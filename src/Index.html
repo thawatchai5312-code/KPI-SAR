@@ -456,6 +456,20 @@
     .cat-row .lock-wrap { display: flex; gap: 6px; align-items: center; width: 100%; }
     .cat-row .editable-input { margin: 0; flex: 1 1 0; min-width: 0; }
     .cat-row .cat-del { flex: none; padding: 5px 10px; }
+
+    /* แยกสีหมวด: Part I–IV (ตัวชี้วัดโรงพยาบาล) = เขียว · หมวดอื่น (หน่วยงาน/ส่วนตัว) = ม่วง */
+    .tree-section { display: flex; align-items: center; gap: 8px; font-size: 11.5px; font-weight: 800; letter-spacing: 0.2px; margin: 12px 2px 6px; }
+    .tree-section::after { content: ''; flex: 1; height: 1px; background: currentColor; opacity: 0.25; }
+    .tree-section.core { color: #15803d; }
+    .tree-section.other { color: #6d28d9; margin-top: 18px; padding-top: 12px; border-top: 2px dashed #d8ccff; }
+    .tree-section.other::after { display: none; }
+    .accordion-part.other > .accordion-header { background: #f6f2ff; border-color: #e2d8ff; color: #4c1d95; }
+    .accordion-part.other > .accordion-header::before { background: #7c3aed; }
+    .accordion-part.other.open > .accordion-header { background: #ece4ff; border-color: #cdbbff; color: #5b21b6; }
+    .accordion-part.other.open > .accordion-header .part-count { border-color: #cdbbff; color: #5b21b6; }
+    .accordion-part.other .category-header { background: #f6f2ff; color: #4c1d95; }
+    .accordion-part.other .category-header::before { background: #7c3aed; }
+    .accordion-part.other .category-header:hover { background: #ece4ff; }
   </style>
 </head>
 <body>
@@ -1400,9 +1414,19 @@
       });
 
       container.innerHTML = '';
+      // แยก 2 ส่วนชัดเจน: ตัวชี้วัดโรงพยาบาล (Part I–IV, สีเขียว) / หมวดของหน่วยงาน-ของฉัน (หมวดอื่น, สีม่วง)
+      let lastKind = null;
       Object.keys(tree).sort(comparePartNames).forEach(partName => {
+        const kind = isCorePart(partName) ? 'core' : 'other';
+        if (kind !== lastKind) {
+          const label = document.createElement('div');
+          label.className = 'tree-section ' + kind;
+          label.textContent = kind === 'core' ? 'ตัวชี้วัดโรงพยาบาล (Part I–IV)' : 'หมวดของหน่วยงาน / ของฉัน';
+          container.appendChild(label);
+          lastKind = kind;
+        }
         const partDiv = document.createElement('div');
-        partDiv.className = 'accordion-part';
+        partDiv.className = 'accordion-part ' + kind;
         if (allOpen || openParts.has(partName)) partDiv.classList.add('open');
 
         const header = document.createElement('div');

@@ -82,6 +82,7 @@ function getAllData(token, requestedFy) {
   try {
     var user = requireUser_(token);
     ensureFiscalSheets_();
+    migrateUnitCategories_();
     var years = listFiscalYears_();
     var currentFy = getCurrentFiscalYear_();
     if (years.length === 0) return { success: true, data: [], fy: currentFy, currentFy: currentFy, years: [] };
@@ -177,6 +178,7 @@ function saveKpi(token, fy, item) {
     fy = resolveFiscalYear_(fy);
     var sheet = getFiscalSheet_(fy);
     if (!sheet) return { success: false, message: "ไม่พบชีตปีงบประมาณ" };
+    ensureColumns_(sheet, EXTRA_CATS_COL);
 
     var data = sheet.getDataRange().getValues();
     var rowIndex = -1;
@@ -357,6 +359,7 @@ function addIndicator(token, fy, newItem) {
     fy = resolveFiscalYear_(fy);
     var sheet = getFiscalSheet_(fy);
     if (!sheet) return { success: false, message: "ไม่พบชีตปีงบประมาณ" };
+    ensureColumns_(sheet, EXTRA_CATS_COL);
     if (!privileged && fy !== getCurrentFiscalYear_()) {
       return { success: false, message: "เพิ่มตัวชี้วัดใหม่ได้เฉพาะปีงบปัจจุบัน (" + getCurrentFiscalYear_() + ")" };
     }

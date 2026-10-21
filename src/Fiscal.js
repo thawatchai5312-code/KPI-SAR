@@ -188,3 +188,66 @@ function resolveFiscalYear_(requested) {
   var current = getCurrentFiscalYear_();
   return years.indexOf(current) !== -1 ? current : years[0];
 }
+
+/** ให้แน่ใจว่าชีตมีคอลัมน์ครบอย่างน้อย n คอลัมน์ (ชีตเก่าอาจมีน้อยกว่านี้ — อ่าน/เขียนนอกขอบเขตจะ error) */
+function ensureColumns_(sheet, n) {
+  var max = sheet.getMaxColumns();
+  if (max < n) sheet.insertColumnsAfter(max, n - max);
+}
+
+// ---------------------------------------------------------------- สร้างหมวดหน่วยงานให้ตัวชี้วัดที่มีหน่วยงาน (ทำครั้งเดียว)
+
+var UNIT_CATS_FLAG = "UNIT_CATEGORIES_V1";
+var UNIT_CATS_PLACEHOLDER = "รอจัดหมวดย่อย";
+
+/**
+ * ตัวชี้วัดทุกตัวที่ระบุหน่วยงานไว้ → เพิ่มระดับ "หน่วยงาน" และให้แสดงในหมวดชื่อหน่วยงานนั้นด้วย
+ * (หมวดย่อยใช้ชื่อชั่วคราว "รอจัดหมวดย่อย" ให้ไปแก้ทีหลัง) หลายหน่วยงาน = หลายหมวด
+ * ทำครั้งเดียวกับทุกชีตปีงบที่มีอยู่ (เก็บสำเนาสำรองไว้ในชีตซ่อน) หลังจากนั้นแก้/เอาหมวดออกได้เองโดยไม่ถูกเติมซ้ำ
+ */
+function migrateUnitCategories_() {
+  var props = PropertiesService.getScriptProperties();
+  if (props.getProperty(UNIT_CATS_FLAG)) return;
+  var lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  try {
+    if (props.getProperty(UNIT_CATS_FLAG)) return;
+    var ss = SpreadsheetApp.openByUrl(SPREADSHEET_URL);
+    var stamp = Utilities.formatDate(new Date(), "Asia/Bangkok", "yyyyMMdd_HHmmss");
+    listFiscalYears_().forEach(function(fy) {
+      var sheet = getFiscalSheet_(fy);
+      var last = sheet.getLastRow();
+      if (last < 2) return;
+      ensureColumns_(sheet, EXTRA_CATS_COL);
+      var rows = sheet.getRange(2, 1, last - 1, EXTRA_CATS_COL).getValues();
+      var levelsOut = [], extraOut = [], changed = 0;
+      rows.forEach(function(row) {
+        var levelsCell = row[LEVEL_COLUMN - 1], extraCell = row[EXTRA_CATS_COL - 1];
+        var depts = row[0] ? parseDepts_(row[26]) : [];
+        if (depts.length === 0) { levelsOut.push([levelsCell]); extraOut.push([extraCell]); return; }
+        var levels = normalizeLevels_(levelsCell);
+        if (levels.indexOf("หน่วยงาน") === -1) levels = sortLevels_(levels.concat(["หน่วยงาน"]));
+        var cats = kpiCats_({ cats: [{ part: row[2] ? row[2].toString().trim() : "ทั่วไป", category: row[3] ? row[3].toString().trim() : "ทั่วไป" }].concat(parseExtraCats_(extraCell)) });
+        depts.forEach(function(d) {
+          if (!cats.some(function(c) { return c.part === d; })) cats.push({ part: d, category: UNIT_CATS_PLACEHOLDER });
+        });
+        var newLevels = levels.join(", "), newExtra = formatExtraCats_(cats.slice(1));
+        if (newLevels !== (levelsCell || "").toString() || newExtra !== (extraCell || "").toString()) changed++;
+        levelsOut.push([newLevels]);
+        extraOut.push([newExtra]);
+      });
+      if (changed === 0) return;
+      var backup = sheet.copyTo(ss);
+      backup.setName("สำรองก่อนสร้างหมวดหน่วยงาน " + fiscalSheetName_(fy) + " " + stamp);
+      backup.hideSheet();
+      sheet.getRange(2, LEVEL_COLUMN, rows.length, 1).setValues(levelsOut);
+      sheet.getRange(2, EXTRA_CATS_COL, rows.length, 1).setNumberFormat("@").setValues(extraOut);
+      if (!sheet.getRange(1, EXTRA_CATS_COL).getValue()) {
+        sheet.getRange(1, EXTRA_CATS_COL).setValue(EXTRA_CATS_HEADER).setFontWeight("bold").setBackground("#e0f2fe").setHorizontalAlignment("center");
+      }
+    });
+    props.setProperty(UNIT_CATS_FLAG, Utilities.formatDate(new Date(), "Asia/Bangkok", "yyyy-MM-dd HH:mm:ss"));
+  } finally {
+    lock.releaseLock();
+  }
+}

@@ -481,11 +481,22 @@ function inCorePart_(kpi) {
   return kpiCats_(kpi).some(function(c) { return isCorePart_(c.part); });
 }
 
-/** หมวดที่ผู้ใช้เห็น: ผอ./QMR (ที่ไม่ใช่เจ้าของ) เห็นเฉพาะ Part I–IV */
+/**
+ * หมวดที่ผู้ใช้เห็นของตัวชี้วัดตัวหนึ่ง
+ *  - admin เห็นทุกหมวด · ผอ./QMR (ที่ไม่ใช่เจ้าของ) เห็นเฉพาะ Part I–IV
+ *  - คนอื่น: หมวดชื่อหน่วยงานของตัวชี้วัด (เช่น "ER") เห็นเฉพาะคนในหน่วยนั้น หมวดอื่นเห็นหมด
+ *    → แต่ละคนจึงเห็น Part I–IV + หมวดของหน่วยงานตัวเอง (และหมวดส่วนตัวที่ตั้งเอง)
+ *  คืนอย่างน้อย 1 หมวดเสมอ
+ */
 function visibleCats_(user, kpi, perm) {
-  var cats = kpiCats_(kpi);
-  if (user.tier === "executive" && !perm.mine) cats = cats.filter(function(c) { return isCorePart_(c.part); });
-  return cats;
+  var cats = kpiCats_(kpi), out = cats;
+  if (user.tier === "executive" && !perm.mine) {
+    out = cats.filter(function(c) { return isCorePart_(c.part); });
+  } else if (user.tier !== "admin") {
+    var depts = parseDepts_(kpi.department);
+    out = cats.filter(function(c) { return depts.indexOf(c.part) === -1 || user.depts.indexOf(c.part) !== -1; });
+  }
+  return out.length > 0 ? out : [cats[0]];
 }
 
 /** ตัวชี้วัดมีระดับ SAR หรือ QA (ระดับโรงพยาบาล) อย่างน้อยหนึ่งระดับ */
