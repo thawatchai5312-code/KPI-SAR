@@ -118,9 +118,11 @@
     /* ผังรายการตัวชี้วัด */
     .tree-filters { position: sticky; top: -12px; background: #fff; padding: 12px 0 8px; margin-top: -12px; z-index: 5; border-bottom: 1px solid #e2e8f0; margin-bottom: 8px; }
     .tree-filters .editable-input { margin-bottom: 6px; }
-    .tree-level-filter { border: 1px solid #e2e8f0; border-radius: 8px; padding: 4px 8px; margin-bottom: 6px; }
-    .tree-level-title { font-size: 12px; font-weight: 700; color: #015c8b; }
-    .tree-level-filter .check-row { font-size: 12.5px; padding: 1px 0; }
+    .tree-level-filter { position: relative; margin-bottom: 6px; }
+    .tree-level-filter > .btn { width: 100%; text-align: left; }
+    .tree-level-menu { position: absolute; left: 0; right: 0; top: calc(100% + 4px); z-index: 30; background: #fff; border: 1px solid #cbd5e1; border-radius: 8px; padding: 6px 10px; box-shadow: 0 8px 20px rgba(0,0,0,0.18); }
+    .tree-level-menu .check-row { font-size: 12.5px; padding: 2px 0; }
+    .tree-level-all { font-size: 12px; font-weight: 700; color: #015c8b; cursor: pointer; text-decoration: underline; padding: 2px 0 4px; display: block; }
     .tree-filter-row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: 12px; font-weight: 700; color: #334155; }
     .tree-count { font-size: 11px; color: #64748b; font-weight: 600; margin-top: 4px; }
     .accordion-part { margin-bottom: 6px; border: 1px solid #cbd5e1; border-radius: 8px; overflow: hidden; }
@@ -315,12 +317,15 @@
         <div class="tree-filters">
           <input type="text" id="tree-search" class="editable-input" placeholder="🔍 ค้นหาชื่อ/ผู้รับผิดชอบ/หน่วยงาน" oninput="onTreeFilterChange()">
           <div class="tree-level-filter">
-            <div class="tree-level-title">ระดับตัวชี้วัด</div>
+            <button type="button" class="btn btn-secondary btn-sm" id="tree-level-btn" onclick="toggleLevelMenu(event)">🎚️ ระดับตัวชี้วัด: ทั้งหมด ▾</button>
+            <div class="tree-level-menu" id="tree-level-menu" style="display: none;">
+            <span class="tree-level-all" onclick="selectAllLevels()">เลือกทั้งหมด</span>
             <label class="check-row"><input type="checkbox" class="tree-level-cb" value="รายบุคคล" checked onchange="onTreeFilterChange()"> รายบุคคล</label>
             <label class="check-row"><input type="checkbox" class="tree-level-cb" value="หน่วยงาน" checked onchange="onTreeFilterChange()"> หน่วยงาน</label>
             <label class="check-row"><input type="checkbox" class="tree-level-cb" value="ฝ่ายการพยาบาล" checked onchange="onTreeFilterChange()"> ฝ่ายการพยาบาล</label>
             <label class="check-row"><input type="checkbox" class="tree-level-cb" value="QA-หน่วยงาน" checked onchange="onTreeFilterChange()"> QA หน่วยงาน</label>
             <label class="check-row"><input type="checkbox" class="tree-level-cb" value="SAR" checked onchange="onTreeFilterChange()"> SAR โรงพยาบาล</label>
+            </div>
           </div>
           <div class="tree-filter-row">
             <select id="tree-mode" class="editable-input" style="width: auto;" onchange="onTreeFilterChange()">
@@ -470,6 +475,19 @@
       <div class="modal-footer" style="display: flex; justify-content: space-between;">
         <button class="btn btn-secondary" onclick="document.getElementById('modal-pdf').style.display='none'">ยกเลิก</button>
         <button class="btn btn-primary" onclick="generatePdf()">🖨️ สร้าง PDF</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modal-fy" class="modal-overlay">
+    <div class="modal-card" style="max-width: 380px;">
+      <div class="modal-header">📅 เลือกปีงบประมาณ</div>
+      <div class="modal-body">
+        <p style="font-size: 13px; color: #64748b; font-weight: 600; margin-bottom: 10px;">กรุณาเลือกปีงบประมาณที่จะดูข้อมูล (เปลี่ยนภายหลังได้ที่แถบปีงบด้านบน)</p>
+        <select id="fy-pick-select" class="editable-input" style="font-size: 15px; padding: 8px;"></select>
+      </div>
+      <div class="modal-footer" style="text-align: center;">
+        <button class="btn btn-primary" style="min-width: 140px;" onclick="confirmFiscalYear()">เข้าสู่ระบบ</button>
       </div>
     </div>
   </div>
@@ -703,7 +721,7 @@
       globalDatabase = [];
       selectedKpiId = null; selectedCategoryName = null; selectedPartName = null;
       document.getElementById('user-bar').style.display = 'none';
-      ['modal-settings', 'modal-add-kpi', 'modal-pdf', 'modal-unsaved', 'modal-change-password', 'modal-alert', 'modal-confirm']
+      ['modal-settings', 'modal-add-kpi', 'modal-pdf', 'modal-fy', 'modal-unsaved', 'modal-change-password', 'modal-alert', 'modal-confirm']
         .forEach(id => { document.getElementById(id).style.display = 'none'; });
       document.getElementById('accordion-tree-container').innerHTML = '<div class="empty-state">กรุณาเข้าสู่ระบบ...</div>';
       document.getElementById('kpi-list-area').innerHTML = '';
@@ -760,7 +778,7 @@
     });
 
     // ===================== โหลดข้อมูล / ปีงบ =====================
-    function fetchAllDataFromServer(quiet = false) {
+    function fetchAllDataFromServer(quiet = false, afterLoad = null) {
       google.script.run
         .withSuccessHandler((res) => {
           if (!res.success) { showAlert('โหลดข้อมูลล้มเหลว', '❌', res.message); renderFiscalYearSelect(); return; }
@@ -773,7 +791,6 @@
 
           if (selectedKpiId && !globalDatabase.some(k => k.id === selectedKpiId)) selectedKpiId = null;
 
-          if (!quiet) document.getElementById('app-login-screen').style.display = 'none';
           editingId = null; editSnapshot = null;
           appliedFilters = readTreeFilters();
           document.getElementById('btn-toggle-chart').innerText = chartVisible ? '🙈 ซ่อนกราฟ' : '📈 แสดงกราฟ';
@@ -788,9 +805,32 @@
             pendingSelectAfterLoad = null;
             if (globalDatabase.some(x => x.id === p.id)) { goToKpi(p.id); if (p.edit) startEditNow(p.id); }
           }
+
+          // เข้าระบบครั้งแรก: ให้เลือกปีงบก่อนเข้าใช้งาน ป้องกันหลงปี (หลังจากนั้นใช้ตัวเลือกปีงบบนแถบนำทางตามปกติ)
+          if (!quiet) showFiscalYearPicker();
+          if (afterLoad) afterLoad();
         })
         .withFailureHandler((err) => { renderFiscalYearSelect(); showAlert('เกิดข้อผิดพลาดเครือข่าย', '❌', err.toString()); })
         .getAllData(sessionToken, selectedFy);
+    }
+
+    // ป๊อปอัพเลือกปีงบหลังล็อกอิน (ค่าเริ่มต้น = ปีงบปัจจุบัน)
+    function showFiscalYearPicker() {
+      const sel = document.getElementById('fy-pick-select');
+      sel.innerHTML = fiscalYears.map(y =>
+        `<option value="${y}" ${y === currentFy ? 'selected' : ''}>ปีงบประมาณ ${y}${y === currentFy ? ' (ปัจจุบัน)' : ''}</option>`).join('');
+      document.getElementById('modal-fy').style.display = 'flex';
+    }
+
+    function confirmFiscalYear() {
+      const fy = Number(document.getElementById('fy-pick-select').value);
+      const done = () => {
+        document.getElementById('modal-fy').style.display = 'none';
+        document.getElementById('app-login-screen').style.display = 'none';
+      };
+      if (fy === selectedFy) { done(); return; }
+      selectedFy = fy;
+      fetchAllDataFromServer(true, done);
     }
 
     function renderFiscalYearSelect() {
@@ -889,6 +929,32 @@
       };
     }
 
+    // ปุ่มตัวกรองระดับ: กดแล้วแสดงรายการติ๊กเลือก กดที่อื่นเพื่อปิด
+    function toggleLevelMenu(e) {
+      e.stopPropagation();
+      const m = document.getElementById('tree-level-menu');
+      m.style.display = m.style.display === 'none' ? 'block' : 'none';
+    }
+
+    function selectAllLevels() {
+      document.querySelectorAll('.tree-level-cb').forEach(c => { c.checked = true; });
+      onTreeFilterChange();
+    }
+
+    function updateLevelButton() {
+      const btn = document.getElementById('tree-level-btn');
+      const total = document.querySelectorAll('.tree-level-cb').length;
+      const n = document.querySelectorAll('.tree-level-cb:checked').length;
+      btn.innerText = '🎚️ ระดับตัวชี้วัด: ' + (n === total ? 'ทั้งหมด' : n + '/' + total) + ' ▾';
+      btn.classList.toggle('btn-accent', n !== total);
+      btn.classList.toggle('btn-secondary', n === total);
+    }
+
+    document.addEventListener('click', (e) => {
+      const m = document.getElementById('tree-level-menu');
+      if (m && m.style.display !== 'none' && !m.contains(e.target)) m.style.display = 'none';
+    });
+
     // ตัวกรองระดับ: ติ๊กครบทุกระดับ = ไม่กรอง
     function levelFilterActive() {
       return appliedFilters.levels.length < document.querySelectorAll('.tree-level-cb').length;
@@ -900,6 +966,7 @@
       document.getElementById('tree-mode').value = appliedFilters.mode;
       document.getElementById('tree-mine').checked = appliedFilters.mine;
       document.querySelectorAll('.tree-level-cb').forEach(c => { c.checked = appliedFilters.levels.indexOf(c.value) !== -1; });
+      updateLevelButton();
     }
 
     function treeFiltersActive() {
@@ -941,6 +1008,7 @@
 
     // ===================== ผังรายการ (ซ้าย) =====================
     function renderTree() {
+      updateLevelButton();
       const container = document.getElementById('accordion-tree-container');
       const countEl = document.getElementById('tree-count');
       if (globalDatabase.length === 0) {
