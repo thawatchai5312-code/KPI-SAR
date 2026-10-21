@@ -22,7 +22,7 @@ function doGet() {
       .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 
-function setupDatabaseSheet() {
+function setupDatabaseSheet_() {
   var ss = SpreadsheetApp.openByUrl(SPREADSHEET_URL);
   var sheet = ss.getSheetByName(DATABASE_SHEET_NAME);
   
@@ -47,7 +47,7 @@ function setupDatabaseSheet() {
   }
 }
 
-function cleanValue(val) {
+function cleanValue_(val) {
   if (val === "" || val === undefined || val === null) return null;
   var str = val.toString().trim().toUpperCase();
   if (str === "NA" || str === "N/A" || str === "-" || isNaN(val)) {
@@ -56,43 +56,53 @@ function cleanValue(val) {
   return Number(val);
 }
 
-function getAllData() {
+function getDatabaseSheet_() {
+  return SpreadsheetApp.openByUrl(SPREADSHEET_URL).getSheetByName(DATABASE_SHEET_NAME);
+}
+
+function rowToKpi_(row) {
+  return {
+    id: row[0].toString().trim(),
+    no: row[1] ? row[1].toString().trim() : "",
+    part: row[2] ? row[2].toString().trim() : "ทั่วไป",
+    category: row[3] ? row[3].toString().trim() : "ทั่วไป",
+    name: row[4] ? row[4].toString().trim() : "",
+    // ดึงค่าเป้าหมายเป็นข้อความ (String) เพื่อเก็บเครื่องหมายต่างๆ ไว้
+    target: row[5] ? row[5].toString().trim() : "",
+    years: [
+      cleanValue_(row[6]), cleanValue_(row[7]), cleanValue_(row[8]), cleanValue_(row[9]), cleanValue_(row[10])
+    ],
+    months: [
+      cleanValue_(row[11]), cleanValue_(row[12]), cleanValue_(row[13]), cleanValue_(row[14]),
+      cleanValue_(row[15]), cleanValue_(row[16]), cleanValue_(row[17]), cleanValue_(row[18]),
+      cleanValue_(row[19]), cleanValue_(row[20]), cleanValue_(row[21]), cleanValue_(row[22])
+    ],
+    templateDetails: row[23] ? row[23].toString().trim() : "",
+    dataSource: row[24] ? row[24].toString().trim() : "",
+    owner: row[25] ? row[25].toString().trim() : "",
+    department: row[26] ? row[26].toString().trim() : "",
+    level: normalizeLevel_(row[28])
+  };
+}
+
+// คืนเฉพาะตัวชี้วัดที่ผู้ใช้มีสิทธิ์ดู พร้อมธง canEdit
+function getAllData(token) {
   try {
-    var ss = SpreadsheetApp.openByUrl(SPREADSHEET_URL);
-    var sheet = ss.getSheetByName(DATABASE_SHEET_NAME);
+    var user = requireUser_(token);
+    var sheet = getDatabaseSheet_();
     if (!sheet) {
-      return { success: true, data: [] }; 
+      return { success: true, data: [] };
     }
-    
+
     var data = sheet.getDataRange().getValues();
     var allData = [];
-    if (data.length <= 1) return { success: true, data: [] };
-    
     for (var i = 1; i < data.length; i++) {
-      var row = data[i];
-      if (row[0]) {
-        allData.push({
-          id: row[0].toString().trim(),
-          no: row[1] ? row[1].toString().trim() : "",
-          part: row[2] ? row[2].toString().trim() : "ทั่วไป",
-          category: row[3] ? row[3].toString().trim() : "ทั่วไป",
-          name: row[4] ? row[4].toString().trim() : "",
-          // ดึงค่าเป้าหมายเป็นข้อความ (String) เพื่อเก็บเครื่องหมายต่างๆ ไว้
-          target: row[5] ? row[5].toString().trim() : "",
-          years: [
-            cleanValue(row[6]), cleanValue(row[7]), cleanValue(row[8]), cleanValue(row[9]), cleanValue(row[10])
-          ],
-          months: [
-            cleanValue(row[11]), cleanValue(row[12]), cleanValue(row[13]), cleanValue(row[14]),
-            cleanValue(row[15]), cleanValue(row[16]), cleanValue(row[17]), cleanValue(row[18]),
-            cleanValue(row[19]), cleanValue(row[20]), cleanValue(row[21]), cleanValue(row[22])
-          ],
-          templateDetails: row[23] ? row[23].toString().trim() : "",
-          dataSource: row[24] ? row[24].toString().trim() : "",
-          owner: row[25] ? row[25].toString().trim() : "",
-          department: row[26] ? row[26].toString().trim() : ""
-        });
-      }
+      if (!data[i][0]) continue;
+      var kpi = rowToKpi_(data[i]);
+      var perm = getKpiPermission_(user, kpi);
+      if (!perm.view) continue;
+      kpi.canEdit = perm.edit;
+      allData.push(kpi);
     }
     return { success: true, data: allData };
   } catch(e) {
@@ -100,55 +110,50 @@ function getAllData() {
   }
 }
 
-function getCategoryKpis(partName, categoryName) {
-  try {
-    var ss = SpreadsheetApp.openByUrl(SPREADSHEET_URL);
-    var sheet = ss.getSheetByName(DATABASE_SHEET_NAME);
-    if (!sheet) return [];
-    var data = sheet.getDataRange().getValues();
-    var kpis = [];
-    var targetPart = partName.toString().trim();
-    var targetCategory = categoryName.toString().trim();
-    
-    for (var i = 1; i < data.length; i++) {
-      var row = data[i];
-      if (row[0] && row[2] && row[3] && row[2].toString().trim() === targetPart && row[3].toString().trim() === targetCategory) {
-        kpis.push({
-          id: row[0].toString().trim(),
-          no: row[1] ? row[1].toString().trim() : "",
-          part: targetPart,
-          category: targetCategory,
-          name: row[4] ? row[4].toString().trim() : "",
-          target: row[5] ? row[5].toString().trim() : "",
-          years: [cleanValue(row[6]), cleanValue(row[7]), cleanValue(row[8]), cleanValue(row[9]), cleanValue(row[10])],
-          months: [
-            cleanValue(row[11]), cleanValue(row[12]), cleanValue(row[13]), cleanValue(row[14]),
-            cleanValue(row[15]), cleanValue(row[16]), cleanValue(row[17]), cleanValue(row[18]),
-            cleanValue(row[19]), cleanValue(row[20]), cleanValue(row[21]), cleanValue(row[22])
-          ]
-        });
-      }
+function getCategoryKpis_(user, partName, categoryName) {
+  var sheet = getDatabaseSheet_();
+  if (!sheet) return [];
+  var data = sheet.getDataRange().getValues();
+  var kpis = [];
+  var targetPart = partName.toString().trim();
+  var targetCategory = categoryName.toString().trim();
+
+  for (var i = 1; i < data.length; i++) {
+    var row = data[i];
+    if (row[0] && row[2] && row[3] && row[2].toString().trim() === targetPart && row[3].toString().trim() === targetCategory) {
+      var kpi = rowToKpi_(row);
+      if (getKpiPermission_(user, kpi).view) kpis.push(kpi);
     }
-    return kpis;
-  } catch(e) { return []; }
+  }
+  return kpis;
 }
 
-function updateKpiDetails(partName, id, details) {
+// ผู้ใช้ทั่วไปแก้ได้เฉพาะตัวที่ตนมีสิทธิ์ (ผู้รับผิดชอบ / หัวหน้าหน่วย) และเฉพาะรายละเอียด/ที่มาข้อมูล
+// ส่วนผู้รับผิดชอบ หน่วยงาน และระดับตัวชี้วัด แก้ได้เฉพาะ admin, ผอ., QMR
+function updateKpiDetails(token, partName, id, details) {
   try {
-    var ss = SpreadsheetApp.openByUrl(SPREADSHEET_URL);
-    var sheet = ss.getSheetByName(DATABASE_SHEET_NAME);
+    var user = requireUser_(token);
+    var sheet = getDatabaseSheet_();
     if (!sheet) return { success: false, message: "ไม่พบชีตฐานข้อมูล" };
-    
+
     var data = sheet.getDataRange().getValues();
     var targetId = id.toString().trim();
-    
+
     for (var i = 1; i < data.length; i++) {
       if (data[i][0] && data[i][0].toString().trim() === targetId) {
+        if (!getKpiPermission_(user, rowToKpi_(data[i])).edit) {
+          return { success: false, message: "ไม่มีสิทธิ์แก้ไขตัวชี้วัดนี้" };
+        }
         var actualRow = i + 1;
-        sheet.getRange(actualRow, 24).setValue(details.templateDetails || ""); 
-        sheet.getRange(actualRow, 25).setValue(details.dataSource || ""); 
-        sheet.getRange(actualRow, 26).setValue(details.owner || ""); 
-        sheet.getRange(actualRow, 27).setValue(details.department || ""); 
+        sheet.getRange(actualRow, 24).setValue(details.templateDetails || "");
+        sheet.getRange(actualRow, 25).setValue(details.dataSource || "");
+        if (isPrivileged_(user)) {
+          sheet.getRange(actualRow, 26).setValue(details.owner || "");
+          sheet.getRange(actualRow, 27).setValue(details.department || "");
+          if (details.level && KPI_LEVELS.indexOf(details.level) !== -1) {
+            sheet.getRange(actualRow, LEVEL_COLUMN).setValue(details.level);
+          }
+        }
         return { success: true, message: "บันทึกข้อมูลรายละเอียดสำเร็จ" };
       }
     }
@@ -158,46 +163,56 @@ function updateKpiDetails(partName, id, details) {
   }
 }
 
-function updateIndicatorsBulk(partName, updatedItems) {
+function updateIndicatorsBulk(token, partName, updatedItems) {
   try {
-    var ss = SpreadsheetApp.openByUrl(SPREADSHEET_URL);
-    var sheet = ss.getSheetByName(DATABASE_SHEET_NAME);
+    var user = requireUser_(token);
+    var privileged = isPrivileged_(user);
+    var sheet = getDatabaseSheet_();
     if (!sheet) return { success: false, message: "ไม่พบชีตฐานข้อมูล" };
-    
+
     var data = sheet.getDataRange().getValues();
     var ids = data.map(function(r) { return r[0] ? r[0].toString().trim() : ""; });
-    
+    var saved = 0;
+    var denied = 0;
+
     updatedItems.forEach(function(item) {
       var rowIndex = ids.indexOf(item.id.toString().trim());
-      if (rowIndex !== -1) {
-        var actualRow = rowIndex + 1;
+      if (rowIndex === -1) return;
+      if (!getKpiPermission_(user, rowToKpi_(data[rowIndex])).edit) { denied++; return; }
+      var actualRow = rowIndex + 1;
+      if (privileged) {
         sheet.getRange(actualRow, 2).setValue(item.no);
         sheet.getRange(actualRow, 5).setValue(item.name);
         sheet.getRange(actualRow, 6).setValue(item.target);
-        for (var i = 0; i < 5; i++) sheet.getRange(actualRow, 7 + i).setValue(item.years[i]);
-        for (var j = 0; j < 12; j++) sheet.getRange(actualRow, 12 + j).setValue(item.months[j]);
       }
+      sheet.getRange(actualRow, 7, 1, 17).setValues([item.years.concat(item.months)]);
+      saved++;
     });
-    return { success: true, message: "บันทึกข้อมูลปรับปรุงเรียบร้อยแล้ว" };
+    var msg = "บันทึกข้อมูลปรับปรุงเรียบร้อยแล้ว (" + saved + " รายการ)";
+    if (denied > 0) msg += " — ข้าม " + denied + " รายการที่ไม่มีสิทธิ์แก้ไข";
+    return { success: true, message: msg };
   } catch (error) {
     return { success: false, message: "เกิดข้อผิดพลาด: " + error.toString() };
   }
 }
 
-function addIndicator(newItem) {
+// เพิ่มตัวชี้วัดใหม่ — เฉพาะ admin, ผอ., QMR
+function addIndicator(token, newItem) {
   try {
-    setupDatabaseSheet(); 
-    
-    var ss = SpreadsheetApp.openByUrl(SPREADSHEET_URL);
-    var sheet = ss.getSheetByName(DATABASE_SHEET_NAME);
+    requirePrivileged_(token);
+    setupDatabaseSheet_();
+    ensureLevelColumn_();
+
+    var sheet = getDatabaseSheet_();
     var data = sheet.getDataRange().getValues();
-    
-    var count = data.filter(function(r) { 
-      return r[2] && r[2].toString().trim() === newItem.part.trim() && 
-             r[3] && r[3].toString().trim() === newItem.category.trim(); 
+
+    var count = data.filter(function(r) {
+      return r[2] && r[2].toString().trim() === newItem.part.trim() &&
+             r[3] && r[3].toString().trim() === newItem.category.trim();
     }).length;
     var autoNo = count + 1;
-    
+    var level = KPI_LEVELS.indexOf(newItem.level) !== -1 ? newItem.level : DEFAULT_KPI_LEVEL;
+
     var newId = "KPI-" + new Date().getTime();
     var newRow = [
       newId, autoNo, newItem.part, newItem.category, newItem.name, newItem.target,
@@ -205,7 +220,8 @@ function addIndicator(newItem) {
       newItem.months[0], newItem.months[1], newItem.months[2], newItem.months[3],
       newItem.months[4], newItem.months[5], newItem.months[6], newItem.months[7],
       newItem.months[8], newItem.months[9], newItem.months[10], newItem.months[11],
-      newItem.templateDetails || "", newItem.dataSource || "", newItem.owner || "", newItem.department || ""
+      newItem.templateDetails || "", newItem.dataSource || "", newItem.owner || "", newItem.department || "",
+      "", level
     ];
     sheet.appendRow(newRow);
     return { success: true, message: "เพิ่มตัวชี้วัดเรียบร้อยแล้ว", newId: newId };
@@ -214,16 +230,17 @@ function addIndicator(newItem) {
   }
 }
 
-function deleteIndicator(partName, id) {
+// ลบตัวชี้วัด — เฉพาะ admin, ผอ., QMR
+function deleteIndicator(token, partName, id) {
   try {
-    var ss = SpreadsheetApp.openByUrl(SPREADSHEET_URL);
-    var sheet = ss.getSheetByName(DATABASE_SHEET_NAME);
+    requirePrivileged_(token);
+    var sheet = getDatabaseSheet_();
     if (!sheet) return { success: false, message: "ไม่พบชีตฐานข้อมูล" };
-    
+
     var data = sheet.getDataRange().getValues();
     var ids = data.map(function(r) { return r[0] ? r[0].toString().trim() : ""; });
     var rowIndex = ids.indexOf(id.toString().trim());
-    
+
     if (rowIndex !== -1) {
       sheet.deleteRow(rowIndex + 1);
       return { success: true, message: "ลบตัวชี้วัดเรียบร้อยแล้ว" };
@@ -235,9 +252,9 @@ function deleteIndicator(partName, id) {
   }
 }
 
-function exportCategoryToPdf(partName, categoryName) {
+function exportCategoryToPdf(token, partName, categoryName) {
   try {
-    var kpis = getCategoryKpis(partName, categoryName);
+    var kpis = getCategoryKpis_(requireUser_(token), partName, categoryName);
     var currentYear = new Date().getFullYear() + 543;
     var yLabels = [currentYear-4, currentYear-3, currentYear-2, currentYear-1, currentYear];
     
@@ -297,110 +314,10 @@ function exportCategoryToPdf(partName, categoryName) {
   }
 }
 
-function setupUsersSheet() {
-  var ss = SpreadsheetApp.openByUrl(SPREADSHEET_URL);
-  var sheet = ss.getSheetByName(USERS_SHEET_NAME);
-  
-  if (!sheet) {
-    sheet = ss.insertSheet(USERS_SHEET_NAME);
-    var headers = ["Role", "Username", "Password"];
-    sheet.getRange(1, 1, 1, 3).setValues([headers]).setFontWeight("bold").setBackground("#e0f2fe");
-    
-    var initialData = [
-      ["viewer", "", "11038"],
-      ["admin", "Admin", "Admin11038"]
-    ];
-    sheet.getRange(2, 1, initialData.length, 3).setValues(initialData);
-  }
-}
-
-function authenticateUser(username, password) {
-  try {
-    setupUsersSheet();
-    var ss = SpreadsheetApp.openByUrl(SPREADSHEET_URL);
-    var sheet = ss.getSheetByName(USERS_SHEET_NAME);
-    var data = sheet.getDataRange().getValues();
-    
-    username = username ? username.toString().trim() : "";
-    password = password ? password.toString().trim() : "";
-    
-    if (username === "") {
-      // Check viewer pin
-      for (var i = 1; i < data.length; i++) {
-        if (data[i][0] === "viewer" && data[i][2].toString() === password) {
-          return { success: true, role: "viewer" };
-        }
-      }
-    } else {
-      // Check admin or officer
-      for (var i = 1; i < data.length; i++) {
-        if ((data[i][0] === "admin" || data[i][0] === "officer") && 
-            data[i][1].toString() === username && 
-            data[i][2].toString() === password) {
-          return { success: true, role: data[i][0] };
-        }
-      }
-    }
-    return { success: false, message: "ข้อมูลบัญชีหรือรหัสผ่านไม่ถูกต้อง" };
-  } catch(e) {
-    return { success: false, message: e.toString() };
-  }
-}
-
-function getSettingsData() {
-  try {
-    var ss = SpreadsheetApp.openByUrl(SPREADSHEET_URL);
-    var sheet = ss.getSheetByName(USERS_SHEET_NAME);
-    if (!sheet) return { success: false };
-    var data = sheet.getDataRange().getValues();
-    
-    var viewerPin = "";
-    var adminData = { username: "", password: "" };
-    var officers = [];
-    
-    for (var i = 1; i < data.length; i++) {
-      if (data[i][0] === "viewer") viewerPin = data[i][2];
-      else if (data[i][0] === "admin") adminData = { username: data[i][1], password: data[i][2] };
-      else if (data[i][0] === "officer") officers.push({ username: data[i][1], password: data[i][2] });
-    }
-    
-    return { success: true, viewerPin: viewerPin, admin: adminData, officers: officers };
-  } catch(e) {
-    return { success: false, message: e.toString() };
-  }
-}
-
-function saveSettingsData(settings) {
-  try {
-    var ss = SpreadsheetApp.openByUrl(SPREADSHEET_URL);
-    var sheet = ss.getSheetByName(USERS_SHEET_NAME);
-    if (!sheet) return { success: false, message: "ไม่พบชีต Users" };
-    
-    // Clear existing data except headers
-    var lastRow = sheet.getLastRow();
-    if (lastRow > 1) {
-      sheet.getRange(2, 1, lastRow - 1, 3).clearContent();
-    }
-    
-    var newData = [];
-    newData.push(["viewer", "", settings.viewerPin]);
-    newData.push(["admin", settings.admin.username, settings.admin.password]);
-    
-    settings.officers.forEach(function(officer) {
-      newData.push(["officer", officer.username, officer.password]);
-    });
-    
-    sheet.getRange(2, 1, newData.length, 3).setValues(newData);
-    return { success: true, message: "บันทึกการตั้งค่าเรียบร้อยแล้ว" };
-  } catch(e) {
-    return { success: false, message: e.toString() };
-  }
-}
-
 // คอลัมน์ที่ 28 ของชีต Database เก็บ "รหัสอ้างอิงจากระบบพยาบาล" ไว้จับคู่ว่าแถวนี้ผูกกับ
 // ตัวชี้วัดตัวไหนในระบบพยาบาล ถ้ายังไม่มีคอลัมน์นี้ (ชีตที่มีข้อมูลจริงอยู่ก่อนฟีเจอร์นี้) จะเพิ่มให้
 // โดยไม่กระทบข้อมูลคอลัมน์ 1-27 ที่มีอยู่แล้ว
-function ensureNursingLinkColumn() {
+function ensureNursingLinkColumn_() {
   var ss = SpreadsheetApp.openByUrl(SPREADSHEET_URL);
   var sheet = ss.getSheetByName(DATABASE_SHEET_NAME);
   if (!sheet) return;
@@ -411,7 +328,7 @@ function ensureNursingLinkColumn() {
   }
 }
 
-function normalizeKpiName(name) {
+function normalizeKpiName_(name) {
   if (!name) return "";
   return name.toString().toLowerCase()
     .replace(/[\s ]+/g, ' ')
@@ -421,9 +338,10 @@ function normalizeKpiName(name) {
 
 // เปรียบเทียบข้อมูลจากฝ่ายการพยาบาลกับของ KPI PH เพื่อให้แอดมินตรวจสอบและจับคู่เอง
 // (ไม่เขียนข้อมูลใดๆ แค่คำนวณรายการที่ต้องให้แอดมินตัดสินใจ)
-function getNursingSyncPreview() {
+function getNursingSyncPreview(token) {
   try {
-    ensureNursingLinkColumn();
+    requireAdmin_(token);
+    ensureNursingLinkColumn_();
     var sourceSs = SpreadsheetApp.openByUrl(NURSING_SPREADSHEET_URL);
     var sourceSheet = sourceSs.getSheetByName(NURSING_DATABASE_SHEET_NAME);
     if (!sourceSheet) return { success: false, message: "ไม่พบชีต Database ในระบบพยาบาล" };
@@ -443,7 +361,7 @@ function getNursingSyncPreview() {
         linkedBySourceId[link] = d;
         linkedDestIndexes[d] = true;
       }
-      var normName = normalizeKpiName(destData[d][4]);
+      var normName = normalizeKpiName_(destData[d][4]);
       if (!destNameNormalizedMap[normName]) destNameNormalizedMap[normName] = [];
       destNameNormalizedMap[normName].push(d);
     }
@@ -468,7 +386,7 @@ function getNursingSyncPreview() {
         result.destId = destData[idx][0].toString().trim();
         result.destName = destData[idx][4] ? destData[idx][4].toString().trim() : "";
       } else {
-        var norm = normalizeKpiName(result.sourceName);
+        var norm = normalizeKpiName_(result.sourceName);
         var candidates = (destNameNormalizedMap[norm] || []).filter(function(idx2) { return !linkedDestIndexes[idx2]; });
         if (candidates.length === 1) {
           var cIdx = candidates[0];
@@ -503,9 +421,10 @@ function getNursingSyncPreview() {
 // บันทึกผลการจับคู่ที่แอดมินยืนยันแล้ว: ข้อมูลจากฝ่ายการพยาบาลชนะเสมอ (เขียนทับคอลัมน์ 2-27
 // ของแถวที่จับคู่ไว้ โดยคง ID เดิมของ KPI PH ไว้) — ดึงเฉพาะตัวชี้วัดที่ "ซ้ำกันจริง" เท่านั้น
 // ถ้าแอดมินเลือก "ข้าม" (destId ว่าง) จะไม่ทำอะไรกับรายการนั้นเลย ไม่สร้างแถวใหม่เด็ดขาด
-function commitNursingSync(mappings) {
+function commitNursingSync(token, mappings) {
   try {
-    ensureNursingLinkColumn();
+    requireAdmin_(token);
+    ensureNursingLinkColumn_();
     var sourceSs = SpreadsheetApp.openByUrl(NURSING_SPREADSHEET_URL);
     var sourceSheet = sourceSs.getSheetByName(NURSING_DATABASE_SHEET_NAME);
     if (!sourceSheet) return { success: false, message: "ไม่พบชีต Database ในระบบพยาบาล" };
@@ -551,7 +470,7 @@ function commitNursingSync(mappings) {
 // และรันอัตโนมัติผ่าน time-based trigger
 function syncFromNursingSystem() {
   try {
-    ensureNursingLinkColumn();
+    ensureNursingLinkColumn_();
     var sourceSs = SpreadsheetApp.openByUrl(NURSING_SPREADSHEET_URL);
     var sourceSheet = sourceSs.getSheetByName(NURSING_DATABASE_SHEET_NAME);
     if (!sourceSheet) return { success: false, message: "ไม่พบชีต Database ในระบบพยาบาล" };
@@ -596,15 +515,27 @@ function syncFromNursingSystem() {
   }
 }
 
-function getNursingSyncTriggerStatus() {
+// ปุ่มซิงค์ในหน้าเว็บ (เฉพาะ admin) — ตัว syncFromNursingSystem ใช้เป็น handler ของ trigger รายวัน
+function syncNursingNow(token) {
+  try {
+    requireAdmin_(token);
+    return syncFromNursingSystem();
+  } catch (e) {
+    return { success: false, message: "เกิดข้อผิดพลาด: " + e.toString() };
+  }
+}
+
+function getNursingSyncTriggerStatus(token) {
+  requireAdmin_(token);
   var triggers = ScriptApp.getProjectTriggers();
   var enabled = triggers.some(function(t) { return t.getHandlerFunction() === NURSING_SYNC_FUNCTION_NAME; });
   return { enabled: enabled };
 }
 
 // เปิด/ปิดการซิงค์ข้อมูลจากระบบพยาบาลอัตโนมัติทุกวัน (05:00 น. เวลาไทย)
-function toggleNursingSyncTrigger() {
+function toggleNursingSyncTrigger(token) {
   try {
+    requireAdmin_(token);
     var triggers = ScriptApp.getProjectTriggers();
     var existing = triggers.filter(function(t) { return t.getHandlerFunction() === NURSING_SYNC_FUNCTION_NAME; });
 
