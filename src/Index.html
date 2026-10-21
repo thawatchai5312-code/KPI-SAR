@@ -471,6 +471,14 @@
     .accordion-part.other .category-header { background: #f6f2ff; color: #4c1d95; }
     .accordion-part.other .category-header::before { background: #7c3aed; }
     .accordion-part.other .category-header:hover { background: #ece4ff; }
+
+    /* แถบนำทาง: ตัวที่การ์ดอยู่บนจอ = แถบฟ้าเข้มอันเดียว (ตัวที่เคยเลือกไม่ไฮไลต์ซ้ำ) */
+    .kpi-link-item.selected { background: transparent; border-color: transparent; box-shadow: none; color: #334155; font-weight: 500; }
+    .kpi-link-item.selected .kn { color: inherit; }
+    .kpi-link-item.in-view, .kpi-link-item.selected.in-view { background: #dbeafe; border: 1px solid #93c5fd; box-shadow: inset 4px 0 0 #2563eb; color: #1e3a8a; font-weight: 700; }
+    .kpi-link-item.in-view .kn { color: #1d4ed8; }
+    .tree-count .tree-collapse { margin-left: auto; border: 1px solid var(--line); background: #fff; color: #475569; border-radius: 999px; padding: 2px 10px; font-size: 11.5px; font-weight: 700; cursor: pointer; font-family: inherit; }
+    .tree-count .tree-collapse:hover { background: #f1f5f9; }
   </style>
 </head>
 <body>
@@ -989,7 +997,7 @@
       globalDatabase = [];
       selectedKpiId = null; selectedCategoryName = null; selectedPartName = null;
       editingKey = null; selectedKey = null; pendingSelectAfterLoad = null; selectedFy = null;
-      openParts.clear(); openCats.clear();
+      openParts.clear(); openCats.clear(); lastInViewKey = null;
       globalProgressData = [];
       resetTreeFilters(); // ตัวกรองสถานะ/ระดับ/เฉพาะของฉัน กลับเป็นค่าเริ่มต้น ไม่ให้ติดไปยังผู้ใช้คนถัดไป
       document.getElementById('progress-filter').value = '';
@@ -1328,10 +1336,6 @@
       updateLevelButton();
     }
 
-    function treeFiltersActive() {
-      return appliedFilters.mode !== 'all' || appliedFilters.mine || levelFilterActive();
-    }
-
     // หมวด Part I–IV = หมวดหลักของ QA/SAR (ต้องเป็นตัวชี้วัดระดับ SAR หรือ QA-หน่วยงาน) อยู่บนสุดเสมอ ตามด้วยหมวดอื่นเรียงตามตัวอักษร
     const CORE_PART_RE = /^part\s+(iv|iii|ii|i)(?![a-z])/i;
     const CORE_PART_RANK = { i: 1, ii: 2, iii: 3, iv: 4 };
@@ -1431,14 +1435,13 @@
       const list = getOrderedKpis();
       const lv = { red: 0, yellow: 0, green: 0 };
       uniqueById(getOrderedKpis(true)).forEach(k => { lv[kpiStatus(k).level]++; }); // นับตามรายการที่แสดงอยู่ (ไม่รวมตัวกรองสถานะ)
-      countEl.innerHTML = `<span>แสดง ${uniqueById(list).length}/${globalDatabase.length}</span><span class="cnt red" title="ต้องแก้ไข">${lv.red}</span><span class="cnt yellow" title="รอติดตาม">${lv.yellow}</span><span class="cnt green" title="ครบถ้วน">${lv.green}</span>`;
+      countEl.innerHTML = `<span>แสดง ${uniqueById(list).length}/${globalDatabase.length}</span><span class="cnt red" title="ต้องแก้ไข">${lv.red}</span><span class="cnt yellow" title="รอติดตาม">${lv.yellow}</span><span class="cnt green" title="ครบถ้วน">${lv.green}</span><button type="button" class="tree-collapse" onclick="collapseTree()" title="ย่อทุกหมวด">ย่อทั้งหมด</button>`;
 
       if (list.length === 0) {
         container.innerHTML = `<div class="empty-state">${emptyListMessage()}</div>`;
         return;
       }
 
-      const allOpen = treeFiltersActive();
       const tree = {};
       list.forEach(item => {
         if (!tree[item.part]) tree[item.part] = {};
@@ -1460,12 +1463,15 @@
         }
         const partDiv = document.createElement('div');
         partDiv.className = 'accordion-part ' + kind;
-        if (allOpen || openParts.has(partName)) partDiv.classList.add('open');
+        partDiv.dataset.part = partName;
+        if (openParts.has(partName)) partDiv.classList.add('open');
 
         const header = document.createElement('div');
         header.className = 'accordion-header';
         header.innerHTML = `<span>${esc(partName)}</span><span class="part-count">${new Set([].concat(...Object.values(tree[partName])).map(k => k.id)).size}</span>`;
+        // กดหัว Part = เปิด/ปิดดูเองได้หลายอันระหว่างหา (ยังไม่ย่ออันอื่น จนกว่าจะเลือกตัวชี้วัด)
         header.onclick = () => {
+          markTreeBrowsing();
           partDiv.classList.toggle('open');
           if (partDiv.classList.contains('open')) openParts.add(partName); else openParts.delete(partName);
         };
@@ -1478,7 +1484,8 @@
           const catKey = partName + '||' + catName;
           const catBlock = document.createElement('div');
           catBlock.className = 'category-block';
-          if (allOpen || openCats.has(catKey)) catBlock.classList.add('open');
+          catBlock.dataset.cat = catKey;
+          if (openCats.has(catKey)) catBlock.classList.add('open');
 
           const catHeader = document.createElement('div');
           catHeader.className = 'category-header';
@@ -1534,14 +1541,18 @@
       const k = list[idx];
       selectedKpiId = id;
       selectedKey = k.key;
+      // เลือกแล้ว: กางเฉพาะหมวดของตัวที่เลือก หมวดอื่นย่อ
+      openParts.clear(); openCats.clear();
       openParts.add(k.part);
       openCats.add(k.part + '||' + k.category);
+      suppressTreeSyncUntil = Date.now() + 1500; // ระหว่างเลื่อนจอไปหาการ์ด ไม่ให้แถบซ้ายกระโดดตามการ์ดที่ผ่าน
       const page = Math.floor(idx / pageSize) + 1;
       if (page !== currentPage || !document.getElementById('card-' + cssId(k.key))) {
         currentPage = page;
         renderList();
       }
       renderTree();
+      scrollTreeTo(k.key);
       trackView(id);
       const card = document.getElementById('card-' + cssId(k.key));
       if (card) {
@@ -1876,10 +1887,81 @@
       document.querySelectorAll('.kpi-card').forEach(c => cardObserver.observe(c));
     }
 
-    function updateTreeInView() {
-      const first = Array.from(document.querySelectorAll('.kpi-card')).map(c => c.dataset.key).find(key => visibleCards.has(key));
-      document.querySelectorAll('.kpi-link-item').forEach(el => el.classList.toggle('in-view', el.dataset.key === first));
+    // ---------- แถบรายชื่อตัวชี้วัดเลื่อนตามการ์ดที่อยู่บนจอ (ใช้เป็นแถบนำทาง) ----------
+    let lastInViewKey = null, treeSyncTimer = null, treeBrowsingAt = 0, treeHover = false, suppressTreeSyncUntil = 0;
+    const isWideScreen = () => window.matchMedia('(min-width: 1001px)').matches; // มือถือ/จอแคบ: แถบอยู่เหนือการ์ด ไม่ต้องเลื่อนตาม
+
+    function markTreeBrowsing() { treeBrowsingAt = Date.now(); }
+    // ผู้ใช้กำลังใช้แถบซ้ายอยู่ (เมาส์อยู่บนแถบ หรือเพิ่งกดกาง/ย่อเองไม่ถึง 4 วินาที) → แถบไม่ขยับเอง
+    function treeSyncPaused() { return treeHover || Date.now() - treeBrowsingAt < 4000 || Date.now() < suppressTreeSyncUntil; }
+
+    // ใส่คลาสเปิด/ปิดตาม openParts/openCats โดยไม่วาดแถบใหม่ทั้งหมด (เร็ว ไม่กระตุกตอนเลื่อนจอ)
+    function applyTreeOpenState() {
+      document.querySelectorAll('#accordion-tree-container .accordion-part').forEach(el => el.classList.toggle('open', openParts.has(el.dataset.part)));
+      document.querySelectorAll('#accordion-tree-container .category-block').forEach(el => el.classList.toggle('open', openCats.has(el.dataset.cat)));
     }
+
+    // กางเฉพาะหมวดของการ์ด (key) ย่อหมวดอื่น
+    function focusTreeOn(key) {
+      const p = findPlacement(key);
+      if (!p) return;
+      openParts.clear(); openCats.clear();
+      openParts.add(p.part);
+      openCats.add(p.part + '||' + p.category);
+      applyTreeOpenState();
+    }
+
+    // เลื่อนเฉพาะแถบซ้ายให้เห็นรายการนั้น (หน้าหลักไม่ขยับ) — จอแคบไม่เลื่อน
+    function scrollTreeTo(key) {
+      if (!isWideScreen()) return;
+      const panel = document.getElementById('panel-tree');
+      const item = Array.from(panel.querySelectorAll('.kpi-link-item')).find(el => el.dataset.key === key);
+      if (!item) return;
+      const pr = panel.getBoundingClientRect(), ir = item.getBoundingClientRect();
+      if (ir.top >= pr.top + 40 && ir.bottom <= pr.bottom - 10) return;
+      panel.scrollTo({ top: panel.scrollTop + (ir.top - pr.top) - pr.height / 3, behavior: 'smooth' });
+    }
+
+    function collapseTree() {
+      markTreeBrowsing();
+      openParts.clear(); openCats.clear();
+      applyTreeOpenState();
+    }
+
+    // การ์ดที่ "กำลังอ่าน" = ใบแรกที่ขอบล่างยังพ้นแถบหัวที่ติดด้านบนลงมาเกิน 80px (การ์ดที่โผล่แค่ขอบใต้แถบหัวไม่นับ)
+    function currentCardKey() {
+      const top = parseFloat(getComputedStyle(document.getElementById('panel-tree')).top) || 0;
+      const card = Array.from(document.querySelectorAll('.kpi-card')).find(c => visibleCards.has(c.dataset.key) && c.getBoundingClientRect().bottom > top + 80);
+      return card ? card.dataset.key : undefined;
+    }
+
+    function updateTreeInView() {
+      const first = currentCardKey();
+      document.querySelectorAll('.kpi-link-item').forEach(el => el.classList.toggle('in-view', el.dataset.key === first));
+      if (!first || first === lastInViewKey) return;
+      lastInViewKey = first;
+      if (!isWideScreen()) return;
+      clearTimeout(treeSyncTimer);
+      // รอให้หยุดเลื่อนสักครู่ก่อนขยับแถบ ไม่ให้สั่นตอนเลื่อนเร็ว
+      treeSyncTimer = setTimeout(() => {
+        if (treeSyncPaused() || lastInViewKey !== first) return;
+        focusTreeOn(first);
+        scrollTreeTo(first);
+      }, 150);
+    }
+
+    (function () {
+      const panel = document.getElementById('panel-tree');
+      panel.addEventListener('mouseenter', () => { treeHover = true; });
+      panel.addEventListener('mouseleave', () => { treeHover = false; });
+      // เลื่อนอยู่ในการ์ดใบยาวๆ ตัว observer อาจไม่แจ้ง — ตรวจตำแหน่งเพิ่มตอนเลื่อนจอ (ไม่เกินเฟรมละครั้ง)
+      let ticking = false;
+      window.addEventListener('scroll', () => {
+        if (ticking) return;
+        ticking = true;
+        requestAnimationFrame(() => { ticking = false; if (currentTab === 'home') updateTreeInView(); });
+      }, { passive: true });
+    })();
 
     function toggleCharts() {
       chartVisible = !chartVisible;
