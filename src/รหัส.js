@@ -81,7 +81,11 @@ function rowToKpi_(row) {
     dataSource: row[24] ? row[24].toString().trim() : "",
     owner: row[25] ? row[25].toString().trim() : "",
     department: row[26] ? row[26].toString().trim() : "",
-    level: normalizeLevel_(row[28])
+    level: normalizeLevel_(row[28]),
+    editedAt: formatStamp_(row[STAMP_EDIT_AT_COL - 1]),
+    editedBy: row[STAMP_EDIT_BY_COL - 1] ? row[STAMP_EDIT_BY_COL - 1].toString() : "",
+    viewedAt: formatStamp_(row[STAMP_VIEW_AT_COL - 1]),
+    viewedBy: row[STAMP_VIEW_BY_COL - 1] ? row[STAMP_VIEW_BY_COL - 1].toString() : ""
   };
 }
 
@@ -145,14 +149,21 @@ function updateKpiDetails(token, partName, id, details) {
           return { success: false, message: "ไม่มีสิทธิ์แก้ไขตัวชี้วัดนี้" };
         }
         var actualRow = i + 1;
+        var old = rowToKpi_(data[i]);
+        var changed = (details.templateDetails || "").trim() !== old.templateDetails ||
+                      (details.dataSource || "").trim() !== old.dataSource;
         sheet.getRange(actualRow, 24).setValue(details.templateDetails || "");
         sheet.getRange(actualRow, 25).setValue(details.dataSource || "");
         if (isPrivileged_(user)) {
+          var newLevel = details.level && KPI_LEVELS.indexOf(details.level) !== -1 ? details.level : old.level;
+          if ((details.owner || "").trim() !== old.owner || (details.department || "").trim() !== old.department || newLevel !== old.level) changed = true;
           sheet.getRange(actualRow, 26).setValue(details.owner || "");
           sheet.getRange(actualRow, 27).setValue(details.department || "");
-          if (details.level && KPI_LEVELS.indexOf(details.level) !== -1) {
-            sheet.getRange(actualRow, LEVEL_COLUMN).setValue(details.level);
-          }
+          sheet.getRange(actualRow, LEVEL_COLUMN).setValue(newLevel);
+        }
+        if (changed) {
+          stampRow_(sheet, actualRow, user, "edit");
+          touchUser_(user, "edit");
         }
         return { success: true, message: "บันทึกข้อมูลรายละเอียดสำเร็จ" };
       }
@@ -174,20 +185,27 @@ function updateIndicatorsBulk(token, partName, updatedItems) {
     var ids = data.map(function(r) { return r[0] ? r[0].toString().trim() : ""; });
     var saved = 0;
     var denied = 0;
+    var edited = false;
 
     updatedItems.forEach(function(item) {
       var rowIndex = ids.indexOf(item.id.toString().trim());
       if (rowIndex === -1) return;
       if (!getKpiPermission_(user, rowToKpi_(data[rowIndex])).edit) { denied++; return; }
       var actualRow = rowIndex + 1;
+      var old = rowToKpi_(data[rowIndex]);
+      var newValues = item.years.concat(item.months);
+      var changed = newValues.join("|") !== old.years.concat(old.months).join("|");
       if (privileged) {
+        if ((item.name || "").trim() !== old.name || (item.target || "").toString().trim() !== old.target) changed = true;
         sheet.getRange(actualRow, 2).setValue(item.no);
         sheet.getRange(actualRow, 5).setValue(item.name);
         sheet.getRange(actualRow, 6).setValue(item.target);
       }
-      sheet.getRange(actualRow, 7, 1, 17).setValues([item.years.concat(item.months)]);
+      sheet.getRange(actualRow, 7, 1, 17).setValues([newValues]);
+      if (changed) { stampRow_(sheet, actualRow, user, "edit"); edited = true; }
       saved++;
     });
+    if (edited) touchUser_(user, "edit");
     var msg = "บันทึกข้อมูลปรับปรุงเรียบร้อยแล้ว (" + saved + " รายการ)";
     if (denied > 0) msg += " — ข้าม " + denied + " รายการที่ไม่มีสิทธิ์แก้ไข";
     return { success: true, message: msg };
@@ -196,10 +214,35 @@ function updateIndicatorsBulk(token, partName, updatedItems) {
   }
 }
 
+// บันทึกเวลาเข้าดูตัวชี้วัด — หน้าเว็บรวมรายการแล้วส่งเป็นชุดทุก ~30 วินาที (ไม่ให้ช้าตอนคลิกดู)
+function recordViews(token, ids) {
+  try {
+    var user = requireUser_(token);
+    if (!ids || ids.length === 0) return { success: true, count: 0 };
+    var sheet = getDatabaseSheet_();
+    if (!sheet) return { success: true, count: 0 };
+    var data = sheet.getDataRange().getValues();
+    var wanted = {};
+    ids.slice(0, 200).forEach(function(id) { wanted[id.toString().trim()] = true; });
+    var count = 0;
+    for (var i = 1; i < data.length; i++) {
+      var id = data[i][0] ? data[i][0].toString().trim() : "";
+      if (!wanted[id]) continue;
+      if (!getKpiPermission_(user, rowToKpi_(data[i])).view) continue;
+      stampRow_(sheet, i + 1, user, "view");
+      count++;
+    }
+    touchUser_(user, "access");
+    return { success: true, count: count };
+  } catch (error) {
+    return { success: false, message: error.toString() };
+  }
+}
+
 // เพิ่มตัวชี้วัดใหม่ — เฉพาะ admin, ผอ., QMR
 function addIndicator(token, newItem) {
   try {
-    requirePrivileged_(token);
+    var user = requirePrivileged_(token);
     setupDatabaseSheet_();
     ensureLevelColumn_();
 
@@ -221,9 +264,10 @@ function addIndicator(token, newItem) {
       newItem.months[4], newItem.months[5], newItem.months[6], newItem.months[7],
       newItem.months[8], newItem.months[9], newItem.months[10], newItem.months[11],
       newItem.templateDetails || "", newItem.dataSource || "", newItem.owner || "", newItem.department || "",
-      "", level
+      "", level, nowStamp_(), user.username
     ];
     sheet.appendRow(newRow);
+    touchUser_(user, "edit");
     return { success: true, message: "เพิ่มตัวชี้วัดเรียบร้อยแล้ว", newId: newId };
   } catch (error) {
     return { success: false, message: "เกิดข้อผิดพลาด: " + error.toString() };

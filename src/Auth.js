@@ -16,12 +16,26 @@ var SESSION_TTL_SECONDS = 21600; // 6 ชั่วโมง (สูงสุด�
 var MAX_LOGIN_FAILURES = 5;
 var LOGIN_LOCK_SECONDS = 300;
 
-var USERS_HEADERS = ["Username", "Password", "Tier", "Departments", "MustChangePassword"];
+var USERS_HEADERS = ["Username", "Password", "Tier", "Departments", "MustChangePassword", "LastAccess", "LastEdit"];
 var TIERS = ["admin", "executive", "head", "staff"];
 
 var KPI_LEVELS = ["รายบุคคล", "หน่วยงาน", "QA-หน่วยงาน", "QA-รพ", "SAR"];
 var DEFAULT_KPI_LEVEL = "SAR";
 var LEVEL_COLUMN = 29; // คอลัมน์ AC
+// คอลัมน์ Time stamp ในชีต Database: แก้ไขล่าสุดเมื่อ / โดย, เข้าดูล่าสุดเมื่อ / โดย
+var STAMP_EDIT_AT_COL = 30;
+var STAMP_EDIT_BY_COL = 31;
+var STAMP_VIEW_AT_COL = 32;
+var STAMP_VIEW_BY_COL = 33;
+var STAMP_HEADERS = ["แก้ไขล่าสุดเมื่อ", "แก้ไขล่าสุดโดย", "เข้าดูล่าสุดเมื่อ", "เข้าดูล่าสุดโดย"];
+
+// หัวหน้าหน่วยตั้งต้น (ใช้ครั้งเดียวหลังอัปเดตนี้) — ชื่อ → หน่วยงานที่ดูแล
+// ผู้บริหาร (executive) จะไม่ถูกลดสิทธิ์ แค่บันทึกหน่วยงานไว้
+var INITIAL_HEADS = {
+  "อรทัย": ["ER"], "ชนกนันท์": ["HR"], "มุจรินทร์": ["PCU"], "รินทร์ลภัส": ["PCT"], "เดือนเพ็ญ": ["NSO"],
+  "สถาพร": ["RM"], "สิรีธร": ["RM"], "ทินกร": ["PTC"], "สุรเชษฐ์": ["IT"]
+};
+var HEAD_OWNER_TOKEN = "หัวหน้าหน่วย"; // ผู้รับผิดชอบที่เขียนว่า "หัวหน้าหน่วย" = ผู้ใช้ Tier head ทุกคน
 
 // ผอ. และ QMR ได้ Tier executive ตอนสร้างบัญชีอัตโนมัติ
 var EXECUTIVE_NAMES = ["ผอ.", "เดือนเพ็ญ", "อานัติ"];
@@ -108,6 +122,71 @@ function isTrue_(v) {
   return v === true || (v || "").toString().toUpperCase() === "TRUE";
 }
 
+/** เวลาปัจจุบันตามเขตเวลาไทย รูปแบบ "21/10/2569 09:15" (ปี พ.ศ.) */
+function nowStamp_() {
+  var now = new Date();
+  var be = parseInt(Utilities.formatDate(now, "Asia/Bangkok", "yyyy"), 10) + 543;
+  return Utilities.formatDate(now, "Asia/Bangkok", "dd/MM/") + be + Utilities.formatDate(now, "Asia/Bangkok", " HH:mm");
+}
+
+/** ค่าในเซลล์ Time stamp อาจถูกชีตแปลงเป็น Date — แปลงกลับเป็นข้อความเสมอ (ส่ง Date ไปหน้าเว็บไม่ได้) */
+function formatStamp_(v) {
+  if (!v) return "";
+  if (Object.prototype.toString.call(v) === "[object Date]") {
+    var be = parseInt(Utilities.formatDate(v, "Asia/Bangkok", "yyyy"), 10) + 543;
+    return Utilities.formatDate(v, "Asia/Bangkok", "dd/MM/") + be + Utilities.formatDate(v, "Asia/Bangkok", " HH:mm");
+  }
+  return v.toString();
+}
+
+/** บันทึกเวลาล่าสุดของผู้ใช้: kind = "access" (เข้าใช้) หรือ "edit" (แก้ไข) */
+function touchUser_(user, kind) {
+  var sheet = getUsersSpreadsheet_().getSheetByName(USERS_SHEET_NAME);
+  if (sheet && user && user.row) sheet.getRange(user.row, kind === "edit" ? 7 : 6).setValue(nowStamp_());
+}
+
+/** ใส่ Time stamp ให้แถวตัวชี้วัด: kind = "edit" หรือ "view" */
+function stampRow_(sheet, rowNumber, user, kind) {
+  var col = kind === "edit" ? STAMP_EDIT_AT_COL : STAMP_VIEW_AT_COL;
+  sheet.getRange(rowNumber, col, 1, 2).setValues([[nowStamp_(), user.username]]);
+}
+
+/** เพิ่มหัวคอลัมน์ Time stamp (ชีต Users: F-G, ชีต Database: AD-AG) ถ้ายังไม่มี และบังคับเป็นข้อความ */
+function ensureStampColumns_(usersSheet) {
+  if (usersSheet.getRange(1, 6).getValue() !== USERS_HEADERS[5]) {
+    usersSheet.getRange(1, 6, 1, 2).setValues([[USERS_HEADERS[5], USERS_HEADERS[6]]])
+      .setFontWeight("bold").setBackground("#e0f2fe").setHorizontalAlignment("center");
+    usersSheet.getRange(1, 6, usersSheet.getMaxRows(), 2).setNumberFormat("@");
+  }
+  var db = getUsersSpreadsheet_().getSheetByName(DATABASE_SHEET_NAME);
+  if (db && db.getRange(1, STAMP_EDIT_AT_COL).getValue() !== STAMP_HEADERS[0]) {
+    db.getRange(1, STAMP_EDIT_AT_COL, 1, 4).setValues([STAMP_HEADERS])
+      .setFontWeight("bold").setBackground("#e0f2fe").setHorizontalAlignment("center");
+    db.getRange(1, STAMP_EDIT_AT_COL, db.getMaxRows(), 4).setNumberFormat("@");
+  }
+}
+
+/** ตั้งหัวหน้าหน่วยตั้งต้นครั้งเดียว (INITIAL_HEADS) — จดไว้ใน Script Properties ว่าทำแล้ว */
+function applyInitialHeads_(sheet) {
+  var props = PropertiesService.getScriptProperties();
+  if (props.getProperty("HEAD_SEED_V1")) return;
+  var lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  try {
+    if (props.getProperty("HEAD_SEED_V1")) return;
+    var users = readUsers_(sheet);
+    users.forEach(function(u) {
+      if (!INITIAL_HEADS.hasOwnProperty(u.username)) return;
+      u.depts = INITIAL_HEADS[u.username];
+      if (u.tier === "staff") u.tier = "head";
+    });
+    writeUsers_(sheet, users);
+    props.setProperty("HEAD_SEED_V1", "1");
+  } finally {
+    lock.releaseLock();
+  }
+}
+
 function readUsers_(sheet) {
   var data = sheet.getDataRange().getValues();
   var users = [];
@@ -120,7 +199,9 @@ function readUsers_(sheet) {
       hash: data[i][1] ? data[i][1].toString() : "",
       tier: data[i][2] ? data[i][2].toString().trim() : "staff",
       depts: data[i][3] ? data[i][3].toString().split(",").map(function(s) { return s.trim(); }).filter(Boolean) : [],
-      mustChange: isTrue_(data[i][4])
+      mustChange: isTrue_(data[i][4]),
+      lastAccess: formatStamp_(data[i][5]),
+      lastEdit: formatStamp_(data[i][6])
     });
   }
   return users;
@@ -131,13 +212,13 @@ function writeUsers_(sheet, users) {
   if (lastRow > 1) sheet.getRange(2, 1, lastRow - 1, USERS_HEADERS.length).clearContent();
   if (users.length === 0) return;
   var rows = users.map(function(u) {
-    return [u.username, u.hash, u.tier, u.depts.join(","), u.mustChange ? "TRUE" : "FALSE"];
+    return [u.username, u.hash, u.tier, u.depts.join(","), u.mustChange ? "TRUE" : "FALSE", u.lastAccess || "", u.lastEdit || ""];
   });
   sheet.getRange(2, 1, rows.length, USERS_HEADERS.length).setValues(rows);
 }
 
 function buildUser_(username, password, tier, depts, mustChange) {
-  return { username: username, hash: hashPassword_(password), tier: tier, depts: depts || [], mustChange: mustChange };
+  return { username: username, hash: hashPassword_(password), tier: tier, depts: depts || [], mustChange: mustChange, lastAccess: "", lastEdit: "" };
 }
 
 /**
@@ -147,7 +228,11 @@ function buildUser_(username, password, tier, depts, mustChange) {
 function ensureUsersSheet_() {
   var ss = getUsersSpreadsheet_();
   var sheet = ss.getSheetByName(USERS_SHEET_NAME);
-  if (sheet && sheet.getRange(1, 1).getValue() === USERS_HEADERS[0]) return sheet;
+  if (sheet && sheet.getRange(1, 1).getValue() === USERS_HEADERS[0]) {
+    ensureStampColumns_(sheet);
+    applyInitialHeads_(sheet);
+    return sheet;
+  }
 
   var lock = LockService.getScriptLock();
   lock.waitLock(30000);
@@ -184,6 +269,7 @@ function ensureUsersSheet_() {
 
     normalizeDatabaseOwners_();
     ensureLevelColumn_();
+    ensureStampColumns_(fresh);
     return fresh;
   } finally {
     lock.releaseLock();
@@ -307,6 +393,10 @@ function getKpiPermission_(user, kpi) {
   if (isPrivileged_(user)) return { view: true, edit: true };
 
   var isOwner = parseOwners_(kpi.owner).indexOf(user.username) !== -1;
+  if (!isOwner && user.tier === "head") {
+    // ตัวชี้วัดที่ผู้รับผิดชอบเขียนว่า "หัวหน้าหน่วย" ให้หัวหน้าหน่วยทุกคนรับผิดชอบ
+    isOwner = (kpi.owner || "").toString().split("/").some(function(t) { return t.trim() === HEAD_OWNER_TOKEN; });
+  }
   var inDept = parseDepts_(kpi.department).some(function(d) { return user.depts.indexOf(d) !== -1; });
   var edit = isOwner || (user.tier === "head" && inDept);
   var view = edit;
@@ -336,6 +426,7 @@ function authenticateUser(username, password) {
     for (var i = 0; i < users.length; i++) {
       if (users[i].username === username && verifyPassword_(password, users[i].hash)) {
         cache.remove(failKey);
+        touchUser_(users[i], "access");
         return { success: true, token: createSession_(username), user: publicUser_(users[i]) };
       }
     }
@@ -388,7 +479,7 @@ function getUsersForAdmin(token) {
   try {
     requireAdmin_(token);
     var users = readUsers_(ensureUsersSheet_()).map(function(u) {
-      return { username: u.username, tier: u.tier, depts: u.depts.join(","), mustChange: u.mustChange };
+      return { username: u.username, tier: u.tier, depts: u.depts.join(","), mustChange: u.mustChange, lastAccess: u.lastAccess, lastEdit: u.lastEdit };
     });
     return { success: true, users: users };
   } catch (e) {
@@ -424,7 +515,7 @@ function saveUsersForAdmin(token, list, resetList) {
         var depts = (list[i].depts || "").toString().split(",").map(function(s) { return s.trim(); }).filter(Boolean);
         var existing = current[name];
         var user = existing
-          ? { username: name, hash: existing.hash, tier: list[i].tier, depts: depts, mustChange: existing.mustChange }
+          ? { username: name, hash: existing.hash, tier: list[i].tier, depts: depts, mustChange: existing.mustChange, lastAccess: existing.lastAccess, lastEdit: existing.lastEdit }
           : buildUser_(name, DEFAULT_PASSWORD, list[i].tier, depts, true);
         if (existing && resets[name]) { user.hash = hashPassword_(DEFAULT_PASSWORD); user.mustChange = true; }
         if (user.tier === "admin") hasAdmin = true;

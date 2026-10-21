@@ -345,7 +345,7 @@
   </div>
 
   <div id="modal-settings" class="modal-overlay">
-    <div class="modal-card" style="max-width: 760px; width: 95%;">
+    <div class="modal-card" style="max-width: 900px; width: 95%;">
       <div class="modal-header" style="background: var(--primary-gradient);">⚙️ จัดการผู้ใช้งาน (Settings)</div>
       <div class="modal-body" style="max-height: 75vh; overflow-y: auto;">
         <p style="font-size: 12px; color: #64748b; margin-bottom: 10px;">
@@ -450,6 +450,26 @@
         .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     }
 
+    function stampText(at, by) {
+      return at ? esc(at) + (by ? ' โดย ' + esc(by) : '') : 'ยังไม่มีข้อมูล';
+    }
+
+    // เก็บรหัสตัวชี้วัดที่เปิดดู แล้วส่งให้ server เป็นชุดทุก 30 วินาที (ไม่ให้การคลิกดูช้าลง)
+    const pendingViews = new Set();
+    function trackView(id) {
+      if (sessionToken && id) pendingViews.add(id);
+    }
+    function flushViews() {
+      if (!sessionToken || pendingViews.size === 0) return;
+      const ids = Array.from(pendingViews);
+      pendingViews.clear();
+      google.script.run
+        .withFailureHandler(() => ids.forEach(id => pendingViews.add(id)))
+        .recordViews(sessionToken, ids);
+    }
+    setInterval(flushViews, 30000);
+    document.addEventListener('visibilitychange', () => { if (document.hidden) flushViews(); });
+
     function isPrivilegedUser() {
       return !!currentUser && (currentUser.tier === 'admin' || currentUser.tier === 'executive');
     }
@@ -537,6 +557,7 @@
       sessionToken = null;
       currentUser = null;
       isAppUnlocked = false;
+      pendingViews.clear();
       globalDatabase = [];
       currentAdminKpis = [];
       selectedKpiId = null; selectedCategoryName = null; selectedPartName = null;
@@ -553,6 +574,7 @@
     }
 
     function logout() {
+      flushViews();
       const token = sessionToken;
       google.script.run.logoutUser(token);
       showLogin('ออกจากระบบเรียบร้อยแล้ว');
@@ -694,7 +716,7 @@
       const tierOptions = (cur) => Object.keys(TIER_LABELS)
         .map(t => `<option value="${t}" ${t === cur ? 'selected' : ''}>${t} (${TIER_LABELS[t]})</option>`).join('');
       let html = `<table class="user-table"><thead><tr>
-        <th>ชื่อผู้ใช้</th><th>Tier</th><th>หน่วยงาน (คั่นด้วย ,)</th><th style="width:150px;">จัดการ</th></tr></thead><tbody>`;
+        <th>ชื่อผู้ใช้</th><th>Tier</th><th>หน่วยงาน (คั่นด้วย ,)</th><th>เข้าใช้ล่าสุด</th><th>แก้ไขล่าสุด</th><th style="width:150px;">จัดการ</th></tr></thead><tbody>`;
       settingsUsers.forEach((u, i) => {
         const isSelf = !u.isNew && u.username === currentUser.username;
         const resetMark = settingsResets[u.username] ? ' ✔' : '';
@@ -702,6 +724,8 @@
           <td><input type="text" class="editable-input" value="${esc(u.username)}" ${u.isNew ? '' : 'disabled'} onchange="settingsUsers[${i}].username = this.value.trim()"></td>
           <td><select class="editable-input" onchange="settingsUsers[${i}].tier = this.value">${tierOptions(u.tier)}</select></td>
           <td><input type="text" class="editable-input" value="${esc(u.depts)}" placeholder="เช่น ER,IPD" onchange="settingsUsers[${i}].depts = this.value"></td>
+          <td style="font-size:11px; text-align:center;">${esc(u.lastAccess) || '-'}</td>
+          <td style="font-size:11px; text-align:center;">${esc(u.lastEdit) || '-'}</td>
           <td style="white-space:nowrap; text-align:center;">
             ${u.isNew ? '' : `<button class="btn btn-secondary" style="padding:4px 6px; font-size:11px;" onclick="toggleResetPassword(${i})">รีเซ็ตรหัส${resetMark}</button>`}
             ${isSelf ? '' : `<button class="btn btn-danger" style="padding:4px 6px; font-size:11px;" onclick="removeUserRow(${i})">ลบ</button>`}
@@ -1010,6 +1034,7 @@
         document.getElementById('dashboard-content-area').innerHTML = '<div class="empty-state">ไม่พบข้อมูล หรืออาจถูกลบไปแล้ว</div>';
         return;
       }
+      trackView(id);
       renderDashboardContent(kpi);
     }
 
@@ -1031,6 +1056,8 @@
           <span class="meta-badge">หมวดหมู่: ${kpi.category}</span>
           <span class="meta-badge">หมวดหลัก: ${kpi.part}</span>
           <span class="meta-badge">ระดับ: ${kpi.level}</span>
+          <span class="meta-badge">✏️ แก้ไขล่าสุด: ${stampText(kpi.editedAt, kpi.editedBy)}</span>
+          <span class="meta-badge">👁️ เข้าดูล่าสุด: ${stampText(kpi.viewedAt, kpi.viewedBy)}</span>
         </div>
 
         <div class="kpi-target-callout">
@@ -1286,6 +1313,7 @@
                 <th class="col-target" style="width:65px;">เป้าหมาย</th>
                 <th style="width:52px;">ปี1</th><th style="width:52px;">ปี2</th><th style="width:52px;">ปี3</th><th style="width:52px;">ปี4</th><th style="width:52px;">ปีปัจจุบัน</th>
                 ${thMonthsNames.map(m => `<th style="background:#fffbeb; min-width:52px;">${m}</th>`).join('')}
+                <th style="min-width:120px;">แก้ไขล่าสุด</th>
                 <th style="text-align:center; min-width:140px;">จัดการ</th>
               </tr>
             </thead>
@@ -1293,7 +1321,7 @@
       `;
 
       if (kpis.length === 0) {
-        html += `<tr><td colspan="21" class="empty-state">ไม่พบตัวชี้วัดย่อยในหมวดนี้</td></tr>`;
+        html += `<tr><td colspan="22" class="empty-state">ไม่พบตัวชี้วัดย่อยในหมวดนี้</td></tr>`;
       } else {
         kpis.forEach((kpi, idx) => {
           const dis = kpi.canEdit ? '' : 'disabled';
@@ -1317,6 +1345,7 @@
                 <td style="padding: 0; background:#f8fafc;"><input type="number" class="editable-input kpi-field-m${mi}" value="${mv !== null ? mv : ''}" style="width:52px; text-align:center; padding:6px 2px;" ${dis}></td>
               `).join('')}
 
+              <td style="font-size:11px; color:#475569; text-align:center;">${kpi.editedAt ? esc(kpi.editedAt) + '<br>' + esc(kpi.editedBy) : '-'}</td>
               <td style="text-align:center; white-space:nowrap;">
                 <button class="btn btn-secondary" style="padding: 5px 8px; font-size:12px; margin-right:4px;" onclick="openDetailsModal('${partName}', '${kpi.id}')">${kpi.canEdit ? 'รายละเอียด' : 'ดูรายละเอียด'}</button>
                 ${priv ? `<button class="btn btn-danger" style="padding: 5px 8px; font-size:12px;" onclick="requestDeleteKpi('${partName}', '${kpi.id}', '${kpi.name}')">ลบ</button>` : ''}
@@ -1332,6 +1361,7 @@
     function openDetailsModal(partName, id) {
       const kpi = currentAdminKpis.find(k => k.id === id);
       if(!kpi) return;
+      trackView(id);
       
       document.getElementById('edit-detail-id').value = id;
       document.getElementById('edit-detail-part').value = partName;
