@@ -401,6 +401,49 @@
     .st-dot.green { background: #22c55e; }
     .st-dot.yellow { background: #facc15; }
     .st-dot.red { background: #ef4444; }
+    /* ================= ผังรายการตัวชี้วัด (ตัวอย่างสไตล์ใหม่) ================= */
+    #panel-tree { padding: 14px 12px 12px; }
+    .tree-filters { padding: 12px 0 10px; border-bottom: 1px solid var(--line); margin-bottom: 10px; display: grid; gap: 8px; }
+    .tree-filters .editable-input { margin-bottom: 0; }
+    .tree-search-wrap { position: relative; }
+    .tree-search-wrap svg { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; color: #16a34a; pointer-events: none; }
+    #tree-search { padding: 9px 14px 9px 38px; border-radius: 999px; background: #f6faf7; border: 1px solid #d5e5da; font-size: 13.5px; }
+    #tree-search::placeholder { color: #8a9b90; font-weight: 500; }
+    .tree-level-filter { margin-bottom: 0; }
+    .tree-level-filter > .btn { border-radius: 999px; background: #f1f6f2; color: #14532d; border: 1px solid #d5e5da; box-shadow: none; font-size: 13px; padding: 8px 14px; display: flex; justify-content: space-between; align-items: center; }
+    .tree-level-filter > .btn.btn-accent { background: #fff7ed; border-color: #fdba74; color: #c2410c; }
+    .tree-level-menu { border-radius: 16px; border: 1px solid var(--line); box-shadow: 0 12px 28px rgba(16,40,24,0.16); padding: 8px 14px; }
+    .tree-level-all { color: var(--primary-color); }
+    .tree-filter-row { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; }
+    #tree-mode { border-radius: 999px; background: #f1f6f2; border: 1px solid #d5e5da; font-weight: 600; color: #14532d; padding: 8px 12px; width: 100% !important; }
+    .tree-filter-row .check-row { background: #f1f6f2; border: 1px solid #d5e5da; border-radius: 999px; padding: 7px 12px; font-size: 12.5px; white-space: nowrap; }
+    .tree-count { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-top: 0; color: #64748b; font-size: 12px; font-weight: 600; }
+    .tree-count .cnt { display: inline-flex; align-items: center; gap: 5px; padding: 2px 10px; border-radius: 999px; font-weight: 700; font-size: 12px; }
+    .tree-count .cnt::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+    .cnt.red { background: #fee2e2; color: #dc2626; }
+    .cnt.yellow { background: #fef9c3; color: #a16207; }
+    .cnt.green { background: #dcfce7; color: #16a34a; }
+
+    .accordion-header { padding: 11px 14px; }
+    .accordion-header .part-count { margin-left: auto; margin-right: 22px; background: #fff; border: 1px solid var(--line); border-radius: 999px; padding: 0 9px; font-size: 12px; color: #475569; font-weight: 700; }
+    .accordion-part.open > .accordion-header .part-count { border-color: #bbe5c8; color: var(--primary-color); }
+    .accordion-content { padding: 4px 0 2px; }
+    .category-header { display: flex; align-items: center; gap: 9px; border-left: none; border-radius: 12px; background: #f3f8f4; color: #14532d; font-weight: 700; font-size: 13.5px; padding: 8px 12px; margin: 8px 0 4px; }
+    .category-header::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: #16a34a; flex: none; }
+    .category-header:hover { background: #e7f2ea; }
+    .category-header .cat-count { margin-left: auto; background: #fff; border-radius: 999px; padding: 0 8px; font-size: 11.5px; color: #475569; }
+    .category-content { margin-left: 14px; padding-left: 8px; border-left: 2px solid #dcebe0; }
+    .kpi-link-item { padding: 8px 10px; border-radius: 12px; border: 1px solid transparent; font-size: 13px; line-height: 1.45; color: #334155; margin: 2px 0; gap: 8px; align-items: flex-start; }
+    .kpi-link-item .kn { color: #64748b; font-weight: 700; margin-right: 3px; }
+    .kpi-link-item:hover { background: #f6faf7; border-color: var(--line); color: #14532d; padding-left: 10px; }
+    .kpi-link-item.in-view { background: #f6f9ff; box-shadow: inset 3px 0 0 #93c5fd; }
+    .kpi-link-item.selected { background: #eaf2ff; border: 1px solid #bfdbfe; border-left: 1px solid #bfdbfe; color: #1e3a8a; font-weight: 700; box-shadow: inset 4px 0 0 #3b82f6; }
+    .kpi-link-item.selected .kn { color: #1d4ed8; }
+    .st-dot { margin-top: 6px; }
+    .st-dot.green { box-shadow: 0 0 0 3px rgba(34,197,94,0.2); }
+    .st-dot.yellow { box-shadow: 0 0 0 3px rgba(250,204,21,0.3); }
+    .st-dot.red { box-shadow: 0 0 0 3px rgba(239,68,68,0.2); }
+    .lv-label { display: flex; align-items: center; gap: 8px; }
   </style>
 </head>
 <body>
@@ -445,9 +488,9 @@
     <div class="home-grid">
       <div class="panel" id="panel-tree">
         <div class="tree-filters">
-          <input type="text" id="tree-search" class="editable-input" placeholder="🔍 ค้นหาชื่อ/ผู้รับผิดชอบ/หน่วยงาน" oninput="onTreeFilterChange()">
+          <div class="tree-search-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input type="text" id="tree-search" class="editable-input" placeholder="ค้นหาชื่อ / ผู้รับผิดชอบ / หน่วยงาน" oninput="onTreeFilterChange()"></div>
           <div class="tree-level-filter">
-            <button type="button" class="btn btn-secondary btn-sm" id="tree-level-btn" onclick="toggleLevelMenu(event)">🎚️ ระดับตัวชี้วัด: ทั้งหมด ▾</button>
+            <button type="button" class="btn btn-secondary btn-sm" id="tree-level-btn" onclick="toggleLevelMenu(event)"><span class="lv-label"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg>ระดับตัวชี้วัด: ทั้งหมด</span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg></button>
             <div class="tree-level-menu" id="tree-level-menu" style="display: none;">
             <span class="tree-level-all" onclick="selectAllLevels()">เลือกทั้งหมด</span>
             <label class="check-row"><input type="checkbox" class="tree-level-cb" value="รายบุคคล" checked onchange="onTreeFilterChange()"> รายบุคคล</label>
@@ -464,7 +507,7 @@
               <option value="yellow">🟡 รอติดตาม</option>
               <option value="green">🟢 ครบถ้วน</option>
             </select>
-            <label class="check-row"><input type="checkbox" id="tree-mine" onchange="onTreeFilterChange()"> เฉพาะของฉัน</label>
+            <label class="check-row"><input type="checkbox" id="tree-mine" onchange="onMineToggle(this)"> เฉพาะของฉัน</label>
           </div>
           <div class="tree-count" id="tree-count"></div>
         </div>
@@ -814,6 +857,7 @@
           currentUser = res.user;
           isAppUnlocked = true;
           applyUserUi();
+          applyDefaultFilters();
 
           if (currentUser.mustChange) {
             document.getElementById('login-box-content').innerHTML = `
@@ -1149,7 +1193,7 @@
       const btn = document.getElementById('tree-level-btn');
       const total = document.querySelectorAll('.tree-level-cb').length;
       const n = document.querySelectorAll('.tree-level-cb:checked').length;
-      btn.innerText = '🎚️ ระดับตัวชี้วัด: ' + (n === total ? 'ทั้งหมด' : n + '/' + total) + ' ▾';
+      btn.innerHTML = '<span class="lv-label"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg>ระดับตัวชี้วัด: ' + (n === total ? 'ทั้งหมด' : n + '/' + total) + '</span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>';
       btn.classList.toggle('btn-accent', n !== total);
       btn.classList.toggle('btn-secondary', n === total);
     }
@@ -1178,10 +1222,10 @@
     }
 
     // ตัวชี้วัดที่ผ่านตัวกรอง เรียงแบบเดียวกับผังรายการ: หมวดหลัก → หมวดย่อย → ลำดับในชีต
-    function getOrderedKpis() {
+    function getOrderedKpis(ignoreStatus = false) {
       const f = appliedFilters;
       const list = globalDatabase.filter(k => {
-        if (f.mode !== 'all' && kpiStatus(k).level !== f.mode) return false;
+        if (!ignoreStatus && f.mode !== 'all' && kpiStatus(k).level !== f.mode) return false;
         if (f.mine && !k.mine) return false;
         // หลายระดับ: แสดงถ้าตัวชี้วัดมีระดับใดระดับหนึ่งที่ติ๊กไว้
         if (levelFilterActive() && !(k.levels || [k.level]).some(l => f.levels.indexOf(l) !== -1)) return false;
@@ -1191,6 +1235,28 @@
       const order = new Map(globalDatabase.map((k, i) => [k.id, i]));
       const cmp = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
       return list.sort((a, b) => cmp(a.part, b.part) || cmp(a.category, b.category) || order.get(a.id) - order.get(b.id));
+    }
+
+    // ค่าตั้งต้นตอนเข้าระบบ: staff / หัวหน้าหน่วย เห็นเฉพาะตัวชี้วัดของตัวเอง (หัวหน้า = ของหน่วยงานที่ดูแล) ผู้ดูแลและผู้บริหารเห็นทั้งหมด
+    function applyDefaultFilters() {
+      document.getElementById('tree-mine').checked = !isPrivilegedUser();
+      appliedFilters = readTreeFilters();
+    }
+
+    // เอาติ๊ก "เฉพาะของฉัน" ออก: เตือนก่อนว่าตัวชี้วัดอื่นดูได้อย่างเดียว แก้ไขไม่ได้
+    function onMineToggle(cb) {
+      if (!cb.checked && !isPrivilegedUser()) {
+        showConfirm('ตัวชี้วัดที่ไม่ใช่ของคุณ ดูได้อย่างเดียว ไม่สามารถแก้ไขได้\nต้องการดูตัวชี้วัดทั้งหมดใช่หรือไม่?', () => onTreeFilterChange(), () => { cb.checked = true; });
+        return;
+      }
+      onTreeFilterChange();
+    }
+
+    function emptyListMessage() {
+      if (appliedFilters.mine && !isPrivilegedUser() && appliedFilters.term === '' && appliedFilters.mode === 'all' && !levelFilterActive()) {
+        return 'ยังไม่มีตัวชี้วัดที่คุณรับผิดชอบ<br>ถ้าต้องการดูตัวชี้วัดอื่น (ดูอย่างเดียว) ให้เอาติ๊ก "เฉพาะของฉัน" ออก';
+      }
+      return 'ไม่พบตัวชี้วัดตามตัวกรองที่เลือก';
     }
 
     function onTreeFilterChange() {
@@ -1222,11 +1288,11 @@
       }
       const list = getOrderedKpis();
       const lv = { red: 0, yellow: 0, green: 0 };
-      globalDatabase.forEach(k => { lv[kpiStatus(k).level]++; });
-      countEl.innerText = `แสดง ${list.length} จาก ${globalDatabase.length} ตัวชี้วัด · 🔴 ${lv.red} · 🟡 ${lv.yellow} · 🟢 ${lv.green}`;
+      getOrderedKpis(true).forEach(k => { lv[kpiStatus(k).level]++; }); // นับตามรายการที่แสดงอยู่ (ไม่รวมตัวกรองสถานะ)
+      countEl.innerHTML = `<span>แสดง ${list.length}/${globalDatabase.length}</span><span class="cnt red" title="ต้องแก้ไข">${lv.red}</span><span class="cnt yellow" title="รอติดตาม">${lv.yellow}</span><span class="cnt green" title="ครบถ้วน">${lv.green}</span>`;
 
       if (list.length === 0) {
-        container.innerHTML = '<div class="empty-state">ไม่พบตัวชี้วัดตามตัวกรองที่เลือก</div>';
+        container.innerHTML = `<div class="empty-state">${emptyListMessage()}</div>`;
         return;
       }
 
@@ -1246,7 +1312,7 @@
 
         const header = document.createElement('div');
         header.className = 'accordion-header';
-        header.innerText = partName;
+        header.innerHTML = `<span>${esc(partName)}</span><span class="part-count">${Object.values(tree[partName]).reduce((n, a) => n + a.length, 0)}</span>`;
         header.onclick = () => {
           partDiv.classList.toggle('open');
           if (partDiv.classList.contains('open')) openParts.add(partName); else openParts.delete(partName);
@@ -1264,7 +1330,7 @@
 
           const catHeader = document.createElement('div');
           catHeader.className = 'category-header';
-          catHeader.innerText = `${catName} (${tree[partName][catName].length})`;
+          catHeader.innerHTML = `<span>${esc(catName)}</span><span class="cat-count">${tree[partName][catName].length}</span>`;
           // คลิกหมวด: เปิดรายการในผัง และเลื่อนไปการ์ดแรกของหมวดนั้น
           catHeader.onclick = (e) => {
             e.stopPropagation();
@@ -1282,7 +1348,7 @@
             item.dataset.id = kpi.id;
             item.title = kpi.name;
             const stt = kpiStatus(kpi);
-            item.innerHTML = `<span class="st-dot ${stt.level}" title="${esc(stt.label + (stt.reasons.length ? ': ' + stt.reasons.join(' · ') : ''))}"></span><span class="kpi-link-text">${kpiNumber(kpi)}. ${esc(kpi.name)}</span>`;
+            item.innerHTML = `<span class="st-dot ${stt.level}" title="${esc(stt.label + (stt.reasons.length ? ': ' + stt.reasons.join(' · ') : ''))}"></span><span class="kpi-link-text"><b class="kn">${kpiNumber(kpi)}.</b> ${esc(kpi.name)}</span>`;
             item.onclick = (e) => { e.stopPropagation(); selectKpi(kpi.id); };
             catContent.appendChild(item);
           });
@@ -1388,7 +1454,7 @@
         return;
       }
       if (list.length === 0) {
-        area.innerHTML = '<div class="panel"><div class="empty-state">ไม่พบตัวชี้วัดตามตัวกรองที่เลือก</div></div>';
+        area.innerHTML = `<div class="panel"><div class="empty-state">${emptyListMessage()}</div></div>`;
         return;
       }
       currentPage = Math.min(Math.max(1, currentPage), totalPages(list.length));
@@ -2229,16 +2295,20 @@
       document.getElementById('modal-alert').style.display = 'flex';
     }
 
-    function showConfirm(msg, callback) {
+    let onCancelCallback = null;
+    function showConfirm(msg, callback, onCancel) {
       document.getElementById('confirm-message').innerText = msg;
       onConfirmCallback = callback;
+      onCancelCallback = onCancel || null;
       document.getElementById('modal-confirm').style.display = 'flex';
     }
 
     function closeConfirm(isConfirmed) {
       document.getElementById('modal-confirm').style.display = 'none';
       if (isConfirmed && onConfirmCallback) onConfirmCallback();
+      if (!isConfirmed && onCancelCallback) onCancelCallback();
       onConfirmCallback = null;
+      onCancelCallback = null;
     }
 
     // ผังรายการติดจอใต้แถบนำทาง: คำนวณระยะจากความสูงจริงของแถบนำทาง
