@@ -19,7 +19,9 @@ var LOGIN_LOCK_SECONDS = 300;
 var USERS_HEADERS = ["Username", "Password", "Tier", "Departments", "MustChangePassword", "LastAccess", "LastEdit"];
 var TIERS = ["admin", "executive", "head", "staff"];
 
-var KPI_LEVELS = ["รายบุคคล", "หน่วยงาน", "QA-หน่วยงาน", "QA-รพ", "SAR"];
+var KPI_LEVELS = ["รายบุคคล", "หน่วยงาน", "QA-หน่วยงาน", "QA-รพ", "SAR", "ฝ่ายการพยาบาล"];
+// ผู้ใช้ที่มี "ฝ่ายการพยาบาล" ในช่องหน่วยงาน เห็นตัวชี้วัดระดับ "ฝ่ายการพยาบาล" ทั้งหมด
+var NURSING_DIVISION_TAG = "ฝ่ายการพยาบาล";
 var DEFAULT_KPI_LEVEL = "SAR";
 var LEVEL_COLUMN = 29; // คอลัมน์ AC
 // คอลัมน์ Time stamp ในชีต Database: แก้ไขล่าสุดเมื่อ / โดย, เข้าดูล่าสุดเมื่อ / โดย
@@ -158,7 +160,7 @@ function ensureStampColumns_(usersSheet) {
       .setFontWeight("bold").setBackground("#e0f2fe").setHorizontalAlignment("center");
     usersSheet.getRange(1, 6, usersSheet.getMaxRows(), 2).setNumberFormat("@");
   }
-  var db = getUsersSpreadsheet_().getSheetByName(DATABASE_SHEET_NAME);
+  var db = getActiveDataSheet_();
   if (db && db.getRange(1, STAMP_EDIT_AT_COL).getValue() !== STAMP_HEADERS[0]) {
     db.getRange(1, STAMP_EDIT_AT_COL, 1, 4).setValues([STAMP_HEADERS])
       .setFontWeight("bold").setBackground("#e0f2fe").setHorizontalAlignment("center");
@@ -278,7 +280,7 @@ function ensureUsersSheet_() {
 
 /** สร้างบัญชี (รหัสผ่านตั้งต้น 11038) ให้ผู้รับผิดชอบทุกคนที่ยังไม่มีใน existingUsers */
 function buildAccountsFromOwners_(existingUsers) {
-  var sheet = getUsersSpreadsheet_().getSheetByName(DATABASE_SHEET_NAME);
+  var sheet = getActiveDataSheet_();
   var deptsByOwner = {};
   EXECUTIVE_NAMES.forEach(function(n) { deptsByOwner[n] = []; });
 
@@ -307,7 +309,7 @@ function buildAccountsFromOwners_(existingUsers) {
 
 /** แก้คำพิมพ์ผิดในคอลัมน์ผู้รับผิดชอบของชีต Database (ไม่ลบค่าที่ไม่ใช่ชื่อคน) */
 function normalizeDatabaseOwners_() {
-  var sheet = getUsersSpreadsheet_().getSheetByName(DATABASE_SHEET_NAME);
+  var sheet = getActiveDataSheet_();
   if (!sheet || sheet.getLastRow() < 2) return;
   var range = sheet.getRange(2, 26, sheet.getLastRow() - 1, 1);
   var values = range.getValues();
@@ -330,7 +332,7 @@ function normalizeDatabaseOwners_() {
 
 /** เพิ่มคอลัมน์ "ระดับตัวชี้วัด" (AC) และตั้งค่าเริ่มต้นเป็น SAR ให้แถวที่ยังว่าง */
 function ensureLevelColumn_() {
-  var sheet = getUsersSpreadsheet_().getSheetByName(DATABASE_SHEET_NAME);
+  var sheet = getActiveDataSheet_();
   if (!sheet) return;
   if (!sheet.getRange(1, LEVEL_COLUMN).getValue()) {
     sheet.getRange(1, LEVEL_COLUMN).setValue("ระดับตัวชี้วัด (Level)")
@@ -388,9 +390,13 @@ function requireAdmin_(token) {
   return user;
 }
 
-/** สิทธิ์ดู/แก้ตัวชี้วัดแต่ละตัว */
-function getKpiPermission_(user, kpi) {
-  if (isPrivileged_(user)) return { view: true, edit: true };
+/**
+ * สิทธิ์ดู/แก้ตัวชี้วัดแต่ละตัวในปีงบ fy
+ * editResults = กรอกผลทั้งปี/รายเดือน (ผู้รับผิดชอบ/หัวหน้าหน่วย: ปีงบปัจจุบันและปีก่อนหน้า)
+ * editDetails = แก้รายละเอียด/ที่มาข้อมูล (ปีงบปัจจุบันเท่านั้น) — admin, ผอ., QMR แก้ได้ทุกอย่างทุกปี
+ */
+function getKpiPermission_(user, kpi, fy) {
+  if (isPrivileged_(user)) return { view: true, editResults: true, editDetails: true };
 
   var isOwner = parseOwners_(kpi.owner).indexOf(user.username) !== -1;
   if (!isOwner && user.tier === "head") {
@@ -403,8 +409,14 @@ function getKpiPermission_(user, kpi) {
   if (!view) {
     if (kpi.level === "SAR" || kpi.level === "QA-รพ") view = true;
     else if (kpi.level === "หน่วยงาน" || kpi.level === "QA-หน่วยงาน") view = inDept;
+    else if (kpi.level === "ฝ่ายการพยาบาล") view = inDept || user.depts.indexOf(NURSING_DIVISION_TAG) !== -1;
   }
-  return { view: view, edit: edit };
+  var current = getCurrentFiscalYear_();
+  return {
+    view: view,
+    editResults: edit && fy >= current - 1,
+    editDetails: edit && fy === current
+  };
 }
 
 // ---------------------------------------------------------------- ล็อกอิน
@@ -412,6 +424,7 @@ function getKpiPermission_(user, kpi) {
 function authenticateUser(username, password) {
   try {
     var sheet = ensureUsersSheet_();
+    ensureFiscalSheets_();
     username = username ? username.toString().trim() : "";
     password = password ? password.toString() : "";
     if (!username || !password) return { success: false, message: "กรุณากรอกชื่อผู้ใช้และรหัสผ่าน" };

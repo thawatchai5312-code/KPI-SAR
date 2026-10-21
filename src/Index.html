@@ -202,6 +202,9 @@
       <div class="nav-item active" id="menu-home-btn" onclick="switchMenu('home')">📊 หน้าแรก (Dashboard)</div>
       <div class="nav-item" id="menu-progress-btn" onclick="switchMenu('progress')">📋 ติดตามงาน (Progress)</div>
       <div class="nav-item" id="menu-admin-btn" onclick="switchMenu('admin')">⚙️ จัดการตัวชี้วัด (Admin)</div>
+      <div class="nav-item" style="cursor: default;">📅 ปีงบประมาณ
+        <select id="fy-select" class="editable-input" style="width: auto; display: inline-block; padding: 3px 6px; margin-left: 4px;" onchange="changeFiscalYear(this.value)"></select>
+      </div>
     </div>
   </div>
 
@@ -380,7 +383,7 @@
 
   <div id="modal-add-kpi" class="modal-overlay">
     <div class="modal-card" style="max-width: 500px;">
-      <div class="modal-header">➕ เพิ่มตัวชี้วัดคุณภาพใหม่</div>
+      <div class="modal-header">➕ เพิ่มตัวชี้วัดคุณภาพใหม่ (เพิ่มในปีงบที่เลือก ปีถัดไปจะตามมาเอง)</div>
       <div class="modal-body" style="max-height: 65vh; overflow-y: auto;">
         <div class="form-group">
           <label>หมวดหลัก (Part) *</label>
@@ -442,7 +445,10 @@
     let onConfirmCallback = null;
     let globalProgressData = []; 
 
-    const KPI_LEVELS = ['รายบุคคล', 'หน่วยงาน', 'QA-หน่วยงาน', 'QA-รพ', 'SAR'];
+    const KPI_LEVELS = ['รายบุคคล', 'หน่วยงาน', 'QA-หน่วยงาน', 'QA-รพ', 'SAR', 'ฝ่ายการพยาบาล'];
+    let selectedFy = null;   // ปีงบที่เลือก (พ.ศ.) — null = ให้ server เลือกปีงบปัจจุบัน
+    let currentFy = null;    // ปีงบปัจจุบันตามวันที่ (ขึ้นปีใหม่ 1 ต.ค.)
+    let fiscalYears = [];
     const TIER_LABELS = { admin: 'ผู้ดูแลระบบ', executive: 'ผู้บริหาร', head: 'หัวหน้าหน่วย', staff: 'เจ้าหน้าที่' };
 
     function esc(v) {
@@ -456,8 +462,11 @@
 
     // เก็บรหัสตัวชี้วัดที่เปิดดู แล้วส่งให้ server เป็นชุดทุก 30 วินาที (ไม่ให้การคลิกดูช้าลง)
     const pendingViews = new Set();
+    let pendingViewsFy = null;
     function trackView(id) {
-      if (sessionToken && id) pendingViews.add(id);
+      if (!sessionToken || !id) return;
+      if (pendingViewsFy !== selectedFy) { flushViews(); pendingViewsFy = selectedFy; }
+      pendingViews.add(id);
     }
     function flushViews() {
       if (!sessionToken || pendingViews.size === 0) return;
@@ -465,7 +474,7 @@
       pendingViews.clear();
       google.script.run
         .withFailureHandler(() => ids.forEach(id => pendingViews.add(id)))
-        .recordViews(sessionToken, ids);
+        .recordViews(sessionToken, pendingViewsFy, ids);
     }
     setInterval(flushViews, 30000);
     document.addEventListener('visibilitychange', () => { if (document.hidden) flushViews(); });
@@ -548,7 +557,6 @@
       document.getElementById('user-info').innerText = '👤 ' + currentUser.username + ' (' + (TIER_LABELS[currentUser.tier] || currentUser.tier) + ')';
       const isAdmin = currentUser.tier === 'admin';
       document.getElementById('admin-settings-btn').style.display = isAdmin ? 'inline-block' : 'none';
-      document.getElementById('nursing-sync-controls').style.display = isAdmin ? 'flex' : 'none';
       document.getElementById('btn-add-kpi').style.display = isPrivilegedUser() ? 'inline-block' : 'none';
     }
 
@@ -624,6 +632,10 @@
         .withSuccessHandler((res) => {
           if (res.success) {
             globalDatabase = res.data;
+            selectedFy = res.fy;
+            currentFy = res.currentFy;
+            fiscalYears = res.years;
+            renderFiscalYearSelect();
             updateDatalists(); 
             
             if(!quiet) {
@@ -640,7 +652,23 @@
           }
         })
         .withFailureHandler((err) => showAlert('เกิดข้อผิดพลาดเครือข่าย', '❌', err.toString()))
-        .getAllData(sessionToken);
+        .getAllData(sessionToken, selectedFy);
+    }
+
+    function renderFiscalYearSelect() {
+      const sel = document.getElementById('fy-select');
+      sel.innerHTML = fiscalYears.map(y =>
+        `<option value="${y}" ${y === selectedFy ? 'selected' : ''}>${y}${y === currentFy ? ' (ปัจจุบัน)' : ''}</option>`).join('');
+      sel.disabled = false;
+    }
+
+    function changeFiscalYear(value) {
+      flushViews();
+      selectedFy = Number(value);
+      document.getElementById('fy-select').disabled = true;
+      selectedKpiId = null;
+      document.getElementById('dashboard-content-area').innerHTML = '<div class="empty-state">กรุณาเลือกตัวชี้วัดจากเมนูฝั่งซ้ายเพื่อดูรายละเอียด</div>';
+      fetchAllDataFromServer(true);
     }
 
     function updateDatalists() {
@@ -686,7 +714,6 @@
         document.getElementById('menu-admin-btn').classList.add('active');
         document.getElementById('page-admin').classList.add('active');
         if (selectedCategoryName) loadAdminCategoryTable(selectedPartName, selectedCategoryName);
-        if (currentUser.tier === 'admin') loadNursingSyncStatus();
       }
       renderAccordionTree();
     }
@@ -1040,7 +1067,7 @@
 
     function renderDashboardContent(kpi) {
       const displayArea = document.getElementById('dashboard-content-area');
-      const currentYear = new Date().getFullYear() + 543;
+      const currentYear = selectedFy;
       const yearsLabels = [currentYear-4, currentYear-3, currentYear-2, currentYear-1, currentYear];
       
       // ส่งค่า target ที่เป็นอักษรเข้าฟังก์ชันวาดกราฟ
@@ -1055,6 +1082,7 @@
         <div style="margin-bottom: 10px;">
           <span class="meta-badge">หมวดหมู่: ${kpi.category}</span>
           <span class="meta-badge">หมวดหลัก: ${kpi.part}</span>
+          <span class="meta-badge">ปีงบ: ${selectedFy}${selectedFy === currentFy ? ' (ปัจจุบัน)' : ''}</span>
           <span class="meta-badge">ระดับ: ${kpi.level}</span>
           <span class="meta-badge">✏️ แก้ไขล่าสุด: ${stampText(kpi.editedAt, kpi.editedBy)}</span>
           <span class="meta-badge">👁️ เข้าดูล่าสุด: ${stampText(kpi.viewedAt, kpi.viewedBy)}</span>
@@ -1168,14 +1196,19 @@
     }
 
     function loadProgressSummary() {
-      const currentMonthJs = new Date().getMonth(); 
-      const fiscalMonthIdx = (currentMonthJs + 3) % 12; 
+      // ผลมักกรอกย้อนหลัง 1 เดือน จึงเช็กเดือนที่แล้ว: ปีงบปัจจุบัน = เดือนก่อนหน้า (ต.ค. = ยังไม่ต้องเช็ก)
+      // ปีงบที่ผ่านมาแล้ว = เช็ก ก.ย. (เดือนสุดท้าย)
+      let fiscalMonthIdx;
+      if (selectedFy === currentFy) {
+        fiscalMonthIdx = ((new Date().getMonth() + 3) % 12) - 1;
+      } else {
+        fiscalMonthIdx = 11;
+      }
       
       let summary = [];
       globalDatabase.forEach(kpi => {
         let noDetails = (!kpi.templateDetails || !kpi.dataSource);
-        let currentMonthVal = kpi.months[fiscalMonthIdx];
-        let noData = (currentMonthVal === null);
+        let noData = fiscalMonthIdx >= 0 && kpi.months[fiscalMonthIdx] === null;
 
         let status = 'green';
         let statusText = 'ข้อมูลครบถ้วน';
@@ -1294,10 +1327,12 @@
       const displayArea = document.getElementById('admin-content-area');
 
       const priv = isPrivilegedUser();
-      const anyEditable = kpis.some(k => k.canEdit);
+      const anyEditable = kpis.some(k => k.canEditResults);
+      const disYear = (kpi, i) => (!kpi.canEditResults || (i < 4 && kpi.lockedYears && kpi.lockedYears[i] && !priv))
+        ? 'disabled title="ผลปีนี้อ้างอิงจากชีตปีงบนั้น แก้ได้เฉพาะ admin / ผอ. / QMR"' : '';
       let html = `
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-          <div class="dashboard-title" style="margin:0; border:none; font-size:16px;">ตารางแก้ไขหมวด: ${catName}</div>
+          <div class="dashboard-title" style="margin:0; border:none; font-size:16px;">ตารางแก้ไขหมวด: ${catName} — ปีงบ ${selectedFy}${selectedFy === currentFy ? ' (ปัจจุบัน)' : ''}</div>
           <div style="display:flex; gap:6px;">
             <button class="btn btn-accent" style="background:var(--secondary-gradient);" onclick="exportCurrentCategoryToPdf('${partName}', '${catName}')">📄 PDF (แนวนอน)</button>
             ${anyEditable ? `<button class="btn btn-primary" onclick="saveBulkAdminChanges('${partName}', '${catName}')">💾 บันทึกตารางตัวเลข (Save Data)</button>` : ''}
@@ -1311,7 +1346,7 @@
                 <th class="sticky-col-1" style="width:45px; text-align:center;">ลำดับ</th>
                 <th class="sticky-col-2" style="min-width:400px; text-align:left;">ชื่อตัวชี้วัด</th>
                 <th class="col-target" style="width:65px;">เป้าหมาย</th>
-                <th style="width:52px;">ปี1</th><th style="width:52px;">ปี2</th><th style="width:52px;">ปี3</th><th style="width:52px;">ปี4</th><th style="width:52px;">ปีปัจจุบัน</th>
+                ${[0, 1, 2, 3, 4].map(i => `<th style="width:52px;">${selectedFy - 4 + i}</th>`).join('')}
                 ${thMonthsNames.map(m => `<th style="background:#fffbeb; min-width:52px;">${m}</th>`).join('')}
                 <th style="min-width:120px;">แก้ไขล่าสุด</th>
                 <th style="text-align:center; min-width:140px;">จัดการ</th>
@@ -1324,10 +1359,10 @@
         html += `<tr><td colspan="22" class="empty-state">ไม่พบตัวชี้วัดย่อยในหมวดนี้</td></tr>`;
       } else {
         kpis.forEach((kpi, idx) => {
-          const dis = kpi.canEdit ? '' : 'disabled';
+          const dis = kpi.canEditResults ? '' : 'disabled';
           const disStruct = priv ? '' : 'disabled';
           html += `
-            <tr class="admin-data-row" data-id="${kpi.id}" data-editable="${kpi.canEdit ? 1 : 0}">
+            <tr class="admin-data-row" data-id="${kpi.id}" data-editable="${kpi.canEditResults ? 1 : 0}">
               <td class="sticky-col-1" style="font-weight:700; color:#0f172a; text-align:center;">${idx + 1}</td>
               <td class="sticky-col-2" style="padding: 0;">
                 <textarea class="editable-input kpi-field-name" style="font-weight:700; text-align:left; min-width:400px; min-height:60px; resize:vertical; padding:8px;" ${disStruct}>${kpi.name}</textarea>
@@ -1335,10 +1370,10 @@
               <!-- เปลี่ยนคอลัมน์เป้าหมายหน้า Admin เป็นแบบข้อความ (text) -->
               <td class="col-target" style="padding: 0;"><input type="text" class="editable-input kpi-field-target" value="${esc(kpi.target)}" style="width:65px; text-align:center; padding:6px 2px;" ${disStruct}></td>
               
-              <td style="padding: 0;"><input type="number" class="editable-input kpi-field-y0" value="${kpi.years[0] !== null ? kpi.years[0] : ''}" style="width:52px; text-align:center; padding:6px 2px;" ${dis}></td>
-              <td style="padding: 0;"><input type="number" class="editable-input kpi-field-y1" value="${kpi.years[1] !== null ? kpi.years[1] : ''}" style="width:52px; text-align:center; padding:6px 2px;" ${dis}></td>
-              <td style="padding: 0;"><input type="number" class="editable-input kpi-field-y2" value="${kpi.years[2] !== null ? kpi.years[2] : ''}" style="width:52px; text-align:center; padding:6px 2px;" ${dis}></td>
-              <td style="padding: 0;"><input type="number" class="editable-input kpi-field-y3" value="${kpi.years[3] !== null ? kpi.years[3] : ''}" style="width:52px; text-align:center; padding:6px 2px;" ${dis}></td>
+              <td style="padding: 0;"><input type="number" class="editable-input kpi-field-y0" value="${kpi.years[0] !== null ? kpi.years[0] : ''}" style="width:52px; text-align:center; padding:6px 2px;" ${disYear(kpi, 0)}></td>
+              <td style="padding: 0;"><input type="number" class="editable-input kpi-field-y1" value="${kpi.years[1] !== null ? kpi.years[1] : ''}" style="width:52px; text-align:center; padding:6px 2px;" ${disYear(kpi, 1)}></td>
+              <td style="padding: 0;"><input type="number" class="editable-input kpi-field-y2" value="${kpi.years[2] !== null ? kpi.years[2] : ''}" style="width:52px; text-align:center; padding:6px 2px;" ${disYear(kpi, 2)}></td>
+              <td style="padding: 0;"><input type="number" class="editable-input kpi-field-y3" value="${kpi.years[3] !== null ? kpi.years[3] : ''}" style="width:52px; text-align:center; padding:6px 2px;" ${disYear(kpi, 3)}></td>
               <td style="padding: 0;"><input type="number" class="editable-input kpi-field-y4" value="${kpi.years[4] !== null ? kpi.years[4] : ''}" style="width:52px; text-align:center; padding:6px 2px;" ${dis}></td>
               
               ${kpi.months.map((mv, mi) => `
@@ -1347,7 +1382,7 @@
 
               <td style="font-size:11px; color:#475569; text-align:center;">${kpi.editedAt ? esc(kpi.editedAt) + '<br>' + esc(kpi.editedBy) : '-'}</td>
               <td style="text-align:center; white-space:nowrap;">
-                <button class="btn btn-secondary" style="padding: 5px 8px; font-size:12px; margin-right:4px;" onclick="openDetailsModal('${partName}', '${kpi.id}')">${kpi.canEdit ? 'รายละเอียด' : 'ดูรายละเอียด'}</button>
+                <button class="btn btn-secondary" style="padding: 5px 8px; font-size:12px; margin-right:4px;" onclick="openDetailsModal('${partName}', '${kpi.id}')">${kpi.canEditDetails ? 'รายละเอียด' : 'ดูรายละเอียด'}</button>
                 ${priv ? `<button class="btn btn-danger" style="padding: 5px 8px; font-size:12px;" onclick="requestDeleteKpi('${partName}', '${kpi.id}', '${kpi.name}')">ลบ</button>` : ''}
               </td>
             </tr>
@@ -1372,12 +1407,12 @@
       document.getElementById('edit-detail-level').value = kpi.level || 'SAR';
 
       const priv = isPrivilegedUser();
-      document.getElementById('edit-detail-template').disabled = !kpi.canEdit;
-      document.getElementById('edit-detail-source').disabled = !kpi.canEdit;
+      document.getElementById('edit-detail-template').disabled = !kpi.canEditDetails;
+      document.getElementById('edit-detail-source').disabled = !kpi.canEditDetails;
       document.getElementById('edit-detail-owner').disabled = !priv;
       document.getElementById('edit-detail-dept').disabled = !priv;
       document.getElementById('edit-detail-level').disabled = !priv;
-      document.getElementById('btn-save-details').style.display = kpi.canEdit ? 'inline-block' : 'none';
+      document.getElementById('btn-save-details').style.display = kpi.canEditDetails ? 'inline-block' : 'none';
       
       document.getElementById('modal-details-edit').style.display = 'flex';
     }
@@ -1407,7 +1442,7 @@
           }
         })
         .withFailureHandler((err) => showAlert("ข้อผิดพลาด", "❌", err.toString()))
-        .updateKpiDetails(sessionToken, partName, id, details);
+        .updateKpiDetails(sessionToken, selectedFy, partName, id, details);
     }
 
     function exportCurrentCategoryToPdf(partName, catName) {
@@ -1428,7 +1463,7 @@
         .withFailureHandler((err) => {
           showAlert("เกิดข้อผิดพลาดขัดข้อง", "❌", err.toString());
         })
-        .exportCategoryToPdf(sessionToken, partName, catName);
+        .exportCategoryToPdf(sessionToken, selectedFy, partName, catName);
     }
 
     function saveBulkAdminChanges(partName, catName) {
@@ -1471,7 +1506,7 @@
             }
           })
           .withFailureHandler((err) => showAlert("เกิดข้อผิดพลาดในการบันทึก", "❌", err.toString()))
-          .updateIndicatorsBulk(sessionToken, partName, updatedPayload);
+          .updateIndicatorsBulk(sessionToken, selectedFy, partName, updatedPayload);
       });
     }
 
@@ -1518,11 +1553,11 @@
           } else { showAlert("ข้อผิดพลาด", "❌", res.message); }
         })
         .withFailureHandler((err) => showAlert("เกิดข้อผิดพลาด", "❌", err.toString()))
-        .addIndicator(sessionToken, newItem);
+        .addIndicator(sessionToken, selectedFy, newItem);
     }
 
     function requestDeleteKpi(partName, id, name) {
-      showConfirm(`ยืนยันการลบตัวชี้วัด:\n"${name}"\nออกจากฐานข้อมูล ${partName} ถาวร?`, () => {
+      showConfirm(`ยืนยันการลบตัวชี้วัด:\n"${name}"\nออกจากปีงบ ${selectedFy} (ปีงบอื่นยังเก็บไว้เป็นประวัติ)?`, () => {
         google.script.run
           .withSuccessHandler((res) => {
             if (res.success) { 
@@ -1531,7 +1566,7 @@
             } else { showAlert("ข้อผิดพลาด", "❌", res.message); }
           })
           .withFailureHandler((err) => showAlert("เกิดข้อผิดพลาดในการลบข้อมูล", "❌", err.toString()))
-          .deleteIndicator(sessionToken, partName, id);
+          .deleteIndicator(sessionToken, selectedFy, partName, id);
       });
     }
 

@@ -13,6 +13,10 @@ const NURSING_SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/1LmpMCQ-
 const NURSING_DATABASE_SHEET_NAME = "Database";
 const NURSING_SYNC_ID_PREFIX = "NURSE-";
 const NURSING_SYNC_FUNCTION_NAME = "syncFromNursingSystem";
+// หยุดการซิงค์จากระบบพยาบาลไว้ก่อน (ฝ่ายการพยาบาลจะย้ายมาใช้เว็บนี้ ใช้ระดับตัวชี้วัด "ฝ่ายการพยาบาล")
+// โค้ดซิงค์ด้านล่างยังอ้างชีต Database เดิม ถ้าจะเปิดใช้ต้องปรับให้เขียนลงชีตปีงบก่อน
+const NURSING_SYNC_ENABLED = false;
+const NURSING_SYNC_PAUSED_MESSAGE = "ปิดการซิงค์ข้อมูลจากระบบฝ่ายการพยาบาลชั่วคราว";
 
 function doGet() {
   return HtmlService.createTemplateFromFile('Index')
@@ -22,31 +26,6 @@ function doGet() {
       .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 
-function setupDatabaseSheet_() {
-  var ss = SpreadsheetApp.openByUrl(SPREADSHEET_URL);
-  var sheet = ss.getSheetByName(DATABASE_SHEET_NAME);
-  
-  if (!sheet) {
-    sheet = ss.insertSheet(DATABASE_SHEET_NAME);
-    var headers = [
-      "รหัสตัวชี้วัด (ID)", "ลำดับ (No)", "หมวดหลัก (Part)", "หมวดหมู่ย่อย (Category)", 
-      "ชื่อตัวชี้วัด (Name)", "ค่าเป้าหมาย (Target)",
-      "ปี -4", "ปี -3", "ปี -2", "ปี -1", "ปีปัจจุบัน",
-      "ต.ค.", "พ.ย.", "ธ.ค.", "ม.ค.", "ก.พ.", "มี.ค.", 
-      "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.",
-      "รายละเอียดตัวชี้วัด (Details)", "แหล่งข้อมูล (Data Source)", 
-      "ผู้รับผิดชอบ (Owner)", "หน่วยงาน (Department)"
-    ];
-    
-    var headerRange = sheet.getRange(1, 1, 1, headers.length);
-    headerRange.setValues([headers]);
-    headerRange.setFontWeight("bold").setBackground("#e0f2fe").setHorizontalAlignment("center");
-    sheet.setFrozenRows(1);
-    sheet.setColumnWidth(5, 300);
-    sheet.setColumnWidth(24, 250);
-  }
-}
-
 function cleanValue_(val) {
   if (val === "" || val === undefined || val === null) return null;
   var str = val.toString().trim().toUpperCase();
@@ -54,10 +33,6 @@ function cleanValue_(val) {
     return null;
   }
   return Number(val);
-}
-
-function getDatabaseSheet_() {
-  return SpreadsheetApp.openByUrl(SPREADSHEET_URL).getSheetByName(DATABASE_SHEET_NAME);
 }
 
 function rowToKpi_(row) {
@@ -89,33 +64,43 @@ function rowToKpi_(row) {
   };
 }
 
-// คืนเฉพาะตัวชี้วัดที่ผู้ใช้มีสิทธิ์ดู พร้อมธง canEdit
-function getAllData(token) {
+// ค่าจากหน้าเว็บ: ว่าง/ไม่ใช่ตัวเลข → null
+function numberOrNull_(v) {
+  return v === undefined || v === "" || v === null || isNaN(v) ? null : Number(v);
+}
+
+// คืนเฉพาะตัวชี้วัดที่ผู้ใช้มีสิทธิ์ดูในปีงบที่เลือก พร้อมสิทธิ์แก้ไขและช่องผลย้อนหลังที่ถูกล็อก
+function getAllData(token, requestedFy) {
   try {
     var user = requireUser_(token);
-    var sheet = getDatabaseSheet_();
-    if (!sheet) {
-      return { success: true, data: [] };
-    }
+    ensureFiscalSheets_();
+    var years = listFiscalYears_();
+    var currentFy = getCurrentFiscalYear_();
+    if (years.length === 0) return { success: true, data: [], fy: currentFy, currentFy: currentFy, years: [] };
 
-    var data = sheet.getDataRange().getValues();
+    var fy = resolveFiscalYear_(requestedFy);
+    var sources = getAnnualSources_(fy);
+    var data = getFiscalSheet_(fy).getDataRange().getValues();
     var allData = [];
     for (var i = 1; i < data.length; i++) {
       if (!data[i][0]) continue;
       var kpi = rowToKpi_(data[i]);
-      var perm = getKpiPermission_(user, kpi);
+      var perm = getKpiPermission_(user, kpi, fy);
       if (!perm.view) continue;
-      kpi.canEdit = perm.edit;
+      kpi.canEditResults = perm.editResults;
+      kpi.canEditDetails = perm.editDetails;
+      // ผลทั้งปีของปีที่มีชีตต้นทางอยู่ (และมีตัวชี้วัดนี้) แก้ได้เฉพาะ admin, ผอ., QMR
+      kpi.lockedYears = sources.map(function(m) { return !!(m && m[kpi.id]); });
       allData.push(kpi);
     }
-    return { success: true, data: allData };
+    return { success: true, data: allData, fy: fy, currentFy: currentFy, years: years };
   } catch(e) {
     return { success: false, message: e.toString() };
   }
 }
 
-function getCategoryKpis_(user, partName, categoryName) {
-  var sheet = getDatabaseSheet_();
+function getCategoryKpis_(user, fy, partName, categoryName) {
+  var sheet = getFiscalSheet_(fy);
   if (!sheet) return [];
   var data = sheet.getDataRange().getValues();
   var kpis = [];
@@ -126,30 +111,31 @@ function getCategoryKpis_(user, partName, categoryName) {
     var row = data[i];
     if (row[0] && row[2] && row[3] && row[2].toString().trim() === targetPart && row[3].toString().trim() === targetCategory) {
       var kpi = rowToKpi_(row);
-      if (getKpiPermission_(user, kpi).view) kpis.push(kpi);
+      if (getKpiPermission_(user, kpi, fy).view) kpis.push(kpi);
     }
   }
   return kpis;
 }
 
-// ผู้ใช้ทั่วไปแก้ได้เฉพาะตัวที่ตนมีสิทธิ์ (ผู้รับผิดชอบ / หัวหน้าหน่วย) และเฉพาะรายละเอียด/ที่มาข้อมูล
-// ส่วนผู้รับผิดชอบ หน่วยงาน และระดับตัวชี้วัด แก้ได้เฉพาะ admin, ผอ., QMR
-function updateKpiDetails(token, partName, id, details) {
+// ผู้ใช้ทั่วไปแก้ได้เฉพาะตัวที่ตนมีสิทธิ์ (ผู้รับผิดชอบ / หัวหน้าหน่วย) ในปีงบปัจจุบัน และเฉพาะรายละเอียด/ที่มาข้อมูล
+// ส่วนผู้รับผิดชอบ หน่วยงาน และระดับตัวชี้วัด แก้ได้เฉพาะ admin, ผอ., QMR — แก้ในปีงบที่เลือกเท่านั้น ปีอื่นไม่เปลี่ยน
+function updateKpiDetails(token, fy, partName, id, details) {
   try {
     var user = requireUser_(token);
-    var sheet = getDatabaseSheet_();
-    if (!sheet) return { success: false, message: "ไม่พบชีตฐานข้อมูล" };
+    fy = resolveFiscalYear_(fy);
+    var sheet = getFiscalSheet_(fy);
+    if (!sheet) return { success: false, message: "ไม่พบชีตปีงบประมาณ" };
 
     var data = sheet.getDataRange().getValues();
     var targetId = id.toString().trim();
 
     for (var i = 1; i < data.length; i++) {
       if (data[i][0] && data[i][0].toString().trim() === targetId) {
-        if (!getKpiPermission_(user, rowToKpi_(data[i])).edit) {
-          return { success: false, message: "ไม่มีสิทธิ์แก้ไขตัวชี้วัดนี้" };
+        var old = rowToKpi_(data[i]);
+        if (!getKpiPermission_(user, old, fy).editDetails) {
+          return { success: false, message: "ไม่มีสิทธิ์แก้ไขรายละเอียดตัวชี้วัดนี้ในปีงบ " + fy };
         }
         var actualRow = i + 1;
-        var old = rowToKpi_(data[i]);
         var changed = (details.templateDetails || "").trim() !== old.templateDetails ||
                       (details.dataSource || "").trim() !== old.dataSource;
         sheet.getRange(actualRow, 24).setValue(details.templateDetails || "");
@@ -165,7 +151,7 @@ function updateKpiDetails(token, partName, id, details) {
           stampRow_(sheet, actualRow, user, "edit");
           touchUser_(user, "edit");
         }
-        return { success: true, message: "บันทึกข้อมูลรายละเอียดสำเร็จ" };
+        return { success: true, message: "บันทึกข้อมูลรายละเอียดสำเร็จ (ปีงบ " + fy + ")" };
       }
     }
     return { success: false, message: "ไม่พบรหัสตัวชี้วัดในระบบ" };
@@ -174,39 +160,56 @@ function updateKpiDetails(token, partName, id, details) {
   }
 }
 
-function updateIndicatorsBulk(token, partName, updatedItems) {
+function updateIndicatorsBulk(token, fy, partName, updatedItems) {
   try {
     var user = requireUser_(token);
     var privileged = isPrivileged_(user);
-    var sheet = getDatabaseSheet_();
-    if (!sheet) return { success: false, message: "ไม่พบชีตฐานข้อมูล" };
+    fy = resolveFiscalYear_(fy);
+    var sheet = getFiscalSheet_(fy);
+    if (!sheet) return { success: false, message: "ไม่พบชีตปีงบประมาณ" };
 
+    var sources = getAnnualSources_(fy);
     var data = sheet.getDataRange().getValues();
     var ids = data.map(function(r) { return r[0] ? r[0].toString().trim() : ""; });
     var saved = 0;
     var denied = 0;
     var edited = false;
+    var annualChanges = [];
 
     updatedItems.forEach(function(item) {
       var rowIndex = ids.indexOf(item.id.toString().trim());
       if (rowIndex === -1) return;
-      if (!getKpiPermission_(user, rowToKpi_(data[rowIndex])).edit) { denied++; return; }
-      var actualRow = rowIndex + 1;
       var old = rowToKpi_(data[rowIndex]);
-      var newValues = item.years.concat(item.months);
-      var changed = newValues.join("|") !== old.years.concat(old.months).join("|");
+      if (!getKpiPermission_(user, old, fy).editResults) { denied++; return; }
+      var actualRow = rowIndex + 1;
+
+      var newYears = old.years.slice();
+      for (var i = 0; i < 5; i++) {
+        var locked = i < 4 && sources[i] && sources[i][old.id];
+        if (locked && !privileged) continue; // ผลปีที่มีชีตต้นทางอยู่ แก้ได้เฉพาะ admin, ผอ., QMR
+        var nv = numberOrNull_(item.years ? item.years[i] : null);
+        if (nv === old.years[i]) continue;
+        newYears[i] = nv;
+        // ผลทั้งปีของปี Y ต้องตรงกันทุกชีตที่เก็บปีนั้น (ช่อง K ของชีตปี Y และ G–J ของชีตปีถัดๆ ไป)
+        annualChanges.push({ id: old.id, year: fy - 4 + i, value: nv, skipFy: i === 4 ? fy : null });
+      }
+      var newMonths = [];
+      for (var m = 0; m < 12; m++) newMonths.push(numberOrNull_(item.months ? item.months[m] : null));
+
+      var changed = newYears.join("|") !== old.years.join("|") || newMonths.join("|") !== old.months.join("|");
       if (privileged) {
         if ((item.name || "").trim() !== old.name || (item.target || "").toString().trim() !== old.target) changed = true;
         sheet.getRange(actualRow, 2).setValue(item.no);
         sheet.getRange(actualRow, 5).setValue(item.name);
         sheet.getRange(actualRow, 6).setValue(item.target);
       }
-      sheet.getRange(actualRow, 7, 1, 17).setValues([newValues]);
+      sheet.getRange(actualRow, ANNUAL_FIRST_COL, 1, 17).setValues([newYears.concat(newMonths)]);
       if (changed) { stampRow_(sheet, actualRow, user, "edit"); edited = true; }
       saved++;
     });
+    propagateAnnual_(annualChanges);
     if (edited) touchUser_(user, "edit");
-    var msg = "บันทึกข้อมูลปรับปรุงเรียบร้อยแล้ว (" + saved + " รายการ)";
+    var msg = "บันทึกข้อมูลปีงบ " + fy + " เรียบร้อยแล้ว (" + saved + " รายการ)";
     if (denied > 0) msg += " — ข้าม " + denied + " รายการที่ไม่มีสิทธิ์แก้ไข";
     return { success: true, message: msg };
   } catch (error) {
@@ -215,11 +218,12 @@ function updateIndicatorsBulk(token, partName, updatedItems) {
 }
 
 // บันทึกเวลาเข้าดูตัวชี้วัด — หน้าเว็บรวมรายการแล้วส่งเป็นชุดทุก ~30 วินาที (ไม่ให้ช้าตอนคลิกดู)
-function recordViews(token, ids) {
+function recordViews(token, fy, ids) {
   try {
     var user = requireUser_(token);
     if (!ids || ids.length === 0) return { success: true, count: 0 };
-    var sheet = getDatabaseSheet_();
+    fy = resolveFiscalYear_(fy);
+    var sheet = getFiscalSheet_(fy);
     if (!sheet) return { success: true, count: 0 };
     var data = sheet.getDataRange().getValues();
     var wanted = {};
@@ -228,7 +232,7 @@ function recordViews(token, ids) {
     for (var i = 1; i < data.length; i++) {
       var id = data[i][0] ? data[i][0].toString().trim() : "";
       if (!wanted[id]) continue;
-      if (!getKpiPermission_(user, rowToKpi_(data[i])).view) continue;
+      if (!getKpiPermission_(user, rowToKpi_(data[i]), fy).view) continue;
       stampRow_(sheet, i + 1, user, "view");
       count++;
     }
@@ -239,14 +243,13 @@ function recordViews(token, ids) {
   }
 }
 
-// เพิ่มตัวชี้วัดใหม่ — เฉพาะ admin, ผอ., QMR
-function addIndicator(token, newItem) {
+// เพิ่มตัวชี้วัดใหม่ในปีงบที่เลือก — เฉพาะ admin, ผอ., QMR (ปีงบถัดไปจะคัดลอกตามจากปีล่าสุดเอง)
+function addIndicator(token, fy, newItem) {
   try {
     var user = requirePrivileged_(token);
-    setupDatabaseSheet_();
-    ensureLevelColumn_();
-
-    var sheet = getDatabaseSheet_();
+    fy = resolveFiscalYear_(fy);
+    var sheet = getFiscalSheet_(fy);
+    if (!sheet) return { success: false, message: "ไม่พบชีตปีงบประมาณ" };
     var data = sheet.getDataRange().getValues();
 
     var count = data.filter(function(r) {
@@ -268,18 +271,19 @@ function addIndicator(token, newItem) {
     ];
     sheet.appendRow(newRow);
     touchUser_(user, "edit");
-    return { success: true, message: "เพิ่มตัวชี้วัดเรียบร้อยแล้ว", newId: newId };
+    return { success: true, message: "เพิ่มตัวชี้วัดในปีงบ " + fy + " เรียบร้อยแล้ว", newId: newId };
   } catch (error) {
     return { success: false, message: "เกิดข้อผิดพลาด: " + error.toString() };
   }
 }
 
-// ลบตัวชี้วัด — เฉพาะ admin, ผอ., QMR
-function deleteIndicator(token, partName, id) {
+// ลบตัวชี้วัดออกจากปีงบที่เลือกเท่านั้น (ปีงบอื่นยังเก็บไว้เป็นประวัติ) — เฉพาะ admin, ผอ., QMR
+function deleteIndicator(token, fy, partName, id) {
   try {
     requirePrivileged_(token);
-    var sheet = getDatabaseSheet_();
-    if (!sheet) return { success: false, message: "ไม่พบชีตฐานข้อมูล" };
+    fy = resolveFiscalYear_(fy);
+    var sheet = getFiscalSheet_(fy);
+    if (!sheet) return { success: false, message: "ไม่พบชีตปีงบประมาณ" };
 
     var data = sheet.getDataRange().getValues();
     var ids = data.map(function(r) { return r[0] ? r[0].toString().trim() : ""; });
@@ -287,7 +291,7 @@ function deleteIndicator(token, partName, id) {
 
     if (rowIndex !== -1) {
       sheet.deleteRow(rowIndex + 1);
-      return { success: true, message: "ลบตัวชี้วัดเรียบร้อยแล้ว" };
+      return { success: true, message: "ลบตัวชี้วัดออกจากปีงบ " + fy + " เรียบร้อยแล้ว" };
     } else {
       return { success: false, message: "ไม่พบรหัสตัวชี้วัดที่ต้องการลบ" };
     }
@@ -296,11 +300,11 @@ function deleteIndicator(token, partName, id) {
   }
 }
 
-function exportCategoryToPdf(token, partName, categoryName) {
+function exportCategoryToPdf(token, fy, partName, categoryName) {
   try {
-    var kpis = getCategoryKpis_(requireUser_(token), partName, categoryName);
-    var currentYear = new Date().getFullYear() + 543;
-    var yLabels = [currentYear-4, currentYear-3, currentYear-2, currentYear-1, currentYear];
+    fy = resolveFiscalYear_(fy);
+    var kpis = getCategoryKpis_(requireUser_(token), fy, partName, categoryName);
+    var yLabels = [fy-4, fy-3, fy-2, fy-1, fy];
     
     var html = '<html><head><meta charset="utf-8"><style>' +
                '@page { size: A4 landscape; margin: 10mm; }' +
@@ -314,10 +318,10 @@ function exportCategoryToPdf(token, partName, categoryName) {
                'td.left-align { text-align: left; font-weight: bold; }' +
                '</style></head><body>' +
                '<div class="title">รายงานสรุปผลการดำเนินงานระบบตัวชี้วัดคุณภาพ</div>' +
-               '<div class="subtitle">หมวดหมู่: ' + categoryName + ' (' + partName + ')</div>' +
+               '<div class="subtitle">หมวดหมู่: ' + categoryName + ' (' + partName + ') ปีงบประมาณ ' + fy + '</div>' +
                '<table><thead><tr>' +
                '<th rowspan="2" style="width:30px;">ลำดับ</th><th rowspan="2">ชื่อตัวชี้วัด</th><th rowspan="2" class="col-target" style="width:60px;">เป้าหมาย</th>' +
-               '<th colspan="5">ผลงานย้อนหลัง 5 ปี</th><th colspan="12">ผลงานรายเดือน ปีปัจจุบัน (ต.ค. - ก.ย.)</th>' +
+               '<th colspan="5">ผลงานย้อนหลัง 5 ปี</th><th colspan="12">ผลงานรายเดือน ปีงบ ' + fy + ' (ต.ค. - ก.ย.)</th>' +
                '</tr><tr>' +
                '<th>' + yLabels[0] + '</th><th>' + yLabels[1] + '</th><th>' + yLabels[2] + '</th><th>' + yLabels[3] + '</th><th>' + yLabels[4] + '</th>' +
                '<th>ต.ค.</th><th>พ.ย.</th><th>ธ.ค.</th><th>ม.ค.</th><th>ก.พ.</th><th>มี.ค.</th><th>เม.ย.</th><th>พ.ค.</th><th>มิ.ย.</th><th>ก.ค.</th><th>ส.ค.</th><th>ก.ย.</th>' +
@@ -385,6 +389,7 @@ function normalizeKpiName_(name) {
 function getNursingSyncPreview(token) {
   try {
     requireAdmin_(token);
+    if (!NURSING_SYNC_ENABLED) return { success: false, message: NURSING_SYNC_PAUSED_MESSAGE };
     ensureNursingLinkColumn_();
     var sourceSs = SpreadsheetApp.openByUrl(NURSING_SPREADSHEET_URL);
     var sourceSheet = sourceSs.getSheetByName(NURSING_DATABASE_SHEET_NAME);
@@ -468,6 +473,7 @@ function getNursingSyncPreview(token) {
 function commitNursingSync(token, mappings) {
   try {
     requireAdmin_(token);
+    if (!NURSING_SYNC_ENABLED) return { success: false, message: NURSING_SYNC_PAUSED_MESSAGE };
     ensureNursingLinkColumn_();
     var sourceSs = SpreadsheetApp.openByUrl(NURSING_SPREADSHEET_URL);
     var sourceSheet = sourceSs.getSheetByName(NURSING_DATABASE_SHEET_NAME);
@@ -513,6 +519,13 @@ function commitNursingSync(token, mappings) {
 // (ผ่าน commitNursingSync) เท่านั้น จะไม่สร้างแถวใหม่โดยอัตโนมัติเด็ดขาด ใช้ได้ทั้งกดเอง
 // และรันอัตโนมัติผ่าน time-based trigger
 function syncFromNursingSystem() {
+  if (!NURSING_SYNC_ENABLED) {
+    // เก็บกวาด trigger รายวันที่เคยตั้งไว้ ไม่ให้รันต่อ
+    ScriptApp.getProjectTriggers().forEach(function(t) {
+      if (t.getHandlerFunction() === NURSING_SYNC_FUNCTION_NAME) ScriptApp.deleteTrigger(t);
+    });
+    return { success: false, message: NURSING_SYNC_PAUSED_MESSAGE };
+  }
   try {
     ensureNursingLinkColumn_();
     var sourceSs = SpreadsheetApp.openByUrl(NURSING_SPREADSHEET_URL);
@@ -580,6 +593,7 @@ function getNursingSyncTriggerStatus(token) {
 function toggleNursingSyncTrigger(token) {
   try {
     requireAdmin_(token);
+    if (!NURSING_SYNC_ENABLED) return { success: false, message: NURSING_SYNC_PAUSED_MESSAGE };
     var triggers = ScriptApp.getProjectTriggers();
     var existing = triggers.filter(function(t) { return t.getHandlerFunction() === NURSING_SYNC_FUNCTION_NAME; });
 
