@@ -396,8 +396,6 @@ function requireAdmin_(token) {
  * editDetails = แก้รายละเอียด/ที่มาข้อมูล (ปีงบปัจจุบันเท่านั้น) — admin, ผอ., QMR แก้ได้ทุกอย่างทุกปี
  */
 function getKpiPermission_(user, kpi, fy) {
-  if (isPrivileged_(user)) return { view: true, editResults: true, editDetails: true };
-
   var isOwner = parseOwners_(kpi.owner).indexOf(user.username) !== -1;
   if (!isOwner && user.tier === "head") {
     // ตัวชี้วัดที่ผู้รับผิดชอบเขียนว่า "หัวหน้าหน่วย" ให้หัวหน้าหน่วยทุกคนรับผิดชอบ
@@ -405,6 +403,9 @@ function getKpiPermission_(user, kpi, fy) {
   }
   var inDept = parseDepts_(kpi.department).some(function(d) { return user.depts.indexOf(d) !== -1; });
   var edit = isOwner || (user.tier === "head" && inDept);
+  // "ของฉัน" = ตัวชี้วัดที่ผู้ใช้เป็นผู้รับผิดชอบ (ผู้บริหารนับเฉพาะที่ระบุชื่อตัวเอง)
+  var mine = edit;
+  if (isPrivileged_(user)) return { view: true, editResults: true, editDetails: true, mine: isOwner };
   var view = edit;
   if (!view) {
     if (kpi.level === "SAR" || kpi.level === "QA-รพ") view = true;
@@ -414,6 +415,7 @@ function getKpiPermission_(user, kpi, fy) {
   var current = getCurrentFiscalYear_();
   return {
     view: view,
+    mine: mine,
     editResults: edit && fy >= current - 1,
     editDetails: edit && fy === current
   };

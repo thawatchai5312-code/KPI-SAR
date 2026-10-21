@@ -6,7 +6,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  
+
   <style>
     :root {
       --primary-gradient: linear-gradient(135deg, #2c9936, #004a24);
@@ -18,9 +18,9 @@
       --secondary-color: #51820a;
       --accent-color: #ae5f05;
 
-      --bg-light: #c0cac3; 
-      --text-main: #18202f; 
-      
+      --bg-light: #c0cac3;
+      --text-main: #18202f;
+
       --radius-large: 14px;
       --radius-pill: 50px;
       --box-shadow: 0 6px 20px rgba(0,0,0,0.1);
@@ -32,98 +32,107 @@
       background: var(--bg-light);
       background-image: radial-gradient(circle at top right, #dcfce7 0%, #bbf7d0 100%);
       color: var(--text-main);
-      padding: 10px; 
+      padding: 10px;
       min-height: 100vh;
     }
 
     input[type=number]::-webkit-inner-spin-button,
-    input[type=number]::-webkit-outer-spin-button {
-      -webkit-appearance: none;
-      margin: 0;
-    }
-    input[type=number] {
-      -moz-appearance: textfield;
-    }
+    input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+    input[type=number] { -moz-appearance: textfield; }
 
+    /* ---------- 1.1 ส่วนหัว ---------- */
     .app-header {
-      background: var(--primary-gradient);
-      color: #ffffff;
-      padding: 14px 20px; 
-      text-align: center;
-      border-radius: var(--radius-large);
-      box-shadow: var(--box-shadow);
-      margin-bottom: 10px; 
-      position: relative;
-      overflow: hidden;
+      background: var(--primary-gradient); color: #ffffff; padding: 10px 18px;
+      border-radius: var(--radius-large); box-shadow: var(--box-shadow); margin-bottom: 10px;
+      display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;
     }
-    .app-header h1 { font-size: 20px; font-weight: 700; letter-spacing: 0.5px; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); }
+    .app-header h1 { font-size: 19px; font-weight: 700; letter-spacing: 0.3px; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); text-align: left; }
+    .header-actions { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+    #user-info { font-size: 13px; font-weight: 700; margin-right: 6px; }
+    .btn-icon { background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.4); color: white; padding: 5px 10px; border-radius: 6px; cursor: pointer; font-size: 13px; transition: 0.2s; font-weight: 700; }
+    .btn-icon:hover { background: rgba(255,255,255,0.3); }
 
-    .nav-menu-bar {
-      background: #ffffff; padding: 4px; border-radius: var(--radius-pill);
-      box-shadow: 0 4px 10px rgba(0,0,0,0.06); margin-bottom: 12px; display: table; width: 100%;
+    /* ---------- 1.2 แถบนำทาง ---------- */
+    .nav-bar {
+      background: #ffffff; padding: 5px 8px; border-radius: var(--radius-pill); box-shadow: 0 4px 10px rgba(0,0,0,0.06);
+      margin-bottom: 10px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
     }
     .nav-item {
-      display: table-cell; text-align: center; padding: 8px 15px; cursor: pointer;
-      font-weight: 700; font-size: 14px; color: #475569; border-radius: var(--radius-pill);
-      transition: all 0.3s ease;
+      padding: 7px 16px; cursor: pointer; font-weight: 700; font-size: 14px; color: #475569;
+      border-radius: var(--radius-pill); transition: all 0.3s ease; white-space: nowrap;
     }
     .nav-item.active { background: var(--secondary-gradient); color: #ffffff; box-shadow: 0 4px 10px rgba(16, 185, 129, 0.4); }
-    .nav-item:not(.active):hover { background: #e0f2fe; color: var(--primary-color); }
+    .nav-item:not(.active):not(.static):hover { background: #e0f2fe; color: var(--primary-color); }
+    .nav-item.static { cursor: default; padding: 3px 10px; }
+    .nav-spacer { flex: 1; }
+    .nav-actions { display: flex; gap: 6px; align-items: center; }
 
-    .main-container { display: block; width: 100%; }
-    .left-panel, .right-panel {
-      background: #ffffff; border-radius: var(--radius-large); box-shadow: var(--box-shadow); padding: 12px; 
-      border: 1px solid rgba(0,0,0,0.05);
+    /* ---------- 1.3 ส่วนแสดงข้อมูล: 20 : 40 : 40 ---------- */
+    .home-grid { display: grid; grid-template-columns: 20fr 40fr 40fr; gap: 10px; align-items: start; }
+    .panel {
+      background: #ffffff; border-radius: var(--radius-large); box-shadow: var(--box-shadow); padding: 12px;
+      border: 1px solid rgba(0,0,0,0.05); min-width: 0;
+      max-height: calc(100vh - 175px); overflow-y: auto;
     }
-    .left-panel { margin-bottom: 12px; }
-    .right-panel { min-height: 400px; }
+    .page-view { display: none; animation: fadeIn 0.4s ease; }
+    .page-view.active { display: block; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
+    /* ผังรายการตัวชี้วัด */
+    .tree-filters { position: sticky; top: -12px; background: #fff; padding: 12px 0 8px; margin-top: -12px; z-index: 5; border-bottom: 1px solid #e2e8f0; margin-bottom: 8px; }
+    .tree-filters .editable-input { margin-bottom: 6px; }
+    .tree-filter-row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: 12px; font-weight: 700; color: #334155; }
+    .tree-count { font-size: 11px; color: #64748b; font-weight: 600; margin-top: 4px; }
     .accordion-part { margin-bottom: 6px; border: 1px solid #cbd5e1; border-radius: 8px; overflow: hidden; }
     .accordion-header {
-      background: #f8fafc; padding: 10px 14px; font-weight: 700; cursor: pointer; position: relative;
-      border-bottom: 1px solid #cbd5e1; color: #015c8b; transition: 0.2s; font-size: 14px;
+      background: #f8fafc; padding: 8px 12px; font-weight: 700; cursor: pointer; position: relative;
+      border-bottom: 1px solid #cbd5e1; color: #015c8b; transition: 0.2s; font-size: 14px; padding-right: 26px;
     }
     .accordion-header:hover { background: #f1f5f9; }
-    .accordion-header::after { content: '▼'; position: absolute; right: 12px; font-size: 11px; color: #64748b; }
+    .accordion-header::after { content: '▼'; position: absolute; right: 10px; font-size: 10px; color: #64748b; }
     .accordion-part.open > .accordion-header::after { content: '▲'; }
-    .accordion-content { display: none; padding-left: 6px; background: #ffffff; }
+    .accordion-content { display: none; padding-left: 4px; background: #ffffff; }
     .accordion-part.open > .accordion-content { display: block; }
-
-    .category-block { margin: 4px 0; }
+    .category-block { margin: 3px 0; }
     .category-header {
-      padding: 7px 12px; font-weight: 700; background: #fff; color: #334155; cursor: pointer;
-      border-left: 4px solid var(--accent-color); margin: 1px 0; border-radius: 0 6px 6px 0; transition: 0.2s; font-size: 13.5px;
+      padding: 6px 10px; font-weight: 700; background: #fff; color: #334155; cursor: pointer;
+      border-left: 4px solid var(--accent-color); margin: 1px 0; border-radius: 0 6px 6px 0; transition: 0.2s; font-size: 13px;
     }
     .category-header:hover { background: #f8fafc; }
-    .category-content { display: none; padding-left: 10px; }
+    .category-content { display: none; padding-left: 8px; }
     .category-block.open > .category-content { display: block; }
     .kpi-link-item {
-      padding: 7px 12px; font-size: 13px; cursor: pointer; border-bottom: 1px dashed #e2e8f0;
+      padding: 6px 8px; font-size: 12.5px; cursor: pointer; border-bottom: 1px dashed #e2e8f0;
       color: #475569; transition: all 0.2s; border-radius: 4px; font-weight: 500;
+      display: flex; gap: 5px; align-items: baseline;
     }
-    .kpi-link-item:hover { background: #f0f9ff; color: var(--primary-color); padding-left: 16px; }
+    .kpi-link-item:hover { background: #f0f9ff; color: var(--primary-color); }
     .kpi-link-item.selected { background: #e0f2fe; color: var(--primary-color); font-weight: 700; border-left: 4px solid var(--primary-color); }
+    .kpi-link-item .kpi-link-text { overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+    .dot-missing { color: #ef4444; font-size: 10px; flex: none; }
 
-    .dashboard-title { font-size: 18px; font-weight: 700; color: #015c8b; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 2px solid #e2e8f0; text-align: left; }
-    .meta-badge { display: inline-block; padding: 4px 10px; background: #f1f5f9; border-radius: 20px; font-size: 12px; font-weight: 700; margin-right: 6px; margin-bottom: 6px; color: #015c8b; border: 1px solid #cbd5e1; }
-    .kpi-target-callout { background: var(--accent-gradient); color: #fff; padding: 12px; border-radius: 10px; font-weight: 700; font-size: 15px; margin-bottom: 15px; box-shadow: 0 4px 10px rgba(234, 88, 12, 0.3); text-shadow: 1px 1px 2px rgba(0,0,0,0.2); }
-
-    .data-table-wrapper { 
-      width: 100%; overflow-x: auto; overflow-y: auto; max-height: 650px; position: relative; 
-      border-radius: 8px; border: 1px solid #cbd5e1; box-shadow: 0 2px 6px rgba(0,0,0,0.05); 
-    }
-    table { width: 100%; border-collapse: collapse; text-align: left; background: #fff; }
-    th { background: #e0f2fe; color: #0f172a; font-weight: 700; padding: 8px 10px; font-size: 13px; border-bottom: 2px solid #93c5fd; white-space: nowrap; text-align: center; border-right: 1px solid #bfdbfe; position: sticky; top: 0; z-index: 2; }
-    td { padding: 6px 8px; font-size: 13px; border-bottom: 1px solid #e2e8f0; text-align: center; border-right: 1px solid #f1f5f9; }
-    tr:hover td { background: #f8fafc; }
-
-    .sticky-col-1 { position: sticky; left: 0; background: #ffffff; z-index: 1; }
-    .sticky-col-2 { position: sticky; left: 45px; background: #ffffff; z-index: 1; border-right: 2px solid #93c5fd !important; }
-    th.sticky-col-1, th.sticky-col-2 { background: #e0f2fe !important; z-index: 4 !important; }
-    .col-target { background-color: #dcfce7 !important; }
-
-    .info-card { background: #ffffff; border-radius: 10px; padding: 12px; margin-top: 12px; border: 1px solid #cbd5e1; box-shadow: 0 2px 6px rgba(0,0,0,0.04); text-align: left; }
+    /* ส่วนที่ 1 / 2 */
+    .dashboard-title { font-size: 17px; font-weight: 700; color: #015c8b; margin-bottom: 8px; padding-bottom: 6px; border-bottom: 2px solid #e2e8f0; text-align: left; }
+    .meta-badge { display: inline-block; padding: 3px 9px; background: #f1f5f9; border-radius: 20px; font-size: 12px; font-weight: 700; margin-right: 5px; margin-bottom: 5px; color: #015c8b; border: 1px solid #cbd5e1; }
+    .kpi-target-callout { background: var(--accent-gradient); color: #fff; padding: 10px 12px; border-radius: 10px; font-weight: 700; font-size: 14px; margin: 6px 0 10px; box-shadow: 0 4px 10px rgba(234, 88, 12, 0.3); text-shadow: 1px 1px 2px rgba(0,0,0,0.25); }
+    .section-bar { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin: 10px 0 6px; }
+    .section-bar h4 { font-size: 14px; color: #0f172a; text-align: left; }
+    .btn-sm { padding: 4px 10px; font-size: 12px; }
+    .chart-box { background: #fff; padding: 8px; border: 1px solid #cbd5e1; border-radius: 8px; margin-bottom: 10px; }
+    .info-card { background: #ffffff; border-radius: 10px; padding: 12px; margin-top: 10px; border: 1px solid #cbd5e1; box-shadow: 0 2px 6px rgba(0,0,0,0.04); text-align: left; }
     .info-card-title { font-weight: 700; font-size: 14px; color: #015c8b; margin-bottom: 4px; }
+    .info-card p { font-size: 13px; color: #475569; white-space: pre-line; font-weight: 500; }
+    .action-bar { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; padding-bottom: 8px; border-bottom: 2px solid #e2e8f0; position: sticky; top: -12px; background: #fff; padding-top: 12px; margin-top: -12px; z-index: 5; }
+    .dirty-mark { font-size: 12px; font-weight: 700; color: #b45309; display: none; }
+    .stamp-line { font-size: 11.5px; color: #64748b; margin-top: 10px; text-align: left; font-weight: 600; }
+    .hint { font-size: 11.5px; color: #64748b; font-weight: 600; margin-top: 4px; }
+
+    .data-table-wrapper { width: 100%; overflow-x: auto; border-radius: 8px; border: 1px solid #cbd5e1; box-shadow: 0 2px 6px rgba(0,0,0,0.05); margin-bottom: 8px; }
+    table { width: 100%; border-collapse: collapse; text-align: left; background: #fff; }
+    th { background: #e0f2fe; color: #0f172a; font-weight: 700; padding: 6px 6px; font-size: 12.5px; border-bottom: 2px solid #93c5fd; white-space: nowrap; text-align: center; border-right: 1px solid #bfdbfe; }
+    td { padding: 5px 6px; font-size: 13px; border-bottom: 1px solid #e2e8f0; text-align: center; border-right: 1px solid #f1f5f9; }
+    tr:hover td { background: #f8fafc; }
+    .cell-input { width: 100%; min-width: 46px; padding: 5px 3px !important; text-align: center; }
 
     .btn { padding: 7px 16px; border-radius: var(--radius-pill); border: none; font-weight: 700; cursor: pointer; font-size: 13px; transition: all 0.3s; box-shadow: 0 2px 4px rgba(0,0,0,0.15); }
     .btn-primary { background: var(--primary-gradient); color: #fff; }
@@ -131,154 +140,154 @@
     .btn-danger { background: var(--danger-gradient); color: #fff; }
     .btn-accent { background: var(--secondary-gradient); color: #fff; }
     .btn:hover { transform: translateY(-1px); box-shadow: 0 4px 10px rgba(0,0,0,0.2); filter: brightness(1.15); }
+    .btn:disabled { opacity: 0.55; cursor: not-allowed; transform: none; filter: none; }
 
     .editable-input { width: 100%; padding: 6px 8px; border: 1px solid #94a3b8; border-radius: 6px; font-size: 13px; transition: 0.3s; color: #0f172a; font-weight: 600; }
     .editable-input:focus { border-color: var(--primary-color); outline: none; box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.2); background: #fff; }
+    .editable-input:disabled { background: #f1f5f9; color: #475569; cursor: not-allowed; }
+    textarea.editable-input { resize: vertical; line-height: 1.5; }
+    .empty-state { text-align: center; padding: 30px 15px; color: #64748b; font-size: 14px; font-weight: 500; }
 
-    #admin-content-area table .editable-input { border: none !important; border-radius: 0 !important; background: transparent !important; box-shadow: none !important; padding: 8px 4px !important; }
-    #admin-content-area table .editable-input:focus { background: #ffffff !important; outline: 2px solid var(--primary-color) !important; outline-offset: -2px; }
+    .user-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .user-table th, .user-table td { border: 1px solid #cbd5e1; padding: 4px; }
+    .user-table th { background: #e0f2fe; }
 
-    .page-view { display: none; animation: fadeIn 0.4s ease; }
-    .page-view.active { display: block; }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
-
+    /* ---------- modal ---------- */
     .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(4px); z-index: 1000; display: none; align-items: center; justify-content: center; padding: 15px; }
-    .modal-card { background: #ffffff; width: 100%; max-width: 450px; border-radius: var(--radius-large); box-shadow: 0 15px 35px rgba(0,0,0,0.3); overflow: hidden; animation: modalShow 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); border: 1px solid rgba(255,255,255,0.2); }
+    .modal-card { background: #ffffff; width: 100%; max-width: 450px; border-radius: var(--radius-large); box-shadow: 0 15px 35px rgba(0,0,0,0.3); overflow: hidden; animation: modalShow 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
     @keyframes modalShow { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
     .modal-header { background: var(--primary-gradient); color: #fff; padding: 14px 18px; font-weight: 700; font-size: 15px; text-align: center; letter-spacing: 0.5px; }
     .modal-body { padding: 18px; }
     .modal-footer { padding: 10px 18px; background: #f8fafc; text-align: right; border-top: 1px solid #e2e8f0; }
     .form-group { margin-bottom: 10px; text-align: left; }
     .form-group label { display: block; font-size: 13px; font-weight: 700; margin-bottom: 5px; color: #334155; }
+    .check-row { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: #334155; padding: 2px 0; cursor: pointer; }
+    .check-row input { width: 16px; height: 16px; }
 
     #app-login-screen { background: var(--bg-light); background-image: var(--primary-gradient); flex-direction: column; }
     .login-box { background: #fff; padding: 30px; border-radius: var(--radius-large); box-shadow: 0 25px 50px rgba(0,0,0,0.3); text-align: center; width: 100%; max-width: 380px; border: 1px solid #bae6fd; }
     .login-box h2 { color: #015c8b; margin-bottom: 8px; font-size: 22px; font-weight: 700; }
     .login-box p { color: #64748b; margin-bottom: 20px; font-size: 13px; font-weight: 500; }
-    .empty-state { text-align: center; padding: 30px 15px; color: #64748b; font-size: 14px; font-weight: 500; }
 
-    .login-tabs { display: flex; margin-bottom: 15px; border-bottom: 2px solid #e2e8f0; }
-    .login-tab { flex: 1; padding: 10px; cursor: pointer; font-weight: 700; font-size: 14px; color: #64748b; text-align: center; border-bottom: 2px solid transparent; margin-bottom: -2px; }
-    .login-tab.active { color: var(--primary-color); border-bottom-color: var(--primary-color); }
+    #toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: #064e3b; color: #fff; padding: 10px 20px; border-radius: 30px; font-weight: 700; font-size: 14px; box-shadow: 0 8px 20px rgba(0,0,0,0.3); z-index: 2000; display: none; }
 
-    .header-actions { position: absolute; right: 20px; top: 14px; }
-    .btn-icon { background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.4); color: white; padding: 5px 10px; border-radius: 6px; cursor: pointer; font-size: 14px; transition: 0.2s; font-weight: 700; }
-    .btn-icon:hover { background: rgba(255,255,255,0.3); }
-
-    @media (min-width: 768px) {
-      body { padding: 15px; }
-      .nav-menu-bar { width: auto; display: inline-table; margin: 0 auto 15px auto; }
-      .nav-menu-container { text-align: center; }
-      .main-container { display: table; table-layout: fixed; gap: 15px; }
-      .left-panel { display: table-cell; width: 25%; vertical-align: top; margin-bottom: 0; } 
-      .panel-spacer { display: table-cell; width: 1.5%; }
-      .right-panel { display: table-cell; width: 73.5%; vertical-align: top; }
+    /* จอเล็ก: เรียง 3 ส่วนต่อกันแนวตั้ง */
+    @media (max-width: 1000px) {
+      .home-grid { grid-template-columns: 1fr; }
+      .panel { max-height: none; }
+      #panel-tree { max-height: 320px; }
+      .nav-spacer { display: none; }
     }
-    .editable-input:disabled { background: #f1f5f9; color: #475569; cursor: not-allowed; }
-    .user-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-    .user-table th, .user-table td { border: 1px solid #cbd5e1; padding: 4px; }
-    .user-table th { background: #e0f2fe; }
+
+    /* ---------- พิมพ์ / Export PDF ---------- */
+    #print-root { display: none; }
+    @media print {
+      body { background: #fff !important; padding: 0 !important; min-height: 0 !important; }
+      body > *:not(#print-root) { display: none !important; }
+      #print-root { display: block !important; }
+      * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    }
+    #print-root { font-family: 'Sarabun', sans-serif; font-size: 14pt; color: #0f172a; line-height: 1.4; }
+    #print-root * { font-family: 'Sarabun', sans-serif; }
+    .pr-head { text-align: center; border-bottom: 3px solid #166534; padding-bottom: 6px; margin-bottom: 10px; }
+    .pr-head .pr-hosp { font-size: 16pt; font-weight: 700; color: #166534; }
+    .pr-head .pr-sub { font-size: 14pt; font-weight: 600; }
+    .pr-head .pr-info { font-size: 11pt; color: #475569; }
+    .pr-part { font-size: 16pt; font-weight: 700; color: #fff; background: #166534; padding: 3px 10px; margin: 12px 0 6px; break-after: avoid; }
+    .pr-cat { font-size: 16pt; font-weight: 700; color: #166534; border-bottom: 2px solid #86efac; margin: 10px 0 5px; break-after: avoid; }
+    .pr-sub-title { font-size: 12pt; font-weight: 700; color: #475569; margin: 6px 0 3px; break-after: avoid; }
+    table.pr-table { width: 100%; border-collapse: collapse; margin-bottom: 8px; table-layout: fixed; }
+    table.pr-table th { background: #dcfce7; color: #14532d; border: 1px solid #94a3b8; padding: 2px 3px; font-size: inherit; white-space: normal; position: static; }
+    table.pr-table td { border: 1px solid #cbd5e1; padding: 2px 2px; font-size: inherit; text-align: center; white-space: nowrap; }
+    table.pr-table td.pr-left { text-align: left; white-space: normal; word-break: break-word; }
+    table.pr-table td.pr-target { background: #fef3c7; font-weight: 700; }
+    table.pr-table tr { break-inside: avoid; }
+    .pr-block { break-inside: avoid; border: 1px solid #94a3b8; border-left: 5px solid #166534; border-radius: 4px; padding: 6px 10px; margin: 8px 0; }
+    .pr-kpi-title { font-size: 16pt; font-weight: 700; color: #14532d; }
+    .pr-meta { font-size: 12pt; color: #475569; margin-bottom: 4px; }
+    .pr-chart svg { width: 100%; height: auto; max-height: 70mm; }
+    .pr-label { font-size: 14pt; font-weight: 700; color: #166534; margin-top: 4px; }
+    .pr-text { font-size: 14pt; white-space: pre-line; }
   </style>
 </head>
 <body>
 
   <div id="app-login-screen" class="modal-overlay" style="display: flex;">
-        <div class="login-box" id="login-box-content" style="animation: fadeIn 0.6s ease;"></div>
+    <div class="login-box" id="login-box-content" style="animation: fadeIn 0.6s ease;"></div>
   </div>
 
+  <!-- 1.1 ส่วนหัว -->
   <div class="app-header">
-    <h1>ระบบจัดการตัวชี้วัดคุณภาพ โรงพยาบาลภูหลวง</h1>
-    <p style="font-size: 14px; margin-top: 4px; opacity: 0.85; font-weight: 400;">ระบบบันทึก วิเคราะห์ และติดตามผลลัพธ์ข้อมูลตัวชี้วัดรายเดือน</p>
+    <h1>🏥 ระบบจัดการตัวชี้วัดคุณภาพ โรงพยาบาลภูหลวง</h1>
     <div class="header-actions" id="user-bar" style="display: none;">
-      <span id="user-info" style="font-size: 13px; margin-right: 8px; font-weight: 700;"></span>
-      <button class="btn-icon" id="admin-settings-btn" style="display: none;" onclick="openSettings()">⚙️ ตั้งค่า</button>
-      <button class="btn-icon" onclick="openChangePassword(false)">🔑 เปลี่ยนรหัสผ่าน</button>
-      <button class="btn-icon" onclick="logout()">🚪 ออกจากระบบ</button>
+      <span id="user-info"></span>
+      <button class="btn-icon" id="admin-settings-btn" style="display: none;" onclick="guardUnsaved(openSettings)">⚙️ ตั้งค่า</button>
+      <button class="btn-icon" onclick="guardUnsaved(() => openChangePassword(false))">🔑 เปลี่ยนรหัสผ่าน</button>
+      <button class="btn-icon" onclick="guardUnsaved(logout)">🚪 ออกจากระบบ</button>
     </div>
   </div>
 
-  <div class="nav-menu-container">
-    <div class="nav-menu-bar">
-      <div class="nav-item active" id="menu-home-btn" onclick="switchMenu('home')">📊 หน้าแรก (Dashboard)</div>
-      <div class="nav-item" id="menu-progress-btn" onclick="switchMenu('progress')">📋 ติดตามงาน (Progress)</div>
-      <div class="nav-item" id="menu-admin-btn" onclick="switchMenu('admin')">⚙️ จัดการตัวชี้วัด (Admin)</div>
-      <div class="nav-item" style="cursor: default;">📅 ปีงบประมาณ
-        <select id="fy-select" class="editable-input" style="width: auto; display: inline-block; padding: 3px 6px; margin-left: 4px;" onchange="changeFiscalYear(this.value)"></select>
-      </div>
+  <!-- 1.2 แถบนำทาง -->
+  <div class="nav-bar">
+    <div class="nav-item static">📅 ปีงบ
+      <select id="fy-select" class="editable-input" style="width: auto; display: inline-block; padding: 3px 6px; margin-left: 4px;" onchange="onFiscalYearChange(this)"></select>
+    </div>
+    <div class="nav-item active" id="menu-home-btn" onclick="guardUnsaved(() => switchMenu('home'))">📊 หน้าแรก (Dashboard)</div>
+    <div class="nav-item" id="menu-progress-btn" onclick="guardUnsaved(() => switchMenu('progress'))">📋 ติดตามงาน (Progress)</div>
+    <div class="nav-spacer"></div>
+    <div class="nav-actions">
+      <button class="btn btn-accent" id="btn-add-kpi" style="display: none;" onclick="guardUnsaved(openAddKpiModal)">➕ เพิ่มตัวชี้วัดใหม่</button>
+      <button class="btn btn-primary" id="btn-export-pdf" onclick="guardUnsaved(openPdfModal)">📄 Export PDF</button>
     </div>
   </div>
 
-  <div class="main-container">
-    <div class="left-panel">
-      <h3 style="margin-bottom: 10px; color: #015c8b; font-size: 15px; font-weight: 700; text-align: center;">📑 ผังรายการตัวชี้วัด</h3>
-      <div id="accordion-tree-container">
-        <div class="empty-state">กรุณาเข้าสู่ระบบ...</div>
-      </div>
-    </div>
-
-    <div class="panel-spacer"></div>
-
-    <div class="right-panel">
-      <div id="page-home" class="page-view active">
-        <div id="dashboard-content-area">
-          <div class="empty-state">
-            <div style="font-size: 35px; margin-bottom: 10px; color:#94a3b8;">👈</div>
-            กรุณาเลือกตัวชี้วัดจากเมนูฝั่งซ้ายเพื่อดูรายละเอียด
+  <!-- 1.3 หน้าแรก (Dashboard): ผังรายการ 20 : ผลลัพธ์ 40 : รายละเอียด 40 -->
+  <div id="page-home" class="page-view active">
+    <div class="home-grid">
+      <div class="panel" id="panel-tree">
+        <div class="tree-filters">
+          <input type="text" id="tree-search" class="editable-input" placeholder="🔍 ค้นหาชื่อ/ผู้รับผิดชอบ/หน่วยงาน" oninput="onTreeFilterChange()">
+          <div class="tree-filter-row">
+            <select id="tree-mode" class="editable-input" style="width: auto;" onchange="onTreeFilterChange()">
+              <option value="all">แสดงทั้งหมด</option>
+              <option value="missing">เฉพาะที่ยังไม่เติมข้อมูล</option>
+            </select>
+            <label class="check-row"><input type="checkbox" id="tree-mine" onchange="onTreeFilterChange()"> เฉพาะของฉัน</label>
           </div>
+          <div class="tree-count" id="tree-count"></div>
         </div>
+        <div id="accordion-tree-container"><div class="empty-state">กรุณาเข้าสู่ระบบ...</div></div>
       </div>
 
-      <div id="page-progress" class="page-view">
-        <div style="background: #f8fafc; padding: 10px; border-radius: 10px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #cbd5e1; flex-wrap: wrap; gap: 10px;">
-          <div style="font-weight: 700; color: #015c8b; font-size: 14px;">📋 ติดตามความคืบหน้าการลงข้อมูล (Progress Tracker)</div>
-          <div>
-            <input type="text" id="progress-filter" class="editable-input" placeholder="🔍 ค้นหาหน่วยงาน, ผู้รับผิดชอบ..." style="width: 260px;" onkeyup="filterProgressTable()">
-          </div>
-        </div>
-        <div id="progress-content-area">
-          <div class="empty-state">รอโหลดข้อมูลความคืบหน้า...</div>
-        </div>
+      <div class="panel" id="panel-result">
+        <div class="empty-state"><div style="font-size: 35px; margin-bottom: 10px; color:#94a3b8;">👈</div>กรุณาเลือกตัวชี้วัดจากผังรายการ</div>
       </div>
 
-      <div id="page-admin" class="page-view">
-        <div style="background: #f8fafc; padding: 10px; border-radius: 10px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #cbd5e1; flex-wrap: wrap; gap: 10px;">
-          <div style="font-weight: 700; color: #015c8b; font-size: 14px;">🛠️ เครื่องมือผู้ดูแลระบบ</div>
-          <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
-            <div id="nursing-sync-controls" style="display:none; align-items:center; gap:8px; flex-wrap:wrap;">
-              <span id="nursing-sync-status" style="font-size:12px; color:#64748b; font-weight:700;"></span>
-              <button class="btn btn-secondary" id="btn-toggle-auto-sync" onclick="toggleAutoNursingSync()">⏱️ เปิดซิงค์อัตโนมัติ</button>
-              <button class="btn btn-secondary" onclick="openNursingReviewModal()">🔗 ตรวจสอบตัวชี้วัดที่ซ้ำกับฝ่ายพยาบาล</button>
-              <button class="btn btn-secondary" onclick="runNursingSyncNow()">🔄 ซิงค์ข้อมูลที่จับคู่แล้ว</button>
-            </div>
-            <button class="btn btn-accent" id="btn-add-kpi" style="display:none;" onclick="openAddKpiModal()">➕ เพิ่มตัวชี้วัดใหม่ (Add KPI)</button>
-          </div>
-        </div>
-        <div id="admin-content-area">
-          <div class="empty-state">กรุณาเลือกหมวดหมู่ย่อยจากเมนูฝั่งซ้าย เพื่อแก้ไขตารางตัวชี้วัด</div>
-        </div>
-      </div>
+      <div class="panel" id="panel-detail"></div>
     </div>
   </div>
 
-  <!-- Removed modal-admin-auth as auth is done upfront -->
+  <div id="page-progress" class="page-view">
+    <div class="panel" style="max-height: none;">
+      <div style="background: #f8fafc; padding: 10px; border-radius: 10px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #cbd5e1; flex-wrap: wrap; gap: 10px;">
+        <div style="font-weight: 700; color: #015c8b; font-size: 14px;">📋 ติดตามความคืบหน้าการลงข้อมูล (Progress Tracker)</div>
+        <div>
+          <input type="text" id="progress-filter" class="editable-input" placeholder="🔍 ค้นหาหน่วยงาน, ผู้รับผิดชอบ..." style="width: 260px;" onkeyup="filterProgressTable()">
+        </div>
+      </div>
+      <div id="progress-content-area"><div class="empty-state">รอโหลดข้อมูลความคืบหน้า...</div></div>
+    </div>
+  </div>
 
+  <!-- ===== modal ===== -->
   <div id="modal-change-password" class="modal-overlay">
     <div class="modal-card" style="max-width: 400px;">
       <div class="modal-header">🔑 เปลี่ยนรหัสผ่าน</div>
       <div class="modal-body">
         <p id="change-password-note" style="margin-bottom: 12px; font-size: 13px; color: #64748b; font-weight: 500;"></p>
-        <div class="form-group">
-          <label>รหัสผ่านเดิม</label>
-          <input type="password" id="chpw-old" class="editable-input">
-        </div>
-        <div class="form-group">
-          <label>รหัสผ่านใหม่ (อย่างน้อย 6 ตัวอักษร)</label>
-          <input type="password" id="chpw-new" class="editable-input">
-        </div>
-        <div class="form-group">
-          <label>ยืนยันรหัสผ่านใหม่</label>
-          <input type="password" id="chpw-confirm" class="editable-input">
-        </div>
+        <div class="form-group"><label>รหัสผ่านเดิม</label><input type="password" id="chpw-old" class="editable-input"></div>
+        <div class="form-group"><label>รหัสผ่านใหม่ (อย่างน้อย 6 ตัวอักษร)</label><input type="password" id="chpw-new" class="editable-input"></div>
+        <div class="form-group"><label>ยืนยันรหัสผ่านใหม่</label><input type="password" id="chpw-confirm" class="editable-input"></div>
       </div>
       <div class="modal-footer" style="display: flex; justify-content: space-between;">
         <button class="btn btn-secondary" id="chpw-cancel" onclick="document.getElementById('modal-change-password').style.display='none'">ยกเลิก</button>
@@ -287,73 +296,13 @@
     </div>
   </div>
 
-  <div id="modal-details-edit" class="modal-overlay">
-    <div class="modal-card" style="max-width: 900px; width: 90%;">
-      <div class="modal-header">📝 แก้ไขรายละเอียดตัวชี้วัด</div>
-      <div class="modal-body" style="max-height: 75vh; overflow-y: auto;">
-        <input type="hidden" id="edit-detail-id">
-        <input type="hidden" id="edit-detail-part">
-        <div class="form-group">
-          <label>รายละเอียดตัวชี้วัด</label>
-          <textarea id="edit-detail-template" class="editable-input" rows="6" style="resize: vertical;"></textarea>
-        </div>
-        <div class="form-group">
-          <label>ที่มาข้อมูล / สูตรคำนวณ (DataSource)</label>
-          <textarea id="edit-detail-source" class="editable-input" rows="6" style="resize: vertical;"></textarea>
-        </div>
-        <div class="form-group">
-          <label>ผู้รับผิดชอบ (Owner)</label>
-          <input type="text" id="edit-detail-owner" class="editable-input">
-        </div>
-        <div class="form-group">
-          <label>หน่วยงาน (Department)</label>
-          <input type="text" id="edit-detail-dept" class="editable-input">
-        </div>
-        <div class="form-group">
-          <label>ระดับตัวชี้วัด (Level)</label>
-          <select id="edit-detail-level" class="editable-input kpi-level-select"></select>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-secondary" onclick="document.getElementById('modal-details-edit').style.display='none'">ยกเลิก</button>
-        <button class="btn btn-primary" id="btn-save-details" onclick="saveDetailsChanges()">💾 บันทึกข้อมูล</button>
-      </div>
-    </div>
-  </div>
-
-  <div id="modal-alert" class="modal-overlay">
-    <div class="modal-card" style="max-width: 360px;">
-      <div class="modal-header" id="alert-title" style="background: var(--primary-gradient);">การแจ้งเตือน</div>
-      <div class="modal-body" style="text-align: center; padding: 20px 15px;">
-        <div id="alert-icon" style="font-size: 38px; margin-bottom: 10px;"></div>
-        <p id="alert-message" style="font-size: 14px; font-weight: 600;"></p>
-      </div>
-      <div class="modal-footer" style="text-align: center;">
-        <button class="btn btn-primary" style="min-width: 100px;" onclick="document.getElementById('modal-alert').style.display='none'">รับทราบ</button>
-      </div>
-    </div>
-  </div>
-
-  <div id="modal-confirm" class="modal-overlay">
-    <div class="modal-card" style="max-width: 380px;">
-      <div class="modal-header" style="background: var(--danger-gradient);">ยืนยันการทำรายการ</div>
-      <div class="modal-body">
-        <p id="confirm-message" style="font-size: 14px; text-align: center; font-weight: 600; padding: 5px 0; color: #1e293b;"></p>
-      </div>
-      <div class="modal-footer" style="display: flex; justify-content: space-between;">
-        <button class="btn btn-secondary" onclick="closeConfirm(false)">ยกเลิก</button>
-        <button class="btn btn-danger" onclick="closeConfirm(true)">ยืนยันดำเนินการ</button>
-      </div>
-    </div>
-  </div>
-
   <div id="modal-settings" class="modal-overlay">
     <div class="modal-card" style="max-width: 900px; width: 95%;">
-      <div class="modal-header" style="background: var(--primary-gradient);">⚙️ จัดการผู้ใช้งาน (Settings)</div>
+      <div class="modal-header">⚙️ จัดการผู้ใช้งาน (Settings)</div>
       <div class="modal-body" style="max-height: 75vh; overflow-y: auto;">
         <p style="font-size: 12px; color: #64748b; margin-bottom: 10px;">
           Tier: <b>admin</b> ทำได้ทุกอย่าง · <b>executive</b> (ผอ./QMR) ดูแก้ได้ทั้งหมด · <b>head</b> (หัวหน้าหน่วย) ดูแก้ตามหน่วยงานที่ระบุ · <b>staff</b> (รายบุคคล) ดูแก้เฉพาะตัวที่ตนรับผิดชอบ<br>
-          ช่อง "หน่วยงาน" คั่นด้วยเครื่องหมายจุลภาค เช่น ER,IPD · ผู้ใช้ใหม่/รีเซ็ตรหัสผ่านจะได้รหัส 11038 และต้องเปลี่ยนตอนเข้าใช้ครั้งแรก
+          ช่อง "หน่วยงาน" คั่นด้วยเครื่องหมายจุลภาค เช่น ER,IPD · ใส่ <b>ฝ่ายการพยาบาล</b> เพื่อให้เห็นตัวชี้วัดระดับฝ่ายการพยาบาล · ผู้ใช้ใหม่/รีเซ็ตรหัสผ่านจะได้รหัส 11038 และต้องเปลี่ยนตอนเข้าใช้ครั้งแรก
         </p>
         <div style="display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap;">
           <button class="btn btn-secondary" onclick="addUserRow()">+ เพิ่มผู้ใช้</button>
@@ -364,19 +313,6 @@
       <div class="modal-footer">
         <button class="btn btn-secondary" onclick="document.getElementById('modal-settings').style.display='none'">ยกเลิก</button>
         <button class="btn btn-primary" onclick="saveSettings()">💾 บันทึกการตั้งค่า</button>
-      </div>
-    </div>
-  </div>
-
-  <div id="modal-nursing-review" class="modal-overlay">
-    <div class="modal-card" style="max-width: 800px; width: 95%;">
-      <div class="modal-header">🔗 ตรวจสอบตัวชี้วัดที่ซ้ำกับฝ่ายการพยาบาล</div>
-      <div class="modal-body" style="max-height: 75vh; overflow-y: auto;">
-        <div id="nursing-review-list"></div>
-      </div>
-      <div class="modal-footer" style="display:flex; justify-content:space-between;">
-        <button class="btn btn-secondary" onclick="document.getElementById('modal-nursing-review').style.display='none'">ยกเลิก</button>
-        <button class="btn btn-primary" onclick="submitNursingReviewMappings()">💾 ยืนยันและบันทึกการจับคู่</button>
       </div>
     </div>
   </div>
@@ -400,8 +336,7 @@
           <input type="text" id="add-kpi-name" class="editable-input" placeholder="กรอกชื่อตัวชี้วัด">
         </div>
         <div class="form-group">
-          <!-- เปลี่ยนจากช่อง number เป็นข้อความ เพื่อให้พิมพ์เครื่องหมาย > < ได้ -->
-          <label>ค่าเป้าหมาย (Target) *</label>
+          <label>ค่าเป้าหมาย (Target)</label>
           <input type="text" id="add-kpi-target" class="editable-input" placeholder="เช่น > 80 หรือ 100%">
         </div>
         <div class="form-group">
@@ -409,7 +344,7 @@
           <textarea id="add-kpi-source" class="editable-input" rows="2"></textarea>
         </div>
         <div class="form-group">
-          <label>ผู้รับผิดชอบ</label>
+          <label>ผู้รับผิดชอบ (คั่นหลายคนด้วย /)</label>
           <input type="text" id="add-kpi-owner" class="editable-input">
         </div>
         <div class="form-group">
@@ -428,28 +363,118 @@
     </div>
   </div>
 
+  <div id="modal-pdf" class="modal-overlay">
+    <div class="modal-card" style="max-width: 560px; width: 95%;">
+      <div class="modal-header">📄 Export PDF</div>
+      <div class="modal-body" style="max-height: 72vh; overflow-y: auto;">
+        <div class="form-group">
+          <label>1. เลือกหมวดตัวชี้วัดที่จะพิมพ์</label>
+          <div style="display: flex; gap: 6px; margin-bottom: 6px;">
+            <button class="btn btn-secondary btn-sm" onclick="pdfSelectAll(true)">เลือกทั้งหมด</button>
+            <button class="btn btn-secondary btn-sm" onclick="pdfSelectAll(false)">ล้างทั้งหมด</button>
+            <span id="pdf-count" class="hint" style="margin: 0 0 0 auto; align-self: center;"></span>
+          </div>
+          <div id="pdf-cat-list" style="border: 1px solid #cbd5e1; border-radius: 8px; padding: 6px 10px; max-height: 220px; overflow-y: auto;"></div>
+        </div>
+        <div class="form-group">
+          <label>2. เนื้อหาที่จะพิมพ์</label>
+          <label class="check-row"><input type="checkbox" id="pdf-opt-table" checked> ตารางตัวชี้วัด (เป้าหมาย ผล 5 ปี ผลรายเดือน)</label>
+          <label class="check-row"><input type="checkbox" id="pdf-opt-chart" checked> กราฟผลลัพธ์ + ตารางรายเดือนรายตัว</label>
+          <label class="check-row"><input type="checkbox" id="pdf-opt-detail" checked> รายละเอียด/การวิเคราะห์ตัวชี้วัด</label>
+          <label class="check-row"><input type="checkbox" id="pdf-opt-source" checked> ที่มาแหล่งข้อมูล / สูตรคำนวณ</label>
+          <label class="check-row"><input type="checkbox" id="pdf-opt-owner" checked> ผู้รับผิดชอบดูแล</label>
+        </div>
+        <div class="form-group">
+          <label>3. แนวกระดาษ</label>
+          <label class="check-row"><input type="radio" name="pdf-orient" value="landscape" checked> แนวนอน</label>
+          <label class="check-row"><input type="radio" name="pdf-orient" value="portrait"> แนวตั้ง</label>
+        </div>
+        <p class="hint">กด "สร้าง PDF" แล้วในหน้าต่างพิมพ์ให้เลือกปลายทางเป็น <b>บันทึกเป็น PDF</b> (ฟอนต์ Sarabun พิมพ์สี)</p>
+      </div>
+      <div class="modal-footer" style="display: flex; justify-content: space-between;">
+        <button class="btn btn-secondary" onclick="document.getElementById('modal-pdf').style.display='none'">ยกเลิก</button>
+        <button class="btn btn-primary" onclick="generatePdf()">🖨️ สร้าง PDF</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modal-unsaved" class="modal-overlay">
+    <div class="modal-card" style="max-width: 420px;">
+      <div class="modal-header" style="background: var(--accent-gradient);">⚠️ มีการแก้ไขที่ยังไม่บันทึก</div>
+      <div class="modal-body">
+        <p style="font-size: 14px; text-align: center; font-weight: 600; color: #1e293b;">ตัวชี้วัดนี้มีข้อมูลที่แก้ไขแล้วแต่ยังไม่ได้กดบันทึก ต้องการทำอย่างไร</p>
+      </div>
+      <div class="modal-footer" style="display: flex; justify-content: space-between; gap: 6px; flex-wrap: wrap;">
+        <button class="btn btn-secondary" onclick="resolveUnsaved('stay')">↩️ กลับไปแก้ต่อ</button>
+        <button class="btn btn-danger" onclick="resolveUnsaved('discard')">ไม่บันทึก</button>
+        <button class="btn btn-primary" onclick="resolveUnsaved('save')">💾 บันทึกแล้วไปต่อ</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modal-alert" class="modal-overlay">
+    <div class="modal-card" style="max-width: 360px;">
+      <div class="modal-header" id="alert-title">การแจ้งเตือน</div>
+      <div class="modal-body" style="text-align: center; padding: 20px 15px;">
+        <div id="alert-icon" style="font-size: 38px; margin-bottom: 10px;"></div>
+        <p id="alert-message" style="font-size: 14px; font-weight: 600;"></p>
+      </div>
+      <div class="modal-footer" style="text-align: center;">
+        <button class="btn btn-primary" style="min-width: 100px;" onclick="document.getElementById('modal-alert').style.display='none'">รับทราบ</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modal-confirm" class="modal-overlay">
+    <div class="modal-card" style="max-width: 380px;">
+      <div class="modal-header" style="background: var(--danger-gradient);">ยืนยันการทำรายการ</div>
+      <div class="modal-body">
+        <p id="confirm-message" style="font-size: 14px; text-align: center; font-weight: 600; padding: 5px 0; color: #1e293b; white-space: pre-line;"></p>
+      </div>
+      <div class="modal-footer" style="display: flex; justify-content: space-between;">
+        <button class="btn btn-secondary" onclick="closeConfirm(false)">ยกเลิก</button>
+        <button class="btn btn-danger" onclick="closeConfirm(true)">ยืนยันดำเนินการ</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast"></div>
+  <div id="print-root"></div>
+  <style id="print-page-style">@page { size: A4 landscape; margin: 10mm; }</style>
+
   <script>
-    let globalDatabase = []; 
-    let currentTab = 'home'; 
+    // ===================== สถานะ =====================
+    let globalDatabase = [];
+    let currentTab = 'home';
     let selectedKpiId = null;
-    let selectedCategoryName = null;
     let selectedPartName = null;
-    
+    let selectedCategoryName = null;
+
     let isAppUnlocked = false;
     let sessionToken = null;
     let currentUser = null; // { username, tier, depts, mustChange }
     let settingsUsers = [];
     let settingsResets = {};
-    let currentAdminKpis = [];
-    
-    let onConfirmCallback = null;
-    let globalProgressData = []; 
 
-    const KPI_LEVELS = ['รายบุคคล', 'หน่วยงาน', 'QA-หน่วยงาน', 'QA-รพ', 'SAR', 'ฝ่ายการพยาบาล'];
+    let onConfirmCallback = null;
+    let globalProgressData = [];
     let selectedFy = null;   // ปีงบที่เลือก (พ.ศ.) — null = ให้ server เลือกปีงบปัจจุบัน
     let currentFy = null;    // ปีงบปัจจุบันตามวันที่ (ขึ้นปีใหม่ 1 ต.ค.)
     let fiscalYears = [];
+
+    let editMode = false;        // กำลังแก้ไขตัวชี้วัดที่เลือกอยู่หรือไม่
+    let editSnapshot = null;     // ค่าในฟอร์มตอนเริ่มแก้ไข ใช้เทียบว่ามีการแก้ไขที่ยังไม่บันทึกหรือไม่
+    let pendingAfterUnsaved = null;
+    let pendingSelectAfterLoad = null;
+    let chartVisible = true;
+    try { if (localStorage.getItem('kpi_chart_visible') === '0') chartVisible = false; } catch (e) {}
+
+    const openParts = new Set();
+    const openCats = new Set();
+
+    const KPI_LEVELS = ['รายบุคคล', 'หน่วยงาน', 'QA-หน่วยงาน', 'QA-รพ', 'SAR', 'ฝ่ายการพยาบาล'];
     const TIER_LABELS = { admin: 'ผู้ดูแลระบบ', executive: 'ผู้บริหาร', head: 'หัวหน้าหน่วย', staff: 'เจ้าหน้าที่' };
+    const thMonthsNames = ['ต.ค.', 'พ.ย.', 'ธ.ค.', 'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.'];
 
     function esc(v) {
       return String(v === null || v === undefined ? '' : v)
@@ -460,7 +485,28 @@
       return at ? esc(at) + (by ? ' โดย ' + esc(by) : '') : 'ยังไม่มีข้อมูล';
     }
 
-    // เก็บรหัสตัวชี้วัดที่เปิดดู แล้วส่งให้ server เป็นชุดทุก 30 วินาที (ไม่ให้การคลิกดูช้าลง)
+    function isPrivilegedUser() {
+      return !!currentUser && (currentUser.tier === 'admin' || currentUser.tier === 'executive');
+    }
+
+    function currentKpi() {
+      return globalDatabase.find(k => k.id === selectedKpiId) || null;
+    }
+
+    function kpiNumber(kpi) {
+      const same = globalDatabase.filter(k => k.part === kpi.part && k.category === kpi.category);
+      return same.findIndex(k => k.id === kpi.id) + 1;
+    }
+
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.innerText = msg;
+      t.style.display = 'block';
+      clearTimeout(showToast._timer);
+      showToast._timer = setTimeout(() => { t.style.display = 'none'; }, 2600);
+    }
+
+    // ===================== เวลาเข้าดู (ส่งเป็นชุด ไม่ให้การคลิกช้าลง) =====================
     const pendingViews = new Set();
     let pendingViewsFy = null;
     function trackView(id) {
@@ -479,12 +525,7 @@
     setInterval(flushViews, 30000);
     document.addEventListener('visibilitychange', () => { if (document.hidden) flushViews(); });
 
-    function isPrivilegedUser() {
-      return !!currentUser && (currentUser.tier === 'admin' || currentUser.tier === 'executive');
-    }
-
-    const thMonthsNames = ['ต.ค.', 'พ.ย.', 'ธ.ค.', 'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.'];
-
+    // ===================== เข้าสู่ระบบ =====================
     function loginBoxHtml(notice) {
       return `
         <div style="font-size: 40px; margin-bottom: 10px;">🏥</div>
@@ -553,10 +594,9 @@
     }
 
     function applyUserUi() {
-      document.getElementById('user-bar').style.display = 'block';
+      document.getElementById('user-bar').style.display = 'flex';
       document.getElementById('user-info').innerText = '👤 ' + currentUser.username + ' (' + (TIER_LABELS[currentUser.tier] || currentUser.tier) + ')';
-      const isAdmin = currentUser.tier === 'admin';
-      document.getElementById('admin-settings-btn').style.display = isAdmin ? 'inline-block' : 'none';
+      document.getElementById('admin-settings-btn').style.display = currentUser.tier === 'admin' ? 'inline-block' : 'none';
       document.getElementById('btn-add-kpi').style.display = isPrivilegedUser() ? 'inline-block' : 'none';
     }
 
@@ -565,16 +605,17 @@
       sessionToken = null;
       currentUser = null;
       isAppUnlocked = false;
+      editMode = false;
+      editSnapshot = null;
       pendingViews.clear();
       globalDatabase = [];
-      currentAdminKpis = [];
       selectedKpiId = null; selectedCategoryName = null; selectedPartName = null;
       document.getElementById('user-bar').style.display = 'none';
-      ['modal-settings', 'modal-nursing-review', 'modal-details-edit', 'modal-add-kpi', 'modal-change-password', 'modal-alert', 'modal-confirm']
+      ['modal-settings', 'modal-add-kpi', 'modal-pdf', 'modal-unsaved', 'modal-change-password', 'modal-alert', 'modal-confirm']
         .forEach(id => { document.getElementById(id).style.display = 'none'; });
       document.getElementById('accordion-tree-container').innerHTML = '<div class="empty-state">กรุณาเข้าสู่ระบบ...</div>';
-      document.getElementById('dashboard-content-area').innerHTML = '<div class="empty-state">กรุณาเลือกตัวชี้วัดจากเมนูฝั่งซ้ายเพื่อดูรายละเอียด</div>';
-      document.getElementById('admin-content-area').innerHTML = '<div class="empty-state">กรุณาเลือกหมวดหมู่ย่อยจากเมนูฝั่งซ้าย เพื่อแก้ไขตารางตัวชี้วัด</div>';
+      document.getElementById('panel-result').innerHTML = '<div class="empty-state">กรุณาเลือกตัวชี้วัดจากผังรายการ</div>';
+      document.getElementById('panel-detail').innerHTML = '';
       document.getElementById('progress-content-area').innerHTML = '<div class="empty-state">รอโหลดข้อมูลความคืบหน้า...</div>';
       resetLoginBox(notice);
       document.getElementById('app-login-screen').style.display = 'flex';
@@ -627,31 +668,33 @@
       if (e.key === 'Enter' && !isAppUnlocked) unlockApp();
     });
 
+    // ===================== โหลดข้อมูล / ปีงบ =====================
     function fetchAllDataFromServer(quiet = false) {
       google.script.run
         .withSuccessHandler((res) => {
-          if (res.success) {
-            globalDatabase = res.data;
-            selectedFy = res.fy;
-            currentFy = res.currentFy;
-            fiscalYears = res.years;
-            renderFiscalYearSelect();
-            updateDatalists(); 
-            
-            if(!quiet) {
-              document.getElementById('app-login-screen').style.display = 'none';
-              renderAccordionTree();
-            } else {
-              renderAccordionTree();
-              if(currentTab === 'home' && selectedKpiId) loadSingleKpiDashboard(selectedPartName, selectedKpiId);
-              if(currentTab === 'progress') loadProgressSummary();
-              if(currentTab === 'admin' && selectedCategoryName) loadAdminCategoryTable(selectedPartName, selectedCategoryName);
-            }
-          } else {
-            showAlert('โหลดข้อมูลล้มเหลว', '❌', res.message);
+          if (!res.success) { showAlert('โหลดข้อมูลล้มเหลว', '❌', res.message); renderFiscalYearSelect(); return; }
+          globalDatabase = res.data;
+          selectedFy = res.fy;
+          currentFy = res.currentFy;
+          fiscalYears = res.years;
+          renderFiscalYearSelect();
+          updateDatalists();
+
+          if (pendingSelectAfterLoad) {
+            const p = pendingSelectAfterLoad;
+            pendingSelectAfterLoad = null;
+            const k = globalDatabase.find(x => x.id === p.id);
+            if (k) { selectedKpiId = k.id; selectedPartName = k.part; selectedCategoryName = k.category; openParts.add(k.part); openCats.add(k.part + '||' + k.category); trackView(k.id); }
           }
+          if (selectedKpiId && !globalDatabase.some(k => k.id === selectedKpiId)) selectedKpiId = null;
+
+          if (!quiet) document.getElementById('app-login-screen').style.display = 'none';
+          editMode = false; editSnapshot = null;
+          renderTree();
+          renderKpiDetail();
+          if (currentTab === 'progress') loadProgressSummary();
         })
-        .withFailureHandler((err) => showAlert('เกิดข้อผิดพลาดเครือข่าย', '❌', err.toString()))
+        .withFailureHandler((err) => { renderFiscalYearSelect(); showAlert('เกิดข้อผิดพลาดเครือข่าย', '❌', err.toString()); })
         .getAllData(sessionToken, selectedFy);
     }
 
@@ -662,12 +705,15 @@
       sel.disabled = false;
     }
 
+    function onFiscalYearChange(sel) {
+      const value = sel.value;
+      guardUnsaved(() => changeFiscalYear(value));
+    }
+
     function changeFiscalYear(value) {
       flushViews();
       selectedFy = Number(value);
       document.getElementById('fy-select').disabled = true;
-      selectedKpiId = null;
-      document.getElementById('dashboard-content-area').innerHTML = '<div class="empty-state">กรุณาเลือกตัวชี้วัดจากเมนูฝั่งซ้ายเพื่อดูรายละเอียด</div>';
       fetchAllDataFromServer(true);
     }
 
@@ -675,49 +721,456 @@
       const parts = new Set();
       const categories = new Set();
       globalDatabase.forEach(item => {
-        if(item.part) parts.add(item.part);
-        if(item.category) categories.add(item.category);
+        if (item.part) parts.add(item.part);
+        if (item.category) categories.add(item.category);
       });
-      
-      const partOptions = document.getElementById('part-options');
-      partOptions.innerHTML = '';
-      parts.forEach(p => {
-        const option = document.createElement('option');
-        option.value = p;
-        partOptions.appendChild(option);
-      });
-
-      const catOptions = document.getElementById('category-options');
-      catOptions.innerHTML = '';
-      categories.forEach(c => {
-        const option = document.createElement('option');
-        option.value = c;
-        catOptions.appendChild(option);
-      });
+      document.getElementById('part-options').innerHTML = Array.from(parts).map(p => `<option value="${esc(p)}"></option>`).join('');
+      document.getElementById('category-options').innerHTML = Array.from(categories).map(c => `<option value="${esc(c)}"></option>`).join('');
     }
 
     function switchMenu(tabName) {
-      if (!isAppUnlocked) return;
+      if (!isAppUnlocked && tabName !== 'home') return;
       currentTab = tabName;
       document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
       document.querySelectorAll('.page-view').forEach(el => el.classList.remove('active'));
-      
-      if (tabName === 'home') {
-        document.getElementById('menu-home-btn').classList.add('active');
-        document.getElementById('page-home').classList.add('active');
-        if (selectedKpiId) loadSingleKpiDashboard(selectedPartName, selectedKpiId);
-      } else if (tabName === 'progress') {
+      if (tabName === 'progress') {
         document.getElementById('menu-progress-btn').classList.add('active');
         document.getElementById('page-progress').classList.add('active');
-        loadProgressSummary(); 
+        loadProgressSummary();
       } else {
-        document.getElementById('menu-admin-btn').classList.add('active');
-        document.getElementById('page-admin').classList.add('active');
-        if (selectedCategoryName) loadAdminCategoryTable(selectedPartName, selectedCategoryName);
+        document.getElementById('menu-home-btn').classList.add('active');
+        document.getElementById('page-home').classList.add('active');
       }
-      renderAccordionTree();
     }
 
+    // ===================== แก้ไขที่ยังไม่บันทึก: ป๊อปอัพเตือน =====================
+    function isDirty() {
+      return editMode && editSnapshot !== null && JSON.stringify(collectDraft()) !== editSnapshot;
+    }
+
+    // ทำ fn ต่อเมื่อไม่มีงานค้าง ถ้ามีการแก้ไขที่ยังไม่บันทึกจะถามก่อน (บันทึก / ไม่บันทึก / กลับไปแก้ต่อ)
+    function guardUnsaved(fn) {
+      if (!editMode) { fn(); return; }
+      if (!isDirty()) { exitEdit(); fn(); return; }
+      pendingAfterUnsaved = fn;
+      document.getElementById('modal-unsaved').style.display = 'flex';
+    }
+
+    function resolveUnsaved(choice) {
+      document.getElementById('modal-unsaved').style.display = 'none';
+      const fn = pendingAfterUnsaved;
+      pendingAfterUnsaved = null;
+      if (choice === 'stay') { renderFiscalYearSelect(); return; }
+      if (choice === 'discard') { exitEdit(); if (fn) fn(); return; }
+      saveKpiEdit(fn);
+    }
+
+    window.addEventListener('beforeunload', function(e) {
+      if (isDirty()) { e.preventDefault(); e.returnValue = ''; }
+    });
+
+    // ===================== ผังรายการตัวชี้วัด (ส่วนที่ 1 ซ้าย) =====================
+    // ผลมักกรอกย้อนหลัง 1 เดือน จึงเช็กเดือนที่แล้ว: ปีงบปัจจุบัน = เดือนก่อนหน้า (ต.ค. = ยังไม่ต้องเช็ก)
+    // ปีงบที่ผ่านมาแล้ว = เช็ก ก.ย. (เดือนสุดท้าย)
+    function expectedMonthIdx() {
+      return selectedFy === currentFy ? ((new Date().getMonth() + 3) % 12) - 1 : 11;
+    }
+
+    function isMissing(kpi) {
+      const i = expectedMonthIdx();
+      return i >= 0 && kpi.months[i] === null;
+    }
+
+    function treeFiltersActive() {
+      return document.getElementById('tree-search').value.trim() !== '' ||
+             document.getElementById('tree-mode').value !== 'all' ||
+             document.getElementById('tree-mine').checked;
+    }
+
+    function getFilteredKpis() {
+      const term = document.getElementById('tree-search').value.trim().toLowerCase();
+      const mode = document.getElementById('tree-mode').value;
+      const mine = document.getElementById('tree-mine').checked;
+      return globalDatabase.filter(k => {
+        if (mode === 'missing' && !isMissing(k)) return false;
+        if (mine && !k.mine) return false;
+        if (term && !((k.name + ' ' + k.owner + ' ' + k.department).toLowerCase().includes(term))) return false;
+        return true;
+      });
+    }
+
+    function onTreeFilterChange() { renderTree(); }
+
+    function renderTree() {
+      const container = document.getElementById('accordion-tree-container');
+      const countEl = document.getElementById('tree-count');
+      if (globalDatabase.length === 0) {
+        container.innerHTML = '<div class="empty-state">ไม่พบข้อมูลตัวชี้วัดในปีงบนี้</div>';
+        countEl.innerText = '';
+        return;
+      }
+      const list = getFilteredKpis();
+      const missingTotal = globalDatabase.filter(isMissing).length;
+      countEl.innerText = `แสดง ${list.length} จาก ${globalDatabase.length} ตัวชี้วัด` +
+        (expectedMonthIdx() >= 0 ? ` · ยังไม่เติมข้อมูล ${missingTotal} ตัว` : ' · (ต.ค. ยังไม่ถึงกำหนดกรอก)');
+
+      if (list.length === 0) {
+        container.innerHTML = '<div class="empty-state">ไม่พบตัวชี้วัดตามตัวกรองที่เลือก</div>';
+        return;
+      }
+
+      const allOpen = treeFiltersActive();
+      const tree = {};
+      list.forEach(item => {
+        if (!tree[item.part]) tree[item.part] = {};
+        if (!tree[item.part][item.category]) tree[item.part][item.category] = [];
+        tree[item.part][item.category].push(item);
+      });
+
+      container.innerHTML = '';
+      Object.keys(tree).sort().forEach(partName => {
+        const partDiv = document.createElement('div');
+        partDiv.className = 'accordion-part';
+        if (allOpen || openParts.has(partName)) partDiv.classList.add('open');
+
+        const header = document.createElement('div');
+        header.className = 'accordion-header';
+        header.innerText = partName;
+        header.onclick = () => {
+          partDiv.classList.toggle('open');
+          if (partDiv.classList.contains('open')) openParts.add(partName); else openParts.delete(partName);
+        };
+        partDiv.appendChild(header);
+
+        const content = document.createElement('div');
+        content.className = 'accordion-content';
+
+        Object.keys(tree[partName]).sort().forEach(catName => {
+          const catKey = partName + '||' + catName;
+          const catBlock = document.createElement('div');
+          catBlock.className = 'category-block';
+          if (allOpen || openCats.has(catKey)) catBlock.classList.add('open');
+
+          const catHeader = document.createElement('div');
+          catHeader.className = 'category-header';
+          catHeader.innerText = `${catName} (${tree[partName][catName].length})`;
+          catHeader.onclick = (e) => {
+            e.stopPropagation();
+            catBlock.classList.toggle('open');
+            if (catBlock.classList.contains('open')) openCats.add(catKey); else openCats.delete(catKey);
+          };
+          catBlock.appendChild(catHeader);
+
+          const catContent = document.createElement('div');
+          catContent.className = 'category-content';
+          tree[partName][catName].forEach(kpi => {
+            const item = document.createElement('div');
+            item.className = 'kpi-link-item' + (selectedKpiId === kpi.id ? ' selected' : '');
+            item.title = kpi.name;
+            item.innerHTML = `${isMissing(kpi) ? '<span class="dot-missing" title="ยังไม่เติมข้อมูลล่าสุด">🔴</span>' : ''}<span class="kpi-link-text">${kpiNumber(kpi)}. ${esc(kpi.name)}</span>`;
+            item.onclick = (e) => { e.stopPropagation(); selectKpi(kpi.id); };
+            catContent.appendChild(item);
+          });
+          catBlock.appendChild(catContent);
+          content.appendChild(catBlock);
+        });
+
+        partDiv.appendChild(content);
+        container.appendChild(partDiv);
+      });
+    }
+
+    function selectKpi(id) {
+      guardUnsaved(() => {
+        const k = globalDatabase.find(x => x.id === id);
+        if (!k) return;
+        selectedKpiId = id;
+        selectedPartName = k.part;
+        selectedCategoryName = k.category;
+        openParts.add(k.part);
+        openCats.add(k.part + '||' + k.category);
+        trackView(id);
+        renderTree();
+        renderKpiDetail();
+      });
+    }
+
+    // ===================== ส่วนที่ 2-3: ผลลัพธ์ + รายละเอียด =====================
+    function disabledYearAttr(kpi, i) {
+      if (!kpi.canEditResults) return 'disabled';
+      if (i < 4 && kpi.lockedYears && kpi.lockedYears[i] && !isPrivilegedUser()) {
+        return 'disabled title="ผลปีนี้อ้างอิงจากชีตปีงบนั้น แก้ได้เฉพาะ admin / ผอ. / QMR"';
+      }
+      return '';
+    }
+
+    function renderKpiDetail() {
+      const left = document.getElementById('panel-result');
+      const right = document.getElementById('panel-detail');
+      const kpi = currentKpi();
+      if (!kpi) {
+        left.innerHTML = '<div class="empty-state"><div style="font-size: 35px; margin-bottom: 10px; color:#94a3b8;">👈</div>กรุณาเลือกตัวชี้วัดจากผังรายการ</div>';
+        right.innerHTML = '';
+        return;
+      }
+      const priv = isPrivilegedUser();
+      const ed = editMode;
+      const yearsLabels = [selectedFy - 4, selectedFy - 3, selectedFy - 2, selectedFy - 1, selectedFy];
+      const canRes = ed && kpi.canEditResults;
+      const canDet = ed && kpi.canEditDetails;
+
+      const nameHtml = ed && priv
+        ? `<textarea id="ed-name" class="editable-input" rows="2" style="font-weight:700; font-size:15px;">${esc(kpi.name)}</textarea>`
+        : `${kpiNumber(kpi)}. ${esc(kpi.name)}`;
+      const targetHtml = ed && priv
+        ? `🎯 ค่าเป้าหมาย: <input type="text" id="ed-target" class="editable-input" value="${esc(kpi.target)}" style="width: 160px; display: inline-block;">`
+        : `🎯 ค่าเป้าหมาย: ${esc(kpi.target) || '-'}`;
+
+      // ผลรายปี
+      const yearsView = `<table><thead><tr>${yearsLabels.map(y => `<th>${y}</th>`).join('')}</tr></thead>
+        <tbody><tr>${kpi.years.map(v => `<td>${v !== null ? v : '-'}</td>`).join('')}</tr></tbody></table>`;
+      const yearsEdit = `<table><thead><tr>${yearsLabels.map(y => `<th>${y}</th>`).join('')}</tr></thead>
+        <tbody><tr>${kpi.years.map((v, i) => `<td style="padding:0;"><input type="number" step="any" id="ed-y${i}" class="editable-input cell-input" value="${v !== null ? v : ''}" ${disabledYearAttr(kpi, i)}></td>`).join('')}</tr></tbody></table>`;
+
+      // ผลรายเดือน แบ่ง 2 แถว (ต.ค.–มี.ค. / เม.ย.–ก.ย.)
+      const monthRows = [0, 6].map(start => {
+        const idx = [0, 1, 2, 3, 4, 5].map(i => start + i);
+        return `<tr>${idx.map(i => `<th style="background:#fffbeb;">${thMonthsNames[i]}</th>`).join('')}</tr>` +
+          `<tr>${idx.map(i => canRes
+            ? `<td style="padding:0;"><input type="number" step="any" id="ed-m${i}" class="editable-input cell-input" value="${kpi.months[i] !== null ? kpi.months[i] : ''}"></td>`
+            : `<td>${kpi.months[i] !== null ? kpi.months[i] : '-'}</td>`).join('')}</tr>`;
+      }).join('');
+
+      left.innerHTML = `
+        <div class="dashboard-title">${nameHtml}</div>
+        <div>
+          <span class="meta-badge">หมวดหมู่: ${esc(kpi.category)}</span>
+          <span class="meta-badge">หมวดหลัก: ${esc(kpi.part)}</span>
+          <span class="meta-badge">ปีงบ: ${selectedFy}${selectedFy === currentFy ? ' (ปัจจุบัน)' : ''}</span>
+          <span class="meta-badge">ระดับ: ${esc(kpi.level)}</span>
+          <span class="meta-badge">✏️ แก้ไขล่าสุด: ${stampText(kpi.editedAt, kpi.editedBy)}</span>
+        </div>
+        <div class="kpi-target-callout">${targetHtml}</div>
+
+        <div class="section-bar">
+          <h4>📈 แผนภูมิเส้นผลลัพธ์ 5 ปีงบประมาณ</h4>
+          <button class="btn btn-secondary btn-sm" id="btn-toggle-chart" onclick="toggleChart()">${chartVisible ? '🙈 ซ่อนกราฟ' : '👁️ แสดงกราฟ'}</button>
+        </div>
+        <div class="chart-box" id="chart-box" style="display:${chartVisible ? 'block' : 'none'};">${generateSvgLineChart(kpi.years, kpi.target, yearsLabels)}</div>
+
+        <div class="section-bar"><h4>📅 ผลทั้งปี (ปีงบประมาณ)</h4></div>
+        <div class="data-table-wrapper">${ed && canRes ? yearsEdit : yearsView}</div>
+        ${ed && kpi.lockedYears && kpi.lockedYears.some(x => x) && !priv ? '<div class="hint">ช่องสีเทา = ผลของปีที่มีชีตปีงบนั้นอยู่แล้ว (แก้ได้เฉพาะ admin / ผอ. / QMR)</div>' : ''}
+
+        <div class="section-bar"><h4>📊 ผลลัพธ์รายเดือน (ปีงบประมาณ ${selectedFy})</h4></div>
+        <div class="data-table-wrapper"><table><tbody>${monthRows}</tbody></table></div>
+        <div class="hint">ค่าเฉลี่ยรายเดือน: <b>${calculateMonthlySummary(kpi.months)}</b></div>
+        ${ed && !kpi.canEditResults ? '<div class="hint">ไม่มีสิทธิ์แก้ไขผลของตัวชี้วัดนี้ในปีงบนี้</div>' : ''}
+      `;
+
+      // ปุ่มจัดการ
+      let actions;
+      if (ed) {
+        actions = `<button class="btn btn-primary" onclick="saveKpiEdit()">💾 บันทึกข้อมูล</button>
+          <button class="btn btn-secondary" onclick="cancelEdit()">ยกเลิก</button>
+          ${priv ? '<button class="btn btn-danger" onclick="requestDeleteKpi()">🗑️ ลบตัวชี้วัด</button>' : ''}
+          <span class="dirty-mark" id="dirty-mark">● ยังไม่ได้บันทึก</span>`;
+      } else if (kpi.canEditResults || kpi.canEditDetails) {
+        actions = `<button class="btn btn-accent" onclick="startEdit()">✏️ แก้ไข</button>`;
+      } else {
+        actions = `<span class="hint" style="margin:0;">ดูอย่างเดียว (ไม่มีสิทธิ์แก้ไขตัวชี้วัดนี้)</span>`;
+      }
+
+      const ownerHtml = ed && priv
+        ? `<div class="form-group"><label>ผู้รับผิดชอบ (คั่นหลายคนด้วย /)</label><input type="text" id="ed-owner" class="editable-input" value="${esc(kpi.owner)}"></div>
+           <div class="form-group"><label>หน่วยงาน</label><input type="text" id="ed-dept" class="editable-input" value="${esc(kpi.department)}"></div>
+           <div class="form-group"><label>ระดับตัวชี้วัด</label><select id="ed-level" class="editable-input">${KPI_LEVELS.map(l => `<option value="${l}" ${l === kpi.level ? 'selected' : ''}>${l}</option>`).join('')}</select></div>`
+        : `<p style="font-weight:700; color:#1e293b;">${esc(kpi.owner) || '-'} (${esc(kpi.department) || '-'})</p>`;
+
+      right.innerHTML = `
+        <div class="action-bar">${actions}</div>
+        <div class="info-card">
+          <div class="info-card-title">📝 รายละเอียด/การวิเคราะห์ตัวชี้วัด</div>
+          ${ed ? `<textarea id="ed-details" class="editable-input" rows="9" ${canDet ? '' : 'disabled'}>${esc(kpi.templateDetails)}</textarea>`
+               : `<p>${esc(kpi.templateDetails) || 'ไม่มีข้อมูลรายละเอียดเพิ่มเติม'}</p>`}
+        </div>
+        <div class="info-card">
+          <div class="info-card-title">🔗 ที่มาแหล่งข้อมูล / สูตรคำนวณ</div>
+          ${ed ? `<textarea id="ed-source" class="editable-input" rows="7" ${canDet ? '' : 'disabled'}>${esc(kpi.dataSource)}</textarea>`
+               : `<p>${esc(kpi.dataSource) || 'ไม่ระบุที่มาข้อมูล'}</p>`}
+          ${ed && !canDet ? '<div class="hint">รายละเอียดและที่มาข้อมูลแก้ไขได้เฉพาะปีงบปัจจุบัน</div>' : ''}
+        </div>
+        <div class="info-card" style="border-left: 5px solid var(--primary-color);">
+          <div class="info-card-title">👤 ผู้รับผิดชอบดูแล</div>
+          ${ownerHtml}
+        </div>
+        <div class="stamp-line">👁️ เข้าดูล่าสุด: ${stampText(kpi.viewedAt, kpi.viewedBy)}</div>
+      `;
+
+      right.oninput = onEditInput;
+      left.oninput = onEditInput;
+      if (ed) onEditInput();
+    }
+
+    function toggleChart() {
+      chartVisible = !chartVisible;
+      try { localStorage.setItem('kpi_chart_visible', chartVisible ? '1' : '0'); } catch (e) {}
+      const box = document.getElementById('chart-box');
+      if (box) box.style.display = chartVisible ? 'block' : 'none';
+      document.getElementById('btn-toggle-chart').innerText = chartVisible ? '🙈 ซ่อนกราฟ' : '👁️ แสดงกราฟ';
+    }
+
+    // ===================== แก้ไข / บันทึก ทีละตัวชี้วัด =====================
+    function getNum(id) {
+      const el = document.getElementById(id);
+      if (!el || el.value === '') return null;
+      const n = Number(el.value);
+      return isNaN(n) ? null : n;
+    }
+
+    function getVal(id) {
+      const el = document.getElementById(id);
+      return el ? el.value : undefined;
+    }
+
+    // ฟอร์มปัจจุบัน → ข้อมูลที่จะส่งบันทึก (เฉพาะส่วนที่ผู้ใช้มีสิทธิ์แก้)
+    function collectDraft() {
+      const kpi = currentKpi();
+      if (!kpi) return {};
+      const p = { id: kpi.id };
+      if (kpi.canEditResults) {
+        p.years = [0, 1, 2, 3, 4].map(i => getNum('ed-y' + i));
+        p.months = Array.from({ length: 12 }, (_, i) => getNum('ed-m' + i));
+      }
+      if (kpi.canEditDetails) {
+        p.templateDetails = getVal('ed-details');
+        p.dataSource = getVal('ed-source');
+      }
+      if (isPrivilegedUser()) {
+        p.name = getVal('ed-name');
+        p.target = getVal('ed-target');
+        p.owner = getVal('ed-owner');
+        p.department = getVal('ed-dept');
+        p.level = getVal('ed-level');
+      }
+      return p;
+    }
+
+    function onEditInput() {
+      const mark = document.getElementById('dirty-mark');
+      if (mark) mark.style.display = isDirty() ? 'inline' : 'none';
+    }
+
+    function startEdit() {
+      const kpi = currentKpi();
+      if (!kpi || !(kpi.canEditResults || kpi.canEditDetails)) return;
+      editMode = true;
+      renderKpiDetail();
+      editSnapshot = JSON.stringify(collectDraft());
+      onEditInput();
+    }
+
+    function exitEdit() {
+      editMode = false;
+      editSnapshot = null;
+      renderKpiDetail();
+    }
+
+    function cancelEdit() {
+      if (isDirty()) showConfirm('ยกเลิกการแก้ไข?\nข้อมูลที่แก้ไขไว้จะหายไป', exitEdit);
+      else exitEdit();
+    }
+
+    function saveKpiEdit(afterSave) {
+      const kpi = currentKpi();
+      if (!kpi) return;
+      const draft = collectDraft();
+      if (isPrivilegedUser() && draft.name !== undefined && draft.name.trim() === '') {
+        showAlert('ข้อมูลไม่ครบ', '⚠️', 'กรุณาระบุชื่อตัวชี้วัด');
+        return;
+      }
+      google.script.run
+        .withSuccessHandler((res) => {
+          if (!res.success) { showAlert('บันทึกไม่สำเร็จ', '❌', res.message); return; }
+          const idx = globalDatabase.findIndex(k => k.id === res.kpi.id);
+          if (idx !== -1) globalDatabase[idx] = res.kpi;
+          editMode = false;
+          editSnapshot = null;
+          renderTree();
+          renderKpiDetail();
+          if (currentTab === 'progress') loadProgressSummary();
+          showToast(res.changed ? '✅ ' + res.message : 'ℹ️ ' + res.message);
+          if (afterSave) afterSave();
+        })
+        .withFailureHandler((err) => showAlert('เกิดข้อผิดพลาดในการบันทึก', '❌', err.toString()))
+        .saveKpi(sessionToken, selectedFy, draft);
+    }
+
+    function requestDeleteKpi() {
+      const kpi = currentKpi();
+      if (!kpi) return;
+      showConfirm(`ยืนยันการลบตัวชี้วัด:\n"${kpi.name}"\nออกจากปีงบ ${selectedFy} (ปีงบอื่นยังเก็บไว้เป็นประวัติ)?`, () => {
+        google.script.run
+          .withSuccessHandler((res) => {
+            if (res.success) {
+              showToast('🗑️ ' + res.message);
+              editMode = false; editSnapshot = null;
+              selectedKpiId = null;
+              fetchAllDataFromServer(true);
+            } else { showAlert('ข้อผิดพลาด', '❌', res.message); }
+          })
+          .withFailureHandler((err) => showAlert('เกิดข้อผิดพลาดในการลบข้อมูล', '❌', err.toString()))
+          .deleteIndicator(sessionToken, selectedFy, kpi.part, kpi.id);
+      });
+    }
+
+    // ===================== เพิ่มตัวชี้วัดใหม่ =====================
+    function openAddKpiModal() {
+      document.getElementById('modal-add-kpi').style.display = 'flex';
+      if (selectedPartName) document.getElementById('add-kpi-part').value = selectedPartName;
+      if (selectedCategoryName) document.getElementById('add-kpi-category').value = selectedCategoryName;
+      ['add-kpi-name', 'add-kpi-target', 'add-kpi-source', 'add-kpi-owner', 'add-kpi-dept'].forEach(id => { document.getElementById(id).value = ''; });
+      document.getElementById('add-kpi-level').value = 'SAR';
+    }
+
+    function submitAddKpi() {
+      const part = document.getElementById('add-kpi-part').value.trim();
+      const cat = document.getElementById('add-kpi-category').value.trim();
+      const name = document.getElementById('add-kpi-name').value.trim();
+      if (!part || !cat || !name) {
+        showAlert('ข้อมูลไม่ครบ', '⚠️', 'กรุณาระบุ หมวดหลัก หมวดหมู่ย่อย และ ชื่อตัวชี้วัด');
+        return;
+      }
+      const newItem = {
+        part: part, category: cat, name: name,
+        target: document.getElementById('add-kpi-target').value.trim(),
+        years: [null, null, null, null, null],
+        months: [null, null, null, null, null, null, null, null, null, null, null, null],
+        templateDetails: '',
+        dataSource: document.getElementById('add-kpi-source').value,
+        owner: document.getElementById('add-kpi-owner').value,
+        department: document.getElementById('add-kpi-dept').value,
+        level: document.getElementById('add-kpi-level').value
+      };
+      document.getElementById('modal-add-kpi').style.display = 'none';
+      google.script.run
+        .withSuccessHandler((res) => {
+          if (!res.success) { showAlert('ข้อผิดพลาด', '❌', res.message); return; }
+          showToast('✅ เพิ่มตัวชี้วัดเรียบร้อยแล้ว');
+          pendingSelectAfterLoad = { id: res.newId };
+          switchMenu('home');
+          fetchAllDataFromServer(true);
+          // เปิดโหมดแก้ไขให้ทันทีหลังโหลดเสร็จ
+          const wait = setInterval(() => {
+            if (!pendingSelectAfterLoad) { clearInterval(wait); if (currentKpi() && currentKpi().id === res.newId) startEdit(); }
+          }, 150);
+          setTimeout(() => clearInterval(wait), 15000);
+        })
+        .withFailureHandler((err) => showAlert('เกิดข้อผิดพลาด', '❌', err.toString()))
+        .addIndicator(sessionToken, selectedFy, newItem);
+    }
+
+    // ===================== ตั้งค่าผู้ใช้ (admin) =====================
     function openSettings() {
       if (!currentUser || currentUser.tier !== 'admin') return;
       document.getElementById('modal-settings').style.display = 'flex';
@@ -762,16 +1215,8 @@
       document.getElementById('settings-users-list').innerHTML = html;
     }
 
-    function addUserRow() {
-      settingsUsers.push({ username: '', tier: 'staff', depts: '', isNew: true });
-      renderSettingsForm();
-    }
-
-    function removeUserRow(index) {
-      settingsUsers.splice(index, 1);
-      renderSettingsForm();
-    }
-
+    function addUserRow() { settingsUsers.push({ username: '', tier: 'staff', depts: '', isNew: true }); renderSettingsForm(); }
+    function removeUserRow(index) { settingsUsers.splice(index, 1); renderSettingsForm(); }
     function toggleResetPassword(index) {
       const name = settingsUsers[index].username;
       settingsResets[name] = !settingsResets[name];
@@ -804,333 +1249,7 @@
         .saveUsersForAdmin(sessionToken, users, resets);
     }
 
-    function runNursingSyncNow() {
-      showAlert("กำลังซิงค์ข้อมูล...", "⏳", "กำลังดึงข้อมูลจากระบบตัวชี้วัดคุณภาพการพยาบาล กรุณารอสักครู่");
-      google.script.run
-        .withSuccessHandler((res) => {
-          document.getElementById('modal-alert').style.display = 'none';
-          if (res.success) {
-            showAlert("ซิงค์ข้อมูลสำเร็จ", "✅", res.message);
-            fetchAllDataFromServer(true);
-          } else {
-            showAlert("ซิงค์ข้อมูลล้มเหลว", "❌", res.message);
-          }
-        })
-        .withFailureHandler((err) => showAlert("เกิดข้อผิดพลาดเครือข่าย", "❌", err.toString()))
-        .syncNursingNow(sessionToken);
-    }
-
-    function loadNursingSyncStatus() {
-      google.script.run
-        .withSuccessHandler((res) => {
-          const statusEl = document.getElementById('nursing-sync-status');
-          const btn = document.getElementById('btn-toggle-auto-sync');
-          if (!statusEl || !btn) return;
-          if (res.enabled) {
-            statusEl.innerText = '🟢 ซิงค์อัตโนมัติ: เปิดอยู่ (ทุกวัน 05:00 น.)';
-            btn.innerText = '⏸️ ปิดซิงค์อัตโนมัติ';
-          } else {
-            statusEl.innerText = '⚪ ซิงค์อัตโนมัติ: ปิดอยู่';
-            btn.innerText = '⏱️ เปิดซิงค์อัตโนมัติ';
-          }
-        })
-        .getNursingSyncTriggerStatus(sessionToken);
-    }
-
-    function toggleAutoNursingSync() {
-      const btn = document.getElementById('btn-toggle-auto-sync');
-      btn.disabled = true;
-      google.script.run
-        .withSuccessHandler((res) => {
-          btn.disabled = false;
-          if (res.success) {
-            showAlert(res.enabled ? "เปิดใช้งานแล้ว" : "ปิดใช้งานแล้ว", "✅", res.message);
-            loadNursingSyncStatus();
-          } else {
-            showAlert("ข้อผิดพลาด", "❌", res.message);
-          }
-        })
-        .withFailureHandler((err) => {
-          btn.disabled = false;
-          showAlert("เกิดข้อผิดพลาด", "❌", err.toString());
-        })
-        .toggleNursingSyncTrigger(sessionToken);
-    }
-
-    let nursingReviewItems = [];
-    let nursingUnlinkedDestList = [];
-
-    function openNursingReviewModal() {
-      showAlert("กำลังโหลดข้อมูล...", "⏳", "กำลังเปรียบเทียบข้อมูลจากทั้งสองระบบ กรุณารอสักครู่");
-      google.script.run
-        .withSuccessHandler((res) => {
-          document.getElementById('modal-alert').style.display = 'none';
-          if (!res.success) { showAlert("ข้อผิดพลาด", "❌", res.message); return; }
-
-          nursingReviewItems = res.items.filter(it => it.status !== 'linked');
-          nursingUnlinkedDestList = res.unlinkedDestList;
-
-          if (nursingReviewItems.length === 0) {
-            showAlert("ไม่มีรายการใหม่", "✅", "ตัวชี้วัดจากฝ่ายการพยาบาลถูกจับคู่ไว้ครบทุกรายการแล้ว");
-            return;
-          }
-          renderNursingReviewList();
-          document.getElementById('modal-nursing-review').style.display = 'flex';
-        })
-        .withFailureHandler((err) => showAlert("เกิดข้อผิดพลาดเครือข่าย", "❌", err.toString()))
-        .getNursingSyncPreview(sessionToken);
-    }
-
-    function renderNursingReviewList() {
-      const container = document.getElementById('nursing-review-list');
-      let html = `<p style="font-size:13px; color:#64748b; margin-bottom:10px;">
-        พบตัวชี้วัดจากฝ่ายการพยาบาล <b>${nursingReviewItems.length}</b> รายการที่ยังไม่จับคู่ —
-        จับคู่เฉพาะตัวชี้วัดที่ <b>ซ้ำกันจริง</b> กับของโรงพยาบาลเท่านั้น ตัวที่ไม่ซ้ำกันไม่ต้องจับคู่ (เลือก "ข้าม" ได้เลย)
-      </p>`;
-      html += `<div class="data-table-wrapper" style="max-height:50vh; box-shadow:none;"><table><thead><tr>
-        <th style="text-align:left; min-width:220px;">ตัวชี้วัดจากฝ่ายการพยาบาล</th>
-        <th style="text-align:left; min-width:220px;">จับคู่กับตัวชี้วัดใน KPI PH</th>
-      </tr></thead><tbody>`;
-
-      nursingReviewItems.forEach((item) => {
-        let options = `<option value="">🚫 ข้าม (ไม่ใช่ตัวเดียวกัน / ไม่มีในระบบนี้)</option>`;
-        nursingUnlinkedDestList.forEach(d => {
-          const selected = (item.status === 'suggested' && item.suggestedDestId === d.id) ? 'selected' : '';
-          options += `<option value="${d.id}" ${selected}>${d.name} (${d.category})</option>`;
-        });
-        const suggestBadge = item.status === 'suggested'
-          ? `<div style="font-size:11px; color:#047857; font-weight:700; margin-top:2px;">💡 ระบบคาดว่าตรงกับ "${item.suggestedDestName}"</div>`
-          : '';
-        html += `<tr>
-          <td style="text-align:left;">
-            <div style="font-weight:700;">${item.sourceName}</div>
-            <div style="font-size:11px; color:#64748b;">${item.sourcePart} / ${item.sourceCategory} — เป้าหมาย: ${item.sourceTarget}</div>
-            ${suggestBadge}
-          </td>
-          <td style="padding:4px;">
-            <select class="editable-input nursing-match-select" data-source-id="${item.sourceId}" style="font-size:12px;">${options}</select>
-          </td>
-        </tr>`;
-      });
-
-      html += `</tbody></table></div>`;
-      container.innerHTML = html;
-    }
-
-    function submitNursingReviewMappings() {
-      const selects = document.querySelectorAll('.nursing-match-select');
-      const mappings = [];
-      const usedDestIds = new Set();
-      let hasDup = false;
-
-      selects.forEach(sel => {
-        const destId = sel.value || null;
-        if (destId) {
-          if (usedDestIds.has(destId)) hasDup = true;
-          usedDestIds.add(destId);
-        }
-        mappings.push({ sourceId: sel.getAttribute('data-source-id'), destId: destId });
-      });
-
-      if (hasDup) {
-        showAlert("เลือกซ้ำกัน", "⚠️", "มีการจับคู่กับตัวชี้วัดเดิมซ้ำกันมากกว่า 1 รายการ กรุณาตรวจสอบก่อนบันทึก");
-        return;
-      }
-
-      document.getElementById('modal-nursing-review').style.display = 'none';
-      showAlert("กำลังบันทึกการจับคู่...", "⏳", "กรุณารอสักครู่");
-
-      google.script.run
-        .withSuccessHandler((res) => {
-          document.getElementById('modal-alert').style.display = 'none';
-          if (res.success) {
-            showAlert("สำเร็จ", "✅", res.message);
-            fetchAllDataFromServer(true);
-          } else {
-            showAlert("ข้อผิดพลาด", "❌", res.message);
-          }
-        })
-        .withFailureHandler((err) => showAlert("เกิดข้อผิดพลาดเครือข่าย", "❌", err.toString()))
-        .commitNursingSync(sessionToken, mappings);
-    }
-
-    function renderAccordionTree() {
-      const container = document.getElementById('accordion-tree-container');
-      if (globalDatabase.length === 0) {
-        container.innerHTML = '<div class="empty-state">ไม่พบข้อมูลตัวชี้วัดในระบบ<br><br>👉 คุณสามารถกดเพิ่มตัวชี้วัดในหน้าจัดการได้เลย</div>';
-        return;
-      }
-
-      const tree = {};
-      globalDatabase.forEach(item => {
-        if (!tree[item.part]) tree[item.part] = {};
-        if (!tree[item.part][item.category]) tree[item.part][item.category] = [];
-        tree[item.part][item.category].push(item);
-      });
-
-      container.innerHTML = '';
-      Object.keys(tree).sort().forEach(partName => {
-        const partDiv = document.createElement('div');
-        partDiv.className = 'accordion-part';
-        if (selectedPartName === partName) partDiv.classList.add('open');
-        
-        const header = document.createElement('div');
-        header.className = 'accordion-header';
-        header.innerText = partName;
-        header.onclick = () => {
-          document.querySelectorAll('.accordion-part').forEach(el => {
-            if (el !== partDiv) el.classList.remove('open');
-          });
-          partDiv.classList.toggle('open');
-        };
-        partDiv.appendChild(header);
-
-        const content = document.createElement('div');
-        content.className = 'accordion-content';
-
-        const categories = tree[partName];
-        Object.keys(categories).sort().forEach(catName => {
-          const catBlock = document.createElement('div');
-          catBlock.className = 'category-block';
-          if (selectedCategoryName === catName && selectedPartName === partName) catBlock.classList.add('open');
-
-          const catHeader = document.createElement('div');
-          catHeader.className = 'category-header';
-          catHeader.innerText = catName;
-          if (currentTab === 'admin' && selectedCategoryName === catName && selectedPartName === partName) {
-            catHeader.style.background = '#e0f2fe';
-          }
-          
-          catHeader.onclick = (e) => {
-            e.stopPropagation();
-            selectedPartName = partName;
-            if (currentTab === 'admin') {
-              selectedCategoryName = catName;
-              document.querySelectorAll('.category-header').forEach(el => el.style.background = '#fff');
-              catHeader.style.background = '#e0f2fe';
-              loadAdminCategoryTable(partName, catName);
-            } else {
-              document.querySelectorAll('.category-block').forEach(el => {
-                if (el !== catBlock) el.classList.remove('open');
-              });
-              catBlock.classList.toggle('open');
-            }
-          };
-          catBlock.appendChild(catHeader);
-
-          const catContent = document.createElement('div');
-          catContent.className = 'category-content';
-
-          categories[catName].forEach((kpi, index) => {
-            const kpiItem = document.createElement('div');
-            kpiItem.className = 'kpi-link-item';
-            if (selectedKpiId === kpi.id && currentTab === 'home') kpiItem.classList.add('selected');
-            
-            kpiItem.innerText = `${index + 1}. ${kpi.name}`;
-            
-            kpiItem.onclick = (e) => {
-              e.stopPropagation();
-              selectedPartName = partName;
-              
-              if (currentTab === 'home' || currentTab === 'progress') {
-                if (currentTab === 'progress') switchMenu('home'); 
-                selectedKpiId = kpi.id;
-                document.querySelectorAll('.kpi-link-item').forEach(el => el.classList.remove('selected'));
-                kpiItem.classList.add('selected');
-                loadSingleKpiDashboard(partName, kpi.id);
-              } else {
-                selectedCategoryName = catName;
-                loadAdminCategoryTable(partName, catName);
-              }
-            };
-            catContent.appendChild(kpiItem);
-          });
-
-          catBlock.appendChild(catContent);
-          content.appendChild(catBlock);
-        });
-
-        partDiv.appendChild(content);
-        container.appendChild(partDiv);
-      });
-    }
-
-    function loadSingleKpiDashboard(partName, id) {
-      const kpi = globalDatabase.find(k => k.id === id);
-      if(!kpi) {
-        document.getElementById('dashboard-content-area').innerHTML = '<div class="empty-state">ไม่พบข้อมูล หรืออาจถูกลบไปแล้ว</div>';
-        return;
-      }
-      trackView(id);
-      renderDashboardContent(kpi);
-    }
-
-    function renderDashboardContent(kpi) {
-      const displayArea = document.getElementById('dashboard-content-area');
-      const currentYear = selectedFy;
-      const yearsLabels = [currentYear-4, currentYear-3, currentYear-2, currentYear-1, currentYear];
-      
-      // ส่งค่า target ที่เป็นอักษรเข้าฟังก์ชันวาดกราฟ
-      const chartSvg = generateSvgLineChart(kpi.years, kpi.target, yearsLabels);
-      const mSummary = calculateMonthlySummary(kpi.months);
-
-      const filtered = globalDatabase.filter(item => item.part === kpi.part && item.category === kpi.category);
-      const kpiIndex = filtered.findIndex(item => item.id === kpi.id) + 1;
-
-      let html = `
-        <div class="dashboard-title">${kpiIndex}. ${kpi.name}</div>
-        <div style="margin-bottom: 10px;">
-          <span class="meta-badge">หมวดหมู่: ${kpi.category}</span>
-          <span class="meta-badge">หมวดหลัก: ${kpi.part}</span>
-          <span class="meta-badge">ปีงบ: ${selectedFy}${selectedFy === currentFy ? ' (ปัจจุบัน)' : ''}</span>
-          <span class="meta-badge">ระดับ: ${kpi.level}</span>
-          <span class="meta-badge">✏️ แก้ไขล่าสุด: ${stampText(kpi.editedAt, kpi.editedBy)}</span>
-          <span class="meta-badge">👁️ เข้าดูล่าสุด: ${stampText(kpi.viewedAt, kpi.viewedBy)}</span>
-        </div>
-
-        <div class="kpi-target-callout">
-          🎯 ค่าเป้าหมายตามเกณฑ์มาตรฐาน: ${kpi.target}
-        </div>
-
-        <h4 style="margin: 12px 0 6px 0; font-size: 14px; color:#0f172a; text-align: left;">📈 แผนภูมิเส้นผลลัพธ์ 5 ปีงบประมาณย้อนหลังและปีปัจจุบัน</h4>
-        <div style="background:#fff; padding:10px; border:1px solid #cbd5e1; border-radius:8px; margin-bottom:12px; box-shadow: 0 4px 10px rgba(0,0,0,0.02);">
-          ${chartSvg}
-        </div>
-
-        <h4 style="margin: 15px 0 6px 0; font-size: 14px; color:#0f172a; text-align: left;">📊 ผลลัพธ์รายเดือน (ปีงบประมาณปัจจุบัน)</h4>
-        <div class="data-table-wrapper">
-          <table>
-            <thead>
-              <tr>
-                ${thMonthsNames.map(m => `<th>${m}</th>`).join('')}
-                <th>ค่าเฉลี่ย</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                ${kpi.months.map(v => `<td>${v !== null ? v : '-'}</td>`).join('')}
-                <td style="font-weight:700; color:var(--primary-color); background:#f0f9ff;">${mSummary}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        <div class="info-card">
-          <div class="info-card-title">📝 รายละเอียดตัวชี้วัด</div>
-          <p style="font-size:13px; color:#475569; white-space: pre-line; font-weight:500;">${kpi.templateDetails || 'ไม่มีข้อมูลรายละเอียดเพิ่มเติม'}</p>
-        </div>
-        <div class="info-card">
-          <div class="info-card-title">🔗 ที่มาแหล่งข้อมูล / สูตรคำนวณ</div>
-          <p style="font-size:13px; color:#475569; white-space: pre-line; font-weight:500;">${kpi.dataSource || 'ไม่ระบุที่มาข้อมูล'}</p>
-        </div>
-        <div class="info-card" style="border-left: 5px solid var(--primary-color);">
-          <div class="info-card-title">👤 ผู้รับผิดชอบดูแล</div>
-          <p style="font-size:13px; font-weight:700; color:#1e293b;">${kpi.owner || '-'} (${kpi.department || '-'})</p>
-        </div>
-      `;
-      displayArea.innerHTML = html;
-    }
-
+    // ===================== กราฟ =====================
     function calculateMonthlySummary(mArray) {
       const validValues = mArray.filter(v => v !== null);
       if (validValues.length === 0) return '-';
@@ -1139,8 +1258,8 @@
 
     // ฟังก์ชันวาดกราฟที่ฉลาดขึ้น สกัดตัวเลขได้เอง
     function generateSvgLineChart(dataPoints, targetStr, labels) {
-      const width = 600, height = 220, padding = 35; 
-      
+      const width = 600, height = 220, padding = 35;
+
       // สกัดตัวเลขออกมาจากช่องเป้าหมาย (รองรับทศนิยมและค่าติดลบ)
       let targetVal = 0;
       const targetMatch = String(targetStr).match(/-?\d+(\.\d+)?/);
@@ -1151,17 +1270,17 @@
       const allVals = [...dataPoints.filter(v => v !== null), targetVal];
       let maxVal = Math.max(...allVals, 10);
       let minVal = Math.min(...allVals, 0);
-      maxVal = maxVal + (maxVal * 0.15); 
-      
+      maxVal = maxVal + (maxVal * 0.15);
+
       let diff = maxVal - minVal;
       if (diff === 0) diff = 1;
-      
+
       const calcY = (val) => val === null ? height - padding : height - padding - ((val - minVal) / diff * (height - padding * 2));
       const calcX = (index) => padding + (index * (width - padding * 2) / (labels.length - 1));
 
       const targetY = calcY(targetVal);
       let svg = `<svg viewBox="0 0 ${width} ${height}" width="100%" height="auto">`;
-      
+
       for (let i = 0; i <= 4; i++) {
         const gridVal = minVal + (i * (maxVal - minVal) / 4);
         const gridY = calcY(gridVal);
@@ -1170,16 +1289,15 @@
       }
 
       svg += `<line x1="${padding}" y1="${targetY}" x2="${width-padding}" y2="${targetY}" stroke="#ea580c" stroke-width="2.5" stroke-dasharray="5,5"/>`;
-      // แสดงป้ายชื่อโดยใช้ String 原ฉบับที่มีเครื่องหมายครบถ้วน
-      svg += `<text x="${width-padding+5}" y="${targetY+4}" font-size="11" fill="#ea580c" font-weight="bold">Target (${targetStr})</text>`;
+      svg += `<text x="${width-padding}" y="${targetY-6}" font-size="11" text-anchor="end" fill="#ea580c" font-weight="bold">Target (${esc(targetStr)})</text>`;
 
       let polylinePoints = [];
       let dotsSvg = '';
-      
+
       dataPoints.forEach((val, idx) => {
         const x = calcX(idx);
         svg += `<text x="${x}" y="${height-8}" font-size="11" font-weight="700" text-anchor="middle" fill="#334155">${labels[idx]}</text>`;
-        
+
         if (val !== null) {
           const y = calcY(val);
           polylinePoints.push(`${x},${y}`);
@@ -1195,49 +1313,30 @@
       return svg;
     }
 
+    // ===================== ติดตามงาน (Progress) =====================
     function loadProgressSummary() {
-      // ผลมักกรอกย้อนหลัง 1 เดือน จึงเช็กเดือนที่แล้ว: ปีงบปัจจุบัน = เดือนก่อนหน้า (ต.ค. = ยังไม่ต้องเช็ก)
-      // ปีงบที่ผ่านมาแล้ว = เช็ก ก.ย. (เดือนสุดท้าย)
-      let fiscalMonthIdx;
-      if (selectedFy === currentFy) {
-        fiscalMonthIdx = ((new Date().getMonth() + 3) % 12) - 1;
-      } else {
-        fiscalMonthIdx = 11;
-      }
-      
-      let summary = [];
+      const fiscalMonthIdx = expectedMonthIdx();
+      const summary = [];
       globalDatabase.forEach(kpi => {
-        let noDetails = (!kpi.templateDetails || !kpi.dataSource);
-        let noData = fiscalMonthIdx >= 0 && kpi.months[fiscalMonthIdx] === null;
+        const noDetails = (!kpi.templateDetails || !kpi.dataSource);
+        const noData = fiscalMonthIdx >= 0 && kpi.months[fiscalMonthIdx] === null;
 
         let status = 'green';
         let statusText = 'ข้อมูลครบถ้วน';
-        
-        if (noData) {
-          status = 'red';
-          statusText = 'ยังไม่เติมข้อมูลล่าสุด';
-        } else if (noDetails) {
-          status = 'yellow';
-          statusText = 'ยังไม่ลงรายละเอียด';
-        }
-        
+        if (noData) { status = 'red'; statusText = 'ยังไม่เติมข้อมูลล่าสุด'; }
+        else if (noDetails) { status = 'yellow'; statusText = 'ยังไม่ลงรายละเอียด'; }
+
         summary.push({
-          id: kpi.id,
-          part: kpi.part,
-          category: kpi.category,
-          name: kpi.name,
-          owner: kpi.owner,
-          department: kpi.department,
-          status: status,
-          statusText: statusText
+          id: kpi.id, part: kpi.part, category: kpi.category, name: kpi.name,
+          owner: kpi.owner, department: kpi.department, status: status, statusText: statusText,
+          canEdit: kpi.canEditResults || kpi.canEditDetails
         });
       });
 
       const order = { 'red': 1, 'yellow': 2, 'green': 3 };
       summary.sort((a, b) => order[a.status] - order[b.status]);
-      
       globalProgressData = summary;
-      renderProgressTable(summary);
+      filterProgressTable();
     }
 
     function renderProgressTable(data) {
@@ -1246,9 +1345,8 @@
         displayArea.innerHTML = '<div class="empty-state">ไม่พบข้อมูลตัวชี้วัดในระบบ</div>';
         return;
       }
-      
       let html = `
-        <div class="data-table-wrapper" style="box-shadow: 0 4px 10px rgba(0,0,0,0.12);">
+        <div class="data-table-wrapper" style="max-height: 70vh; overflow-y: auto; box-shadow: 0 4px 10px rgba(0,0,0,0.12);">
           <table>
             <thead>
               <tr>
@@ -1257,31 +1355,27 @@
                 <th style="width:120px;">หมวดหมู่</th>
                 <th style="width:100px;">ผู้รับผิดชอบ</th>
                 <th style="width:120px;">หน่วยงาน</th>
-                <th style="width:70px;">แก้ไข</th>
+                <th style="width:90px;">เปิด</th>
               </tr>
             </thead>
             <tbody>
       `;
-      
       data.forEach(item => {
-        let dotColor = item.status === 'red' ? '#ef4444' : (item.status === 'yellow' ? '#f59e0b' : '#10b981');
-        let badgeBg = item.status === 'red' ? '#fee2e2' : (item.status === 'yellow' ? '#fef3c7' : '#d1fae5');
-        let badgeColor = item.status === 'red' ? '#b91c1c' : (item.status === 'yellow' ? '#b45309' : '#047857');
-        
+        const dotColor = item.status === 'red' ? '#ef4444' : (item.status === 'yellow' ? '#f59e0b' : '#10b981');
+        const badgeBg = item.status === 'red' ? '#fee2e2' : (item.status === 'yellow' ? '#fef3c7' : '#d1fae5');
+        const badgeColor = item.status === 'red' ? '#b91c1c' : (item.status === 'yellow' ? '#b45309' : '#047857');
         html += `
-          <tr style="cursor:pointer;" onclick="editKpiFromProgress('${item.part}', '${item.category}')" title="คลิกเพื่อกระโดดไปหน้าจัดการหมวดนี้">
+          <tr style="cursor:pointer;" onclick="gotoKpi('${esc(item.id)}', ${item.canEdit ? 'true' : 'false'})" title="คลิกเพื่อเปิดตัวชี้วัดนี้ในหน้าแรก">
             <td>
               <span style="background:${badgeBg}; color:${badgeColor}; padding:4px 8px; border-radius:12px; font-size:12px; font-weight:700; display:inline-block; white-space:nowrap;">
                 <span style="display:inline-block; width:8px; height:8px; background:${dotColor}; border-radius:50%; margin-right:4px;"></span>${item.statusText}
               </span>
             </td>
-            <td style="text-align:left; font-weight:600; color:#0f172a;">${item.name}</td>
-            <td>${item.category}</td>
-            <td>${item.owner || '-'}</td>
-            <td>${item.department || '-'}</td>
-            <td style="text-align:center;">
-               <button class="btn btn-secondary" style="padding: 4px 8px; font-size:11px;">✏️ แก้ไข</button>
-            </td>
+            <td style="text-align:left; font-weight:600; color:#0f172a;">${esc(item.name)}</td>
+            <td>${esc(item.category)}</td>
+            <td>${esc(item.owner) || '-'}</td>
+            <td>${esc(item.department) || '-'}</td>
+            <td style="text-align:center;"><button class="btn btn-secondary btn-sm">${item.canEdit ? '✏️ แก้ไข' : '👁️ ดู'}</button></td>
           </tr>
         `;
       });
@@ -1291,285 +1385,157 @@
 
     function filterProgressTable() {
       const term = document.getElementById('progress-filter').value.toLowerCase();
-      const filtered = globalProgressData.filter(item => 
-        (item.owner || '').toLowerCase().includes(term) || 
+      const filtered = globalProgressData.filter(item =>
+        (item.owner || '').toLowerCase().includes(term) ||
         (item.department || '').toLowerCase().includes(term) ||
         (item.name || '').toLowerCase().includes(term)
       );
       renderProgressTable(filtered);
     }
 
-    function editKpiFromProgress(part, category) {
-      routeToAdminCategory(part, category);
+    // เปิดตัวชี้วัดในหน้าแรก (และเข้าโหมดแก้ไขถ้ามีสิทธิ์)
+    function gotoKpi(id, edit) {
+      switchMenu('home');
+      selectKpi(id);
+      if (edit && selectedKpiId === id) startEdit();
     }
 
-    function routeToAdminCategory(part, category) {
-      selectedPartName = part;
-      selectedCategoryName = category;
-      currentTab = 'admin';
-      
-      document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-      document.querySelectorAll('.page-view').forEach(el => el.classList.remove('active'));
-      document.getElementById('menu-admin-btn').classList.add('active');
-      document.getElementById('page-admin').classList.add('active');
-      
-      renderAccordionTree();
-      loadAdminCategoryTable(part, category);
-    }
-
-    function loadAdminCategoryTable(partName, catName) {
-      const kpis = globalDatabase.filter(item => item.part === partName && item.category === catName);
-      currentAdminKpis = kpis;
-      renderAdminCategoryTable(partName, catName, kpis);
-    }
-
-    function renderAdminCategoryTable(partName, catName, kpis) {
-      const displayArea = document.getElementById('admin-content-area');
-
-      const priv = isPrivilegedUser();
-      const anyEditable = kpis.some(k => k.canEditResults);
-      const disYear = (kpi, i) => (!kpi.canEditResults || (i < 4 && kpi.lockedYears && kpi.lockedYears[i] && !priv))
-        ? 'disabled title="ผลปีนี้อ้างอิงจากชีตปีงบนั้น แก้ได้เฉพาะ admin / ผอ. / QMR"' : '';
-      let html = `
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-          <div class="dashboard-title" style="margin:0; border:none; font-size:16px;">ตารางแก้ไขหมวด: ${catName} — ปีงบ ${selectedFy}${selectedFy === currentFy ? ' (ปัจจุบัน)' : ''}</div>
-          <div style="display:flex; gap:6px;">
-            <button class="btn btn-accent" style="background:var(--secondary-gradient);" onclick="exportCurrentCategoryToPdf('${partName}', '${catName}')">📄 PDF (แนวนอน)</button>
-            ${anyEditable ? `<button class="btn btn-primary" onclick="saveBulkAdminChanges('${partName}', '${catName}')">💾 บันทึกตารางตัวเลข (Save Data)</button>` : ''}
-          </div>
-        </div>
-
-        <div class="data-table-wrapper">
-          <table>
-            <thead>
-              <tr>
-                <th class="sticky-col-1" style="width:45px; text-align:center;">ลำดับ</th>
-                <th class="sticky-col-2" style="min-width:400px; text-align:left;">ชื่อตัวชี้วัด</th>
-                <th class="col-target" style="width:65px;">เป้าหมาย</th>
-                ${[0, 1, 2, 3, 4].map(i => `<th style="width:52px;">${selectedFy - 4 + i}</th>`).join('')}
-                ${thMonthsNames.map(m => `<th style="background:#fffbeb; min-width:52px;">${m}</th>`).join('')}
-                <th style="min-width:120px;">แก้ไขล่าสุด</th>
-                <th style="text-align:center; min-width:140px;">จัดการ</th>
-              </tr>
-            </thead>
-            <tbody>
-      `;
-
-      if (kpis.length === 0) {
-        html += `<tr><td colspan="22" class="empty-state">ไม่พบตัวชี้วัดย่อยในหมวดนี้</td></tr>`;
-      } else {
-        kpis.forEach((kpi, idx) => {
-          const dis = kpi.canEditResults ? '' : 'disabled';
-          const disStruct = priv ? '' : 'disabled';
-          html += `
-            <tr class="admin-data-row" data-id="${kpi.id}" data-editable="${kpi.canEditResults ? 1 : 0}">
-              <td class="sticky-col-1" style="font-weight:700; color:#0f172a; text-align:center;">${idx + 1}</td>
-              <td class="sticky-col-2" style="padding: 0;">
-                <textarea class="editable-input kpi-field-name" style="font-weight:700; text-align:left; min-width:400px; min-height:60px; resize:vertical; padding:8px;" ${disStruct}>${kpi.name}</textarea>
-              </td>
-              <!-- เปลี่ยนคอลัมน์เป้าหมายหน้า Admin เป็นแบบข้อความ (text) -->
-              <td class="col-target" style="padding: 0;"><input type="text" class="editable-input kpi-field-target" value="${esc(kpi.target)}" style="width:65px; text-align:center; padding:6px 2px;" ${disStruct}></td>
-              
-              <td style="padding: 0;"><input type="number" class="editable-input kpi-field-y0" value="${kpi.years[0] !== null ? kpi.years[0] : ''}" style="width:52px; text-align:center; padding:6px 2px;" ${disYear(kpi, 0)}></td>
-              <td style="padding: 0;"><input type="number" class="editable-input kpi-field-y1" value="${kpi.years[1] !== null ? kpi.years[1] : ''}" style="width:52px; text-align:center; padding:6px 2px;" ${disYear(kpi, 1)}></td>
-              <td style="padding: 0;"><input type="number" class="editable-input kpi-field-y2" value="${kpi.years[2] !== null ? kpi.years[2] : ''}" style="width:52px; text-align:center; padding:6px 2px;" ${disYear(kpi, 2)}></td>
-              <td style="padding: 0;"><input type="number" class="editable-input kpi-field-y3" value="${kpi.years[3] !== null ? kpi.years[3] : ''}" style="width:52px; text-align:center; padding:6px 2px;" ${disYear(kpi, 3)}></td>
-              <td style="padding: 0;"><input type="number" class="editable-input kpi-field-y4" value="${kpi.years[4] !== null ? kpi.years[4] : ''}" style="width:52px; text-align:center; padding:6px 2px;" ${dis}></td>
-              
-              ${kpi.months.map((mv, mi) => `
-                <td style="padding: 0; background:#f8fafc;"><input type="number" class="editable-input kpi-field-m${mi}" value="${mv !== null ? mv : ''}" style="width:52px; text-align:center; padding:6px 2px;" ${dis}></td>
-              `).join('')}
-
-              <td style="font-size:11px; color:#475569; text-align:center;">${kpi.editedAt ? esc(kpi.editedAt) + '<br>' + esc(kpi.editedBy) : '-'}</td>
-              <td style="text-align:center; white-space:nowrap;">
-                <button class="btn btn-secondary" style="padding: 5px 8px; font-size:12px; margin-right:4px;" onclick="openDetailsModal('${partName}', '${kpi.id}')">${kpi.canEditDetails ? 'รายละเอียด' : 'ดูรายละเอียด'}</button>
-                ${priv ? `<button class="btn btn-danger" style="padding: 5px 8px; font-size:12px;" onclick="requestDeleteKpi('${partName}', '${kpi.id}', '${kpi.name}')">ลบ</button>` : ''}
-              </td>
-            </tr>
-          `;
-        });
-      }
-      html += `</tbody></table></div>`;
-      displayArea.innerHTML = html;
-    }
-
-    function openDetailsModal(partName, id) {
-      const kpi = currentAdminKpis.find(k => k.id === id);
-      if(!kpi) return;
-      trackView(id);
-      
-      document.getElementById('edit-detail-id').value = id;
-      document.getElementById('edit-detail-part').value = partName;
-      document.getElementById('edit-detail-template').value = kpi.templateDetails || '';
-      document.getElementById('edit-detail-source').value = kpi.dataSource || '';
-      document.getElementById('edit-detail-owner').value = kpi.owner || '';
-      document.getElementById('edit-detail-dept').value = kpi.department || '';
-      document.getElementById('edit-detail-level').value = kpi.level || 'SAR';
-
-      const priv = isPrivilegedUser();
-      document.getElementById('edit-detail-template').disabled = !kpi.canEditDetails;
-      document.getElementById('edit-detail-source').disabled = !kpi.canEditDetails;
-      document.getElementById('edit-detail-owner').disabled = !priv;
-      document.getElementById('edit-detail-dept').disabled = !priv;
-      document.getElementById('edit-detail-level').disabled = !priv;
-      document.getElementById('btn-save-details').style.display = kpi.canEditDetails ? 'inline-block' : 'none';
-      
-      document.getElementById('modal-details-edit').style.display = 'flex';
-    }
-
-    function saveDetailsChanges() {
-      const id = document.getElementById('edit-detail-id').value;
-      const partName = document.getElementById('edit-detail-part').value;
-      const details = {
-        templateDetails: document.getElementById('edit-detail-template').value,
-        dataSource: document.getElementById('edit-detail-source').value,
-        owner: document.getElementById('edit-detail-owner').value,
-        department: document.getElementById('edit-detail-dept').value,
-        level: document.getElementById('edit-detail-level').value
-      };
-      
-      document.getElementById('modal-details-edit').style.display = 'none';
-      showAlert("กำลังบันทึก...", "⏳", "ระบบกำลังประมวลผลการบันทึกรายละเอียด");
-      
-      google.script.run
-        .withSuccessHandler((res) => {
-          document.getElementById('modal-alert').style.display = 'none';
-          if(res.success) {
-            showAlert("บันทึกสำเร็จ", "✅", res.message);
-            fetchAllDataFromServer(true); 
-          } else {
-            showAlert("ข้อผิดพลาด", "❌", res.message);
-          }
-        })
-        .withFailureHandler((err) => showAlert("ข้อผิดพลาด", "❌", err.toString()))
-        .updateKpiDetails(sessionToken, selectedFy, partName, id, details);
-    }
-
-    function exportCurrentCategoryToPdf(partName, catName) {
-      showAlert("กำลังสร้างไฟล์รายงาน PDF", "⏳", "กรุณารอสักครู่ ระบบกำลังจัดตารางในแนวนอน (Landscape)...");
-      
-      google.script.run
-        .withSuccessHandler((res) => {
-          document.getElementById('modal-alert').style.display = 'none'; 
-          if (res.success) {
-            const link = document.createElement('a');
-            link.href = 'data:application/pdf;base64,' + res.base64;
-            link.download = res.filename;
-            link.click();
-          } else {
-            showAlert("ส่งออกไฟล์ล้มเหลว", "❌", res.message);
-          }
-        })
-        .withFailureHandler((err) => {
-          showAlert("เกิดข้อผิดพลาดขัดข้อง", "❌", err.toString());
-        })
-        .exportCategoryToPdf(sessionToken, selectedFy, partName, catName);
-    }
-
-    function saveBulkAdminChanges(partName, catName) {
-      showConfirm("คุณต้องการบันทึกการแก้ไขตัวเลขผลลัพธ์รายเดือนและข้อมูลทั้งหมดใช่หรือไม่?", () => {
-        const rows = document.querySelectorAll('.admin-data-row[data-editable="1"]');
-        const updatedPayload = [];
-
-        rows.forEach((row, idx) => {
-          const id = row.getAttribute('data-id');
-          const parseVal = (inputEl) => inputEl && inputEl.value === "" ? null : Number(inputEl.value);
-
-          const monthsData = [];
-          for(let i=0; i<12; i++) {
-            monthsData.push(parseVal(row.querySelector(`.kpi-field-m${i}`)));
-          }
-
-          updatedPayload.push({
-            id: id, 
-            no: idx + 1,
-            part: partName, 
-            category: catName,
-            name: row.querySelector('.kpi-field-name').value,
-            // ส่ง target กลับไปเป็นข้อความดิบๆ แทนการบีบให้เป็น Number()
-            target: row.querySelector('.kpi-field-target').value.trim(),
-            years: [
-              parseVal(row.querySelector('.kpi-field-y0')), parseVal(row.querySelector('.kpi-field-y1')),
-              parseVal(row.querySelector('.kpi-field-y2')), parseVal(row.querySelector('.kpi-field-y3')), parseVal(row.querySelector('.kpi-field-y4'))
-            ],
-            months: monthsData
-          });
-        });
-
-        google.script.run
-          .withSuccessHandler((res) => {
-            if (res.success) { 
-              showAlert("บันทึกสำเร็จ", "✅", res.message); 
-              fetchAllDataFromServer(true); 
-            } else { 
-              showAlert("ข้อผิดพลาด", "❌", res.message); 
-            }
-          })
-          .withFailureHandler((err) => showAlert("เกิดข้อผิดพลาดในการบันทึก", "❌", err.toString()))
-          .updateIndicatorsBulk(sessionToken, selectedFy, partName, updatedPayload);
+    // ===================== Export PDF (พิมพ์จากเบราว์เซอร์) =====================
+    function pdfGroups() {
+      const g = {};
+      globalDatabase.forEach(k => {
+        if (!g[k.part]) g[k.part] = {};
+        g[k.part][k.category] = (g[k.part][k.category] || 0) + 1;
       });
+      return g;
     }
 
-    function openAddKpiModal() {
-      document.getElementById('modal-add-kpi').style.display = 'flex';
-      if (selectedPartName) document.getElementById('add-kpi-part').value = selectedPartName;
-      if (selectedCategoryName) document.getElementById('add-kpi-category').value = selectedCategoryName;
-      document.getElementById('add-kpi-name').value = '';
-      document.getElementById('add-kpi-target').value = '';
-      document.getElementById('add-kpi-level').value = 'SAR';
+    function openPdfModal() {
+      const groups = pdfGroups();
+      let html = '';
+      Object.keys(groups).sort().forEach((part, pi) => {
+        html += `<label class="check-row" style="font-weight:700; color:#015c8b;"><input type="checkbox" class="pdf-part" data-part="${esc(part)}" checked onchange="pdfTogglePart(this)"> ${esc(part)}</label>`;
+        Object.keys(groups[part]).sort().forEach(cat => {
+          html += `<label class="check-row" style="margin-left:22px;"><input type="checkbox" class="pdf-cat" data-part="${esc(part)}" data-cat="${esc(cat)}" checked onchange="pdfUpdateCount()"> ${esc(cat)} (${groups[part][cat]})</label>`;
+        });
+      });
+      document.getElementById('pdf-cat-list').innerHTML = html || '<div class="empty-state">ไม่มีตัวชี้วัด</div>';
+      pdfUpdateCount();
+      document.getElementById('modal-pdf').style.display = 'flex';
     }
 
-    function submitAddKpi() {
-      const part = document.getElementById('add-kpi-part').value.trim();
-      const cat = document.getElementById('add-kpi-category').value.trim();
-      const name = document.getElementById('add-kpi-name').value.trim();
-      // ไม่ใช้ Number() เพื่อรองรับข้อความ
-      const target = document.getElementById('add-kpi-target').value.trim();
-      
-      if (!part || !cat || !name) {
-        showAlert("ข้อมูลไม่ครบ", "⚠️", "กรุณาระบุ หมวดหลัก หมวดหมู่ย่อย และ ชื่อตัวชี้วัด");
+    function pdfSelectAll(on) {
+      document.querySelectorAll('#pdf-cat-list input').forEach(c => { c.checked = on; });
+      pdfUpdateCount();
+    }
+
+    function pdfTogglePart(el) {
+      document.querySelectorAll('.pdf-cat').forEach(c => { if (c.dataset.part === el.dataset.part) c.checked = el.checked; });
+      pdfUpdateCount();
+    }
+
+    function pdfSelectedKeys() {
+      const keys = new Set();
+      document.querySelectorAll('.pdf-cat').forEach(c => { if (c.checked) keys.add(c.dataset.part + '||' + c.dataset.cat); });
+      return keys;
+    }
+
+    function pdfUpdateCount() {
+      const keys = pdfSelectedKeys();
+      const n = globalDatabase.filter(k => keys.has(k.part + '||' + k.category)).length;
+      document.getElementById('pdf-count').innerText = `เลือก ${n} ตัวชี้วัด`;
+    }
+
+    function prNum(v) { return v !== null && v !== undefined ? Math.round(v * 100) / 100 : '-'; }
+    function prShort(text, n) { return text.length > n ? text.substring(0, n - 1) + '…' : text; }
+
+    function prMainTables(kpis, landscape) {
+      const yl = [selectedFy - 4, selectedFy - 3, selectedFy - 2, selectedFy - 1, selectedFy];
+      const fs = landscape ? '12pt' : '11pt';
+      const fsMonth = landscape ? '12pt' : '9pt'; // แนวตั้ง: 12 เดือนในหน้าเดียวต้องลดขนาดตาราง
+      const wA = landscape ? [6, 40, 10, 8.8, 8.8, 8.8, 8.8, 8.8] : [7, 36, 12, 9, 9, 9, 9, 9];
+      const wB = landscape ? [5, 21, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 7] : [5, 15, 5.8, 5.8, 5.8, 5.8, 5.8, 5.8, 5.8, 5.8, 5.8, 5.8, 5.8, 5.8, 8.4];
+      const cols = (w) => '<colgroup>' + w.map(x => `<col style="width:${x}%">`).join('') + '</colgroup>';
+
+      let a = `<div class="pr-sub-title">เป้าหมายและผลทั้งปี</div><table class="pr-table" style="font-size:${fs};">${cols(wA)}
+        <thead><tr><th>ที่</th><th>ชื่อตัวชี้วัด</th><th>เป้าหมาย</th>${yl.map(y => `<th>${y}</th>`).join('')}</tr></thead><tbody>`;
+      let b = `<div class="pr-sub-title">ผลลัพธ์รายเดือน ปีงบประมาณ ${selectedFy}</div><table class="pr-table" style="font-size:${fsMonth};">${cols(wB)}
+        <thead><tr><th>ที่</th><th>ตัวชี้วัด</th>${thMonthsNames.map(m => `<th>${m}</th>`).join('')}<th>เฉลี่ย</th></tr></thead><tbody>`;
+      kpis.forEach(k => {
+        const no = kpiNumber(k);
+        a += `<tr><td>${no}</td><td class="pr-left">${esc(k.name)}</td><td class="pr-target">${esc(k.target) || '-'}</td>${k.years.map(v => `<td>${prNum(v)}</td>`).join('')}</tr>`;
+        b += `<tr><td>${no}</td><td class="pr-left">${esc(prShort(k.name, landscape ? 40 : 18))}</td>${k.months.map(v => `<td>${prNum(v)}</td>`).join('')}<td>${calculateMonthlySummary(k.months)}</td></tr>`;
+      });
+      return a + '</tbody></table>' + b + '</tbody></table>';
+    }
+
+    function prBlock(k, opts, landscape) {
+      const yl = [selectedFy - 4, selectedFy - 3, selectedFy - 2, selectedFy - 1, selectedFy];
+      let h = `<div class="pr-block"><div class="pr-kpi-title">${kpiNumber(k)}. ${esc(k.name)}</div>
+        <div class="pr-meta">หมวด: ${esc(k.category)} · ระดับ: ${esc(k.level)} · เป้าหมาย: <b>${esc(k.target) || '-'}</b> · ปีงบประมาณ ${selectedFy}</div>`;
+      if (opts.chart) {
+        h += `<div class="pr-chart">${generateSvgLineChart(k.years, k.target, yl)}</div>
+          <table class="pr-table" style="font-size:${landscape ? '12pt' : '9.5pt'};"><thead><tr>${thMonthsNames.map(m => `<th>${m}</th>`).join('')}<th>เฉลี่ย</th></tr></thead>
+          <tbody><tr>${k.months.map(v => `<td>${prNum(v)}</td>`).join('')}<td>${calculateMonthlySummary(k.months)}</td></tr></tbody></table>`;
+      }
+      if (opts.detail) h += `<div class="pr-label">รายละเอียด/การวิเคราะห์ตัวชี้วัด</div><div class="pr-text">${esc(k.templateDetails) || '-'}</div>`;
+      if (opts.source) h += `<div class="pr-label">ที่มาแหล่งข้อมูล / สูตรคำนวณ</div><div class="pr-text">${esc(k.dataSource) || '-'}</div>`;
+      if (opts.owner) h += `<div class="pr-label">ผู้รับผิดชอบดูแล</div><div class="pr-text">${esc(k.owner) || '-'} (${esc(k.department) || '-'})</div>`;
+      return h + '</div>';
+    }
+
+    function buildPrintHtml(opts, landscape) {
+      const keys = pdfSelectedKeys();
+      const chosen = globalDatabase.filter(k => keys.has(k.part + '||' + k.category));
+      const tree = {};
+      chosen.forEach(k => {
+        if (!tree[k.part]) tree[k.part] = {};
+        if (!tree[k.part][k.category]) tree[k.part][k.category] = [];
+        tree[k.part][k.category].push(k);
+      });
+      const printedAt = new Date().toLocaleString('th-TH', { dateStyle: 'long', timeStyle: 'short' });
+      let html = `<div class="pr-head"><div class="pr-hosp">โรงพยาบาลภูหลวง</div>
+        <div class="pr-sub">รายงานตัวชี้วัดคุณภาพ ปีงบประมาณ ${selectedFy}</div>
+        <div class="pr-info">พิมพ์เมื่อ ${esc(printedAt)} · โดย ${esc(currentUser.username)} · จำนวน ${chosen.length} ตัวชี้วัด</div></div>`;
+      const perKpi = opts.chart || opts.detail || opts.source || opts.owner;
+      Object.keys(tree).sort().forEach(part => {
+        html += `<div class="pr-part">${esc(part)}</div>`;
+        Object.keys(tree[part]).sort().forEach(cat => {
+          const kpis = tree[part][cat];
+          html += `<div class="pr-cat">${esc(cat)}</div>`;
+          if (opts.table) html += prMainTables(kpis, landscape);
+          if (perKpi) html += kpis.map(k => prBlock(k, opts, landscape)).join('');
+        });
+      });
+      return html;
+    }
+
+    function generatePdf() {
+      const opts = {
+        table: document.getElementById('pdf-opt-table').checked,
+        chart: document.getElementById('pdf-opt-chart').checked,
+        detail: document.getElementById('pdf-opt-detail').checked,
+        source: document.getElementById('pdf-opt-source').checked,
+        owner: document.getElementById('pdf-opt-owner').checked
+      };
+      if (pdfSelectedKeys().size === 0) { showAlert('ยังไม่ได้เลือกหมวด', '⚠️', 'กรุณาเลือกหมวดตัวชี้วัดอย่างน้อย 1 หมวด'); return; }
+      if (!opts.table && !opts.chart && !opts.detail && !opts.source && !opts.owner) {
+        showAlert('ยังไม่ได้เลือกเนื้อหา', '⚠️', 'กรุณาเลือกเนื้อหาที่จะพิมพ์อย่างน้อย 1 อย่าง');
         return;
       }
-
-      const newItem = {
-        part: part, category: cat, name: name, target: target,
-        years: [null, null, null, null, null], 
-        months: [null, null, null, null, null, null, null, null, null, null, null, null],
-        templateDetails: document.getElementById('add-kpi-source').value,
-        dataSource: document.getElementById('add-kpi-source').value,
-        owner: document.getElementById('add-kpi-owner').value,
-        department: document.getElementById('add-kpi-dept').value,
-        level: document.getElementById('add-kpi-level').value
-      };
-
-      document.getElementById('modal-add-kpi').style.display = 'none';
-      
-      google.script.run
-        .withSuccessHandler((res) => {
-          if (res.success) {
-            showAlert("เพิ่มสำเร็จ", "✅", "ตัวชี้วัดถูกเพิ่มเข้าระบบแล้ว");
-            selectedPartName = part; selectedCategoryName = cat;
-            fetchAllDataFromServer(true); 
-          } else { showAlert("ข้อผิดพลาด", "❌", res.message); }
-        })
-        .withFailureHandler((err) => showAlert("เกิดข้อผิดพลาด", "❌", err.toString()))
-        .addIndicator(sessionToken, selectedFy, newItem);
+      const orient = document.querySelector('input[name="pdf-orient"]:checked').value;
+      const landscape = orient === 'landscape';
+      document.getElementById('print-page-style').textContent = `@page { size: A4 ${orient}; margin: 10mm; }`;
+      document.getElementById('print-root').innerHTML = buildPrintHtml(opts, landscape);
+      document.getElementById('modal-pdf').style.display = 'none';
+      // รอให้เบราว์เซอร์จัดหน้าและฟอนต์พร้อมก่อนเปิดหน้าต่างพิมพ์
+      const go = () => setTimeout(() => window.print(), 250);
+      if (document.fonts && document.fonts.ready) document.fonts.ready.then(go); else go();
     }
 
-    function requestDeleteKpi(partName, id, name) {
-      showConfirm(`ยืนยันการลบตัวชี้วัด:\n"${name}"\nออกจากปีงบ ${selectedFy} (ปีงบอื่นยังเก็บไว้เป็นประวัติ)?`, () => {
-        google.script.run
-          .withSuccessHandler((res) => {
-            if (res.success) { 
-              showAlert("ลบสำเร็จ", "🗑️", "ลบข้อมูลเรียบร้อยแล้ว"); 
-              fetchAllDataFromServer(true); 
-            } else { showAlert("ข้อผิดพลาด", "❌", res.message); }
-          })
-          .withFailureHandler((err) => showAlert("เกิดข้อผิดพลาดในการลบข้อมูล", "❌", err.toString()))
-          .deleteIndicator(sessionToken, selectedFy, partName, id);
-      });
-    }
+    window.addEventListener('afterprint', () => { document.getElementById('print-root').innerHTML = ''; });
 
+    // ===================== แจ้งเตือน / ยืนยัน =====================
     function showAlert(title, icon, message) {
       if (message && message.toString().indexOf('SESSION_EXPIRED') !== -1) {
         showLogin('เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่');
@@ -1587,16 +1553,17 @@
       document.getElementById('modal-confirm').style.display = 'flex';
     }
 
-    document.querySelectorAll('.kpi-level-select').forEach(sel => {
-      sel.innerHTML = KPI_LEVELS.map(l => `<option value="${l}">${l}</option>`).join('');
-    });
-    resetLoginBox();
-
     function closeConfirm(isConfirmed) {
       document.getElementById('modal-confirm').style.display = 'none';
       if (isConfirmed && onConfirmCallback) onConfirmCallback();
       onConfirmCallback = null;
     }
+
+    // ===================== เริ่มต้น =====================
+    document.querySelectorAll('.kpi-level-select').forEach(sel => {
+      sel.innerHTML = KPI_LEVELS.map(l => `<option value="${l}">${l}</option>`).join('');
+    });
+    resetLoginBox();
   </script>
 </body>
 </html>

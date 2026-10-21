@@ -85,13 +85,8 @@ function getAllData(token, requestedFy) {
     for (var i = 1; i < data.length; i++) {
       if (!data[i][0]) continue;
       var kpi = rowToKpi_(data[i]);
-      var perm = getKpiPermission_(user, kpi, fy);
-      if (!perm.view) continue;
-      kpi.canEditResults = perm.editResults;
-      kpi.canEditDetails = perm.editDetails;
-      // ผลทั้งปีของปีที่มีชีตต้นทางอยู่ (และมีตัวชี้วัดนี้) แก้ได้เฉพาะ admin, ผอ., QMR
-      kpi.lockedYears = sources.map(function(m) { return !!(m && m[kpi.id]); });
-      allData.push(kpi);
+      if (!getKpiPermission_(user, kpi, fy).view) continue;
+      allData.push(decorateKpi_(user, fy, kpi, sources));
     }
     return { success: true, data: allData, fy: fy, currentFy: currentFy, years: years };
   } catch(e) {
@@ -99,68 +94,25 @@ function getAllData(token, requestedFy) {
   }
 }
 
-function getCategoryKpis_(user, fy, partName, categoryName) {
-  var sheet = getFiscalSheet_(fy);
-  if (!sheet) return [];
-  var data = sheet.getDataRange().getValues();
-  var kpis = [];
-  var targetPart = partName.toString().trim();
-  var targetCategory = categoryName.toString().trim();
-
-  for (var i = 1; i < data.length; i++) {
-    var row = data[i];
-    if (row[0] && row[2] && row[3] && row[2].toString().trim() === targetPart && row[3].toString().trim() === targetCategory) {
-      var kpi = rowToKpi_(row);
-      if (getKpiPermission_(user, kpi, fy).view) kpis.push(kpi);
-    }
-  }
-  return kpis;
+// ข้อมูลตัวชี้วัดที่ส่งให้หน้าเว็บ: เติมสิทธิ์แก้ไข ธง "ของฉัน" และช่องผลย้อนหลังที่ถูกล็อก
+function decorateKpi_(user, fy, kpi, sources) {
+  var perm = getKpiPermission_(user, kpi, fy);
+  kpi.canEditResults = perm.editResults;
+  kpi.canEditDetails = perm.editDetails;
+  kpi.mine = perm.mine;
+  // ผลทั้งปีของปีที่มีชีตต้นทางอยู่ (และมีตัวชี้วัดนี้) แก้ได้เฉพาะ admin, ผอ., QMR
+  kpi.lockedYears = sources.map(function(m) { return !!(m && m[kpi.id]); });
+  return kpi;
 }
 
-// ผู้ใช้ทั่วไปแก้ได้เฉพาะตัวที่ตนมีสิทธิ์ (ผู้รับผิดชอบ / หัวหน้าหน่วย) ในปีงบปัจจุบัน และเฉพาะรายละเอียด/ที่มาข้อมูล
-// ส่วนผู้รับผิดชอบ หน่วยงาน และระดับตัวชี้วัด แก้ได้เฉพาะ admin, ผอ., QMR — แก้ในปีงบที่เลือกเท่านั้น ปีอื่นไม่เปลี่ยน
-function updateKpiDetails(token, fy, partName, id, details) {
-  try {
-    var user = requireUser_(token);
-    fy = resolveFiscalYear_(fy);
-    var sheet = getFiscalSheet_(fy);
-    if (!sheet) return { success: false, message: "ไม่พบชีตปีงบประมาณ" };
-
-    var data = sheet.getDataRange().getValues();
-    var targetId = id.toString().trim();
-
-    for (var i = 1; i < data.length; i++) {
-      if (data[i][0] && data[i][0].toString().trim() === targetId) {
-        var old = rowToKpi_(data[i]);
-        if (!getKpiPermission_(user, old, fy).editDetails) {
-          return { success: false, message: "ไม่มีสิทธิ์แก้ไขรายละเอียดตัวชี้วัดนี้ในปีงบ " + fy };
-        }
-        var actualRow = i + 1;
-        var changed = (details.templateDetails || "").trim() !== old.templateDetails ||
-                      (details.dataSource || "").trim() !== old.dataSource;
-        sheet.getRange(actualRow, 24).setValue(details.templateDetails || "");
-        sheet.getRange(actualRow, 25).setValue(details.dataSource || "");
-        if (isPrivileged_(user)) {
-          var newLevel = details.level && KPI_LEVELS.indexOf(details.level) !== -1 ? details.level : old.level;
-          if ((details.owner || "").trim() !== old.owner || (details.department || "").trim() !== old.department || newLevel !== old.level) changed = true;
-          sheet.getRange(actualRow, 26).setValue(details.owner || "");
-          sheet.getRange(actualRow, 27).setValue(details.department || "");
-          sheet.getRange(actualRow, LEVEL_COLUMN).setValue(newLevel);
-        }
-        if (changed) {
-          stampRow_(sheet, actualRow, user, "edit");
-          touchUser_(user, "edit");
-        }
-        return { success: true, message: "บันทึกข้อมูลรายละเอียดสำเร็จ (ปีงบ " + fy + ")" };
-      }
-    }
-    return { success: false, message: "ไม่พบรหัสตัวชี้วัดในระบบ" };
-  } catch (error) {
-    return { success: false, message: "เกิดข้อผิดพลาด: " + error.toString() };
-  }
-}
-
-function updateIndicatorsBulk(token, fy, partName, updatedItems) {
+/**
+ * บันทึกตัวชี้วัดทีละตัวในปีงบที่เลือก (ผลลัพธ์ + รายละเอียดในครั้งเดียว) ส่วนที่ไม่ได้ส่งมา (undefined) จะไม่แตะ
+ *  - years/months (ผลทั้งปี/รายเดือน): ต้องมีสิทธิ์กรอกผล; ช่องผลย้อนหลังที่มีชีตต้นทางล็อกไว้ให้ admin/ผอ./QMR
+ *  - templateDetails/dataSource: ต้องมีสิทธิ์แก้รายละเอียด (ปีงบปัจจุบัน)
+ *  - name/target/owner/department/level: เฉพาะ admin, ผอ., QMR — แก้ในปีงบที่เลือกเท่านั้น ปีอื่นไม่เปลี่ยน
+ * คืน kpi ที่อัปเดตแล้วให้หน้าเว็บแทนที่ได้ทันที
+ */
+function saveKpi(token, fy, item) {
   try {
     var user = requireUser_(token);
     var privileged = isPrivileged_(user);
@@ -168,50 +120,88 @@ function updateIndicatorsBulk(token, fy, partName, updatedItems) {
     var sheet = getFiscalSheet_(fy);
     if (!sheet) return { success: false, message: "ไม่พบชีตปีงบประมาณ" };
 
-    var sources = getAnnualSources_(fy);
     var data = sheet.getDataRange().getValues();
-    var ids = data.map(function(r) { return r[0] ? r[0].toString().trim() : ""; });
-    var saved = 0;
-    var denied = 0;
-    var edited = false;
+    var rowIndex = -1;
+    for (var i = 1; i < data.length; i++) {
+      if (data[i][0] && data[i][0].toString().trim() === item.id.toString().trim()) { rowIndex = i; break; }
+    }
+    if (rowIndex === -1) return { success: false, message: "ไม่พบรหัสตัวชี้วัดในปีงบ " + fy };
+
+    var old = rowToKpi_(data[rowIndex]);
+    var perm = getKpiPermission_(user, old, fy);
+    var hasResults = item.years !== undefined || item.months !== undefined;
+    var hasDetails = item.templateDetails !== undefined || item.dataSource !== undefined;
+    if (hasResults && !perm.editResults) return { success: false, message: "ไม่มีสิทธิ์แก้ไขผลตัวชี้วัดนี้ในปีงบ " + fy };
+    if (hasDetails && !perm.editDetails) return { success: false, message: "ไม่มีสิทธิ์แก้ไขรายละเอียดตัวชี้วัดนี้ในปีงบ " + fy };
+
+    var row = rowIndex + 1;
+    var changed = false;
     var annualChanges = [];
+    var sources = getAnnualSources_(fy);
 
-    updatedItems.forEach(function(item) {
-      var rowIndex = ids.indexOf(item.id.toString().trim());
-      if (rowIndex === -1) return;
-      var old = rowToKpi_(data[rowIndex]);
-      if (!getKpiPermission_(user, old, fy).editResults) { denied++; return; }
-      var actualRow = rowIndex + 1;
-
+    if (hasResults) {
       var newYears = old.years.slice();
-      for (var i = 0; i < 5; i++) {
-        var locked = i < 4 && sources[i] && sources[i][old.id];
+      for (var y = 0; y < 5; y++) {
+        var locked = y < 4 && sources[y] && sources[y][old.id];
         if (locked && !privileged) continue; // ผลปีที่มีชีตต้นทางอยู่ แก้ได้เฉพาะ admin, ผอ., QMR
-        var nv = numberOrNull_(item.years ? item.years[i] : null);
-        if (nv === old.years[i]) continue;
-        newYears[i] = nv;
+        var nv = numberOrNull_(item.years ? item.years[y] : null);
+        if (nv === old.years[y]) continue;
+        newYears[y] = nv;
         // ผลทั้งปีของปี Y ต้องตรงกันทุกชีตที่เก็บปีนั้น (ช่อง K ของชีตปี Y และ G–J ของชีตปีถัดๆ ไป)
-        annualChanges.push({ id: old.id, year: fy - 4 + i, value: nv, skipFy: i === 4 ? fy : null });
+        annualChanges.push({ id: old.id, year: fy - 4 + y, value: nv, skipFy: y === 4 ? fy : null });
       }
       var newMonths = [];
-      for (var m = 0; m < 12; m++) newMonths.push(numberOrNull_(item.months ? item.months[m] : null));
-
-      var changed = newYears.join("|") !== old.years.join("|") || newMonths.join("|") !== old.months.join("|");
-      if (privileged) {
-        if ((item.name || "").trim() !== old.name || (item.target || "").toString().trim() !== old.target) changed = true;
-        sheet.getRange(actualRow, 2).setValue(item.no);
-        sheet.getRange(actualRow, 5).setValue(item.name);
-        sheet.getRange(actualRow, 6).setValue(item.target);
+      for (var m = 0; m < 12; m++) {
+        newMonths.push(item.months ? numberOrNull_(item.months[m]) : old.months[m]);
       }
-      sheet.getRange(actualRow, ANNUAL_FIRST_COL, 1, 17).setValues([newYears.concat(newMonths)]);
-      if (changed) { stampRow_(sheet, actualRow, user, "edit"); edited = true; }
-      saved++;
-    });
+      if (newYears.join("|") !== old.years.join("|") || newMonths.join("|") !== old.months.join("|")) changed = true;
+      sheet.getRange(row, ANNUAL_FIRST_COL, 1, 17).setValues([newYears.concat(newMonths)]);
+    }
+
+    if (hasDetails) {
+      var tpl = item.templateDetails !== undefined ? item.templateDetails : old.templateDetails;
+      var src = item.dataSource !== undefined ? item.dataSource : old.dataSource;
+      if ((tpl || "").trim() !== old.templateDetails || (src || "").trim() !== old.dataSource) changed = true;
+      sheet.getRange(row, 24).setValue(tpl || "");
+      sheet.getRange(row, 25).setValue(src || "");
+    }
+
+    if (privileged) {
+      if (item.name !== undefined && item.name.toString().trim() !== "" && item.name.toString().trim() !== old.name) {
+        sheet.getRange(row, 5).setValue(item.name.toString().trim());
+        changed = true;
+      }
+      if (item.target !== undefined && item.target.toString().trim() !== old.target) {
+        sheet.getRange(row, 6).setValue(item.target.toString().trim());
+        changed = true;
+      }
+      if (item.owner !== undefined && item.owner.toString().trim() !== old.owner) {
+        sheet.getRange(row, 26).setValue(item.owner.toString().trim());
+        changed = true;
+      }
+      if (item.department !== undefined && item.department.toString().trim() !== old.department) {
+        sheet.getRange(row, 27).setValue(item.department.toString().trim());
+        changed = true;
+      }
+      if (item.level !== undefined && KPI_LEVELS.indexOf(item.level) !== -1 && item.level !== old.level) {
+        sheet.getRange(row, LEVEL_COLUMN).setValue(item.level);
+        changed = true;
+      }
+    }
+
     propagateAnnual_(annualChanges);
-    if (edited) touchUser_(user, "edit");
-    var msg = "บันทึกข้อมูลปีงบ " + fy + " เรียบร้อยแล้ว (" + saved + " รายการ)";
-    if (denied > 0) msg += " — ข้าม " + denied + " รายการที่ไม่มีสิทธิ์แก้ไข";
-    return { success: true, message: msg };
+    if (changed) {
+      stampRow_(sheet, row, user, "edit");
+      touchUser_(user, "edit");
+    }
+
+    var fresh = rowToKpi_(sheet.getRange(row, 1, 1, STAMP_VIEW_BY_COL).getValues()[0]);
+    return {
+      success: true,
+      changed: changed,
+      message: changed ? "บันทึกข้อมูลปีงบ " + fy + " เรียบร้อยแล้ว" : "ไม่มีการเปลี่ยนแปลง",
+      kpi: decorateKpi_(user, fy, fresh, getAnnualSources_(fy))
+    };
   } catch (error) {
     return { success: false, message: "เกิดข้อผิดพลาด: " + error.toString() };
   }
@@ -297,68 +287,6 @@ function deleteIndicator(token, fy, partName, id) {
     }
   } catch (error) {
     return { success: false, message: "เกิดข้อผิดพลาด: " + error.toString() };
-  }
-}
-
-function exportCategoryToPdf(token, fy, partName, categoryName) {
-  try {
-    fy = resolveFiscalYear_(fy);
-    var kpis = getCategoryKpis_(requireUser_(token), fy, partName, categoryName);
-    var yLabels = [fy-4, fy-3, fy-2, fy-1, fy];
-    
-    var html = '<html><head><meta charset="utf-8"><style>' +
-               '@page { size: A4 landscape; margin: 10mm; }' +
-               'body { font-family: "sans-serif"; margin: 0; color: #1e293b; }' +
-               '.title { text-align: center; font-size: 18px; font-weight: bold; color: #0284c7; margin-bottom: 5px; }' +
-               '.subtitle { text-align: center; font-size: 13px; color: #64748b; margin-bottom: 20px; }' +
-               'table { width: 100%; border-collapse: collapse; font-size: 10px; margin-top: 10px; }' +
-               'th, td { border: 1px solid #cbd5e1; padding: 6px 4px; text-align: center; }' +
-               'th { background-color: #e0f2fe; font-weight: bold; color: #0f172a; }' +
-               '.col-target { background-color: #dcfce7 !important; }' + 
-               'td.left-align { text-align: left; font-weight: bold; }' +
-               '</style></head><body>' +
-               '<div class="title">รายงานสรุปผลการดำเนินงานระบบตัวชี้วัดคุณภาพ</div>' +
-               '<div class="subtitle">หมวดหมู่: ' + categoryName + ' (' + partName + ') ปีงบประมาณ ' + fy + '</div>' +
-               '<table><thead><tr>' +
-               '<th rowspan="2" style="width:30px;">ลำดับ</th><th rowspan="2">ชื่อตัวชี้วัด</th><th rowspan="2" class="col-target" style="width:60px;">เป้าหมาย</th>' +
-               '<th colspan="5">ผลงานย้อนหลัง 5 ปี</th><th colspan="12">ผลงานรายเดือน ปีงบ ' + fy + ' (ต.ค. - ก.ย.)</th>' +
-               '</tr><tr>' +
-               '<th>' + yLabels[0] + '</th><th>' + yLabels[1] + '</th><th>' + yLabels[2] + '</th><th>' + yLabels[3] + '</th><th>' + yLabels[4] + '</th>' +
-               '<th>ต.ค.</th><th>พ.ย.</th><th>ธ.ค.</th><th>ม.ค.</th><th>ก.พ.</th><th>มี.ค.</th><th>เม.ย.</th><th>พ.ค.</th><th>มิ.ย.</th><th>ก.ค.</th><th>ส.ค.</th><th>ก.ย.</th>' +
-               '</tr></thead><tbody>';
-               
-    if (kpis.length === 0) {
-      html += '<tr><td colspan="20">ไม่พบข้อมูลตัวชี้วัดในหมวดนี้</td></tr>';
-    } else {
-      kpis.forEach(function(kpi, idx) {
-        html += '<tr>' +
-                '<td>' + (idx + 1) + '</td>' +
-                '<td class="left-align">' + kpi.name + '</td>' +
-                '<td class="col-target">' + kpi.target + '</td>';
-                
-        for (var i = 0; i < 5; i++) {
-          html += '<td>' + (kpi.years[i] !== null ? kpi.years[i] : '-') + '</td>';
-        }
-        for (var j = 0; j < 12; j++) {
-          html += '<td>' + (kpi.months[j] !== null ? kpi.months[j] : '-') + '</td>';
-        }
-        html += '</tr>';
-      });
-    }
-    
-    html += '</tbody></table></body></html>';
-    
-    var blob = HtmlService.createHtmlOutput(html).getAs('application/pdf');
-    var filename = "รายงานตัวชี้วัด_" + categoryName.replace(/\s+/g, '_') + ".pdf";
-    blob.setName(filename);
-    
-    return {
-      success: true,
-      base64: Utilities.base64Encode(blob.getBytes()),
-      filename: filename
-    };
-  } catch(e) {
-    return { success: false, message: e.toString() };
   }
 }
 
