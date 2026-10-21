@@ -5,7 +5,7 @@
   <title>ระบบจัดการตัวชี้วัดคุณภาพ โรงพยาบาลภูหลวง</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400..700&display=swap" rel="stylesheet">
 
   <style>
     :root {
@@ -26,7 +26,7 @@
       --box-shadow: 0 6px 20px rgba(0,0,0,0.1);
     }
 
-    * { box-sizing: border-box; font-family: 'Sarabun', sans-serif; margin: 0; padding: 0; }
+    * { box-sizing: border-box; font-family: 'Google Sans', sans-serif !important; margin: 0; padding: 0; }
 
     body {
       background: var(--bg-light);
@@ -256,8 +256,8 @@
       #print-root { display: block !important; }
       * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     }
-    #print-root { font-family: 'Sarabun', sans-serif; font-size: 14pt; color: #0f172a; line-height: 1.4; }
-    #print-root * { font-family: 'Sarabun', sans-serif; }
+    #print-root { font-family: 'Google Sans', sans-serif !important; font-size: 14pt; color: #0f172a; line-height: 1.4; }
+    #print-root * { font-family: 'Google Sans', sans-serif !important; }
     .pr-head { text-align: center; border-bottom: 3px solid #166534; padding-bottom: 6px; margin-bottom: 10px; }
     .pr-head .pr-hosp { font-size: 16pt; font-weight: 700; color: #166534; }
     .pr-head .pr-sub { font-size: 14pt; font-weight: 600; }
@@ -277,6 +277,112 @@
     .pr-chart svg { width: 100%; height: auto; max-height: 70mm; }
     .pr-label { font-size: 14pt; font-weight: 700; color: #166534; margin-top: 4px; }
     .pr-text { font-size: 14pt; white-space: pre-line; }
+    /* ================= สไตล์ใหม่ (ตัวอย่าง): Google Sans, การ์ดโค้งมน, สีสดขึ้น ================= */
+    :root {
+      --primary-gradient: linear-gradient(135deg, #22b04b, #00733a);
+      --secondary-gradient: linear-gradient(135deg, #7cc71b, #4e9a0c);
+      --accent-gradient: linear-gradient(135deg, #f5b41f, #e0730c);
+      --danger-gradient: linear-gradient(135deg, #ef4444, #c0262d);
+      --primary-color: #00733a;
+      --primary-vivid: #16a34a;
+      --secondary-color: #4e9a0c;
+      --accent-color: #e0730c;
+      --text-main: #14231a;
+      --muted: #64748b;
+      --line: #e3ebe6;
+      --soft: #f3f7f4;
+      --radius-large: 20px;
+      --box-shadow: 0 4px 18px rgba(16, 40, 24, 0.07);
+    }
+    body { background: #eef5f0; background-image: radial-gradient(circle at 100% 0%, #dff5e5 0%, #eef5f0 45%); color: var(--text-main); }
+
+    /* ส่วนหัว + แถบนำทางต่อกันเป็นแผ่นเดียว */
+    .app-header { background: #0b4f2a; border-radius: 22px 22px 0 0; margin-bottom: 0; padding: 14px 20px; box-shadow: none; }
+    .app-header h1 { font-size: 20px; font-weight: 700; text-shadow: none; display: flex; align-items: center; gap: 12px; letter-spacing: 0; }
+    .app-header .logo { width: 44px; height: 44px; border-radius: 13px; background: #fff; display: inline-flex; align-items: center; justify-content: center; font-size: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
+    .app-header .sub { font-size: 13px; font-weight: 500; opacity: 0.8; }
+    .btn-icon { background: rgba(255,255,255,0.14); border: 1px solid rgba(255,255,255,0.28); border-radius: 999px; padding: 6px 14px; font-size: 13px; }
+    .nav-bar { background: var(--primary-gradient); border-radius: 0 0 22px 22px; padding: 8px 12px; box-shadow: 0 8px 20px rgba(0, 115, 58, 0.25); margin-bottom: 14px; top: 0; }
+    .nav-item { color: rgba(255,255,255,0.92); font-size: 14px; padding: 8px 18px; }
+    .nav-item.active { background: #fff; color: var(--primary-color); box-shadow: 0 3px 10px rgba(0,0,0,0.15); }
+    .nav-item:not(.active):not(.static):hover { background: rgba(255,255,255,0.18); color: #fff; }
+    .nav-item.static { color: #fff; }
+    .nav-bar #fy-select { border: none; border-radius: 999px; font-weight: 700; color: var(--primary-color); }
+    .nav-actions .btn { box-shadow: 0 2px 8px rgba(0,0,0,0.12); }
+    .nav-actions .btn-secondary { background: rgba(255,255,255,0.92); color: var(--primary-color); }
+    .nav-actions .btn-primary { background: #fff; color: var(--primary-color); }
+    .nav-actions .btn-accent { background: var(--accent-gradient); color: #fff; }
+    .pw-warning { border-radius: 14px; margin: 10px 0; }
+
+    /* การ์ด / แผง */
+    .panel, .kpi-card, .pager { border-radius: var(--radius-large); border: 1px solid var(--line); box-shadow: var(--box-shadow); }
+    .kpi-card { padding: 18px 20px; margin-bottom: 16px; }
+    .kpi-card.selected { border: 2px solid #86efac; }
+    .kpi-card.editing { border: 2px solid var(--accent-color); box-shadow: 0 0 0 4px rgba(224,115,12,0.12), var(--box-shadow); }
+    .kpi-card-head { border-bottom: 1px solid var(--line); padding-bottom: 10px; margin-bottom: 14px; }
+    .kpi-card-title { font-size: 18px; color: #0f2a1a; font-weight: 700; line-height: 1.45; }
+    .meta-badge { background: #ecf8f0; color: var(--primary-color); border: none; border-radius: 999px; padding: 4px 12px; font-size: 12px; }
+    .kpi-card-badges .meta-badge:first-child { background: #ede9fe; color: #5b21b6; }
+    .list-section { border-radius: 16px; padding: 9px 18px; font-size: 15px; box-shadow: 0 4px 12px rgba(0,115,58,0.2); }
+    .kpi-target-callout { background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa; text-shadow: none; box-shadow: none; border-radius: 14px; font-size: 15px; }
+    .kpi-target-callout .editable-input { color: #0f2a1a; }
+    .section-bar h4 { font-size: 14.5px; color: #3b1d6e; font-weight: 700; }
+    .section-bar h4 { color: #14532d; }
+    .chart-box { border: 1px solid var(--line); border-radius: 16px; background: #fbfdfc; padding: 10px; }
+
+    /* ตาราง */
+    .data-table-wrapper { border-radius: 14px; border: 1px solid var(--line); box-shadow: none; }
+    th { background: #f3f6f4; color: #1f2d24; border-bottom: 1px solid var(--line); border-right: 1px solid var(--line); font-weight: 700; padding: 8px 6px; }
+    td { border-bottom: 1px solid #eef2ef; border-right: 1px solid #eef2ef; padding: 8px 6px; }
+    tr:hover td { background: #f8fbf9; }
+
+    /* กล่องรายละเอียด */
+    .info-card { border-radius: 16px; border: 1px solid var(--line); box-shadow: none; padding: 14px 16px; }
+    .info-card-title { font-size: 14.5px; }
+    .card-right .info-card.clip-box:nth-child(1) { background: #fffbeb; border-color: #fde68a; }
+    .card-right .info-card.clip-box:nth-child(1) .info-card-title { color: #92400e; }
+    .card-right .info-card.clip-box:nth-child(2) { background: var(--soft); }
+    .card-right .info-card.clip-box:nth-child(2) .info-card-title { color: #334155; }
+    .card-right .owner-box { background: #f0fdf4; border-color: #bbf7d0; border-left: 5px solid var(--primary-vivid) !important; }
+    .clip-box.clipped::after { background: linear-gradient(rgba(255,255,255,0), currentColor); opacity: 0; }
+    .card-right .info-card.clip-box:nth-child(1).clipped::after { background: linear-gradient(rgba(255,251,235,0), #fffbeb); opacity: 1; }
+    .card-right .info-card.clip-box:nth-child(2).clipped::after { background: linear-gradient(rgba(243,247,244,0), #f3f7f4); opacity: 1; }
+
+    /* ผังรายการ (แบบแถบมนเหมือนตัวอย่าง) */
+    #panel-tree { padding: 14px; }
+    .accordion-part { border: none; border-radius: 16px; margin-bottom: 8px; overflow: hidden; background: transparent; }
+    .accordion-header { background: var(--soft); border: 1px solid var(--line); border-radius: 16px; padding: 11px 34px 11px 14px; color: #1f2d24; font-size: 14.5px; display: flex; align-items: center; gap: 10px; }
+    .accordion-header::before { content: ''; width: 20px; height: 20px; flex: none; background: var(--primary-vivid);
+      -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M3 6.5A2.5 2.5 0 0 1 5.5 4h4.2l2 2.2h6.8A2.5 2.5 0 0 1 21 8.7v8.8a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5z'/%3E%3C/svg%3E") center / contain no-repeat;
+              mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M3 6.5A2.5 2.5 0 0 1 5.5 4h4.2l2 2.2h6.8A2.5 2.5 0 0 1 21 8.7v8.8a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5z'/%3E%3C/svg%3E") center / contain no-repeat; }
+    .accordion-header::after { content: ''; width: 8px; height: 8px; border-right: 2px solid #475569; border-bottom: 2px solid #475569; transform: rotate(45deg); top: 15px; right: 16px; }
+    .accordion-part.open > .accordion-header::after { content: ''; transform: rotate(-135deg); top: 19px; }
+    .accordion-part.open > .accordion-header { background: #e7f6ec; border-color: #bbe5c8; color: var(--primary-color); }
+    .accordion-content { padding: 6px 2px 2px 6px; }
+    .category-header { border-left: 4px solid var(--accent-color); border-radius: 0 10px 10px 0; font-size: 13.5px; padding: 7px 10px; }
+    .kpi-link-item { border-radius: 10px; border-bottom: none; margin: 2px 0; }
+    .kpi-link-item.selected { background: #e7f6ec; border-left: 4px solid var(--primary-vivid); }
+    .tree-filters { border-bottom: 1px solid var(--line); }
+
+    /* ปุ่ม / ช่องกรอก */
+    .btn { border-radius: 999px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); font-weight: 700; white-space: nowrap; }
+    .btn-secondary { background: #edf2ee; color: #1f2d24; }
+    .editable-input { border: 1px solid #cfdcd3; border-radius: 10px; font-weight: 500; }
+    .editable-input:focus { border-color: var(--primary-vivid); box-shadow: 0 0 0 3px rgba(22,163,74,0.18); }
+    .page-btn { border-radius: 10px; border-color: var(--line); }
+    .page-btn.active { background: var(--primary-gradient); }
+
+    /* modal */
+    .modal-card { border-radius: 22px; }
+    .modal-header { background: var(--primary-gradient); font-size: 16px; }
+    .modal-footer { background: #f7faf8; }
+    .login-box { border-radius: 24px; border: none; }
+    .login-box h2 { color: var(--primary-color); }
+    #app-login-screen { background-image: linear-gradient(135deg, #0b4f2a, #16a34a); }
+
+    /* หน้าติดตามงาน */
+    .pg-summary { border-radius: 14px; }
+    .pg-bar { height: 16px; border-radius: 999px; }
   </style>
 </head>
 <body>
@@ -287,7 +393,7 @@
 
   <!-- 1.1 ส่วนหัว -->
   <div class="app-header">
-    <h1>🏥 ระบบจัดการตัวชี้วัดคุณภาพ โรงพยาบาลภูหลวง</h1>
+    <h1><span class="logo">🏥</span><span>ระบบจัดการตัวชี้วัดคุณภาพ <span class="sub">· โรงพยาบาลภูหลวง จังหวัดเลย</span></span></h1>
     <div class="header-actions" id="user-bar" style="display: none;">
       <span id="user-info"></span>
       <button class="btn-icon" id="admin-settings-btn" style="display: none;" onclick="guardUnsaved(openSettings)">⚙️ ตั้งค่า</button>
@@ -476,7 +582,7 @@
           <label class="check-row"><input type="radio" name="pdf-orient" value="landscape" checked> แนวนอน</label>
           <label class="check-row"><input type="radio" name="pdf-orient" value="portrait"> แนวตั้ง</label>
         </div>
-        <p class="hint">กด "สร้าง PDF" แล้วในหน้าต่างพิมพ์ให้เลือกปลายทางเป็น <b>บันทึกเป็น PDF</b> (ฟอนต์ Sarabun พิมพ์สี)</p>
+        <p class="hint">กด "สร้าง PDF" แล้วในหน้าต่างพิมพ์ให้เลือกปลายทางเป็น <b>บันทึกเป็น PDF</b> (ฟอนต์ Google Sans พิมพ์สี)</p>
       </div>
       <div class="modal-footer" style="display: flex; justify-content: space-between;">
         <button class="btn btn-secondary" onclick="document.getElementById('modal-pdf').style.display='none'">ยกเลิก</button>
@@ -1311,7 +1417,7 @@
               ${ed && kpi.lockedYears && kpi.lockedYears.some(x => x) && !priv ? '<div class="hint">ช่องสีเทา = ผลของปีที่มีชีตปีงบนั้นอยู่แล้ว (แก้ได้เฉพาะ admin / ผอ. / QMR)</div>' : ''}
               <div class="section-bar"><h4>📊 ผลลัพธ์รายเดือน (ปีงบประมาณ ${selectedFy})</h4></div>
               <div class="data-table-wrapper"><table><tbody>${monthRows}</tbody></table></div>
-              <div class="hint">ค่าเฉลี่ยรายเดือน: <b>${calculateMonthlySummary(kpi.months)}</b></div>
+              <div class="hint">สรุปรายเดือน: <b>${calculateMonthlySummary(kpi.months)}</b></div>
               ${ed && !kpi.canEditResults ? '<div class="hint">ไม่มีสิทธิ์แก้ไขผลของตัวชี้วัดนี้ในปีงบนี้</div>' : ''}
             </div>
             <div class="card-right"><div class="card-right-inner">
@@ -1667,61 +1773,78 @@
       return (validValues.reduce((a, b) => a + b, 0) / validValues.length).toFixed(2);
     }
 
-    // ฟังก์ชันวาดกราฟที่ฉลาดขึ้น สกัดตัวเลขได้เอง
+    // กราฟเส้นผลลัพธ์ 5 ปี (สไตล์ใหม่): เส้นโค้งมน พื้นที่ใต้เส้นไล่สี จุดขอบขาว ป้ายเป้าหมายแบบเม็ดยา
+    let chartSeq = 0;
     function generateSvgLineChart(dataPoints, targetStr, labels) {
-      const width = 600, height = 220, padding = 35;
+      const width = 600, height = 230;
+      const padL = 40, padR = 18, padT = 32, padB = 30;
 
       // สกัดตัวเลขออกมาจากช่องเป้าหมาย (รองรับทศนิยมและค่าติดลบ)
       let targetVal = 0;
       const targetMatch = String(targetStr).match(/-?\d+(\.\d+)?/);
-      if (targetMatch) {
-        targetVal = parseFloat(targetMatch[0]);
-      }
+      if (targetMatch) targetVal = parseFloat(targetMatch[0]);
 
       const allVals = [...dataPoints.filter(v => v !== null), targetVal];
       let maxVal = Math.max(...allVals, 10);
       let minVal = Math.min(...allVals, 0);
       maxVal = maxVal + (maxVal * 0.15);
-
       let diff = maxVal - minVal;
       if (diff === 0) diff = 1;
 
-      const calcY = (val) => val === null ? height - padding : height - padding - ((val - minVal) / diff * (height - padding * 2));
-      const calcX = (index) => padding + (index * (width - padding * 2) / (labels.length - 1));
+      const plotH = height - padT - padB;
+      const calcY = (val) => padT + plotH - ((val - minVal) / diff * plotH);
+      const calcX = (index) => padL + (index * (width - padL - padR) / (labels.length - 1));
+      const id = 'cg' + (++chartSeq);
 
-      const targetY = calcY(targetVal);
-      let svg = `<svg viewBox="0 0 ${width} ${height}" width="100%" height="auto">`;
+      let svg = `<svg viewBox="0 0 ${width} ${height}" width="100%" height="auto">
+        <defs><linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#0ea5e9" stop-opacity="0.28"/><stop offset="100%" stop-color="#0ea5e9" stop-opacity="0"/>
+        </linearGradient></defs>`;
 
       for (let i = 0; i <= 4; i++) {
         const gridVal = minVal + (i * (maxVal - minVal) / 4);
         const gridY = calcY(gridVal);
-        svg += `<line x1="${padding}" y1="${gridY}" x2="${width-padding}" y2="${gridY}" stroke="#e2e8f0" stroke-width="1"/>`;
-        svg += `<text x="${padding-6}" y="${gridY+4}" font-size="11" text-anchor="end" fill="#64748b" font-weight="600">${gridVal.toFixed(0)}</text>`;
+        svg += `<line x1="${padL}" y1="${gridY}" x2="${width - padR}" y2="${gridY}" stroke="#e8eef0" stroke-width="1"/>`;
+        svg += `<text x="${padL - 8}" y="${gridY + 4}" font-size="11" text-anchor="end" fill="#94a3b8" font-weight="500">${gridVal.toFixed(0)}</text>`;
       }
 
-      svg += `<line x1="${padding}" y1="${targetY}" x2="${width-padding}" y2="${targetY}" stroke="#ea580c" stroke-width="2.5" stroke-dasharray="5,5"/>`;
-      svg += `<text x="${width-padding}" y="${targetY-6}" font-size="11" text-anchor="end" fill="#ea580c" font-weight="bold">Target (${esc(targetStr)})</text>`;
-
-      let polylinePoints = [];
-      let dotsSvg = '';
-
+      const pts = [];
       dataPoints.forEach((val, idx) => {
         const x = calcX(idx);
-        svg += `<text x="${x}" y="${height-8}" font-size="11" font-weight="700" text-anchor="middle" fill="#334155">${labels[idx]}</text>`;
-
-        if (val !== null) {
-          const y = calcY(val);
-          polylinePoints.push(`${x},${y}`);
-          dotsSvg += `<circle cx="${x}" cy="${y}" r="5" fill="#0369a1" stroke="#fff" stroke-width="2"/>`;
-          dotsSvg += `<text x="${x}" y="${y-10}" font-size="11" font-weight="bold" text-anchor="middle" fill="#015c8b">${val}</text>`;
-        }
+        svg += `<text x="${x}" y="${height - 8}" font-size="12" font-weight="700" text-anchor="middle" fill="#475569">${labels[idx]}</text>`;
+        if (val !== null) pts.push([x, calcY(val), val]);
       });
 
-      if (polylinePoints.length > 1) {
-        svg += `<polyline points="${polylinePoints.join(' ')}" fill="none" stroke="#015c8b" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>`;
+      if (pts.length > 1) {
+        // เส้นโค้ง (Catmull-Rom → Bezier)
+        let d = `M${pts[0][0]},${pts[0][1]}`;
+        for (let i = 0; i < pts.length - 1; i++) {
+          const p0 = pts[i - 1] || pts[i], p1 = pts[i], p2 = pts[i + 1], p3 = pts[i + 2] || p2;
+          const c1x = p1[0] + (p2[0] - p0[0]) / 6, c1y = p1[1] + (p2[1] - p0[1]) / 6;
+          const c2x = p2[0] - (p3[0] - p1[0]) / 6, c2y = p2[1] - (p3[1] - p1[1]) / 6;
+          d += ` C${c1x},${c1y} ${c2x},${c2y} ${p2[0]},${p2[1]}`;
+        }
+        const base = padT + plotH;
+        svg += `<path d="${d} L${pts[pts.length - 1][0]},${base} L${pts[0][0]},${base} Z" fill="url(#${id})"/>`;
+        svg += `<path d="${d}" fill="none" stroke="#0284c7" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>`;
       }
-      svg += dotsSvg + `</svg>`;
-      return svg;
+      // เส้นเป้าหมาย + ป้ายแบบเม็ดยา: วางชิดขวา ถ้าทับจุดข้อมูลให้ย้ายไปใต้เส้น
+      const targetY = calcY(targetVal);
+      const tLabel = 'เป้าหมาย ' + String(targetStr || '-');
+      const tW = Math.min(220, 16 + tLabel.length * 6.4);
+      const tX = width - padR - tW;
+      const hits = (ty) => pts.some(([x, y]) => x > tX - 14 && x < tX + tW + 14 && Math.abs(y - (ty + 9)) < 26);
+      let tY = targetY - 22;
+      if (hits(tY)) tY = targetY + 5;
+      svg += `<line x1="${padL}" y1="${targetY}" x2="${width - padR}" y2="${targetY}" stroke="#f43f5e" stroke-width="2" stroke-dasharray="6,5"/>`;
+      svg += `<rect x="${tX}" y="${tY}" width="${tW}" height="18" rx="9" fill="#f43f5e"/>`;
+      svg += `<text x="${tX + tW / 2}" y="${tY + 13}" font-size="11" font-weight="700" text-anchor="middle" fill="#fff">${esc(tLabel)}</text>`;
+
+      pts.forEach(([x, y, val]) => {
+        svg += `<circle cx="${x}" cy="${y}" r="6" fill="#fff" stroke="#0284c7" stroke-width="3"/>`;
+        svg += `<text x="${x}" y="${y - 12}" font-size="12" font-weight="700" text-anchor="middle" fill="#075985">${val}</text>`;
+      });
+      return svg + `</svg>`;
     }
 
     // ===================== ติดตามงาน (Progress) =====================
@@ -1937,7 +2060,7 @@
       let a = `<div class="pr-sub-title">เป้าหมายและผลทั้งปี</div><table class="pr-table" style="font-size:${fs};">${cols(wA)}
         <thead><tr><th>ที่</th><th>ชื่อตัวชี้วัด</th><th>เป้าหมาย</th>${yl.map(y => `<th>${y}</th>`).join('')}</tr></thead><tbody>`;
       let b = `<div class="pr-sub-title">ผลลัพธ์รายเดือน ปีงบประมาณ ${selectedFy}</div><table class="pr-table" style="font-size:${fsMonth};">${cols(wB)}
-        <thead><tr><th>ที่</th><th>ตัวชี้วัด</th>${thMonthsNames.map(m => `<th>${m}</th>`).join('')}<th>เฉลี่ย</th></tr></thead><tbody>`;
+        <thead><tr><th>ที่</th><th>ตัวชี้วัด</th>${thMonthsNames.map(m => `<th>${m}</th>`).join('')}<th>สรุป</th></tr></thead><tbody>`;
       kpis.forEach(k => {
         const no = kpiNumber(k);
         a += `<tr><td>${no}</td><td class="pr-left">${esc(k.name)}</td><td class="pr-target">${esc(k.target) || '-'}</td>${k.years.map(v => `<td>${prNum(v)}</td>`).join('')}</tr>`;
@@ -1952,7 +2075,7 @@
         <div class="pr-meta">หมวด: ${esc(k.category)} · ระดับ: ${esc(k.level)} · เป้าหมาย: <b>${esc(k.target) || '-'}</b> · ปีงบประมาณ ${selectedFy}</div>`;
       if (opts.chart) {
         h += `<div class="pr-chart">${generateSvgLineChart(k.years, k.target, yl)}</div>
-          <table class="pr-table" style="font-size:${landscape ? '12pt' : '9.5pt'};"><thead><tr>${thMonthsNames.map(m => `<th>${m}</th>`).join('')}<th>เฉลี่ย</th></tr></thead>
+          <table class="pr-table" style="font-size:${landscape ? '12pt' : '9.5pt'};"><thead><tr>${thMonthsNames.map(m => `<th>${m}</th>`).join('')}<th>สรุป</th></tr></thead>
           <tbody><tr>${k.months.map(v => `<td>${prNum(v)}</td>`).join('')}<td>${calculateMonthlySummary(k.months)}</td></tr></tbody></table>`;
       }
       if (opts.detail) h += `<div class="pr-label">รายละเอียด/การวิเคราะห์ตัวชี้วัด</div><div class="pr-text">${esc(k.templateDetails) || '-'}</div>`;
