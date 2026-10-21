@@ -57,6 +57,8 @@ function rowToKpi_(row) {
     owner: row[25] ? row[25].toString().trim() : "",
     department: row[26] ? row[26].toString().trim() : "",
     summaryMethod: normalizeSummaryMethod_(row[SUMMARY_COL - 1]),
+    analysisUpdatedAt: formatStamp_(row[ANALYSIS_COL - 1]),
+    frequency: normalizeFrequency_(row[FREQ_COL - 1]),
     levels: normalizeLevels_(row[28]),
     level: normalizeLevels_(row[28]).slice(-1)[0], // ระดับสูงสุด ใช้แสดงผล
     editedAt: formatStamp_(row[STAMP_EDIT_AT_COL - 1]),
@@ -111,7 +113,7 @@ function decorateKpi_(user, fy, kpi, sources) {
  * บันทึกตัวชี้วัดทีละตัวในปีงบที่เลือก (ผลลัพธ์ + รายละเอียดในครั้งเดียว) ส่วนที่ไม่ได้ส่งมา (undefined) จะไม่แตะ
  *  - years/months (ผลทั้งปี/รายเดือน): ต้องมีสิทธิ์กรอกผล; ช่องผลย้อนหลังที่มีชีตต้นทางล็อกไว้ให้ admin/ผอ./QMR
  *  - templateDetails/dataSource: ต้องมีสิทธิ์แก้รายละเอียด (ปีงบปัจจุบัน)
- *  - name/target/owner/department/levels/summaryMethod (วิธีสรุปผลรายเดือน): เฉพาะ admin, ผอ., QMR — แก้ในปีงบที่เลือกเท่านั้น ปีอื่นไม่เปลี่ยน
+ *  - name/target/owner/department/levels/summaryMethod/frequency (ความถี่การเก็บข้อมูล): เฉพาะ admin, ผอ., QMR — แก้ในปีงบที่เลือกเท่านั้น ปีอื่นไม่เปลี่ยน
  * คืน kpi ที่อัปเดตแล้วให้หน้าเว็บแทนที่ได้ทันที
  */
 function saveKpi(token, fy, item) {
@@ -163,7 +165,15 @@ function saveKpi(token, fy, item) {
     if (hasDetails) {
       var tpl = item.templateDetails !== undefined ? item.templateDetails : old.templateDetails;
       var src = item.dataSource !== undefined ? item.dataSource : old.dataSource;
-      if ((tpl || "").trim() !== old.templateDetails || (src || "").trim() !== old.dataSource) changed = true;
+      var detailsChanged = (tpl || "").trim() !== old.templateDetails || (src || "").trim() !== old.dataSource;
+      if (detailsChanged) {
+        changed = true;
+        // บันทึกเวลาอัปเดตการวิเคราะห์ (ใช้ดูว่าปีงบนี้ได้ทบทวนรายละเอียดแล้วหรือยัง)
+        sheet.getRange(row, ANALYSIS_COL).setNumberFormat("@").setValue(nowStamp_());
+        if (!sheet.getRange(1, ANALYSIS_COL).getValue()) {
+          sheet.getRange(1, ANALYSIS_COL).setValue(ANALYSIS_HEADER).setFontWeight("bold").setBackground("#e0f2fe").setHorizontalAlignment("center");
+        }
+      }
       sheet.getRange(row, 24).setValue(tpl || "");
       sheet.getRange(row, 25).setValue(src || "");
     }
@@ -192,6 +202,13 @@ function saveKpi(token, fy, item) {
         }
         changed = true;
       }
+      if (item.frequency !== undefined && FREQUENCIES.indexOf(item.frequency) !== -1 && item.frequency !== old.frequency) {
+        sheet.getRange(row, FREQ_COL).setValue(item.frequency);
+        if (!sheet.getRange(1, FREQ_COL).getValue()) {
+          sheet.getRange(1, FREQ_COL).setValue(FREQ_HEADER).setFontWeight("bold").setBackground("#e0f2fe").setHorizontalAlignment("center");
+        }
+        changed = true;
+      }
       var levelList = item.levels !== undefined ? item.levels : (item.level !== undefined ? [item.level] : undefined);
       if (levelList !== undefined) {
         var newLevels = cleanLevelList_(levelList, old.levels);
@@ -208,7 +225,7 @@ function saveKpi(token, fy, item) {
       touchUser_(user, "edit");
     }
 
-    var fresh = rowToKpi_(sheet.getRange(row, 1, 1, SUMMARY_COL).getValues()[0]);
+    var fresh = rowToKpi_(sheet.getRange(row, 1, 1, FREQ_COL).getValues()[0]);
     return {
       success: true,
       changed: changed,
@@ -272,7 +289,9 @@ function addIndicator(token, fy, newItem) {
       newItem.months[8], newItem.months[9], newItem.months[10], newItem.months[11],
       newItem.templateDetails || "", newItem.dataSource || "", newItem.owner || "", newItem.department || "",
       "", levels.join(", "), nowStamp_(), user.username, "", "",
-      SUMMARY_METHODS.indexOf(newItem.summaryMethod) !== -1 ? newItem.summaryMethod : DEFAULT_SUMMARY_METHOD
+      SUMMARY_METHODS.indexOf(newItem.summaryMethod) !== -1 ? newItem.summaryMethod : DEFAULT_SUMMARY_METHOD,
+      (newItem.templateDetails || newItem.dataSource) ? nowStamp_() : "",
+      FREQUENCIES.indexOf(newItem.frequency) !== -1 ? newItem.frequency : DEFAULT_FREQUENCY
     ];
     sheet.appendRow(newRow);
     touchUser_(user, "edit");

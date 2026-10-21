@@ -107,6 +107,7 @@ function createFiscalYearSheet_(newFy) {
     });
     sheet.getRange(2, ANNUAL_FIRST_COL, last - 1, 5 + MONTHLY_COLS).setValues(out);
     sheet.getRange(2, STAMP_EDIT_AT_COL, last - 1, 4).clearContent();
+    sheet.getRange(2, ANALYSIS_COL, last - 1, 1).clearContent(); // ปีงบใหม่ต้องอัปเดตการวิเคราะห์ใหม่
   }
   setFiscalYearHeaders_(sheet, newFy);
   return sheet;

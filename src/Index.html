@@ -152,7 +152,6 @@
     .kpi-link-item:hover { background: #f0f9ff; color: var(--primary-color); }
     .kpi-link-item.selected { background: #e0f2fe; color: var(--primary-color); font-weight: 700; border-left: 4px solid var(--primary-color); }
     .kpi-link-item .kpi-link-text { overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
-    .dot-missing { color: #ef4444; font-size: 10px; flex: none; }
 
     /* ส่วนที่ 1 / 2 */
     .meta-badge { display: inline-block; padding: 3px 9px; background: #f1f5f9; border-radius: 20px; font-size: 12px; font-weight: 700; margin-right: 5px; margin-bottom: 5px; color: #015c8b; border: 1px solid #cbd5e1; }
@@ -384,6 +383,24 @@
     /* หน้าติดตามงาน */
     .pg-summary { border-radius: 14px; }
     .pg-bar { height: 16px; border-radius: 999px; }
+
+    /* ================= สถานะตัวชี้วัด 3 สี: ขอบการ์ด / จุดในผังรายการ / ป้าย / หน้าติดตามงาน ================= */
+    .kpi-card.st-green { border: 4px solid #22c55e; }
+    .kpi-card.st-yellow { border: 4px solid #facc15; }
+    .kpi-card.st-red { border: 4px solid #ef4444; }
+    .kpi-card.editing { box-shadow: 0 0 0 5px rgba(37, 99, 235, 0.28), var(--box-shadow); }
+    .st-badge { display: inline-block; padding: 4px 12px; border-radius: 999px; font-size: 12.5px; font-weight: 700; margin-right: 5px; margin-bottom: 5px; white-space: nowrap; }
+    .st-badge.green { background: #dcfce7; color: #166534; }
+    .st-badge.yellow { background: #fef9c3; color: #854d0e; }
+    .st-badge.red { background: #fee2e2; color: #b91c1c; }
+    .st-reasons { grid-column: 1 / -1; font-size: 12.5px; font-weight: 700; margin-top: 2px; }
+    .st-reasons.red { color: #b91c1c; }
+    .st-reasons.yellow { color: #854d0e; }
+    .st-reasons-sm { font-size: 11px; font-weight: 600; color: #64748b; margin-top: 3px; text-align: left; }
+    .st-dot { width: 10px; height: 10px; border-radius: 50%; flex: none; display: inline-block; margin-top: 5px; }
+    .st-dot.green { background: #22c55e; }
+    .st-dot.yellow { background: #facc15; }
+    .st-dot.red { background: #ef4444; }
   </style>
 </head>
 <body>
@@ -442,8 +459,10 @@
           </div>
           <div class="tree-filter-row">
             <select id="tree-mode" class="editable-input" style="width: auto;" onchange="onTreeFilterChange()">
-              <option value="all">แสดงทั้งหมด</option>
-              <option value="missing">เฉพาะที่ยังไม่เติมข้อมูล</option>
+              <option value="all">ทั้งหมด</option>
+              <option value="red">🔴 ต้องแก้ไข</option>
+              <option value="yellow">🟡 รอติดตาม</option>
+              <option value="green">🟢 ครบถ้วน</option>
             </select>
             <label class="check-row"><input type="checkbox" id="tree-mine" onchange="onTreeFilterChange()"> เฉพาะของฉัน</label>
           </div>
@@ -548,6 +567,10 @@
         <div class="form-group">
           <label>ระดับตัวชี้วัด (เลือกได้หลายระดับ — แสดงระดับสูงสุด)</label>
           <div id="add-kpi-levels" class="level-checks"></div>
+        </div>
+        <div class="form-group">
+          <label>ความถี่การเก็บข้อมูล</label>
+          <select id="add-kpi-frequency" class="editable-input"><option value="รายเดือน">รายเดือน</option><option value="รายไตรมาส">รายไตรมาส</option><option value="ครึ่งปี">ครึ่งปี</option><option value="รายปี">รายปี</option></select>
         </div>
         <div class="form-group">
           <label>วิธีสรุปผลรายเดือน</label>
@@ -1044,9 +1067,59 @@
       return selectedFy === currentFy ? ((new Date().getMonth() + 3) % 12) - 1 : 11;
     }
 
-    function isMissing(kpi) {
-      const i = expectedMonthIdx();
-      return i >= 0 && kpi.months[i] === null;
+    // ---------- สถานะตัวชี้วัด 3 ระดับ (ใช้สีชุดเดียวกันทั้งการ์ด / ผังรายการ / หน้าติดตามงาน) ----------
+    //  🔴 ต้องแก้ไข : ผลรอบล่าสุดที่ถึงกำหนดยังว่าง · ไม่มีรายละเอียด/วิเคราะห์ · ไม่อัปเดตการวิเคราะห์ในปีงบนี้ (พ้น ธ.ค.)
+    //  🟡 รอติดตาม  : มีรอบก่อนหน้าที่ยังว่าง · ยังไม่อัปเดตการวิเคราะห์แต่ยังอยู่ในช่วงผ่อนผัน (ต.ค.–ธ.ค.) · ไม่ระบุที่มา/สูตร
+    //  🟢 ครบถ้วน   : ผลครบทุกรอบที่ถึงกำหนด และมีรายละเอียดที่อัปเดตแล้ว
+    const STATUS_META = {
+      red: { label: 'ต้องแก้ไข', icon: '🔴', color: '#ef4444' },
+      yellow: { label: 'รอติดตาม', icon: '🟡', color: '#facc15' },
+      green: { label: 'ครบถ้วน', icon: '🟢', color: '#22c55e' }
+    };
+    const FREQ_PERIODS = { 'รายไตรมาส': [[0, 2], [3, 5], [6, 8], [9, 11]], 'ครึ่งปี': [[0, 5], [6, 11]], 'รายปี': [[0, 11]] };
+    const FREQUENCIES = ['รายเดือน', 'รายไตรมาส', 'ครึ่งปี', 'รายปี'];
+    const ANALYSIS_GRACE_LAST_IDX = 2; // ผ่อนผันการอัปเดตการวิเคราะห์ถึงเดือนที่ 3 ของปีงบ (ธ.ค.)
+
+    // รอบการเก็บข้อมูลที่ถึงกำหนดแล้ว (ตามความถี่ของตัวชี้วัด)
+    function duePeriods(kpi) {
+      const exp = expectedMonthIdx();
+      if (exp < 0) return [];
+      let periods = FREQ_PERIODS[kpi.frequency];
+      if (!periods) periods = Array.from({ length: 12 }, (_, i) => [i, i]);
+      return periods.filter(p => p[1] <= exp);
+    }
+
+    // รอบนั้นมีข้อมูลหรือยัง (กรอกเดือนใดเดือนหนึ่งในรอบก็นับ)
+    function periodHasData(kpi, p) {
+      if (kpi.months.slice(p[0], p[1] + 1).some(v => v !== null)) return true;
+      return kpi.frequency === 'รายปี' && kpi.years[4] !== null;
+    }
+
+    function periodLabel(p) {
+      return p[0] === p[1] ? thMonthsNames[p[0]] : thMonthsNames[p[0]] + '–' + thMonthsNames[p[1]];
+    }
+
+    function kpiStatus(kpi) {
+      const red = [], yellow = [];
+      const due = duePeriods(kpi);
+      if (due.length) {
+        const last = due[due.length - 1];
+        if (!periodHasData(kpi, last)) red.push('ผล ' + periodLabel(last) + ' ยังว่าง');
+        const gaps = due.slice(0, -1).filter(p => !periodHasData(kpi, p));
+        if (gaps.length) {
+          const names = gaps.slice(0, 3).map(periodLabel).join(', ') + (gaps.length > 3 ? ' +' + (gaps.length - 3) : '');
+          yellow.push('รอบก่อนหน้ายังว่าง: ' + names);
+        }
+      }
+      if (!(kpi.templateDetails || '').trim()) {
+        red.push('ยังไม่มีรายละเอียด/การวิเคราะห์');
+      } else if (selectedFy === currentFy && !kpi.analysisUpdatedAt) {
+        const inGrace = ((new Date().getMonth() + 3) % 12) <= ANALYSIS_GRACE_LAST_IDX;
+        (inGrace ? yellow : red).push('ยังไม่อัปเดตการวิเคราะห์ปีงบ ' + selectedFy + (inGrace ? ' (ภายใน ธ.ค.)' : ''));
+      }
+      if (!(kpi.dataSource || '').trim()) yellow.push('ยังไม่ระบุที่มาข้อมูล/สูตรคำนวณ');
+      const level = red.length ? 'red' : (yellow.length ? 'yellow' : 'green');
+      return { level: level, label: STATUS_META[level].label, icon: STATUS_META[level].icon, reasons: red.concat(yellow) };
     }
 
     let appliedFilters = { term: '', mode: 'all', mine: false, levels: KPI_LEVELS.slice() };
@@ -1108,7 +1181,7 @@
     function getOrderedKpis() {
       const f = appliedFilters;
       const list = globalDatabase.filter(k => {
-        if (f.mode === 'missing' && !isMissing(k)) return false;
+        if (f.mode !== 'all' && kpiStatus(k).level !== f.mode) return false;
         if (f.mine && !k.mine) return false;
         // หลายระดับ: แสดงถ้าตัวชี้วัดมีระดับใดระดับหนึ่งที่ติ๊กไว้
         if (levelFilterActive() && !(k.levels || [k.level]).some(l => f.levels.indexOf(l) !== -1)) return false;
@@ -1148,9 +1221,9 @@
         return;
       }
       const list = getOrderedKpis();
-      const missingTotal = globalDatabase.filter(isMissing).length;
-      countEl.innerText = `แสดง ${list.length} จาก ${globalDatabase.length} ตัวชี้วัด` +
-        (expectedMonthIdx() >= 0 ? ` · ยังไม่เติมข้อมูล ${missingTotal} ตัว` : ' · (ต.ค. ยังไม่ถึงกำหนดกรอก)');
+      const lv = { red: 0, yellow: 0, green: 0 };
+      globalDatabase.forEach(k => { lv[kpiStatus(k).level]++; });
+      countEl.innerText = `แสดง ${list.length} จาก ${globalDatabase.length} ตัวชี้วัด · 🔴 ${lv.red} · 🟡 ${lv.yellow} · 🟢 ${lv.green}`;
 
       if (list.length === 0) {
         container.innerHTML = '<div class="empty-state">ไม่พบตัวชี้วัดตามตัวกรองที่เลือก</div>';
@@ -1208,7 +1281,8 @@
             item.className = 'kpi-link-item' + (selectedKpiId === kpi.id ? ' selected' : '');
             item.dataset.id = kpi.id;
             item.title = kpi.name;
-            item.innerHTML = `${isMissing(kpi) ? '<span class="dot-missing" title="ยังไม่เติมข้อมูลล่าสุด">🔴</span>' : ''}<span class="kpi-link-text">${kpiNumber(kpi)}. ${esc(kpi.name)}</span>`;
+            const stt = kpiStatus(kpi);
+            item.innerHTML = `<span class="st-dot ${stt.level}" title="${esc(stt.label + (stt.reasons.length ? ': ' + stt.reasons.join(' · ') : ''))}"></span><span class="kpi-link-text">${kpiNumber(kpi)}. ${esc(kpi.name)}</span>`;
             item.onclick = (e) => { e.stopPropagation(); selectKpi(kpi.id); };
             catContent.appendChild(item);
           });
@@ -1397,18 +1471,22 @@
            <div class="form-group" style="margin-bottom:0;"><label>ระดับตัวชี้วัด (เลือกได้หลายระดับ — แสดงระดับสูงสุด)</label><div class="level-checks">${levelCheckboxesHtml('ed-level-cb', kpi.levels || [kpi.level])}</div></div>`
         : `<p style="font-weight:700; color:#1e293b;">${esc(kpi.owner) || '-'} (${esc(kpi.department) || '-'})</p>`;
 
-      const cls = 'kpi-card' + (ed ? ' editing' : '') + (expandedCards.has(kpi.id) ? ' expanded' : '') + (selectedKpiId === kpi.id ? ' selected' : '');
+      const stt = kpiStatus(kpi);
+      const cls = 'kpi-card st-' + stt.level + (ed ? ' editing' : '') + (expandedCards.has(kpi.id) ? ' expanded' : '') + (selectedKpiId === kpi.id ? ' selected' : '');
       return `
         <div class="${cls}" id="card-${cssId(kpi.id)}" data-id="${esc(kpi.id)}">
           <div class="kpi-card-head">
             <div class="kpi-card-title">${nameHtml}</div>
             <div class="kpi-card-actions">${actions}</div>
             <div class="kpi-card-badges">
+              <span class="st-badge ${stt.level}">${stt.icon} ${stt.label}</span>
               <span class="meta-badge">หมวดหมู่: ${esc(kpi.category)}</span>
               <span class="meta-badge" title="ทุกระดับ: ${esc((kpi.levels || [kpi.level]).join(', '))}">ระดับ: ${esc(kpi.level)}${(kpi.levels || []).length > 1 ? ' (+' + (kpi.levels.length - 1) + ')' : ''}</span>
               <span class="meta-badge">ปีงบ: ${selectedFy}${selectedFy === currentFy ? ' (ปัจจุบัน)' : ''}</span>
+              ${kpi.frequency && kpi.frequency !== 'รายเดือน' ? `<span class="meta-badge">ความถี่: ${esc(kpi.frequency)}</span>` : ''}
               <span class="meta-badge">✏️ แก้ไขล่าสุด: ${stampText(kpi.editedAt, kpi.editedBy)}</span>
             </div>
+            ${stt.reasons.length ? `<div class="st-reasons ${stt.level}">${stt.reasons.map(r => '• ' + esc(r)).join('  ')}</div>` : ''}
           </div>
           <div class="kpi-card-body">
             <div class="card-left">
@@ -1422,6 +1500,7 @@
               ${ed && kpi.lockedYears && kpi.lockedYears.some(x => x) && !priv ? '<div class="hint">ช่องสีเทา = ผลของปีที่มีชีตปีงบนั้นอยู่แล้ว (แก้ได้เฉพาะ admin / ผอ. / QMR)</div>' : ''}
               <div class="section-bar"><h4>📊 ผลลัพธ์รายเดือน (ปีงบประมาณ ${selectedFy})</h4></div>
               <div class="data-table-wrapper"><table><tbody>${monthRows}</tbody></table></div>
+              ${ed && priv ? `<div class="form-group" style="margin: 6px 0 0;"><label>ความถี่การเก็บข้อมูล (ระบบเช็กผลเฉพาะรอบที่ถึงกำหนด)</label><select id="ed-frequency" class="editable-input" style="width:auto;">${FREQUENCIES.map(m => `<option value="${m}" ${m === (kpi.frequency || 'รายเดือน') ? 'selected' : ''}>${m}</option>`).join('')}</select></div>` : ''}
               ${ed && priv ? `<div class="form-group" style="margin: 6px 0 0;"><label>วิธีสรุปผลรายเดือน</label><select id="ed-summary" class="editable-input" style="width:auto;">${SUMMARY_METHODS.map(m => `<option value="${m}" ${m === (kpi.summaryMethod || 'เฉลี่ย') ? 'selected' : ''}>${m}</option>`).join('')}</select></div>` : ''}
               <div class="hint">สรุปรายเดือน (${esc(kpi.summaryMethod || 'เฉลี่ย')}): <b>${calculateMonthlySummary(kpi.months, kpi.summaryMethod)}</b></div>
               ${ed && !kpi.canEditResults ? '<div class="hint">ไม่มีสิทธิ์แก้ไขผลของตัวชี้วัดนี้ในปีงบนี้</div>' : ''}
@@ -1566,6 +1645,7 @@
         p.department = getVal('ed-dept');
         if (document.querySelector('.ed-level-cb')) p.levels = checkedLevels('ed-level-cb');
         p.summaryMethod = getVal('ed-summary');
+        p.frequency = getVal('ed-frequency');
       }
       return p;
     }
@@ -1656,6 +1736,7 @@
       ['add-kpi-name', 'add-kpi-target', 'add-kpi-source', 'add-kpi-owner', 'add-kpi-dept'].forEach(id => { document.getElementById(id).value = ''; });
       document.getElementById('add-kpi-levels').innerHTML = levelCheckboxesHtml('add-level-cb', ['SAR']);
       document.getElementById('add-kpi-summary').value = 'เฉลี่ย';
+      document.getElementById('add-kpi-frequency').value = 'รายเดือน';
     }
 
     function submitAddKpi() {
@@ -1676,7 +1757,8 @@
         owner: document.getElementById('add-kpi-owner').value,
         department: document.getElementById('add-kpi-dept').value,
         levels: checkedLevels('add-level-cb'),
-        summaryMethod: document.getElementById('add-kpi-summary').value
+        summaryMethod: document.getElementById('add-kpi-summary').value,
+        frequency: document.getElementById('add-kpi-frequency').value
       };
       if (newItem.levels.length === 0) {
         showAlert('ข้อมูลไม่ครบ', '⚠️', 'กรุณาเลือกระดับตัวชี้วัดอย่างน้อย 1 ระดับ');
@@ -1862,20 +1944,12 @@
 
     // ===================== ติดตามงาน (Progress) =====================
     function loadProgressSummary() {
-      const fiscalMonthIdx = expectedMonthIdx();
       const summary = [];
       globalDatabase.forEach(kpi => {
-        const noDetails = (!kpi.templateDetails || !kpi.dataSource);
-        const noData = fiscalMonthIdx >= 0 && kpi.months[fiscalMonthIdx] === null;
-
-        let status = 'green';
-        let statusText = 'ข้อมูลครบถ้วน';
-        if (noData) { status = 'red'; statusText = 'ยังไม่เติมข้อมูลล่าสุด'; }
-        else if (noDetails) { status = 'yellow'; statusText = 'ยังไม่ลงรายละเอียด'; }
-
+        const stt = kpiStatus(kpi);
         summary.push({
           id: kpi.id, part: kpi.part, category: kpi.category, name: kpi.name,
-          owner: kpi.owner, department: kpi.department, status: status, statusText: statusText,
+          owner: kpi.owner, department: kpi.department, status: stt.level, statusText: stt.label, reasons: stt.reasons,
           canEdit: kpi.canEditResults || kpi.canEditDetails
         });
       });
@@ -1897,7 +1971,7 @@
           <table>
             <thead>
               <tr>
-                <th style="width:130px;">สถานะงาน</th>
+                <th style="width:210px;">สถานะงาน</th>
                 <th style="min-width:200px; text-align:left;">ชื่อตัวชี้วัด</th>
                 <th style="width:120px;">หมวดหมู่</th>
                 <th style="width:100px;">ผู้รับผิดชอบ</th>
@@ -1908,15 +1982,11 @@
             <tbody>
       `;
       data.forEach(item => {
-        const dotColor = item.status === 'red' ? '#ef4444' : (item.status === 'yellow' ? '#f59e0b' : '#10b981');
-        const badgeBg = item.status === 'red' ? '#fee2e2' : (item.status === 'yellow' ? '#fef3c7' : '#d1fae5');
-        const badgeColor = item.status === 'red' ? '#b91c1c' : (item.status === 'yellow' ? '#b45309' : '#047857');
         html += `
           <tr style="cursor:pointer;" onclick="gotoKpi('${esc(item.id)}', ${item.canEdit ? 'true' : 'false'})" title="คลิกเพื่อเปิดตัวชี้วัดนี้ในหน้าแรก">
             <td>
-              <span style="background:${badgeBg}; color:${badgeColor}; padding:4px 8px; border-radius:12px; font-size:12px; font-weight:700; display:inline-block; white-space:nowrap;">
-                <span style="display:inline-block; width:8px; height:8px; background:${dotColor}; border-radius:50%; margin-right:4px;"></span>${item.statusText}
-              </span>
+              <span class="st-badge ${item.status}">${STATUS_META[item.status].icon} ${item.statusText}</span>
+              ${item.reasons.length ? `<div class="st-reasons-sm">${item.reasons.map(r => esc(r)).join('<br>')}</div>` : ''}
             </td>
             <td style="text-align:left; font-weight:600; color:#0f172a;">${esc(item.name)}</td>
             <td>${esc(item.category)}</td>
@@ -1941,22 +2011,21 @@
       renderProgressChart(filtered, term !== '');
     }
 
-    // กราฟความคืบหน้า (ฝั่งซ้าย): ใช้สถานะเดียวกับตาราง — เติมข้อมูลแล้ว = ไม่ใช่ "ยังไม่เติมข้อมูลล่าสุด"
+    // กราฟความคืบหน้า (ฝั่งซ้าย): ใช้สถานะ 3 ระดับชุดเดียวกับการ์ดและผังรายการ
     function renderProgressChart(data, filtered) {
       const area = document.getElementById('progress-chart-area');
       const total = data.length;
       if (total === 0) { area.innerHTML = '<div class="empty-state">ไม่พบข้อมูลตัวชี้วัด</div>'; return; }
-      const C = { green: '#10b981', yellow: '#f59e0b', red: '#ef4444' };
+      const C = { green: STATUS_META.green.color, yellow: STATUS_META.yellow.color, red: STATUS_META.red.color };
       const count = (list, st) => list.filter(x => x.status === st).length;
       const pct = (n, d) => d === 0 ? 0 : Math.round(n / d * 1000) / 10;
       const g = count(data, 'green'), y = count(data, 'yellow'), r = count(data, 'red');
-      const filled = g + y;
       const idx = expectedMonthIdx();
       const monthNote = idx >= 0
         ? `เช็กผลเดือน ${thMonthsNames[idx]} ปีงบ ${selectedFy}`
         : `ปีงบ ${selectedFy} — เดือน ต.ค. ยังไม่ถึงกำหนดกรอกผล`;
 
-      // โดนัท: เขียว (ครบถ้วน) → เหลือง (ยังไม่ลงรายละเอียด) → แดง (ยังไม่เติมข้อมูลล่าสุด)
+      // โดนัท: เขียว (ครบถ้วน) → เหลือง (รอติดตาม) → แดง (ต้องแก้ไข)
       const R = 52, L = 2 * Math.PI * R;
       let offset = 0;
       const seg = (n, color) => {
@@ -1969,8 +2038,8 @@
       const donut = `<svg viewBox="0 0 140 140" width="140" height="140">
         <circle cx="70" cy="70" r="${R}" fill="none" stroke="#e2e8f0" stroke-width="18"/>
         ${seg(g, C.green)}${seg(y, C.yellow)}${seg(r, C.red)}
-        <text x="70" y="68" text-anchor="middle" font-size="22" font-weight="700" fill="#14532d">${pct(filled, total)}%</text>
-        <text x="70" y="88" text-anchor="middle" font-size="11" font-weight="700" fill="#64748b">เติมข้อมูลแล้ว</text>
+        <text x="70" y="68" text-anchor="middle" font-size="22" font-weight="700" fill="#14532d">${pct(g, total)}%</text>
+        <text x="70" y="88" text-anchor="middle" font-size="11" font-weight="700" fill="#64748b">ครบถ้วน</text>
       </svg>`;
 
       // แยกตามหมวดหลัก
@@ -1981,11 +2050,11 @@
         const pg = count(list, 'green'), py = count(list, 'yellow'), pr = count(list, 'red');
         const w = v => (v / n * 100) + '%';
         return `<div class="pg-part">
-          <div class="pg-part-head"><span>${esc(p)}</span><span>${pg + py}/${n} ตัว (${pct(pg + py, n)}%)</span></div>
-          <div class="pg-bar" title="ครบถ้วน ${pg} · ยังไม่ลงรายละเอียด ${py} · ยังไม่เติมข้อมูลล่าสุด ${pr}">
+          <div class="pg-part-head"><span>${esc(p)}</span><span>ครบถ้วน ${pg}/${n} ตัว (${pct(pg, n)}%)</span></div>
+          <div class="pg-bar" title="ครบถ้วน ${pg} · รอติดตาม ${py} · ต้องแก้ไข ${pr}">
             <span style="width:${w(pg)}; background:${C.green};"></span><span style="width:${w(py)}; background:${C.yellow};"></span><span style="width:${w(pr)}; background:${C.red};"></span>
           </div>
-          <div class="pg-part-foot">เหลือ ${pr} ตัว · ยังไม่ลงรายละเอียด ${py} ตัว</div>
+          <div class="pg-part-foot">ต้องแก้ไข ${pr} ตัว · รอติดตาม ${py} ตัว</div>
         </div>`;
       }).join('');
 
@@ -1995,12 +2064,12 @@
         <div class="pg-donut-row">
           ${donut}
           <div class="pg-legend">
-            <div><span class="pg-dot" style="background:${C.green}"></span>ข้อมูลครบถ้วน ${g} ตัว (${pct(g, total)}%)</div>
-            <div><span class="pg-dot" style="background:${C.yellow}"></span>ยังไม่ลงรายละเอียด ${y} ตัว (${pct(y, total)}%)</div>
-            <div><span class="pg-dot" style="background:${C.red}"></span>ยังไม่เติมข้อมูลล่าสุด ${r} ตัว (${pct(r, total)}%)</div>
+            <div><span class="pg-dot" style="background:${C.green}"></span>🟢 ครบถ้วน ${g} ตัว (${pct(g, total)}%)</div>
+            <div><span class="pg-dot" style="background:${C.yellow}"></span>🟡 รอติดตาม ${y} ตัว (${pct(y, total)}%)</div>
+            <div><span class="pg-dot" style="background:${C.red}"></span>🔴 ต้องแก้ไข ${r} ตัว (${pct(r, total)}%)</div>
           </div>
         </div>
-        <div class="pg-summary">เติมข้อมูลแล้ว ${filled} จาก ${total} ตัว (${pct(filled, total)}%) · เหลือ ${r} ตัว</div>
+        <div class="pg-summary">ครบถ้วน ${g} จาก ${total} ตัว (${pct(g, total)}%) · รอติดตาม ${y} ตัว · ต้องแก้ไข ${r} ตัว</div>
         <div class="pg-title" style="font-size:14px; margin-bottom:6px;">แยกตามหมวดหลัก</div>
         ${partRows}
       `;

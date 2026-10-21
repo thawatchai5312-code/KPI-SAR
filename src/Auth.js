@@ -39,6 +39,14 @@ var SUMMARY_COL = 34;
 var SUMMARY_METHODS = ["เฉลี่ย", "ผลรวม", "เดือนล่าสุด"];
 var DEFAULT_SUMMARY_METHOD = "เฉลี่ย";
 var SUMMARY_HEADER = "วิธีสรุปผลรายเดือน (Summary)";
+// เวลาที่แก้รายละเอียด/วิเคราะห์/ที่มาข้อมูลล่าสุด (คอลัมน์ AI) — ใช้ตัดสินสถานะ "ต้องอัปเดตทุกปีงบ" ปีงบใหม่เริ่มว่าง
+var ANALYSIS_COL = 35;
+var ANALYSIS_HEADER = "อัปเดตการวิเคราะห์ล่าสุด";
+// ความถี่การเก็บข้อมูลของตัวชี้วัด (คอลัมน์ AJ) — ระบบเช็กผลเฉพาะรอบที่ถึงกำหนด
+var FREQ_COL = 36;
+var FREQUENCIES = ["รายเดือน", "รายไตรมาส", "ครึ่งปี", "รายปี"];
+var DEFAULT_FREQUENCY = "รายเดือน";
+var FREQ_HEADER = "ความถี่การเก็บข้อมูล (Frequency)";
 
 // หัวหน้าหน่วยตั้งต้น (ใช้ครั้งเดียวหลังอัปเดตนี้) — ชื่อ → หน่วยงานที่ดูแล
 // ผู้บริหาร (executive) จะไม่ถูกลดสิทธิ์ แค่บันทึกหน่วยงานไว้
@@ -103,6 +111,11 @@ function parseDepts_(text) {
 function normalizeSummaryMethod_(value) {
   var v = value ? value.toString().trim() : "";
   return SUMMARY_METHODS.indexOf(v) !== -1 ? v : DEFAULT_SUMMARY_METHOD;
+}
+
+function normalizeFrequency_(value) {
+  var v = value ? value.toString().trim() : "";
+  return FREQUENCIES.indexOf(v) !== -1 ? v : DEFAULT_FREQUENCY;
 }
 
 function sortLevels_(levels) {
