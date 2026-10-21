@@ -1,0 +1,13 @@
+{
+  "name": "kpi-sar",
+  "private": true,
+  "description": "Phuluang KPI SAR – Google Apps Script web app (bound to the 'Phuluang KPI SAR data' spreadsheet)",
+  "scripts": {
+    "pull": "clasp pull",
+    "push": "clasp push -f",
+    "deploy": "bash scripts/deploy.sh"
+  },
+  "devDependencies": {
+    "@google/clasp": "^3.4.1"
+  }
+}
