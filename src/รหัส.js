@@ -133,10 +133,21 @@ function saveKpi(token, fy, item) {
 
     var old = rowToKpi_(data[rowIndex]);
     var perm = getKpiPermission_(user, old, fy);
+    if (!perm.view) return { success: false, message: "ไม่มีสิทธิ์เข้าถึงตัวชี้วัดนี้" };
     var hasResults = item.years !== undefined || item.months !== undefined;
     var hasDetails = item.templateDetails !== undefined || item.dataSource !== undefined;
     if (hasResults && !perm.editResults) return { success: false, message: "ไม่มีสิทธิ์แก้ไขผลตัวชี้วัดนี้ในปีงบ " + fy };
     if (hasDetails && !perm.editDetails) return { success: false, message: "ไม่มีสิทธิ์แก้ไขรายละเอียดตัวชี้วัดนี้ในปีงบ " + fy };
+    var metaDiffers = ["name", "target", "owner", "department"].some(function(f) {
+      return item[f] !== undefined && item[f].toString().trim() !== (old[f] || "").toString().trim();
+    });
+    if (metaDiffers && !perm.editDetails) return { success: false, message: "ไม่มีสิทธิ์แก้ไขข้อมูลตัวชี้วัดนี้ในปีงบ " + fy };
+    // ตรวจระดับก่อนเขียนข้อมูลใดๆ (หมวด Part I–IV ต้องมีระดับ SAR หรือ QA-หน่วยงาน)
+    var levelList = item.levels !== undefined ? item.levels : (item.level !== undefined ? [item.level] : undefined);
+    var newLevels = levelList !== undefined && privileged ? cleanLevelList_(levelList, old.levels) : [];
+    if (newLevels.length > 0 && isCorePart_(old.part) && !hasHospitalLevel_(newLevels)) {
+      return { success: false, message: "ตัวชี้วัดในหมวด " + old.part + " ต้องมีระดับ SAR หรือ QA-หน่วยงาน อย่างน้อย 1 ระดับ" };
+    }
 
     var row = rowIndex + 1;
     var changed = false;
@@ -178,7 +189,8 @@ function saveKpi(token, fy, item) {
       sheet.getRange(row, 25).setValue(src || "");
     }
 
-    if (privileged) {
+    // ชื่อ/เป้าหมาย/ผู้รับผิดชอบ/หน่วยงาน: ผู้ที่แก้รายละเอียดได้ (ผู้รับผิดชอบ/หัวหน้าหน่วยในปีงบปัจจุบัน หรือ admin/ผอ./QMR)
+    if (perm.editDetails) {
       if (item.name !== undefined && item.name.toString().trim() !== "" && item.name.toString().trim() !== old.name) {
         sheet.getRange(row, 5).setValue(item.name.toString().trim());
         changed = true;
@@ -195,6 +207,10 @@ function saveKpi(token, fy, item) {
         sheet.getRange(row, 27).setValue(item.department.toString().trim());
         changed = true;
       }
+    }
+
+    // วิธีสรุป/ความถี่/ระดับ: เฉพาะ admin, ผอ., QMR
+    if (privileged) {
       if (item.summaryMethod !== undefined && SUMMARY_METHODS.indexOf(item.summaryMethod) !== -1 && item.summaryMethod !== old.summaryMethod) {
         sheet.getRange(row, SUMMARY_COL).setValue(item.summaryMethod);
         if (!sheet.getRange(1, SUMMARY_COL).getValue()) {
@@ -209,13 +225,9 @@ function saveKpi(token, fy, item) {
         }
         changed = true;
       }
-      var levelList = item.levels !== undefined ? item.levels : (item.level !== undefined ? [item.level] : undefined);
-      if (levelList !== undefined) {
-        var newLevels = cleanLevelList_(levelList, old.levels);
-        if (newLevels.length > 0 && newLevels.join(", ") !== old.levels.join(", ")) {
-          sheet.getRange(row, LEVEL_COLUMN).setValue(newLevels.join(", "));
-          changed = true;
-        }
+      if (newLevels.length > 0 && newLevels.join(", ") !== old.levels.join(", ")) {
+        sheet.getRange(row, LEVEL_COLUMN).setValue(newLevels.join(", "));
+        changed = true;
       }
     }
 
@@ -263,22 +275,52 @@ function recordViews(token, fy, ids) {
   }
 }
 
-// เพิ่มตัวชี้วัดใหม่ในปีงบที่เลือก — เฉพาะ admin, ผอ., QMR (ปีงบถัดไปจะคัดลอกตามจากปีล่าสุดเอง)
+// เพิ่มตัวชี้วัดใหม่ในปีงบที่เลือก — ทุกคนที่ล็อกอิน (staff ขึ้นไป) เพิ่มได้ (ปีงบถัดไปจะคัดลอกตามจากปีล่าสุดเอง)
+//  - staff/head: เพิ่มได้เฉพาะปีงบปัจจุบัน และระบบใส่ตัวเองเป็นผู้รับผิดชอบให้เสมอ
+//  - หมวด Part I–IV ต้องมีระดับ SAR หรือ QA-หน่วยงาน อย่างน้อย 1 ระดับ (หมวดอื่นตั้งชื่อเองได้)
 function addIndicator(token, fy, newItem) {
   try {
-    var user = requirePrivileged_(token);
+    var user = requireUser_(token);
+    var privileged = isPrivileged_(user);
     fy = resolveFiscalYear_(fy);
     var sheet = getFiscalSheet_(fy);
     if (!sheet) return { success: false, message: "ไม่พบชีตปีงบประมาณ" };
+    if (!privileged && fy !== getCurrentFiscalYear_()) {
+      return { success: false, message: "เพิ่มตัวชี้วัดใหม่ได้เฉพาะปีงบปัจจุบัน (" + getCurrentFiscalYear_() + ")" };
+    }
+    newItem.part = (newItem.part || "").toString().trim();
+    newItem.category = (newItem.category || "").toString().trim();
+    newItem.name = (newItem.name || "").toString().trim();
+    if (!newItem.part || !newItem.category || !newItem.name) {
+      return { success: false, message: "กรุณาระบุ หมวดหลัก หมวดหมู่ย่อย และชื่อตัวชี้วัด" };
+    }
+    var newLevels = cleanLevelList_(newItem.levels || (newItem.level ? [newItem.level] : []), []);
+    if (newLevels.length === 0) newLevels = [DEFAULT_KPI_LEVEL];
+    if (isCorePart_(newItem.part) && !hasHospitalLevel_(newLevels)) {
+      return { success: false, message: "หมวด " + newItem.part + " ต้องเป็นตัวชี้วัดระดับ SAR หรือ QA-หน่วยงาน (ถ้าเป็นระดับรายบุคคล/หน่วยงาน/ฝ่ายการพยาบาล ให้ตั้งชื่อหมวดอื่น)" };
+    }
     var data = sheet.getDataRange().getValues();
+    // ผู้เพิ่ม (ที่ไม่ใช่ admin) ต้องเห็นตัวชี้วัดที่ตัวเองเพิ่ม จึงใส่ตัวเองเป็นผู้รับผิดชอบให้
+    // ยกเว้น ผอ./QMR ที่เพิ่มตัวชี้วัด Part I–IV ระดับ SAR/QA ซึ่งเห็นได้อยู่แล้ว
+    var seesAnyway = user.tier === "admin" || (user.tier === "executive" && isCorePart_(newItem.part) && hasHospitalLevel_(newLevels));
+    if (!seesAnyway) {
+      var owners = parseOwners_(newItem.owner);
+      if (owners.indexOf(user.username) === -1) owners.unshift(user.username);
+      newItem.owner = owners.join(" / ");
+    }
+    if (!privileged && !(newItem.department || "").toString().trim()) newItem.department = user.depts.join(" / ");
+    // ผู้เพิ่มต้องเห็นตัวชี้วัดที่ตัวเองเพิ่ม (เช่น ผอ. เพิ่มได้เฉพาะ Part I–IV ระดับ SAR/QA)
+    var probe = { part: newItem.part, owner: newItem.owner || "", department: newItem.department || "", levels: newLevels };
+    if (!getKpiPermission_(user, probe, fy).view) {
+      return { success: false, message: "บัญชีผอ./QMR เพิ่มได้เฉพาะตัวชี้วัด Part I–IV ระดับ SAR/QA หรือที่ตัวเองเป็นผู้รับผิดชอบ" };
+    }
 
     var count = data.filter(function(r) {
       return r[2] && r[2].toString().trim() === newItem.part.trim() &&
              r[3] && r[3].toString().trim() === newItem.category.trim();
     }).length;
     var autoNo = count + 1;
-    var levels = cleanLevelList_(newItem.levels || (newItem.level ? [newItem.level] : []), []);
-    if (levels.length === 0) levels = [DEFAULT_KPI_LEVEL];
+    var levels = newLevels;
 
     var newId = "KPI-" + new Date().getTime();
     var newRow = [

@@ -405,10 +405,6 @@
     #panel-tree { padding: 14px 12px 12px; }
     .tree-filters { padding: 12px 0 10px; border-bottom: 1px solid var(--line); margin-bottom: 10px; display: grid; gap: 8px; }
     .tree-filters .editable-input { margin-bottom: 0; }
-    .tree-search-wrap { position: relative; }
-    .tree-search-wrap svg { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; color: #16a34a; pointer-events: none; }
-    #tree-search { padding: 9px 14px 9px 38px; border-radius: 999px; background: #f6faf7; border: 1px solid #d5e5da; font-size: 13.5px; }
-    #tree-search::placeholder { color: #8a9b90; font-weight: 500; }
     .tree-level-filter { margin-bottom: 0; }
     .tree-level-filter > .btn { border-radius: 999px; background: #f1f6f2; color: #14532d; border: 1px solid #d5e5da; box-shadow: none; font-size: 13px; padding: 8px 14px; display: flex; justify-content: space-between; align-items: center; }
     .tree-level-filter > .btn.btn-accent { background: #fff7ed; border-color: #fdba74; color: #c2410c; }
@@ -488,7 +484,6 @@
     <div class="home-grid">
       <div class="panel" id="panel-tree">
         <div class="tree-filters">
-          <div class="tree-search-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input type="text" id="tree-search" class="editable-input" placeholder="ค้นหาชื่อ / ผู้รับผิดชอบ / หน่วยงาน" oninput="onTreeFilterChange()"></div>
           <div class="tree-level-filter">
             <button type="button" class="btn btn-secondary btn-sm" id="tree-level-btn" onclick="toggleLevelMenu(event)"><span class="lv-label"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg>ระดับตัวชี้วัด: ทั้งหมด</span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg></button>
             <div class="tree-level-menu" id="tree-level-menu" style="display: none;">
@@ -526,7 +521,8 @@
     <div class="panel" id="progress-table-panel" style="max-height: none; min-width: 0;">
       <div style="background: #f8fafc; padding: 10px; border-radius: 10px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #cbd5e1; flex-wrap: wrap; gap: 10px;">
         <div style="font-weight: 700; color: #015c8b; font-size: 14px;">📋 ติดตามความคืบหน้าการลงข้อมูล (Progress Tracker)</div>
-        <div>
+        <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+          <label class="check-row" style="margin: 0; white-space: nowrap;"><input type="checkbox" id="pg-mine" onchange="onMineToggle(this)"> เฉพาะของฉัน</label>
           <input type="text" id="progress-filter" class="editable-input" placeholder="🔍 ค้นหาหน่วยงาน, ผู้รับผิดชอบ..." style="width: 260px;" onkeyup="filterProgressTable()">
         </div>
       </div>
@@ -581,6 +577,7 @@
           <label>หมวดหลัก (Part) *</label>
           <input type="text" id="add-kpi-part" list="part-options" class="editable-input" placeholder="พิมพ์ชื่อหมวดใหม่ หรือเลือกจากรายการ">
           <datalist id="part-options"></datalist>
+          <div class="hint">Part I–IV ใช้กับตัวชี้วัดระดับ SAR / QA เท่านั้น · ถ้าเป็นตัวชี้วัดของหน่วยงาน/รายบุคคล ให้ตั้งชื่อหมวดเอง (หมวดใหม่จะแสดงต่อท้าย Part I–IV)</div>
         </div>
         <div class="form-group">
           <label>หมวดหมู่ย่อย (Category) *</label>
@@ -889,7 +886,7 @@
       document.getElementById('user-bar').style.display = 'flex';
       document.getElementById('user-info').innerText = '👤 ' + currentUser.username + ' (' + (TIER_LABELS[currentUser.tier] || currentUser.tier) + ')';
       document.getElementById('admin-settings-btn').style.display = currentUser.tier === 'admin' ? 'inline-block' : 'none';
-      document.getElementById('btn-add-kpi').style.display = isPrivilegedUser() ? 'inline-block' : 'none';
+      document.getElementById('btn-add-kpi').style.display = 'inline-block';
       document.getElementById('pw-warning-bar').style.display = currentUser.mustChange ? 'flex' : 'none';
     }
 
@@ -1058,7 +1055,7 @@
         if (item.part) parts.add(item.part);
         if (item.category) categories.add(item.category);
       });
-      document.getElementById('part-options').innerHTML = Array.from(parts).map(p => `<option value="${esc(p)}"></option>`).join('');
+      document.getElementById('part-options').innerHTML = Array.from(parts).sort(comparePartNames).map(p => `<option value="${esc(p)}"></option>`).join('');
       document.getElementById('category-options').innerHTML = Array.from(categories).map(c => `<option value="${esc(c)}"></option>`).join('');
     }
 
@@ -1166,11 +1163,10 @@
       return { level: level, label: STATUS_META[level].label, icon: STATUS_META[level].icon, reasons: red.concat(yellow) };
     }
 
-    let appliedFilters = { term: '', mode: 'all', mine: false, levels: KPI_LEVELS.slice() };
+    let appliedFilters = { mode: 'all', mine: false, levels: KPI_LEVELS.slice() };
 
     function readTreeFilters() {
       return {
-        term: document.getElementById('tree-search').value.trim().toLowerCase(),
         mode: document.getElementById('tree-mode').value,
         mine: document.getElementById('tree-mine').checked,
         levels: Array.from(document.querySelectorAll('.tree-level-cb:checked')).map(c => c.value)
@@ -1210,15 +1206,32 @@
 
     // ผู้ใช้กด "กลับไปแก้ต่อ" ตอนเปลี่ยนตัวกรอง → คืนค่าตัวกรองเดิมในช่อง
     function restoreTreeFilters() {
-      document.getElementById('tree-search').value = appliedFilters.term;
       document.getElementById('tree-mode').value = appliedFilters.mode;
       document.getElementById('tree-mine').checked = appliedFilters.mine;
+      syncMineBoxes();
       document.querySelectorAll('.tree-level-cb').forEach(c => { c.checked = appliedFilters.levels.indexOf(c.value) !== -1; });
       updateLevelButton();
     }
 
     function treeFiltersActive() {
-      return appliedFilters.term !== '' || appliedFilters.mode !== 'all' || appliedFilters.mine || levelFilterActive();
+      return appliedFilters.mode !== 'all' || appliedFilters.mine || levelFilterActive();
+    }
+
+    // หมวด Part I–IV = หมวดหลักของ QA/SAR (ต้องเป็นตัวชี้วัดระดับ SAR หรือ QA-หน่วยงาน) อยู่บนสุดเสมอ ตามด้วยหมวดอื่นเรียงตามตัวอักษร
+    const CORE_PART_RE = /^part\s+(iv|iii|ii|i)(?![a-z])/i;
+    const CORE_PART_RANK = { i: 1, ii: 2, iii: 3, iv: 4 };
+    function corePartRank(part) {
+      const m = String(part || '').trim().match(CORE_PART_RE);
+      return m ? CORE_PART_RANK[m[1].toLowerCase()] : 0;
+    }
+    function isCorePart(part) { return corePartRank(part) > 0; }
+    function hasHospitalLevel(levels) { return (levels || []).some(l => l === 'SAR' || l === 'QA-หน่วยงาน'); }
+    function comparePartNames(a, b) {
+      const ra = corePartRank(a), rb = corePartRank(b);
+      if (ra && rb) return ra - rb || String(a).localeCompare(String(b), 'th');
+      if (ra) return -1;
+      if (rb) return 1;
+      return String(a).localeCompare(String(b), 'th');
     }
 
     // ตัวชี้วัดที่ผ่านตัวกรอง เรียงแบบเดียวกับผังรายการ: หมวดหลัก → หมวดย่อย → ลำดับในชีต
@@ -1229,31 +1242,41 @@
         if (f.mine && !k.mine) return false;
         // หลายระดับ: แสดงถ้าตัวชี้วัดมีระดับใดระดับหนึ่งที่ติ๊กไว้
         if (levelFilterActive() && !(k.levels || [k.level]).some(l => f.levels.indexOf(l) !== -1)) return false;
-        if (f.term && !((k.name + ' ' + k.owner + ' ' + k.department).toLowerCase().includes(f.term))) return false;
         return true;
       });
       const order = new Map(globalDatabase.map((k, i) => [k.id, i]));
       const cmp = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
-      return list.sort((a, b) => cmp(a.part, b.part) || cmp(a.category, b.category) || order.get(a.id) - order.get(b.id));
+      return list.sort((a, b) => comparePartNames(a.part, b.part) || cmp(a.category, b.category) || order.get(a.id) - order.get(b.id));
     }
 
     // ค่าตั้งต้นตอนเข้าระบบ: staff / หัวหน้าหน่วย เห็นเฉพาะตัวชี้วัดของตัวเอง (หัวหน้า = ของหน่วยงานที่ดูแล) ผู้ดูแลและผู้บริหารเห็นทั้งหมด
     function applyDefaultFilters() {
       document.getElementById('tree-mine').checked = !isPrivilegedUser();
+      syncMineBoxes();
       appliedFilters = readTreeFilters();
     }
 
     // เอาติ๊ก "เฉพาะของฉัน" ออก: เตือนก่อนว่าตัวชี้วัดอื่นดูได้อย่างเดียว แก้ไขไม่ได้
+    // ช่อง "เฉพาะของฉัน" มี 2 ที่ (ผังรายการหน้าแรก / หน้าติดตามงาน) ใช้ค่าเดียวกัน
+    function syncMineBoxes() {
+      document.getElementById('pg-mine').checked = document.getElementById('tree-mine').checked;
+    }
+
     function onMineToggle(cb) {
+      const apply = () => {
+        document.getElementById('tree-mine').checked = cb.checked;
+        syncMineBoxes();
+        onTreeFilterChange();
+      };
       if (!cb.checked && !isPrivilegedUser()) {
-        showConfirm('ตัวชี้วัดที่ไม่ใช่ของคุณ ดูได้อย่างเดียว ไม่สามารถแก้ไขได้\nต้องการดูตัวชี้วัดทั้งหมดใช่หรือไม่?', () => onTreeFilterChange(), () => { cb.checked = true; });
+        showConfirm('ตัวชี้วัดที่ไม่ใช่ของคุณ ดูได้อย่างเดียว ไม่สามารถแก้ไขได้\nต้องการดูตัวชี้วัดทั้งหมดใช่หรือไม่?', apply, () => { cb.checked = true; });
         return;
       }
-      onTreeFilterChange();
+      apply();
     }
 
     function emptyListMessage() {
-      if (appliedFilters.mine && !isPrivilegedUser() && appliedFilters.term === '' && appliedFilters.mode === 'all' && !levelFilterActive()) {
+      if (appliedFilters.mine && !isPrivilegedUser() && appliedFilters.mode === 'all' && !levelFilterActive()) {
         return 'ยังไม่มีตัวชี้วัดที่คุณรับผิดชอบ<br>ถ้าต้องการดูตัวชี้วัดอื่น (ดูอย่างเดียว) ให้เอาติ๊ก "เฉพาะของฉัน" ออก';
       }
       return 'ไม่พบตัวชี้วัดตามตัวกรองที่เลือก';
@@ -1265,13 +1288,14 @@
         currentPage = 1;
         renderTree();
         renderList();
+        if (currentTab === 'progress') loadProgressSummary();
       });
     }
 
     function resetTreeFilters() {
-      document.getElementById('tree-search').value = '';
       document.getElementById('tree-mode').value = 'all';
       document.getElementById('tree-mine').checked = false;
+      syncMineBoxes();
       document.querySelectorAll('.tree-level-cb').forEach(c => { c.checked = true; });
       appliedFilters = readTreeFilters();
     }
@@ -1305,7 +1329,7 @@
       });
 
       container.innerHTML = '';
-      Object.keys(tree).sort().forEach(partName => {
+      Object.keys(tree).sort(comparePartNames).forEach(partName => {
         const partDiv = document.createElement('div');
         partDiv.className = 'accordion-part';
         if (allOpen || openParts.has(partName)) partDiv.classList.add('open');
@@ -1498,10 +1522,10 @@
       const canRes = ed && kpi.canEditResults;
       const canDet = ed && kpi.canEditDetails;
 
-      const nameHtml = ed && priv
+      const nameHtml = canDet
         ? `<textarea id="ed-name" class="editable-input" rows="2" style="font-weight:700; font-size:15px;">${esc(kpi.name)}</textarea>`
         : `${kpiNumber(kpi)}. ${esc(kpi.name)}`;
-      const targetHtml = ed && priv
+      const targetHtml = canDet
         ? `🎯 ค่าเป้าหมาย: <input type="text" id="ed-target" class="editable-input" value="${esc(kpi.target)}" style="width: 160px; display: inline-block;">`
         : `🎯 ค่าเป้าหมาย: ${esc(kpi.target) || '-'}`;
 
@@ -1531,10 +1555,10 @@
             : `<td>${kpi.months[i] !== null ? kpi.months[i] : '-'}</td>`).join('')}</tr>`;
       }).join('');
 
-      const ownerHtml = ed && priv
+      const ownerHtml = canDet
         ? `<div class="form-group"><label>ผู้รับผิดชอบ (คั่นหลายคนด้วย /)</label><input type="text" id="ed-owner" class="editable-input" value="${esc(kpi.owner)}"></div>
-           <div class="form-group"><label>หน่วยงาน</label><input type="text" id="ed-dept" class="editable-input" value="${esc(kpi.department)}"></div>
-           <div class="form-group" style="margin-bottom:0;"><label>ระดับตัวชี้วัด (เลือกได้หลายระดับ — แสดงระดับสูงสุด)</label><div class="level-checks">${levelCheckboxesHtml('ed-level-cb', kpi.levels || [kpi.level])}</div></div>`
+           <div class="form-group" style="${priv ? '' : 'margin-bottom:0;'}"><label>หน่วยงาน</label><input type="text" id="ed-dept" class="editable-input" value="${esc(kpi.department)}"></div>
+           ${priv ? `<div class="form-group" style="margin-bottom:0;"><label>ระดับตัวชี้วัด (เลือกได้หลายระดับ — แสดงระดับสูงสุด)</label><div class="level-checks">${levelCheckboxesHtml('ed-level-cb', kpi.levels || [kpi.level])}</div></div>` : ''}`
         : `<p style="font-weight:700; color:#1e293b;">${esc(kpi.owner) || '-'} (${esc(kpi.department) || '-'})</p>`;
 
       const stt = kpiStatus(kpi);
@@ -1703,12 +1727,12 @@
       if (kpi.canEditDetails) {
         p.templateDetails = getVal('ed-details');
         p.dataSource = getVal('ed-source');
-      }
-      if (isPrivilegedUser()) {
         p.name = getVal('ed-name');
         p.target = getVal('ed-target');
         p.owner = getVal('ed-owner');
         p.department = getVal('ed-dept');
+      }
+      if (isPrivilegedUser()) {
         if (document.querySelector('.ed-level-cb')) p.levels = checkedLevels('ed-level-cb');
         p.summaryMethod = getVal('ed-summary');
         p.frequency = getVal('ed-frequency');
@@ -1751,12 +1775,16 @@
       const kpi = editingKpi();
       if (!kpi) return;
       const draft = collectDraft();
-      if (isPrivilegedUser() && draft.name !== undefined && draft.name.trim() === '') {
+      if (draft.name !== undefined && draft.name.trim() === '') {
         showAlert('ข้อมูลไม่ครบ', '⚠️', 'กรุณาระบุชื่อตัวชี้วัด');
         return;
       }
       if (draft.levels !== undefined && draft.levels.length === 0) {
         showAlert('ข้อมูลไม่ครบ', '⚠️', 'กรุณาเลือกระดับตัวชี้วัดอย่างน้อย 1 ระดับ');
+        return;
+      }
+      if (draft.levels !== undefined && isCorePart(kpi.part) && !hasHospitalLevel(draft.levels)) {
+        showAlert('ระดับไม่ถูกต้อง', '⚠️', 'ตัวชี้วัดในหมวด ' + kpi.part + ' ต้องมีระดับ SAR หรือ QA-หน่วยงาน อย่างน้อย 1 ระดับ');
         return;
       }
       google.script.run
@@ -1796,10 +1824,19 @@
 
     // ===================== เพิ่มตัวชี้วัดใหม่ =====================
     function openAddKpiModal() {
+      if (!isPrivilegedUser() && selectedFy !== currentFy) {
+        showAlert('เพิ่มตัวชี้วัดไม่ได้', '⚠️', 'เพิ่มตัวชี้วัดใหม่ได้เฉพาะปีงบปัจจุบัน (' + currentFy + ')\nกรุณาเลือกปีงบปัจจุบันก่อน');
+        return;
+      }
       document.getElementById('modal-add-kpi').style.display = 'flex';
       if (selectedPartName) document.getElementById('add-kpi-part').value = selectedPartName;
       if (selectedCategoryName) document.getElementById('add-kpi-category').value = selectedCategoryName;
       ['add-kpi-name', 'add-kpi-target', 'add-kpi-source', 'add-kpi-owner', 'add-kpi-dept'].forEach(id => { document.getElementById(id).value = ''; });
+      if (!isPrivilegedUser()) {
+        // staff / หัวหน้าหน่วย: ใส่ตัวเองเป็นผู้รับผิดชอบ และหน่วยงานของตัวเองให้ก่อน (แก้ได้)
+        document.getElementById('add-kpi-owner').value = currentUser.username;
+        document.getElementById('add-kpi-dept').value = (currentUser.depts || []).join(' / ');
+      }
       document.getElementById('add-kpi-levels').innerHTML = levelCheckboxesHtml('add-level-cb', ['SAR']);
       document.getElementById('add-kpi-summary').value = 'เฉลี่ย';
       document.getElementById('add-kpi-frequency').value = 'รายเดือน';
@@ -1828,6 +1865,10 @@
       };
       if (newItem.levels.length === 0) {
         showAlert('ข้อมูลไม่ครบ', '⚠️', 'กรุณาเลือกระดับตัวชี้วัดอย่างน้อย 1 ระดับ');
+        return;
+      }
+      if (isCorePart(part) && !hasHospitalLevel(newItem.levels)) {
+        showAlert('ระดับไม่ถูกต้อง', '⚠️', 'ตัวชี้วัดในหมวด ' + part + ' ต้องเป็นระดับ SAR หรือ QA-หน่วยงาน อย่างน้อย 1 ระดับ\nถ้าเป็นระดับรายบุคคล/หน่วยงาน/ฝ่ายการพยาบาล ให้ตั้งชื่อหมวดอื่นเอง (เช่น ชื่อหมวดของคุณ)');
         return;
       }
       document.getElementById('modal-add-kpi').style.display = 'none';
@@ -2012,6 +2053,7 @@
     function loadProgressSummary() {
       const summary = [];
       globalDatabase.forEach(kpi => {
+        if (appliedFilters.mine && !kpi.mine) return; // ค่าตั้งต้นตามผู้ใช้ (staff / หัวหน้า = เฉพาะของตัวเอง) ใช้ร่วมกับหน้าแรก
         const stt = kpiStatus(kpi);
         summary.push({
           id: kpi.id, part: kpi.part, category: kpi.category, name: kpi.name,
@@ -2029,7 +2071,7 @@
     function renderProgressTable(data) {
       const displayArea = document.getElementById('progress-content-area');
       if (data.length === 0) {
-        displayArea.innerHTML = '<div class="empty-state">ไม่พบข้อมูลตัวชี้วัดในระบบ</div>';
+        displayArea.innerHTML = '<div class="empty-state">' + (appliedFilters.mine && !isPrivilegedUser() ? 'ยังไม่มีตัวชี้วัดที่คุณรับผิดชอบ<br>ถ้าต้องการดูตัวชี้วัดอื่น (ดูอย่างเดียว) ให้เอาติ๊ก "เฉพาะของฉัน" ออก' : 'ไม่พบข้อมูลตัวชี้วัดในระบบ') + '</div>';
         return;
       }
       let html = `
@@ -2111,7 +2153,7 @@
       // แยกตามหมวดหลัก
       const parts = {};
       data.forEach(x => { (parts[x.part] = parts[x.part] || []).push(x); });
-      const partRows = Object.keys(parts).sort().map(p => {
+      const partRows = Object.keys(parts).sort(comparePartNames).map(p => {
         const list = parts[p], n = list.length;
         const pg = count(list, 'green'), py = count(list, 'yellow'), pr = count(list, 'red');
         const w = v => (v / n * 100) + '%';
@@ -2161,7 +2203,7 @@
     function openPdfModal() {
       const groups = pdfGroups();
       let html = '';
-      Object.keys(groups).sort().forEach((part, pi) => {
+      Object.keys(groups).sort(comparePartNames).forEach((part, pi) => {
         html += `<label class="check-row" style="font-weight:700; color:#015c8b;"><input type="checkbox" class="pdf-part" data-part="${esc(part)}" checked onchange="pdfTogglePart(this)"> ${esc(part)}</label>`;
         Object.keys(groups[part]).sort().forEach(cat => {
           html += `<label class="check-row" style="margin-left:22px;"><input type="checkbox" class="pdf-cat" data-part="${esc(part)}" data-cat="${esc(cat)}" checked onchange="pdfUpdateCount()"> ${esc(cat)} (${groups[part][cat]})</label>`;
@@ -2246,7 +2288,7 @@
         <div class="pr-sub">รายงานตัวชี้วัดคุณภาพ ปีงบประมาณ ${selectedFy}</div>
         <div class="pr-info">พิมพ์เมื่อ ${esc(printedAt)} · โดย ${esc(currentUser.username)} · จำนวน ${chosen.length} ตัวชี้วัด</div></div>`;
       const perKpi = opts.chart || opts.detail || opts.source || opts.owner;
-      Object.keys(tree).sort().forEach(part => {
+      Object.keys(tree).sort(comparePartNames).forEach(part => {
         html += `<div class="pr-part">${esc(part)}</div>`;
         Object.keys(tree[part]).sort().forEach(cat => {
           const kpis = tree[part][cat];

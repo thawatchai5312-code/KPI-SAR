@@ -440,10 +440,23 @@ function requireAdmin_(token) {
   return user;
 }
 
+/** Part I–IV = หมวดหลักของ QA/SAR (ตัวชี้วัดในหมวดนี้ต้องมีระดับ SAR หรือ QA-หน่วยงาน) */
+function isCorePart_(part) {
+  return /^part\s+(iv|iii|ii|i)(?![a-z])/i.test((part || "").toString().trim());
+}
+
+/** ตัวชี้วัดมีระดับ SAR หรือ QA (ระดับโรงพยาบาล) อย่างน้อยหนึ่งระดับ */
+function hasHospitalLevel_(levels) {
+  return (levels || []).some(function(l) { return l === "SAR" || l === "QA-หน่วยงาน"; });
+}
+
 /**
  * สิทธิ์ดู/แก้ตัวชี้วัดแต่ละตัวในปีงบ fy
  * editResults = กรอกผลทั้งปี/รายเดือน (ผู้รับผิดชอบ/หัวหน้าหน่วย: ปีงบปัจจุบันและปีก่อนหน้า)
- * editDetails = แก้รายละเอียด/ที่มาข้อมูล (ปีงบปัจจุบันเท่านั้น) — admin, ผอ., QMR แก้ได้ทุกอย่างทุกปี
+ * editDetails = แก้ชื่อ/เป้าหมาย/รายละเอียด/ที่มาข้อมูล/ผู้รับผิดชอบ/หน่วยงาน (ปีงบปัจจุบันเท่านั้น) — admin, ผอ., QMR แก้ได้ทุกอย่างทุกปี
+ * การมองเห็น: admin เห็นทั้งหมด · ผอ./QMR เห็นเฉพาะ Part I–IV ระดับ SAR/QA (หรือที่ตัวเองเป็นผู้รับผิดชอบ)
+ *   · หัวหน้า/เจ้าหน้าที่: ตัวที่ตัวเองรับผิดชอบ, ระดับ SAR (ทุกคน), QA-หน่วยงานของหน่วยตัวเอง
+ *     ส่วนระดับรายบุคคล/หน่วยงาน/ฝ่ายการพยาบาล เห็นถึงหัวหน้าหน่วยนั้นเท่านั้น
  */
 function getKpiPermission_(user, kpi, fy) {
   var isOwner = parseOwners_(kpi.owner).indexOf(user.username) !== -1;
@@ -451,19 +464,24 @@ function getKpiPermission_(user, kpi, fy) {
     // ตัวชี้วัดที่ผู้รับผิดชอบเขียนว่า "หัวหน้าหน่วย" ให้หัวหน้าหน่วยทุกคนรับผิดชอบ
     isOwner = (kpi.owner || "").toString().split("/").some(function(t) { return t.trim() === HEAD_OWNER_TOKEN; });
   }
+  var levels = kpi.levels || normalizeLevels_(kpi.level);
+  if (user.tier === "admin") return { view: true, editResults: true, editDetails: true, mine: isOwner };
+  if (user.tier === "executive") {
+    var execView = isOwner || (isCorePart_(kpi.part) && hasHospitalLevel_(levels));
+    return { view: execView, editResults: execView, editDetails: execView, mine: isOwner };
+  }
   var inDept = parseDepts_(kpi.department).some(function(d) { return user.depts.indexOf(d) !== -1; });
   var edit = isOwner || (user.tier === "head" && inDept);
-  // "ของฉัน" = ตัวชี้วัดที่ผู้ใช้เป็นผู้รับผิดชอบ (ผู้บริหารนับเฉพาะที่ระบุชื่อตัวเอง)
+  // "ของฉัน" = ตัวชี้วัดที่ผู้ใช้เป็นผู้รับผิดชอบ
   var mine = edit;
-  if (isPrivileged_(user)) return { view: true, editResults: true, editDetails: true, mine: isOwner };
   var view = edit;
   if (!view) {
     // หลายระดับ: เห็นได้ถ้าระดับใดระดับหนึ่งให้สิทธิ์ดู
-    view = (kpi.levels || normalizeLevels_(kpi.level)).some(function(l) {
+    view = levels.some(function(l) {
       if (l === "SAR") return true;
-      if (l === "หน่วยงาน" || l === "QA-หน่วยงาน") return inDept;
-      if (l === "ฝ่ายการพยาบาล") return inDept || user.depts.indexOf(NURSING_DIVISION_TAG) !== -1;
-      return false;
+      if (l === "QA-หน่วยงาน") return inDept;
+      if (l === "ฝ่ายการพยาบาล") return user.tier === "head" && user.depts.indexOf(NURSING_DIVISION_TAG) !== -1;
+      return false; // รายบุคคล/หน่วยงาน: เห็นถึงหัวหน้าหน่วยเท่านั้น (ผ่านเงื่อนไข edit ด้านบน)
     });
   }
   var current = getCurrentFiscalYear_();
