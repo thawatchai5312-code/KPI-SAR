@@ -198,6 +198,7 @@
     .form-group label { display: block; font-size: 13px; font-weight: 700; margin-bottom: 5px; color: #334155; }
     .check-row { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: #334155; padding: 2px 0; cursor: pointer; }
     .check-row input { width: 16px; height: 16px; }
+    .level-checks { display: flex; flex-wrap: wrap; gap: 2px 14px; }
 
     #app-login-screen { background: var(--bg-light); background-image: var(--primary-gradient); flex-direction: column; }
     .login-box { background: #fff; padding: 30px; border-radius: var(--radius-large); box-shadow: 0 25px 50px rgba(0,0,0,0.3); text-align: center; width: 100%; max-width: 380px; border: 1px solid #bae6fd; }
@@ -388,8 +389,8 @@
           <input type="text" id="add-kpi-dept" class="editable-input">
         </div>
         <div class="form-group">
-          <label>ระดับตัวชี้วัด (Level)</label>
-          <select id="add-kpi-level" class="editable-input kpi-level-select"></select>
+          <label>ระดับตัวชี้วัด (เลือกได้หลายระดับ — แสดงระดับสูงสุด)</label>
+          <div id="add-kpi-levels" class="level-checks"></div>
         </div>
       </div>
       <div class="modal-footer">
@@ -515,7 +516,18 @@
     const openParts = new Set();
     const openCats = new Set();
 
-    const KPI_LEVELS = ['รายบุคคล', 'หน่วยงาน', 'QA-หน่วยงาน', 'QA-รพ', 'SAR', 'ฝ่ายการพยาบาล'];
+    // ระดับตัวชี้วัด เรียงจากต่ำไปสูง — เลือกได้หลายระดับ แสดงระดับสูงสุด
+    const KPI_LEVELS = ['รายบุคคล', 'หน่วยงาน', 'ฝ่ายการพยาบาล', 'QA-หน่วยงาน', 'SAR'];
+
+    // ช่องติ๊กเลือกระดับ (ระดับเดิมที่ไม่มีในรายการแล้ว แสดงต่อท้ายถ้าตัวชี้วัดมีอยู่)
+    function levelCheckboxesHtml(cls, selected) {
+      const opts = KPI_LEVELS.concat(selected.filter(l => KPI_LEVELS.indexOf(l) === -1));
+      return opts.map(l => `<label class="check-row"><input type="checkbox" class="${cls}" value="${esc(l)}" ${selected.indexOf(l) !== -1 ? 'checked' : ''}> ${esc(l)}</label>`).join('');
+    }
+
+    function checkedLevels(cls) {
+      return Array.from(document.querySelectorAll('.' + cls + ':checked')).map(c => c.value);
+    }
     const TIER_LABELS = { admin: 'ผู้ดูแลระบบ', executive: 'ผู้บริหาร', head: 'หัวหน้าหน่วย', staff: 'เจ้าหน้าที่' };
     const thMonthsNames = ['ต.ค.', 'พ.ย.', 'ธ.ค.', 'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.'];
 
@@ -1133,7 +1145,7 @@
       const ownerHtml = ed && priv
         ? `<div class="form-group"><label>ผู้รับผิดชอบ (คั่นหลายคนด้วย /)</label><input type="text" id="ed-owner" class="editable-input" value="${esc(kpi.owner)}"></div>
            <div class="form-group"><label>หน่วยงาน</label><input type="text" id="ed-dept" class="editable-input" value="${esc(kpi.department)}"></div>
-           <div class="form-group" style="margin-bottom:0;"><label>ระดับตัวชี้วัด</label><select id="ed-level" class="editable-input">${KPI_LEVELS.map(l => `<option value="${l}" ${l === kpi.level ? 'selected' : ''}>${l}</option>`).join('')}</select></div>`
+           <div class="form-group" style="margin-bottom:0;"><label>ระดับตัวชี้วัด (เลือกได้หลายระดับ — แสดงระดับสูงสุด)</label><div class="level-checks">${levelCheckboxesHtml('ed-level-cb', kpi.levels || [kpi.level])}</div></div>`
         : `<p style="font-weight:700; color:#1e293b;">${esc(kpi.owner) || '-'} (${esc(kpi.department) || '-'})</p>`;
 
       const cls = 'kpi-card' + (ed ? ' editing' : '') + (expandedCards.has(kpi.id) ? ' expanded' : '') + (selectedKpiId === kpi.id ? ' selected' : '');
@@ -1144,7 +1156,7 @@
             <div class="kpi-card-actions">${actions}</div>
             <div class="kpi-card-badges">
               <span class="meta-badge">หมวดหมู่: ${esc(kpi.category)}</span>
-              <span class="meta-badge">ระดับ: ${esc(kpi.level)}</span>
+              <span class="meta-badge" title="ทุกระดับ: ${esc((kpi.levels || [kpi.level]).join(', '))}">ระดับ: ${esc(kpi.level)}${(kpi.levels || []).length > 1 ? ' (+' + (kpi.levels.length - 1) + ')' : ''}</span>
               <span class="meta-badge">ปีงบ: ${selectedFy}${selectedFy === currentFy ? ' (ปัจจุบัน)' : ''}</span>
               <span class="meta-badge">✏️ แก้ไขล่าสุด: ${stampText(kpi.editedAt, kpi.editedBy)}</span>
             </div>
@@ -1302,7 +1314,7 @@
         p.target = getVal('ed-target');
         p.owner = getVal('ed-owner');
         p.department = getVal('ed-dept');
-        p.level = getVal('ed-level');
+        if (document.querySelector('.ed-level-cb')) p.levels = checkedLevels('ed-level-cb');
       }
       return p;
     }
@@ -1346,6 +1358,10 @@
         showAlert('ข้อมูลไม่ครบ', '⚠️', 'กรุณาระบุชื่อตัวชี้วัด');
         return;
       }
+      if (draft.levels !== undefined && draft.levels.length === 0) {
+        showAlert('ข้อมูลไม่ครบ', '⚠️', 'กรุณาเลือกระดับตัวชี้วัดอย่างน้อย 1 ระดับ');
+        return;
+      }
       google.script.run
         .withSuccessHandler((res) => {
           if (!res.success) { showAlert('บันทึกไม่สำเร็จ', '❌', res.message); return; }
@@ -1387,7 +1403,7 @@
       if (selectedPartName) document.getElementById('add-kpi-part').value = selectedPartName;
       if (selectedCategoryName) document.getElementById('add-kpi-category').value = selectedCategoryName;
       ['add-kpi-name', 'add-kpi-target', 'add-kpi-source', 'add-kpi-owner', 'add-kpi-dept'].forEach(id => { document.getElementById(id).value = ''; });
-      document.getElementById('add-kpi-level').value = 'SAR';
+      document.getElementById('add-kpi-levels').innerHTML = levelCheckboxesHtml('add-level-cb', ['SAR']);
     }
 
     function submitAddKpi() {
@@ -1407,8 +1423,12 @@
         dataSource: document.getElementById('add-kpi-source').value,
         owner: document.getElementById('add-kpi-owner').value,
         department: document.getElementById('add-kpi-dept').value,
-        level: document.getElementById('add-kpi-level').value
+        levels: checkedLevels('add-level-cb')
       };
+      if (newItem.levels.length === 0) {
+        showAlert('ข้อมูลไม่ครบ', '⚠️', 'กรุณาเลือกระดับตัวชี้วัดอย่างน้อย 1 ระดับ');
+        return;
+      }
       document.getElementById('modal-add-kpi').style.display = 'none';
       google.script.run
         .withSuccessHandler((res) => {
@@ -1819,9 +1839,6 @@
     window.addEventListener('resize', setStickyOffsets);
 
     // ===================== เริ่มต้น =====================
-    document.querySelectorAll('.kpi-level-select').forEach(sel => {
-      sel.innerHTML = KPI_LEVELS.map(l => `<option value="${l}">${l}</option>`).join('');
-    });
     resetLoginBox();
   </script>
 </body>

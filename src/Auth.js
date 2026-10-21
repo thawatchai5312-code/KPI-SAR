@@ -19,7 +19,11 @@ var LOGIN_LOCK_SECONDS = 300;
 var USERS_HEADERS = ["Username", "Password", "Tier", "Departments", "MustChangePassword", "LastAccess", "LastEdit"];
 var TIERS = ["admin", "executive", "head", "staff"];
 
-var KPI_LEVELS = ["รายบุคคล", "หน่วยงาน", "QA-หน่วยงาน", "QA-รพ", "SAR", "ฝ่ายการพยาบาล"];
+// ระดับตัวชี้วัด เรียงจากต่ำไปสูง — 1 ตัวชี้วัดเลือกได้หลายระดับ (คอลัมน์ AC คั่นด้วย ", ") แสดงผลเป็นระดับสูงสุด
+var KPI_LEVELS = ["รายบุคคล", "หน่วยงาน", "ฝ่ายการพยาบาล", "QA-หน่วยงาน", "SAR"];
+// ระดับเดิมที่ยังรองรับถ้ามีอยู่ในชีตแล้ว แต่ไม่มีให้เลือกใหม่
+var LEGACY_KPI_LEVELS = ["QA-รพ"];
+var LEVEL_RANK = ["รายบุคคล", "หน่วยงาน", "ฝ่ายการพยาบาล", "QA-หน่วยงาน", "QA-รพ", "SAR"];
 // ผู้ใช้ที่มี "ฝ่ายการพยาบาล" ในช่องหน่วยงาน เห็นตัวชี้วัดระดับ "ฝ่ายการพยาบาล" ทั้งหมด
 var NURSING_DIVISION_TAG = "ฝ่ายการพยาบาล";
 var DEFAULT_KPI_LEVEL = "SAR";
@@ -90,11 +94,32 @@ function parseDepts_(text) {
   return out;
 }
 
-function normalizeLevel_(value) {
-  var v = value ? value.toString().trim() : "";
-  if (v === "") return DEFAULT_KPI_LEVEL;
-  if (KPI_LEVELS.indexOf(v) !== -1) return v;
-  return KPI_LEVELS[0]; // ค่าที่ไม่รู้จัก ให้จำกัดสิทธิ์สูงสุดไว้ก่อน
+function sortLevels_(levels) {
+  return levels.sort(function(a, b) { return LEVEL_RANK.indexOf(a) - LEVEL_RANK.indexOf(b); });
+}
+
+/** ค่าในคอลัมน์ระดับ → รายการระดับเรียงต่ำไปสูง (ว่าง = SAR, ไม่รู้จักเลย = รายบุคคล เพื่อจำกัดสิทธิ์ไว้ก่อน) */
+function normalizeLevels_(value) {
+  var text = value ? value.toString().trim() : "";
+  if (text === "") return [DEFAULT_KPI_LEVEL];
+  var out = [];
+  text.split(/[,\/]/).forEach(function(t) {
+    t = t.trim();
+    if (LEVEL_RANK.indexOf(t) !== -1 && out.indexOf(t) === -1) out.push(t);
+  });
+  if (out.length === 0) return [KPI_LEVELS[0]];
+  return sortLevels_(out);
+}
+
+/** ระดับที่ส่งมาจากหน้าเว็บ → เก็บเฉพาะที่เลือกได้ (ระดับเดิมแบบ legacy คงไว้ได้ถ้าตัวชี้วัดมีอยู่แล้ว) */
+function cleanLevelList_(list, oldLevels) {
+  var out = [];
+  (list || []).forEach(function(t) {
+    t = (t || "").toString().trim();
+    var ok = KPI_LEVELS.indexOf(t) !== -1 || (LEGACY_KPI_LEVELS.indexOf(t) !== -1 && (oldLevels || []).indexOf(t) !== -1);
+    if (ok && out.indexOf(t) === -1) out.push(t);
+  });
+  return sortLevels_(out);
 }
 
 // ---------------------------------------------------------------- รหัสผ่าน
@@ -408,9 +433,13 @@ function getKpiPermission_(user, kpi, fy) {
   if (isPrivileged_(user)) return { view: true, editResults: true, editDetails: true, mine: isOwner };
   var view = edit;
   if (!view) {
-    if (kpi.level === "SAR" || kpi.level === "QA-รพ") view = true;
-    else if (kpi.level === "หน่วยงาน" || kpi.level === "QA-หน่วยงาน") view = inDept;
-    else if (kpi.level === "ฝ่ายการพยาบาล") view = inDept || user.depts.indexOf(NURSING_DIVISION_TAG) !== -1;
+    // หลายระดับ: เห็นได้ถ้าระดับใดระดับหนึ่งให้สิทธิ์ดู
+    view = (kpi.levels || normalizeLevels_(kpi.level)).some(function(l) {
+      if (l === "SAR" || l === "QA-รพ") return true;
+      if (l === "หน่วยงาน" || l === "QA-หน่วยงาน") return inDept;
+      if (l === "ฝ่ายการพยาบาล") return inDept || user.depts.indexOf(NURSING_DIVISION_TAG) !== -1;
+      return false;
+    });
   }
   var current = getCurrentFiscalYear_();
   return {

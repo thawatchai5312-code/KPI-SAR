@@ -56,7 +56,8 @@ function rowToKpi_(row) {
     dataSource: row[24] ? row[24].toString().trim() : "",
     owner: row[25] ? row[25].toString().trim() : "",
     department: row[26] ? row[26].toString().trim() : "",
-    level: normalizeLevel_(row[28]),
+    levels: normalizeLevels_(row[28]),
+    level: normalizeLevels_(row[28]).slice(-1)[0], // ระดับสูงสุด ใช้แสดงผล
     editedAt: formatStamp_(row[STAMP_EDIT_AT_COL - 1]),
     editedBy: row[STAMP_EDIT_BY_COL - 1] ? row[STAMP_EDIT_BY_COL - 1].toString() : "",
     viewedAt: formatStamp_(row[STAMP_VIEW_AT_COL - 1]),
@@ -109,7 +110,7 @@ function decorateKpi_(user, fy, kpi, sources) {
  * บันทึกตัวชี้วัดทีละตัวในปีงบที่เลือก (ผลลัพธ์ + รายละเอียดในครั้งเดียว) ส่วนที่ไม่ได้ส่งมา (undefined) จะไม่แตะ
  *  - years/months (ผลทั้งปี/รายเดือน): ต้องมีสิทธิ์กรอกผล; ช่องผลย้อนหลังที่มีชีตต้นทางล็อกไว้ให้ admin/ผอ./QMR
  *  - templateDetails/dataSource: ต้องมีสิทธิ์แก้รายละเอียด (ปีงบปัจจุบัน)
- *  - name/target/owner/department/level: เฉพาะ admin, ผอ., QMR — แก้ในปีงบที่เลือกเท่านั้น ปีอื่นไม่เปลี่ยน
+ *  - name/target/owner/department/levels (หลายระดับ): เฉพาะ admin, ผอ., QMR — แก้ในปีงบที่เลือกเท่านั้น ปีอื่นไม่เปลี่ยน
  * คืน kpi ที่อัปเดตแล้วให้หน้าเว็บแทนที่ได้ทันที
  */
 function saveKpi(token, fy, item) {
@@ -183,9 +184,13 @@ function saveKpi(token, fy, item) {
         sheet.getRange(row, 27).setValue(item.department.toString().trim());
         changed = true;
       }
-      if (item.level !== undefined && KPI_LEVELS.indexOf(item.level) !== -1 && item.level !== old.level) {
-        sheet.getRange(row, LEVEL_COLUMN).setValue(item.level);
-        changed = true;
+      var levelList = item.levels !== undefined ? item.levels : (item.level !== undefined ? [item.level] : undefined);
+      if (levelList !== undefined) {
+        var newLevels = cleanLevelList_(levelList, old.levels);
+        if (newLevels.length > 0 && newLevels.join(", ") !== old.levels.join(", ")) {
+          sheet.getRange(row, LEVEL_COLUMN).setValue(newLevels.join(", "));
+          changed = true;
+        }
       }
     }
 
@@ -247,7 +252,8 @@ function addIndicator(token, fy, newItem) {
              r[3] && r[3].toString().trim() === newItem.category.trim();
     }).length;
     var autoNo = count + 1;
-    var level = KPI_LEVELS.indexOf(newItem.level) !== -1 ? newItem.level : DEFAULT_KPI_LEVEL;
+    var levels = cleanLevelList_(newItem.levels || (newItem.level ? [newItem.level] : []), []);
+    if (levels.length === 0) levels = [DEFAULT_KPI_LEVEL];
 
     var newId = "KPI-" + new Date().getTime();
     var newRow = [
@@ -257,7 +263,7 @@ function addIndicator(token, fy, newItem) {
       newItem.months[4], newItem.months[5], newItem.months[6], newItem.months[7],
       newItem.months[8], newItem.months[9], newItem.months[10], newItem.months[11],
       newItem.templateDetails || "", newItem.dataSource || "", newItem.owner || "", newItem.department || "",
-      "", level, nowStamp_(), user.username
+      "", levels.join(", "), nowStamp_(), user.username
     ];
     sheet.appendRow(newRow);
     touchUser_(user, "edit");
