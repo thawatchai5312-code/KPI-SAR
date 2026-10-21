@@ -479,6 +479,29 @@
     .kpi-link-item.in-view .kn { color: #1d4ed8; }
     .tree-count .tree-collapse { margin-left: auto; border: 1px solid var(--line); background: #fff; color: #475569; border-radius: 999px; padding: 2px 10px; font-size: 11.5px; font-weight: 700; cursor: pointer; font-family: inherit; }
     .tree-count .tree-collapse:hover { background: #f1f5f9; }
+
+    /* ปุ่มเลือกมุมมองแถบซ้าย */
+    .view-tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin-bottom: 10px; }
+    .view-tab { display: grid; justify-items: center; gap: 1px; padding: 7px 4px 6px; border: 1.5px solid var(--line); border-radius: 14px; background: #fff; color: #475569; font-family: inherit; cursor: pointer; line-height: 1.2; }
+    .view-tab .vt-ico { font-size: 17px; }
+    .view-tab .vt-label { font-size: 11.5px; font-weight: 700; text-align: center; }
+    .view-tab .vt-count { font-size: 12px; font-weight: 800; background: #f1f5f9; border-radius: 999px; padding: 0 8px; min-width: 24px; text-align: center; margin-top: 2px; }
+    .view-tab:hover { background: #f8fafc; }
+    .view-tab[data-view="hosp"].active { background: #e7f6ec; border-color: #16a34a; color: #14532d; }
+    .view-tab[data-view="qa"].active { background: #e0f4f6; border-color: #0e7490; color: #155e75; }
+    .view-tab[data-view="unit"].active { background: #ece4ff; border-color: #7c3aed; color: #5b21b6; }
+    .view-tab.active .vt-count { background: #fff; }
+    /* มุมมอง QA / การพยาบาล = โทนฟ้าอมเขียว */
+    .tree-section.qa { color: #0e7490; }
+    .accordion-part.qa > .accordion-header { background: #eaf7f9; border-color: #c4e6ec; color: #155e75; }
+    .accordion-part.qa > .accordion-header::before { background: #0e7490; }
+    .accordion-part.qa.open > .accordion-header { background: #d6eff3; border-color: #a5d8e1; color: #0e5a70; }
+    .accordion-part.qa.open > .accordion-header .part-count { border-color: #a5d8e1; color: #0e5a70; }
+    .accordion-part.qa .category-header { background: #eaf7f9; color: #155e75; }
+    .accordion-part.qa .category-header::before { background: #0e7490; }
+    .accordion-part.qa .category-header:hover { background: #d6eff3; }
+    /* จอเล็ก: ผังรายการไม่ต้องมีแถบเลื่อนซ้อนในตัว (ไม่ให้รายการค้างครึ่งกล่อง) */
+    @media (max-width: 1000px) { #panel-tree { max-height: none !important; overflow: visible !important; } }
   </style>
 </head>
 <body>
@@ -522,6 +545,11 @@
   <div id="page-home" class="page-view active">
     <div class="home-grid">
       <div class="panel" id="panel-tree">
+        <div class="view-tabs" id="view-tabs" role="tablist" aria-label="มุมมองตัวชี้วัด">
+          <button type="button" class="view-tab" data-view="hosp" role="tab" onclick="setTreeView('hosp')"><span class="vt-ico">🏥</span><span class="vt-label">รพ.<br>Part I–IV</span><span class="vt-count">0</span></button>
+          <button type="button" class="view-tab" data-view="qa" role="tab" onclick="setTreeView('qa')"><span class="vt-ico">🩺</span><span class="vt-label">QA /<br>การพยาบาล</span><span class="vt-count">0</span></button>
+          <button type="button" class="view-tab" data-view="unit" role="tab" onclick="setTreeView('unit')"><span class="vt-ico">🏷️</span><span class="vt-label">หน่วยงาน /<br>ของฉัน</span><span class="vt-count">0</span></button>
+        </div>
         <div class="tree-filters">
           <div class="tree-level-filter">
             <button type="button" class="btn btn-secondary btn-sm" id="tree-level-btn" onclick="toggleLevelMenu(event)"><span class="lv-label"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg>ระดับตัวชี้วัด: ทั้งหมด</span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg></button>
@@ -1100,6 +1128,7 @@
 
           editingId = null; editSnapshot = null;
           appliedFilters = readTreeFilters();
+          if (!quiet) pickInitialView(); // เข้าระบบครั้งแรก: ถ้ามุมมองตั้งต้นว่าง ให้ไปมุมมองแรกที่มีตัวชี้วัด
           document.getElementById('btn-toggle-chart').innerText = chartVisible ? '🙈 ซ่อนกราฟ' : '📈 แสดงกราฟ';
           setStickyOffsets();
           renderTree();
@@ -1353,8 +1382,29 @@
       return String(a).localeCompare(String(b), 'th');
     }
 
+    // ---------- มุมมองแถบซ้าย: รพ. Part I–IV / QA-การพยาบาล / หน่วยงาน-ของฉัน ----------
+    // แต่ละมุมมองแสดงตัวชี้วัดตัวละการ์ดใบเดียว (ไม่ซ้ำ) เริ่มต้น: staff/หัวหน้า = หน่วยงาน-ของฉัน · ผู้บริหาร/admin = รพ.
+    const VIEWS = ['hosp', 'qa', 'unit'];
+    const VIEW_INFO = {
+      hosp: { label: 'ตัวชี้วัดโรงพยาบาล (Part I–IV)', kind: 'core', name: 'รพ. Part I–IV' },
+      qa: { label: 'QA / ฝ่ายการพยาบาล แยกตามหน่วยงาน', kind: 'qa', name: 'QA / การพยาบาล' },
+      unit: { label: 'หมวดของหน่วยงาน / ของฉัน', kind: 'other', name: 'หน่วยงาน / ของฉัน' }
+    };
+    let treeView = 'hosp';
+
+    // หมวด (placement) ของตัวชี้วัดที่ขึ้นในมุมมองนั้น
+    function viewPlacements(k, view) {
+      const ps = placementsOf(k);
+      if (view === 'hosp') return ps.filter(p => isCorePart(p.part));
+      if (view === 'unit') return ps.filter(p => !isCorePart(p.part));
+      // qa: ตัวที่มีระดับ QA-หน่วยงาน หรือ ฝ่ายการพยาบาล — แยกตามหมวดหน่วยงาน (ไม่มีหมวดหน่วยงานให้ใช้หมวดแรกแทน ไม่ให้ตกหล่น)
+      if (!(k.levels || [k.level]).some(l => l === 'QA-หน่วยงาน' || l === 'ฝ่ายการพยาบาล')) return [];
+      const non = ps.filter(p => !isCorePart(p.part));
+      return non.length ? non : ps.slice(0, 1);
+    }
+
     // ตัวชี้วัดที่ผ่านตัวกรอง เรียงแบบเดียวกับผังรายการ: หมวดหลัก → หมวดย่อย → ลำดับในชีต
-    function getOrderedKpis(ignoreStatus = false) {
+    function getOrderedKpis(ignoreStatus = false, view = treeView) {
       const f = appliedFilters;
       const list = globalDatabase.filter(k => {
         if (!ignoreStatus && f.mode !== 'all' && kpiStatus(k).level !== f.mode) return false;
@@ -1367,7 +1417,7 @@
       const cmp = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
       // ตัวชี้วัดที่อยู่หลายหมวดจะขึ้นในทุกหมวด (เป็นตัวเดียวกัน)
       const placements = [];
-      list.forEach(k => placementsOf(k).forEach(p => placements.push(p)));
+      list.forEach(k => viewPlacements(k, view).forEach(p => placements.push(p)));
       return placements.sort((a, b) => comparePartNames(a.part, b.part) || cmp(a.category, b.category) || order.get(a.id) - order.get(b.id));
     }
 
@@ -1376,6 +1426,41 @@
       document.getElementById('tree-mine').checked = !isPrivilegedUser();
       syncMineBoxes();
       appliedFilters = readTreeFilters();
+      treeView = isPrivilegedUser() ? 'hosp' : 'unit'; // เจ้าหน้าที่/หัวหน้าเริ่มที่หมวดของหน่วยงาน · ผู้บริหาร/admin เริ่มที่ Part I–IV
+    }
+
+    function pickInitialView() {
+      const has = v => getOrderedKpis(false, v).length > 0;
+      if (has(treeView)) return;
+      const next = [treeView === 'unit' ? 'hosp' : 'unit', 'hosp', 'unit', 'qa'].find(has);
+      if (next) treeView = next;
+    }
+
+    function updateViewTabs() {
+      const counts = {};
+      VIEWS.forEach(v => { counts[v] = uniqueById(getOrderedKpis(false, v)).length; });
+      document.querySelectorAll('#view-tabs .view-tab').forEach(btn => {
+        const v = btn.dataset.view;
+        btn.classList.toggle('active', v === treeView);
+        btn.setAttribute('aria-selected', v === treeView ? 'true' : 'false');
+        btn.querySelector('.vt-count').textContent = counts[v];
+      });
+    }
+
+    // เปลี่ยนมุมมอง: วาดแถบซ้ายและรายการการ์ดใหม่ เริ่มที่การ์ดแรกของมุมมองนั้น
+    function setTreeView(view) {
+      if (view === treeView) return;
+      guardUnsaved(() => {
+        treeView = view;
+        currentPage = 1;
+        openParts.clear(); openCats.clear();
+        renderTree();
+        renderList();
+        const first = document.querySelector('.kpi-card');
+        if (first) { focusTreeOn(first.dataset.key); lastInViewKey = null; }
+        document.getElementById('panel-tree').scrollTop = 0;
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
     }
 
     // เอาติ๊ก "เฉพาะของฉัน" ออก: เตือนก่อนว่าตัวชี้วัดอื่นดูได้อย่างเดียว แก้ไขไม่ได้
@@ -1398,10 +1483,16 @@
     }
 
     function emptyListMessage() {
+      if (treeView === 'qa' && !appliedFilters.mine && appliedFilters.mode === 'all' && !levelFilterActive()) {
+        return 'ยังไม่มีตัวชี้วัดระดับ QA-หน่วยงาน หรือ ฝ่ายการพยาบาล<br>(ตัวชี้วัดที่ติ๊กระดับเหล่านี้จะแสดงที่นี่)';
+      }
+      if (treeView === 'unit' && !appliedFilters.mine && appliedFilters.mode === 'all' && !levelFilterActive()) {
+        return 'ยังไม่มีหมวดของหน่วยงานหรือหมวดของคุณ';
+      }
       if (appliedFilters.mine && !isPrivilegedUser() && appliedFilters.mode === 'all' && !levelFilterActive()) {
         return 'ยังไม่มีตัวชี้วัดที่คุณรับผิดชอบ<br>ถ้าต้องการดูตัวชี้วัดอื่น (ดูอย่างเดียว) ให้เอาติ๊ก "เฉพาะของฉัน" ออก';
       }
-      return 'ไม่พบตัวชี้วัดตามตัวกรองที่เลือก';
+      return 'ไม่พบตัวชี้วัดในมุมมอง "' + VIEW_INFO[treeView].name + '" ตามตัวกรองที่เลือก';
     }
 
     function onTreeFilterChange() {
@@ -1433,9 +1524,10 @@
         return;
       }
       const list = getOrderedKpis();
+      updateViewTabs();
       const lv = { red: 0, yellow: 0, green: 0 };
       uniqueById(getOrderedKpis(true)).forEach(k => { lv[kpiStatus(k).level]++; }); // นับตามรายการที่แสดงอยู่ (ไม่รวมตัวกรองสถานะ)
-      countEl.innerHTML = `<span>แสดง ${uniqueById(list).length}/${globalDatabase.length}</span><span class="cnt red" title="ต้องแก้ไข">${lv.red}</span><span class="cnt yellow" title="รอติดตาม">${lv.yellow}</span><span class="cnt green" title="ครบถ้วน">${lv.green}</span><button type="button" class="tree-collapse" onclick="collapseTree()" title="ย่อทุกหมวด">ย่อทั้งหมด</button>`;
+      countEl.innerHTML = `<span>แสดง ${uniqueById(list).length} ตัว</span><span class="cnt red" title="ต้องแก้ไข">${lv.red}</span><span class="cnt yellow" title="รอติดตาม">${lv.yellow}</span><span class="cnt green" title="ครบถ้วน">${lv.green}</span><button type="button" class="tree-collapse" onclick="collapseTree()" title="ย่อทุกหมวด">ย่อทั้งหมด</button>`;
 
       if (list.length === 0) {
         container.innerHTML = `<div class="empty-state">${emptyListMessage()}</div>`;
@@ -1450,17 +1542,13 @@
       });
 
       container.innerHTML = '';
-      // แยก 2 ส่วนชัดเจน: ตัวชี้วัดโรงพยาบาล (Part I–IV, สีเขียว) / หมวดของหน่วยงาน-ของฉัน (หมวดอื่น, สีม่วง)
-      let lastKind = null;
+      // สีตามมุมมอง: รพ. Part I–IV = เขียว · QA/การพยาบาล = ฟ้าอมเขียว · หน่วยงาน/ของฉัน = ม่วง
+      const kind = VIEW_INFO[treeView].kind;
+      const label = document.createElement('div');
+      label.className = 'tree-section ' + kind;
+      label.textContent = VIEW_INFO[treeView].label;
+      container.appendChild(label);
       Object.keys(tree).sort(comparePartNames).forEach(partName => {
-        const kind = isCorePart(partName) ? 'core' : 'other';
-        if (kind !== lastKind) {
-          const label = document.createElement('div');
-          label.className = 'tree-section ' + kind;
-          label.textContent = kind === 'core' ? 'ตัวชี้วัดโรงพยาบาล (Part I–IV)' : 'หมวดของหน่วยงาน / ของฉัน';
-          container.appendChild(label);
-          lastKind = kind;
-        }
         const partDiv = document.createElement('div');
         partDiv.className = 'accordion-part ' + kind;
         partDiv.dataset.part = partName;
@@ -1528,23 +1616,32 @@
     }
 
     function goToKpi(id, key) {
-      const find = (l) => (key ? l.findIndex(k => k.key === key) : -1) !== -1 ? l.findIndex(k => k.key === key) : l.findIndex(k => k.id === id);
-      let list = getOrderedKpis();
-      let idx = find(list);
+      const cards = () => uniqueById(getOrderedKpis()); // การ์ด: ตัวชี้วัดละใบเดียวในมุมมองนี้
+      let list = cards();
+      let idx = list.findIndex(k => k.id === id);
       if (idx === -1) {
         // ตัวที่ต้องการถูกตัวกรองซ่อนอยู่ (เช่น มาจากหน้าติดตามงาน) → ล้างตัวกรองก่อน
         resetTreeFilters();
-        list = getOrderedKpis();
-        idx = find(list);
+        list = cards();
+        idx = list.findIndex(k => k.id === id);
+      }
+      if (idx === -1) {
+        // ไม่อยู่ในมุมมองปัจจุบัน → สลับไปมุมมองแรกที่มีตัวนี้
+        const v = VIEWS.find(x => uniqueById(getOrderedKpis(false, x)).some(k => k.id === id));
+        if (!v) return;
+        treeView = v;
+        list = cards();
+        idx = list.findIndex(k => k.id === id);
         if (idx === -1) return;
       }
       const k = list[idx];
+      const focusP = (key && findPlacement(key) && getOrderedKpis().some(p => p.key === key)) ? findPlacement(key) : k; // กดจากหมวดไหน กางหมวดนั้น
       selectedKpiId = id;
       selectedKey = k.key;
       // เลือกแล้ว: กางเฉพาะหมวดของตัวที่เลือก หมวดอื่นย่อ
       openParts.clear(); openCats.clear();
-      openParts.add(k.part);
-      openCats.add(k.part + '||' + k.category);
+      openParts.add(focusP.part);
+      openCats.add(focusP.part + '||' + focusP.category);
       suppressTreeSyncUntil = Date.now() + 1500; // ระหว่างเลื่อนจอไปหาการ์ด ไม่ให้แถบซ้ายกระโดดตามการ์ดที่ผ่าน
       const page = Math.floor(idx / pageSize) + 1;
       if (page !== currentPage || !document.getElementById('card-' + cssId(k.key))) {
@@ -1552,7 +1649,7 @@
         renderList();
       }
       renderTree();
-      scrollTreeTo(k.key);
+      scrollTreeTo(focusP.key);
       trackView(id);
       const card = document.getElementById('card-' + cssId(k.key));
       if (card) {
@@ -1581,7 +1678,7 @@
       const btn = (label, p, disabled, active) =>
         `<button class="page-btn${active ? ' active' : ''}" ${disabled ? 'disabled' : `onclick="goPage(${p})"`}>${label}</button>`;
       return `<div class="pager">
-        <span class="pager-info">แสดง ${from}–${to} จาก ${n} รายการ</span>
+        <span class="pager-info">แสดง ${from}–${to} จาก ${n} ตัวชี้วัด</span>
         <span class="pager-buttons">
           ${btn('«', 1, currentPage === 1)}${btn('‹', currentPage - 1, currentPage === 1)}
           ${nums.map(p => p === '…' ? '<span class="page-gap">…</span>' : btn(p, p, false, p === currentPage)).join('')}
@@ -1615,7 +1712,7 @@
 
     function renderList() {
       const area = document.getElementById('kpi-list-area');
-      const list = getOrderedKpis();
+      const list = uniqueById(getOrderedKpis()); // ตัวชี้วัดละการ์ดใบเดียวในมุมมองที่เลือก
       if (globalDatabase.length === 0) {
         area.innerHTML = '<div class="panel"><div class="empty-state">ไม่พบข้อมูลตัวชี้วัดในปีงบนี้</div></div>';
         return;
@@ -1937,7 +2034,8 @@
 
     function updateTreeInView() {
       const first = currentCardKey();
-      document.querySelectorAll('.kpi-link-item').forEach(el => el.classList.toggle('in-view', el.dataset.key === first));
+      const firstCard = first ? document.getElementById('card-' + cssId(first)) : null;
+      document.querySelectorAll('.kpi-link-item').forEach(el => el.classList.toggle('in-view', !!firstCard && el.dataset.id === firstCard.dataset.id));
       if (!first || first === lastInViewKey) return;
       lastInViewKey = first;
       if (!isWideScreen()) return;
@@ -2037,7 +2135,7 @@
       if (!key) {
         // ไม่ระบุการ์ด (เช่น มาจากหน้าติดตามงาน): ใช้การ์ดที่อยู่บนจอ ถ้าไม่มีใช้ใบแรก
         const card = Array.from(document.querySelectorAll('.kpi-card')).find(c => c.dataset.id === id);
-        key = card ? card.dataset.key : placementsOf(kpi)[0].key;
+        key = card ? card.dataset.key : (viewPlacements(kpi, treeView)[0] || placementsOf(kpi)[0]).key;
       }
       editingId = id;
       editingKey = key;
