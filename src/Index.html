@@ -1,0 +1,1507 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <base target="_top">
+  <title>ระบบจัดการตัวชี้วัดคุณภาพ โรงพยาบาลภูหลวง</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      --primary-gradient: linear-gradient(135deg, #2c9936, #004a24);
+      --secondary-gradient: linear-gradient(135deg, #6aa312, #51820a);
+      --accent-gradient: linear-gradient(135deg, #c9991d, #ae5f05);
+      --danger-gradient: linear-gradient(135deg, #bf3636, #941616);
+
+      --primary-color: #004a24;
+      --secondary-color: #51820a;
+      --accent-color: #ae5f05;
+
+      --bg-light: #c0cac3; 
+      --text-main: #18202f; 
+      
+      --radius-large: 14px;
+      --radius-pill: 50px;
+      --box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+    }
+
+    * { box-sizing: border-box; font-family: 'Sarabun', sans-serif; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg-light);
+      background-image: radial-gradient(circle at top right, #dcfce7 0%, #bbf7d0 100%);
+      color: var(--text-main);
+      padding: 10px; 
+      min-height: 100vh;
+    }
+
+    input[type=number]::-webkit-inner-spin-button,
+    input[type=number]::-webkit-outer-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+    input[type=number] {
+      -moz-appearance: textfield;
+    }
+
+    .app-header {
+      background: var(--primary-gradient);
+      color: #ffffff;
+      padding: 14px 20px; 
+      text-align: center;
+      border-radius: var(--radius-large);
+      box-shadow: var(--box-shadow);
+      margin-bottom: 10px; 
+      position: relative;
+      overflow: hidden;
+    }
+    .app-header h1 { font-size: 20px; font-weight: 700; letter-spacing: 0.5px; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); }
+
+    .nav-menu-bar {
+      background: #ffffff; padding: 4px; border-radius: var(--radius-pill);
+      box-shadow: 0 4px 10px rgba(0,0,0,0.06); margin-bottom: 12px; display: table; width: 100%;
+    }
+    .nav-item {
+      display: table-cell; text-align: center; padding: 8px 15px; cursor: pointer;
+      font-weight: 700; font-size: 14px; color: #475569; border-radius: var(--radius-pill);
+      transition: all 0.3s ease;
+    }
+    .nav-item.active { background: var(--secondary-gradient); color: #ffffff; box-shadow: 0 4px 10px rgba(16, 185, 129, 0.4); }
+    .nav-item:not(.active):hover { background: #e0f2fe; color: var(--primary-color); }
+
+    .main-container { display: block; width: 100%; }
+    .left-panel, .right-panel {
+      background: #ffffff; border-radius: var(--radius-large); box-shadow: var(--box-shadow); padding: 12px; 
+      border: 1px solid rgba(0,0,0,0.05);
+    }
+    .left-panel { margin-bottom: 12px; }
+    .right-panel { min-height: 400px; }
+
+    .accordion-part { margin-bottom: 6px; border: 1px solid #cbd5e1; border-radius: 8px; overflow: hidden; }
+    .accordion-header {
+      background: #f8fafc; padding: 10px 14px; font-weight: 700; cursor: pointer; position: relative;
+      border-bottom: 1px solid #cbd5e1; color: #015c8b; transition: 0.2s; font-size: 14px;
+    }
+    .accordion-header:hover { background: #f1f5f9; }
+    .accordion-header::after { content: '▼'; position: absolute; right: 12px; font-size: 11px; color: #64748b; }
+    .accordion-part.open > .accordion-header::after { content: '▲'; }
+    .accordion-content { display: none; padding-left: 6px; background: #ffffff; }
+    .accordion-part.open > .accordion-content { display: block; }
+
+    .category-block { margin: 4px 0; }
+    .category-header {
+      padding: 7px 12px; font-weight: 700; background: #fff; color: #334155; cursor: pointer;
+      border-left: 4px solid var(--accent-color); margin: 1px 0; border-radius: 0 6px 6px 0; transition: 0.2s; font-size: 13.5px;
+    }
+    .category-header:hover { background: #f8fafc; }
+    .category-content { display: none; padding-left: 10px; }
+    .category-block.open > .category-content { display: block; }
+    .kpi-link-item {
+      padding: 7px 12px; font-size: 13px; cursor: pointer; border-bottom: 1px dashed #e2e8f0;
+      color: #475569; transition: all 0.2s; border-radius: 4px; font-weight: 500;
+    }
+    .kpi-link-item:hover { background: #f0f9ff; color: var(--primary-color); padding-left: 16px; }
+    .kpi-link-item.selected { background: #e0f2fe; color: var(--primary-color); font-weight: 700; border-left: 4px solid var(--primary-color); }
+
+    .dashboard-title { font-size: 18px; font-weight: 700; color: #015c8b; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 2px solid #e2e8f0; text-align: left; }
+    .meta-badge { display: inline-block; padding: 4px 10px; background: #f1f5f9; border-radius: 20px; font-size: 12px; font-weight: 700; margin-right: 6px; margin-bottom: 6px; color: #015c8b; border: 1px solid #cbd5e1; }
+    .kpi-target-callout { background: var(--accent-gradient); color: #fff; padding: 12px; border-radius: 10px; font-weight: 700; font-size: 15px; margin-bottom: 15px; box-shadow: 0 4px 10px rgba(234, 88, 12, 0.3); text-shadow: 1px 1px 2px rgba(0,0,0,0.2); }
+
+    .data-table-wrapper { 
+      width: 100%; overflow-x: auto; overflow-y: auto; max-height: 650px; position: relative; 
+      border-radius: 8px; border: 1px solid #cbd5e1; box-shadow: 0 2px 6px rgba(0,0,0,0.05); 
+    }
+    table { width: 100%; border-collapse: collapse; text-align: left; background: #fff; }
+    th { background: #e0f2fe; color: #0f172a; font-weight: 700; padding: 8px 10px; font-size: 13px; border-bottom: 2px solid #93c5fd; white-space: nowrap; text-align: center; border-right: 1px solid #bfdbfe; position: sticky; top: 0; z-index: 2; }
+    td { padding: 6px 8px; font-size: 13px; border-bottom: 1px solid #e2e8f0; text-align: center; border-right: 1px solid #f1f5f9; }
+    tr:hover td { background: #f8fafc; }
+
+    .sticky-col-1 { position: sticky; left: 0; background: #ffffff; z-index: 1; }
+    .sticky-col-2 { position: sticky; left: 45px; background: #ffffff; z-index: 1; border-right: 2px solid #93c5fd !important; }
+    th.sticky-col-1, th.sticky-col-2 { background: #e0f2fe !important; z-index: 4 !important; }
+    .col-target { background-color: #dcfce7 !important; }
+
+    .info-card { background: #ffffff; border-radius: 10px; padding: 12px; margin-top: 12px; border: 1px solid #cbd5e1; box-shadow: 0 2px 6px rgba(0,0,0,0.04); text-align: left; }
+    .info-card-title { font-weight: 700; font-size: 14px; color: #015c8b; margin-bottom: 4px; }
+
+    .btn { padding: 7px 16px; border-radius: var(--radius-pill); border: none; font-weight: 700; cursor: pointer; font-size: 13px; transition: all 0.3s; box-shadow: 0 2px 4px rgba(0,0,0,0.15); }
+    .btn-primary { background: var(--primary-gradient); color: #fff; }
+    .btn-secondary { background: #e2e8f0; color: #334155; font-weight: 700; }
+    .btn-danger { background: var(--danger-gradient); color: #fff; }
+    .btn-accent { background: var(--secondary-gradient); color: #fff; }
+    .btn:hover { transform: translateY(-1px); box-shadow: 0 4px 10px rgba(0,0,0,0.2); filter: brightness(1.15); }
+
+    .editable-input { width: 100%; padding: 6px 8px; border: 1px solid #94a3b8; border-radius: 6px; font-size: 13px; transition: 0.3s; color: #0f172a; font-weight: 600; }
+    .editable-input:focus { border-color: var(--primary-color); outline: none; box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.2); background: #fff; }
+
+    #admin-content-area table .editable-input { border: none !important; border-radius: 0 !important; background: transparent !important; box-shadow: none !important; padding: 8px 4px !important; }
+    #admin-content-area table .editable-input:focus { background: #ffffff !important; outline: 2px solid var(--primary-color) !important; outline-offset: -2px; }
+
+    .page-view { display: none; animation: fadeIn 0.4s ease; }
+    .page-view.active { display: block; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+    .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(4px); z-index: 1000; display: none; align-items: center; justify-content: center; padding: 15px; }
+    .modal-card { background: #ffffff; width: 100%; max-width: 450px; border-radius: var(--radius-large); box-shadow: 0 15px 35px rgba(0,0,0,0.3); overflow: hidden; animation: modalShow 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); border: 1px solid rgba(255,255,255,0.2); }
+    @keyframes modalShow { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    .modal-header { background: var(--primary-gradient); color: #fff; padding: 14px 18px; font-weight: 700; font-size: 15px; text-align: center; letter-spacing: 0.5px; }
+    .modal-body { padding: 18px; }
+    .modal-footer { padding: 10px 18px; background: #f8fafc; text-align: right; border-top: 1px solid #e2e8f0; }
+    .form-group { margin-bottom: 10px; text-align: left; }
+    .form-group label { display: block; font-size: 13px; font-weight: 700; margin-bottom: 5px; color: #334155; }
+
+    #app-login-screen { background: var(--bg-light); background-image: var(--primary-gradient); flex-direction: column; }
+    .login-box { background: #fff; padding: 30px; border-radius: var(--radius-large); box-shadow: 0 25px 50px rgba(0,0,0,0.3); text-align: center; width: 100%; max-width: 380px; border: 1px solid #bae6fd; }
+    .login-box h2 { color: #015c8b; margin-bottom: 8px; font-size: 22px; font-weight: 700; }
+    .login-box p { color: #64748b; margin-bottom: 20px; font-size: 13px; font-weight: 500; }
+    .empty-state { text-align: center; padding: 30px 15px; color: #64748b; font-size: 14px; font-weight: 500; }
+
+    .login-tabs { display: flex; margin-bottom: 15px; border-bottom: 2px solid #e2e8f0; }
+    .login-tab { flex: 1; padding: 10px; cursor: pointer; font-weight: 700; font-size: 14px; color: #64748b; text-align: center; border-bottom: 2px solid transparent; margin-bottom: -2px; }
+    .login-tab.active { color: var(--primary-color); border-bottom-color: var(--primary-color); }
+
+    .header-actions { position: absolute; right: 20px; top: 14px; }
+    .btn-icon { background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.4); color: white; padding: 5px 10px; border-radius: 6px; cursor: pointer; font-size: 14px; transition: 0.2s; font-weight: 700; }
+    .btn-icon:hover { background: rgba(255,255,255,0.3); }
+
+    @media (min-width: 768px) {
+      body { padding: 15px; }
+      .nav-menu-bar { width: auto; display: inline-table; margin: 0 auto 15px auto; }
+      .nav-menu-container { text-align: center; }
+      .main-container { display: table; table-layout: fixed; gap: 15px; }
+      .left-panel { display: table-cell; width: 25%; vertical-align: top; margin-bottom: 0; } 
+      .panel-spacer { display: table-cell; width: 1.5%; }
+      .right-panel { display: table-cell; width: 73.5%; vertical-align: top; }
+    }
+  </style>
+</head>
+<body>
+
+  <div id="app-login-screen" class="modal-overlay" style="display: flex;">
+    <div class="login-box" id="login-box-content" style="animation: fadeIn 0.6s ease;">
+      <div style="font-size: 40px; margin-bottom: 10px;">🏥</div>
+      <h2>เข้าสู่ระบบรายงานตัวชี้วัด</h2>
+      
+      <div class="login-tabs">
+        <div class="login-tab active" id="tab-viewer" onclick="switchLoginTab('viewer')">ผู้เข้าชมทั่วไป</div>
+        <div class="login-tab" id="tab-officer" onclick="switchLoginTab('officer')">เจ้าหน้าที่ / Admin</div>
+      </div>
+      
+      <div id="login-form-viewer">
+        <p>กรุณากรอกรหัสผ่านเพื่อเข้าสู่ Dashboard</p>
+        <input type="password" id="login-viewer-pass" class="editable-input" placeholder="รหัสผ่านเข้าใช้งาน" style="text-align: center; font-size: 15px; margin-bottom: 15px;">
+      </div>
+      
+      <div id="login-form-officer" style="display: none;">
+        <p>ระบุชื่อผู้ใช้งานและรหัสผ่านเพื่อเข้าจัดการข้อมูล</p>
+        <input type="text" id="login-username" class="editable-input" placeholder="Username" style="text-align: center; font-size: 15px; margin-bottom: 10px;">
+        <input type="password" id="login-password" class="editable-input" placeholder="Password" style="text-align: center; font-size: 15px; margin-bottom: 15px;">
+      </div>
+      
+      <button class="btn btn-primary" style="width: 100%; font-size: 15px; padding: 10px;" onclick="unlockApp()">ยืนยันเข้าสู่ระบบ</button>
+    </div>
+  </div>
+
+  <div class="app-header">
+    <h1>ระบบจัดการตัวชี้วัดคุณภาพ โรงพยาบาลภูหลวง</h1>
+    <p style="font-size: 14px; margin-top: 4px; opacity: 0.85; font-weight: 400;">ระบบบันทึก วิเคราะห์ และติดตามผลลัพธ์ข้อมูลตัวชี้วัดรายเดือน</p>
+    <div class="header-actions" id="admin-settings-btn" style="display: none;">
+      <button class="btn-icon" onclick="openSettings()">⚙️ ตั้งค่า</button>
+    </div>
+  </div>
+
+  <div class="nav-menu-container">
+    <div class="nav-menu-bar">
+      <div class="nav-item active" id="menu-home-btn" onclick="switchMenu('home')">📊 หน้าแรก (Dashboard)</div>
+      <div class="nav-item" id="menu-progress-btn" onclick="switchMenu('progress')">📋 ติดตามงาน (Progress)</div>
+      <div class="nav-item" id="menu-admin-btn" onclick="switchMenu('admin')">⚙️ จัดการตัวชี้วัด (Admin)</div>
+    </div>
+  </div>
+
+  <div class="main-container">
+    <div class="left-panel">
+      <h3 style="margin-bottom: 10px; color: #015c8b; font-size: 15px; font-weight: 700; text-align: center;">📑 ผังรายการตัวชี้วัด</h3>
+      <div id="accordion-tree-container">
+        <div class="empty-state">กรุณาเข้าสู่ระบบ...</div>
+      </div>
+    </div>
+
+    <div class="panel-spacer"></div>
+
+    <div class="right-panel">
+      <div id="page-home" class="page-view active">
+        <div id="dashboard-content-area">
+          <div class="empty-state">
+            <div style="font-size: 35px; margin-bottom: 10px; color:#94a3b8;">👈</div>
+            กรุณาเลือกตัวชี้วัดจากเมนูฝั่งซ้ายเพื่อดูรายละเอียด
+          </div>
+        </div>
+      </div>
+
+      <div id="page-progress" class="page-view">
+        <div style="background: #f8fafc; padding: 10px; border-radius: 10px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #cbd5e1; flex-wrap: wrap; gap: 10px;">
+          <div style="font-weight: 700; color: #015c8b; font-size: 14px;">📋 ติดตามความคืบหน้าการลงข้อมูล (Progress Tracker)</div>
+          <div>
+            <input type="text" id="progress-filter" class="editable-input" placeholder="🔍 ค้นหาหน่วยงาน, ผู้รับผิดชอบ..." style="width: 260px;" onkeyup="filterProgressTable()">
+          </div>
+        </div>
+        <div id="progress-content-area">
+          <div class="empty-state">รอโหลดข้อมูลความคืบหน้า...</div>
+        </div>
+      </div>
+
+      <div id="page-admin" class="page-view">
+        <div style="background: #f8fafc; padding: 10px; border-radius: 10px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #cbd5e1; flex-wrap: wrap; gap: 10px;">
+          <div style="font-weight: 700; color: #015c8b; font-size: 14px;">🛠️ เครื่องมือผู้ดูแลระบบ</div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+            <div id="nursing-sync-controls" style="display:none; align-items:center; gap:8px; flex-wrap:wrap;">
+              <span id="nursing-sync-status" style="font-size:12px; color:#64748b; font-weight:700;"></span>
+              <button class="btn btn-secondary" id="btn-toggle-auto-sync" onclick="toggleAutoNursingSync()">⏱️ เปิดซิงค์อัตโนมัติ</button>
+              <button class="btn btn-secondary" onclick="openNursingReviewModal()">🔗 ตรวจสอบตัวชี้วัดที่ซ้ำกับฝ่ายพยาบาล</button>
+              <button class="btn btn-secondary" onclick="runNursingSyncNow()">🔄 ซิงค์ข้อมูลที่จับคู่แล้ว</button>
+            </div>
+            <button class="btn btn-accent" onclick="openAddKpiModal()">➕ เพิ่มตัวชี้วัดใหม่ (Add KPI)</button>
+          </div>
+        </div>
+        <div id="admin-content-area">
+          <div class="empty-state">กรุณาเลือกหมวดหมู่ย่อยจากเมนูฝั่งซ้าย เพื่อแก้ไขตารางตัวชี้วัด</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Removed modal-admin-auth as auth is done upfront -->
+
+  <div id="modal-elevate-auth" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">ยืนยันตัวตนเจ้าหน้าที่ / Admin</div>
+      <div class="modal-body">
+        <p style="margin-bottom: 12px; font-size: 13px; color: #64748b; font-weight: 500;">กรุณาระบุ Username และ Password เพื่อเข้าจัดการข้อมูล</p>
+        <div class="form-group">
+          <label>ชื่อผู้ใช้งาน (User)</label>
+          <input type="text" id="elevate-username" class="editable-input">
+        </div>
+        <div class="form-group">
+          <label>รหัสผ่าน (Password)</label>
+          <input type="password" id="elevate-password" class="editable-input">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="document.getElementById('modal-elevate-auth').style.display='none'">ยกเลิก</button>
+        <button class="btn btn-primary" id="btn-submit-elevate" onclick="submitElevateAuth()">ตกลง</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modal-details-edit" class="modal-overlay">
+    <div class="modal-card" style="max-width: 900px; width: 90%;">
+      <div class="modal-header">📝 แก้ไขรายละเอียดตัวชี้วัด</div>
+      <div class="modal-body" style="max-height: 75vh; overflow-y: auto;">
+        <input type="hidden" id="edit-detail-id">
+        <input type="hidden" id="edit-detail-part">
+        <div class="form-group">
+          <label>รายละเอียดตัวชี้วัด</label>
+          <textarea id="edit-detail-template" class="editable-input" rows="6" style="resize: vertical;"></textarea>
+        </div>
+        <div class="form-group">
+          <label>ที่มาข้อมูล / สูตรคำนวณ (DataSource)</label>
+          <textarea id="edit-detail-source" class="editable-input" rows="6" style="resize: vertical;"></textarea>
+        </div>
+        <div class="form-group">
+          <label>ผู้รับผิดชอบ (Owner)</label>
+          <input type="text" id="edit-detail-owner" class="editable-input">
+        </div>
+        <div class="form-group">
+          <label>หน่วยงาน (Department)</label>
+          <input type="text" id="edit-detail-dept" class="editable-input">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="document.getElementById('modal-details-edit').style.display='none'">ยกเลิก</button>
+        <button class="btn btn-primary" onclick="saveDetailsChanges()">💾 บันทึกข้อมูล</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modal-alert" class="modal-overlay">
+    <div class="modal-card" style="max-width: 360px;">
+      <div class="modal-header" id="alert-title" style="background: var(--primary-gradient);">การแจ้งเตือน</div>
+      <div class="modal-body" style="text-align: center; padding: 20px 15px;">
+        <div id="alert-icon" style="font-size: 38px; margin-bottom: 10px;"></div>
+        <p id="alert-message" style="font-size: 14px; font-weight: 600;"></p>
+      </div>
+      <div class="modal-footer" style="text-align: center;">
+        <button class="btn btn-primary" style="min-width: 100px;" onclick="document.getElementById('modal-alert').style.display='none'">รับทราบ</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modal-confirm" class="modal-overlay">
+    <div class="modal-card" style="max-width: 380px;">
+      <div class="modal-header" style="background: var(--danger-gradient);">ยืนยันการทำรายการ</div>
+      <div class="modal-body">
+        <p id="confirm-message" style="font-size: 14px; text-align: center; font-weight: 600; padding: 5px 0; color: #1e293b;"></p>
+      </div>
+      <div class="modal-footer" style="display: flex; justify-content: space-between;">
+        <button class="btn btn-secondary" onclick="closeConfirm(false)">ยกเลิก</button>
+        <button class="btn btn-danger" onclick="closeConfirm(true)">ยืนยันดำเนินการ</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modal-settings" class="modal-overlay">
+    <div class="modal-card" style="max-width: 600px; width: 95%;">
+      <div class="modal-header" style="background: var(--primary-gradient);">⚙️ จัดการตั้งค่าผู้ใช้งาน (Settings)</div>
+      <div class="modal-body" style="max-height: 75vh; overflow-y: auto;">
+        
+        <h4 style="color:#015c8b; margin-bottom:8px; border-bottom:1px solid #cbd5e1; padding-bottom:4px;">1. รหัสผ่านสำหรับผู้เข้าชม (Viewer)</h4>
+        <div class="form-group" style="display: flex; gap: 10px;">
+          <input type="text" id="setting-viewer-pass" class="editable-input" placeholder="รหัสผ่านผู้เข้าชม">
+        </div>
+        
+        <h4 style="color:#015c8b; margin-top:20px; margin-bottom:8px; border-bottom:1px solid #cbd5e1; padding-bottom:4px;">2. บัญชีผู้ดูแลระบบ (Admin)</h4>
+        <div class="form-group" style="display: flex; gap: 10px;">
+          <input type="text" id="setting-admin-user" class="editable-input" placeholder="Admin Username" disabled style="background:#f1f5f9; cursor:not-allowed;">
+          <input type="text" id="setting-admin-pass" class="editable-input" placeholder="Admin Password">
+        </div>
+        
+        <h4 style="color:#015c8b; margin-top:20px; margin-bottom:8px; border-bottom:1px solid #cbd5e1; padding-bottom:4px;">3. บัญชีเจ้าหน้าที่ (Officers)</h4>
+        <div id="settings-officers-list"></div>
+        <button class="btn btn-secondary" style="margin-top: 10px; width: 100%;" onclick="addOfficerRow()">+ เพิ่มบัญชีเจ้าหน้าที่</button>
+        
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="document.getElementById('modal-settings').style.display='none'">ยกเลิก</button>
+        <button class="btn btn-primary" onclick="saveSettings()">💾 บันทึกการตั้งค่า</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modal-nursing-review" class="modal-overlay">
+    <div class="modal-card" style="max-width: 800px; width: 95%;">
+      <div class="modal-header">🔗 ตรวจสอบตัวชี้วัดที่ซ้ำกับฝ่ายการพยาบาล</div>
+      <div class="modal-body" style="max-height: 75vh; overflow-y: auto;">
+        <div id="nursing-review-list"></div>
+      </div>
+      <div class="modal-footer" style="display:flex; justify-content:space-between;">
+        <button class="btn btn-secondary" onclick="document.getElementById('modal-nursing-review').style.display='none'">ยกเลิก</button>
+        <button class="btn btn-primary" onclick="submitNursingReviewMappings()">💾 ยืนยันและบันทึกการจับคู่</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modal-add-kpi" class="modal-overlay">
+    <div class="modal-card" style="max-width: 500px;">
+      <div class="modal-header">➕ เพิ่มตัวชี้วัดคุณภาพใหม่</div>
+      <div class="modal-body" style="max-height: 65vh; overflow-y: auto;">
+        <div class="form-group">
+          <label>หมวดหลัก (Part) *</label>
+          <input type="text" id="add-kpi-part" list="part-options" class="editable-input" placeholder="พิมพ์ชื่อหมวดใหม่ หรือเลือกจากรายการ">
+          <datalist id="part-options"></datalist>
+        </div>
+        <div class="form-group">
+          <label>หมวดหมู่ย่อย (Category) *</label>
+          <input type="text" id="add-kpi-category" list="category-options" class="editable-input" placeholder="พิมพ์ชื่อหมวดหมู่ย่อยใหม่ หรือเลือกจากรายการ">
+          <datalist id="category-options"></datalist>
+        </div>
+        <div class="form-group">
+          <label>ชื่อตัวชี้วัด (KPI Name) *</label>
+          <input type="text" id="add-kpi-name" class="editable-input" placeholder="กรอกชื่อตัวชี้วัด">
+        </div>
+        <div class="form-group">
+          <!-- เปลี่ยนจากช่อง number เป็นข้อความ เพื่อให้พิมพ์เครื่องหมาย > < ได้ -->
+          <label>ค่าเป้าหมาย (Target) *</label>
+          <input type="text" id="add-kpi-target" class="editable-input" placeholder="เช่น > 80 หรือ 100%">
+        </div>
+        <div class="form-group">
+          <label>ที่มาข้อมูล / สูตรคำนวณ</label>
+          <textarea id="add-kpi-source" class="editable-input" rows="2"></textarea>
+        </div>
+        <div class="form-group">
+          <label>ผู้รับผิดชอบ</label>
+          <input type="text" id="add-kpi-owner" class="editable-input">
+        </div>
+        <div class="form-group">
+          <label>หน่วยงาน</label>
+          <input type="text" id="add-kpi-dept" class="editable-input">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="document.getElementById('modal-add-kpi').style.display='none'">ยกเลิก</button>
+        <button class="btn btn-primary" onclick="submitAddKpi()">💾 บันทึกข้อมูล</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let globalDatabase = []; 
+    let currentTab = 'home'; 
+    let selectedKpiId = null;
+    let selectedCategoryName = null;
+    let selectedPartName = null;
+    
+    let isAppUnlocked = false;
+    let isAdminUnlocked = false; // Kept for compatibility with other parts of the code
+    let currentLoginMode = 'viewer';
+    let currentUserRole = null; // 'viewer', 'officer', 'admin'
+    let settingsData = { viewerPin: "", admin: {username:"", password:""}, officers: [] };
+    
+    let onConfirmCallback = null;
+    let globalProgressData = []; 
+    let pendingAdminRoute = null; 
+
+    const thMonthsNames = ['ต.ค.', 'พ.ย.', 'ธ.ค.', 'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.'];
+
+    function switchLoginTab(mode) {
+      currentLoginMode = mode;
+      document.getElementById('tab-viewer').classList.remove('active');
+      document.getElementById('tab-officer').classList.remove('active');
+      document.getElementById('login-form-viewer').style.display = 'none';
+      document.getElementById('login-form-officer').style.display = 'none';
+      
+      document.getElementById('tab-' + mode).classList.add('active');
+      document.getElementById('login-form-' + mode).style.display = 'block';
+    }
+
+    function unlockApp() {
+      let username = '';
+      let password = '';
+      
+      if (currentLoginMode === 'viewer') {
+        password = document.getElementById('login-viewer-pass').value;
+      } else {
+        username = document.getElementById('login-username').value;
+        password = document.getElementById('login-password').value;
+        if (!username) {
+          showAlert('กรุณากรอก Username', '⚠️', '');
+          return;
+        }
+      }
+      
+      if (!password) {
+        showAlert('กรุณากรอกรหัสผ่าน', '⚠️', '');
+        return;
+      }
+
+      document.getElementById('login-box-content').innerHTML = `
+        <div style="font-size: 40px; margin-bottom: 10px;">⏳</div>
+        <h2>กำลังตรวจสอบสิทธิ์...</h2>
+        <p>กรุณารอสักครู่</p>
+      `;
+
+      google.script.run
+        .withSuccessHandler((res) => {
+          if (res.success) {
+            currentUserRole = res.role;
+            isAppUnlocked = true;
+            isAdminUnlocked = (currentUserRole === 'officer' || currentUserRole === 'admin');
+            
+            if (currentUserRole === 'admin') {
+              document.getElementById('admin-settings-btn').style.display = 'block';
+              document.getElementById('nursing-sync-controls').style.display = 'flex';
+            }
+
+            document.getElementById('login-box-content').innerHTML = `
+              <div style="font-size: 40px; margin-bottom: 10px;">⏳</div>
+              <h2>กำลังดาวน์โหลดฐานข้อมูล...</h2>
+              <p>กรุณารอสักครู่ ระบบกำลังจัดเตรียมข้อมูลทั้งหมด</p>
+            `;
+            fetchAllDataFromServer();
+          } else {
+            resetLoginBox();
+            showAlert('เข้าสู่ระบบไม่สำเร็จ', '⚠️', res.message);
+          }
+        })
+        .withFailureHandler((err) => {
+          resetLoginBox();
+          showAlert('เกิดข้อผิดพลาดเครือข่าย', '❌', err.toString());
+        })
+        .authenticateUser(username, password);
+    }
+
+    function resetLoginBox() {
+      document.getElementById('login-box-content').innerHTML = `
+        <div style="font-size: 40px; margin-bottom: 10px;">🏥</div>
+        <h2>เข้าสู่ระบบรายงานตัวชี้วัด</h2>
+        <div class="login-tabs">
+          <div class="login-tab ${currentLoginMode === 'viewer' ? 'active' : ''}" id="tab-viewer" onclick="switchLoginTab('viewer')">ผู้เข้าชมทั่วไป</div>
+          <div class="login-tab ${currentLoginMode === 'officer' ? 'active' : ''}" id="tab-officer" onclick="switchLoginTab('officer')">เจ้าหน้าที่ / Admin</div>
+        </div>
+        <div id="login-form-viewer" style="display: ${currentLoginMode === 'viewer' ? 'block' : 'none'};">
+          <p>กรุณากรอกรหัสผ่านเพื่อเข้าสู่ Dashboard</p>
+          <input type="password" id="login-viewer-pass" class="editable-input" placeholder="รหัสผ่านเข้าใช้งาน" style="text-align: center; font-size: 15px; margin-bottom: 15px;">
+        </div>
+        <div id="login-form-officer" style="display: ${currentLoginMode === 'officer' ? 'block' : 'none'};">
+          <p>ระบุชื่อผู้ใช้งานและรหัสผ่านเพื่อเข้าจัดการข้อมูล</p>
+          <input type="text" id="login-username" class="editable-input" placeholder="Username" style="text-align: center; font-size: 15px; margin-bottom: 10px;">
+          <input type="password" id="login-password" class="editable-input" placeholder="Password" style="text-align: center; font-size: 15px; margin-bottom: 15px;">
+        </div>
+        <button class="btn btn-primary" style="width: 100%; font-size: 15px; padding: 10px;" onclick="unlockApp()">ยืนยันเข้าสู่ระบบ</button>
+      `;
+    }
+
+    document.addEventListener('keypress', function(e) {
+      if (e.key === 'Enter' && !isAppUnlocked) unlockApp();
+    });
+
+    function fetchAllDataFromServer(quiet = false) {
+      google.script.run
+        .withSuccessHandler((res) => {
+          if (res.success) {
+            globalDatabase = res.data;
+            updateDatalists(); 
+            
+            if(!quiet) {
+              document.getElementById('app-login-screen').style.display = 'none';
+              renderAccordionTree();
+            } else {
+              renderAccordionTree();
+              if(currentTab === 'home' && selectedKpiId) loadSingleKpiDashboard(selectedPartName, selectedKpiId);
+              if(currentTab === 'progress') loadProgressSummary();
+              if(currentTab === 'admin' && selectedCategoryName) loadAdminCategoryTable(selectedPartName, selectedCategoryName);
+            }
+          } else {
+            showAlert('โหลดข้อมูลล้มเหลว', '❌', res.message);
+          }
+        })
+        .withFailureHandler((err) => showAlert('เกิดข้อผิดพลาดเครือข่าย', '❌', err.toString()))
+        .getAllData();
+    }
+
+    function updateDatalists() {
+      const parts = new Set();
+      const categories = new Set();
+      globalDatabase.forEach(item => {
+        if(item.part) parts.add(item.part);
+        if(item.category) categories.add(item.category);
+      });
+      
+      const partOptions = document.getElementById('part-options');
+      partOptions.innerHTML = '';
+      parts.forEach(p => {
+        const option = document.createElement('option');
+        option.value = p;
+        partOptions.appendChild(option);
+      });
+
+      const catOptions = document.getElementById('category-options');
+      catOptions.innerHTML = '';
+      categories.forEach(c => {
+        const option = document.createElement('option');
+        option.value = c;
+        catOptions.appendChild(option);
+      });
+    }
+
+    function switchMenu(tabName) {
+      if (!isAppUnlocked) return;
+      if (tabName === 'admin' && currentUserRole === 'viewer') {
+        pendingAdminRoute = null;
+        document.getElementById('modal-elevate-auth').style.display = 'flex';
+        document.getElementById('elevate-username').value = '';
+        document.getElementById('elevate-password').value = '';
+        return;
+      }
+      
+      currentTab = tabName;
+      document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.page-view').forEach(el => el.classList.remove('active'));
+      
+      if (tabName === 'home') {
+        document.getElementById('menu-home-btn').classList.add('active');
+        document.getElementById('page-home').classList.add('active');
+        if (selectedKpiId) loadSingleKpiDashboard(selectedPartName, selectedKpiId);
+      } else if (tabName === 'progress') {
+        document.getElementById('menu-progress-btn').classList.add('active');
+        document.getElementById('page-progress').classList.add('active');
+        loadProgressSummary(); 
+      } else {
+        document.getElementById('menu-admin-btn').classList.add('active');
+        document.getElementById('page-admin').classList.add('active');
+        if (selectedCategoryName) loadAdminCategoryTable(selectedPartName, selectedCategoryName);
+        if (currentUserRole === 'admin') loadNursingSyncStatus();
+      }
+      renderAccordionTree();
+    }
+
+    // submitAdminAuth removed as authentication happens at login
+    
+    function submitElevateAuth() {
+      const username = document.getElementById('elevate-username').value;
+      const password = document.getElementById('elevate-password').value;
+      
+      if (!username || !password) {
+        showAlert('ข้อมูลไม่ครบถ้วน', '⚠️', 'กรุณากรอก Username และ Password');
+        return;
+      }
+      
+      const btn = document.getElementById('btn-submit-elevate');
+      btn.innerText = 'กำลังตรวจสอบ...';
+      btn.disabled = true;
+      
+      google.script.run
+        .withSuccessHandler((res) => {
+          btn.innerText = 'ตกลง';
+          btn.disabled = false;
+          
+          if (res.success && (res.role === 'officer' || res.role === 'admin')) {
+            currentUserRole = res.role;
+            isAdminUnlocked = true;
+            document.getElementById('modal-elevate-auth').style.display = 'none';
+            
+            if (currentUserRole === 'admin') {
+              document.getElementById('admin-settings-btn').style.display = 'block';
+              document.getElementById('nursing-sync-controls').style.display = 'flex';
+            }
+
+            if (pendingAdminRoute) {
+              routeToAdminCategory(pendingAdminRoute.part, pendingAdminRoute.category);
+              pendingAdminRoute = null;
+            } else {
+              switchMenu('admin');
+            }
+          } else {
+            showAlert('เข้าสู่ระบบไม่สำเร็จ', '⚠️', 'Username หรือ Password ไม่ถูกต้อง หรือไม่มีสิทธิ์เข้าถึง');
+          }
+        })
+        .withFailureHandler((err) => {
+          btn.innerText = 'ตกลง';
+          btn.disabled = false;
+          showAlert('เกิดข้อผิดพลาดเครือข่าย', '❌', err.toString());
+        })
+        .authenticateUser(username, password);
+    }
+
+    function openSettings() {
+      if (currentUserRole !== 'admin') return;
+      document.getElementById('modal-settings').style.display = 'flex';
+      
+      google.script.run
+        .withSuccessHandler((res) => {
+          if (res.success) {
+            settingsData = { viewerPin: res.viewerPin, admin: res.admin, officers: res.officers || [] };
+            renderSettingsForm();
+          } else {
+            showAlert('ข้อผิดพลาด', '❌', 'ไม่สามารถโหลดข้อมูลการตั้งค่าได้');
+          }
+        })
+        .getSettingsData();
+    }
+    
+    function renderSettingsForm() {
+      document.getElementById('setting-viewer-pass').value = settingsData.viewerPin;
+      document.getElementById('setting-admin-user').value = settingsData.admin.username;
+      document.getElementById('setting-admin-pass').value = settingsData.admin.password;
+      
+      const listDiv = document.getElementById('settings-officers-list');
+      listDiv.innerHTML = '';
+      
+      settingsData.officers.forEach((officer, index) => {
+        const row = document.createElement('div');
+        row.style = 'display: flex; gap: 10px; margin-bottom: 10px;';
+        row.innerHTML = `
+          <input type="text" class="editable-input" value="${officer.username}" onchange="updateOfficer(${index}, 'username', this.value)" placeholder="Username">
+          <input type="text" class="editable-input" value="${officer.password}" onchange="updateOfficer(${index}, 'password', this.value)" placeholder="Password">
+          <button class="btn btn-danger" onclick="removeOfficerRow(${index})">ลบ</button>
+        `;
+        listDiv.appendChild(row);
+      });
+    }
+    
+    function updateOfficer(index, field, value) {
+      settingsData.officers[index][field] = value;
+    }
+    
+    function addOfficerRow() {
+      settingsData.officers.push({ username: "", password: "" });
+      renderSettingsForm();
+    }
+    
+    function removeOfficerRow(index) {
+      settingsData.officers.splice(index, 1);
+      renderSettingsForm();
+    }
+    
+    function saveSettings() {
+      settingsData.viewerPin = document.getElementById('setting-viewer-pass').value;
+      settingsData.admin.password = document.getElementById('setting-admin-pass').value;
+      
+      settingsData.officers = settingsData.officers.filter(o => o.username.trim() !== "");
+      
+      document.getElementById('modal-settings').style.display = 'none';
+      
+      google.script.run
+        .withSuccessHandler((res) => {
+          if (res.success) {
+            showAlert('สำเร็จ', '✅', res.message);
+          } else {
+            showAlert('ข้อผิดพลาด', '❌', res.message);
+          }
+        })
+        .saveSettingsData(settingsData);
+    }
+
+    function runNursingSyncNow() {
+      showAlert("กำลังซิงค์ข้อมูล...", "⏳", "กำลังดึงข้อมูลจากระบบตัวชี้วัดคุณภาพการพยาบาล กรุณารอสักครู่");
+      google.script.run
+        .withSuccessHandler((res) => {
+          document.getElementById('modal-alert').style.display = 'none';
+          if (res.success) {
+            showAlert("ซิงค์ข้อมูลสำเร็จ", "✅", res.message);
+            fetchAllDataFromServer(true);
+          } else {
+            showAlert("ซิงค์ข้อมูลล้มเหลว", "❌", res.message);
+          }
+        })
+        .withFailureHandler((err) => showAlert("เกิดข้อผิดพลาดเครือข่าย", "❌", err.toString()))
+        .syncFromNursingSystem();
+    }
+
+    function loadNursingSyncStatus() {
+      google.script.run
+        .withSuccessHandler((res) => {
+          const statusEl = document.getElementById('nursing-sync-status');
+          const btn = document.getElementById('btn-toggle-auto-sync');
+          if (!statusEl || !btn) return;
+          if (res.enabled) {
+            statusEl.innerText = '🟢 ซิงค์อัตโนมัติ: เปิดอยู่ (ทุกวัน 05:00 น.)';
+            btn.innerText = '⏸️ ปิดซิงค์อัตโนมัติ';
+          } else {
+            statusEl.innerText = '⚪ ซิงค์อัตโนมัติ: ปิดอยู่';
+            btn.innerText = '⏱️ เปิดซิงค์อัตโนมัติ';
+          }
+        })
+        .getNursingSyncTriggerStatus();
+    }
+
+    function toggleAutoNursingSync() {
+      const btn = document.getElementById('btn-toggle-auto-sync');
+      btn.disabled = true;
+      google.script.run
+        .withSuccessHandler((res) => {
+          btn.disabled = false;
+          if (res.success) {
+            showAlert(res.enabled ? "เปิดใช้งานแล้ว" : "ปิดใช้งานแล้ว", "✅", res.message);
+            loadNursingSyncStatus();
+          } else {
+            showAlert("ข้อผิดพลาด", "❌", res.message);
+          }
+        })
+        .withFailureHandler((err) => {
+          btn.disabled = false;
+          showAlert("เกิดข้อผิดพลาด", "❌", err.toString());
+        })
+        .toggleNursingSyncTrigger();
+    }
+
+    let nursingReviewItems = [];
+    let nursingUnlinkedDestList = [];
+
+    function openNursingReviewModal() {
+      showAlert("กำลังโหลดข้อมูล...", "⏳", "กำลังเปรียบเทียบข้อมูลจากทั้งสองระบบ กรุณารอสักครู่");
+      google.script.run
+        .withSuccessHandler((res) => {
+          document.getElementById('modal-alert').style.display = 'none';
+          if (!res.success) { showAlert("ข้อผิดพลาด", "❌", res.message); return; }
+
+          nursingReviewItems = res.items.filter(it => it.status !== 'linked');
+          nursingUnlinkedDestList = res.unlinkedDestList;
+
+          if (nursingReviewItems.length === 0) {
+            showAlert("ไม่มีรายการใหม่", "✅", "ตัวชี้วัดจากฝ่ายการพยาบาลถูกจับคู่ไว้ครบทุกรายการแล้ว");
+            return;
+          }
+          renderNursingReviewList();
+          document.getElementById('modal-nursing-review').style.display = 'flex';
+        })
+        .withFailureHandler((err) => showAlert("เกิดข้อผิดพลาดเครือข่าย", "❌", err.toString()))
+        .getNursingSyncPreview();
+    }
+
+    function renderNursingReviewList() {
+      const container = document.getElementById('nursing-review-list');
+      let html = `<p style="font-size:13px; color:#64748b; margin-bottom:10px;">
+        พบตัวชี้วัดจากฝ่ายการพยาบาล <b>${nursingReviewItems.length}</b> รายการที่ยังไม่จับคู่ —
+        จับคู่เฉพาะตัวชี้วัดที่ <b>ซ้ำกันจริง</b> กับของโรงพยาบาลเท่านั้น ตัวที่ไม่ซ้ำกันไม่ต้องจับคู่ (เลือก "ข้าม" ได้เลย)
+      </p>`;
+      html += `<div class="data-table-wrapper" style="max-height:50vh; box-shadow:none;"><table><thead><tr>
+        <th style="text-align:left; min-width:220px;">ตัวชี้วัดจากฝ่ายการพยาบาล</th>
+        <th style="text-align:left; min-width:220px;">จับคู่กับตัวชี้วัดใน KPI PH</th>
+      </tr></thead><tbody>`;
+
+      nursingReviewItems.forEach((item) => {
+        let options = `<option value="">🚫 ข้าม (ไม่ใช่ตัวเดียวกัน / ไม่มีในระบบนี้)</option>`;
+        nursingUnlinkedDestList.forEach(d => {
+          const selected = (item.status === 'suggested' && item.suggestedDestId === d.id) ? 'selected' : '';
+          options += `<option value="${d.id}" ${selected}>${d.name} (${d.category})</option>`;
+        });
+        const suggestBadge = item.status === 'suggested'
+          ? `<div style="font-size:11px; color:#047857; font-weight:700; margin-top:2px;">💡 ระบบคาดว่าตรงกับ "${item.suggestedDestName}"</div>`
+          : '';
+        html += `<tr>
+          <td style="text-align:left;">
+            <div style="font-weight:700;">${item.sourceName}</div>
+            <div style="font-size:11px; color:#64748b;">${item.sourcePart} / ${item.sourceCategory} — เป้าหมาย: ${item.sourceTarget}</div>
+            ${suggestBadge}
+          </td>
+          <td style="padding:4px;">
+            <select class="editable-input nursing-match-select" data-source-id="${item.sourceId}" style="font-size:12px;">${options}</select>
+          </td>
+        </tr>`;
+      });
+
+      html += `</tbody></table></div>`;
+      container.innerHTML = html;
+    }
+
+    function submitNursingReviewMappings() {
+      const selects = document.querySelectorAll('.nursing-match-select');
+      const mappings = [];
+      const usedDestIds = new Set();
+      let hasDup = false;
+
+      selects.forEach(sel => {
+        const destId = sel.value || null;
+        if (destId) {
+          if (usedDestIds.has(destId)) hasDup = true;
+          usedDestIds.add(destId);
+        }
+        mappings.push({ sourceId: sel.getAttribute('data-source-id'), destId: destId });
+      });
+
+      if (hasDup) {
+        showAlert("เลือกซ้ำกัน", "⚠️", "มีการจับคู่กับตัวชี้วัดเดิมซ้ำกันมากกว่า 1 รายการ กรุณาตรวจสอบก่อนบันทึก");
+        return;
+      }
+
+      document.getElementById('modal-nursing-review').style.display = 'none';
+      showAlert("กำลังบันทึกการจับคู่...", "⏳", "กรุณารอสักครู่");
+
+      google.script.run
+        .withSuccessHandler((res) => {
+          document.getElementById('modal-alert').style.display = 'none';
+          if (res.success) {
+            showAlert("สำเร็จ", "✅", res.message);
+            fetchAllDataFromServer(true);
+          } else {
+            showAlert("ข้อผิดพลาด", "❌", res.message);
+          }
+        })
+        .withFailureHandler((err) => showAlert("เกิดข้อผิดพลาดเครือข่าย", "❌", err.toString()))
+        .commitNursingSync(mappings);
+    }
+
+    function renderAccordionTree() {
+      const container = document.getElementById('accordion-tree-container');
+      if (globalDatabase.length === 0) {
+        container.innerHTML = '<div class="empty-state">ไม่พบข้อมูลตัวชี้วัดในระบบ<br><br>👉 คุณสามารถกดเพิ่มตัวชี้วัดในหน้าจัดการได้เลย</div>';
+        return;
+      }
+
+      const tree = {};
+      globalDatabase.forEach(item => {
+        if (!tree[item.part]) tree[item.part] = {};
+        if (!tree[item.part][item.category]) tree[item.part][item.category] = [];
+        tree[item.part][item.category].push(item);
+      });
+
+      container.innerHTML = '';
+      Object.keys(tree).sort().forEach(partName => {
+        const partDiv = document.createElement('div');
+        partDiv.className = 'accordion-part';
+        if (selectedPartName === partName) partDiv.classList.add('open');
+        
+        const header = document.createElement('div');
+        header.className = 'accordion-header';
+        header.innerText = partName;
+        header.onclick = () => {
+          document.querySelectorAll('.accordion-part').forEach(el => {
+            if (el !== partDiv) el.classList.remove('open');
+          });
+          partDiv.classList.toggle('open');
+        };
+        partDiv.appendChild(header);
+
+        const content = document.createElement('div');
+        content.className = 'accordion-content';
+
+        const categories = tree[partName];
+        Object.keys(categories).sort().forEach(catName => {
+          const catBlock = document.createElement('div');
+          catBlock.className = 'category-block';
+          if (selectedCategoryName === catName && selectedPartName === partName) catBlock.classList.add('open');
+
+          const catHeader = document.createElement('div');
+          catHeader.className = 'category-header';
+          catHeader.innerText = catName;
+          if (currentTab === 'admin' && selectedCategoryName === catName && selectedPartName === partName) {
+            catHeader.style.background = '#e0f2fe';
+          }
+          
+          catHeader.onclick = (e) => {
+            e.stopPropagation();
+            selectedPartName = partName;
+            if (currentTab === 'admin') {
+              selectedCategoryName = catName;
+              document.querySelectorAll('.category-header').forEach(el => el.style.background = '#fff');
+              catHeader.style.background = '#e0f2fe';
+              loadAdminCategoryTable(partName, catName);
+            } else {
+              document.querySelectorAll('.category-block').forEach(el => {
+                if (el !== catBlock) el.classList.remove('open');
+              });
+              catBlock.classList.toggle('open');
+            }
+          };
+          catBlock.appendChild(catHeader);
+
+          const catContent = document.createElement('div');
+          catContent.className = 'category-content';
+
+          categories[catName].forEach((kpi, index) => {
+            const kpiItem = document.createElement('div');
+            kpiItem.className = 'kpi-link-item';
+            if (selectedKpiId === kpi.id && currentTab === 'home') kpiItem.classList.add('selected');
+            
+            kpiItem.innerText = `${index + 1}. ${kpi.name}`;
+            
+            kpiItem.onclick = (e) => {
+              e.stopPropagation();
+              selectedPartName = partName;
+              
+              if (currentTab === 'home' || currentTab === 'progress') {
+                if (currentTab === 'progress') switchMenu('home'); 
+                selectedKpiId = kpi.id;
+                document.querySelectorAll('.kpi-link-item').forEach(el => el.classList.remove('selected'));
+                kpiItem.classList.add('selected');
+                loadSingleKpiDashboard(partName, kpi.id);
+              } else {
+                selectedCategoryName = catName;
+                loadAdminCategoryTable(partName, catName);
+              }
+            };
+            catContent.appendChild(kpiItem);
+          });
+
+          catBlock.appendChild(catContent);
+          content.appendChild(catBlock);
+        });
+
+        partDiv.appendChild(content);
+        container.appendChild(partDiv);
+      });
+    }
+
+    function loadSingleKpiDashboard(partName, id) {
+      const kpi = globalDatabase.find(k => k.id === id);
+      if(!kpi) {
+        document.getElementById('dashboard-content-area').innerHTML = '<div class="empty-state">ไม่พบข้อมูล หรืออาจถูกลบไปแล้ว</div>';
+        return;
+      }
+      renderDashboardContent(kpi);
+    }
+
+    function renderDashboardContent(kpi) {
+      const displayArea = document.getElementById('dashboard-content-area');
+      const currentYear = new Date().getFullYear() + 543;
+      const yearsLabels = [currentYear-4, currentYear-3, currentYear-2, currentYear-1, currentYear];
+      
+      // ส่งค่า target ที่เป็นอักษรเข้าฟังก์ชันวาดกราฟ
+      const chartSvg = generateSvgLineChart(kpi.years, kpi.target, yearsLabels);
+      const mSummary = calculateMonthlySummary(kpi.months);
+
+      const filtered = globalDatabase.filter(item => item.part === kpi.part && item.category === kpi.category);
+      const kpiIndex = filtered.findIndex(item => item.id === kpi.id) + 1;
+
+      let html = `
+        <div class="dashboard-title">${kpiIndex}. ${kpi.name}</div>
+        <div style="margin-bottom: 10px;">
+          <span class="meta-badge">หมวดหมู่: ${kpi.category}</span>
+          <span class="meta-badge">หมวดหลัก: ${kpi.part}</span>
+        </div>
+
+        <div class="kpi-target-callout">
+          🎯 ค่าเป้าหมายตามเกณฑ์มาตรฐาน: ${kpi.target}
+        </div>
+
+        <h4 style="margin: 12px 0 6px 0; font-size: 14px; color:#0f172a; text-align: left;">📈 แผนภูมิเส้นผลลัพธ์ 5 ปีงบประมาณย้อนหลังและปีปัจจุบัน</h4>
+        <div style="background:#fff; padding:10px; border:1px solid #cbd5e1; border-radius:8px; margin-bottom:12px; box-shadow: 0 4px 10px rgba(0,0,0,0.02);">
+          ${chartSvg}
+        </div>
+
+        <h4 style="margin: 15px 0 6px 0; font-size: 14px; color:#0f172a; text-align: left;">📊 ผลลัพธ์รายเดือน (ปีงบประมาณปัจจุบัน)</h4>
+        <div class="data-table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                ${thMonthsNames.map(m => `<th>${m}</th>`).join('')}
+                <th>ค่าเฉลี่ย</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                ${kpi.months.map(v => `<td>${v !== null ? v : '-'}</td>`).join('')}
+                <td style="font-weight:700; color:var(--primary-color); background:#f0f9ff;">${mSummary}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="info-card">
+          <div class="info-card-title">📝 รายละเอียดตัวชี้วัด</div>
+          <p style="font-size:13px; color:#475569; white-space: pre-line; font-weight:500;">${kpi.templateDetails || 'ไม่มีข้อมูลรายละเอียดเพิ่มเติม'}</p>
+        </div>
+        <div class="info-card">
+          <div class="info-card-title">🔗 ที่มาแหล่งข้อมูล / สูตรคำนวณ</div>
+          <p style="font-size:13px; color:#475569; white-space: pre-line; font-weight:500;">${kpi.dataSource || 'ไม่ระบุที่มาข้อมูล'}</p>
+        </div>
+        <div class="info-card" style="border-left: 5px solid var(--primary-color);">
+          <div class="info-card-title">👤 ผู้รับผิดชอบดูแล</div>
+          <p style="font-size:13px; font-weight:700; color:#1e293b;">${kpi.owner || '-'} (${kpi.department || '-'})</p>
+        </div>
+      `;
+      displayArea.innerHTML = html;
+    }
+
+    function calculateMonthlySummary(mArray) {
+      const validValues = mArray.filter(v => v !== null);
+      if (validValues.length === 0) return '-';
+      return (validValues.reduce((a, b) => a + b, 0) / validValues.length).toFixed(2);
+    }
+
+    // ฟังก์ชันวาดกราฟที่ฉลาดขึ้น สกัดตัวเลขได้เอง
+    function generateSvgLineChart(dataPoints, targetStr, labels) {
+      const width = 600, height = 220, padding = 35; 
+      
+      // สกัดตัวเลขออกมาจากช่องเป้าหมาย (รองรับทศนิยมและค่าติดลบ)
+      let targetVal = 0;
+      const targetMatch = String(targetStr).match(/-?\d+(\.\d+)?/);
+      if (targetMatch) {
+        targetVal = parseFloat(targetMatch[0]);
+      }
+
+      const allVals = [...dataPoints.filter(v => v !== null), targetVal];
+      let maxVal = Math.max(...allVals, 10);
+      let minVal = Math.min(...allVals, 0);
+      maxVal = maxVal + (maxVal * 0.15); 
+      
+      let diff = maxVal - minVal;
+      if (diff === 0) diff = 1;
+      
+      const calcY = (val) => val === null ? height - padding : height - padding - ((val - minVal) / diff * (height - padding * 2));
+      const calcX = (index) => padding + (index * (width - padding * 2) / (labels.length - 1));
+
+      const targetY = calcY(targetVal);
+      let svg = `<svg viewBox="0 0 ${width} ${height}" width="100%" height="auto">`;
+      
+      for (let i = 0; i <= 4; i++) {
+        const gridVal = minVal + (i * (maxVal - minVal) / 4);
+        const gridY = calcY(gridVal);
+        svg += `<line x1="${padding}" y1="${gridY}" x2="${width-padding}" y2="${gridY}" stroke="#e2e8f0" stroke-width="1"/>`;
+        svg += `<text x="${padding-6}" y="${gridY+4}" font-size="11" text-anchor="end" fill="#64748b" font-weight="600">${gridVal.toFixed(0)}</text>`;
+      }
+
+      svg += `<line x1="${padding}" y1="${targetY}" x2="${width-padding}" y2="${targetY}" stroke="#ea580c" stroke-width="2.5" stroke-dasharray="5,5"/>`;
+      // แสดงป้ายชื่อโดยใช้ String 原ฉบับที่มีเครื่องหมายครบถ้วน
+      svg += `<text x="${width-padding+5}" y="${targetY+4}" font-size="11" fill="#ea580c" font-weight="bold">Target (${targetStr})</text>`;
+
+      let polylinePoints = [];
+      let dotsSvg = '';
+      
+      dataPoints.forEach((val, idx) => {
+        const x = calcX(idx);
+        svg += `<text x="${x}" y="${height-8}" font-size="11" font-weight="700" text-anchor="middle" fill="#334155">${labels[idx]}</text>`;
+        
+        if (val !== null) {
+          const y = calcY(val);
+          polylinePoints.push(`${x},${y}`);
+          dotsSvg += `<circle cx="${x}" cy="${y}" r="5" fill="#0369a1" stroke="#fff" stroke-width="2"/>`;
+          dotsSvg += `<text x="${x}" y="${y-10}" font-size="11" font-weight="bold" text-anchor="middle" fill="#015c8b">${val}</text>`;
+        }
+      });
+
+      if (polylinePoints.length > 1) {
+        svg += `<polyline points="${polylinePoints.join(' ')}" fill="none" stroke="#015c8b" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>`;
+      }
+      svg += dotsSvg + `</svg>`;
+      return svg;
+    }
+
+    function loadProgressSummary() {
+      const currentMonthJs = new Date().getMonth(); 
+      const fiscalMonthIdx = (currentMonthJs + 3) % 12; 
+      
+      let summary = [];
+      globalDatabase.forEach(kpi => {
+        let noDetails = (!kpi.templateDetails || !kpi.dataSource);
+        let currentMonthVal = kpi.months[fiscalMonthIdx];
+        let noData = (currentMonthVal === null);
+
+        let status = 'green';
+        let statusText = 'ข้อมูลครบถ้วน';
+        
+        if (noData) {
+          status = 'red';
+          statusText = 'ยังไม่เติมข้อมูลล่าสุด';
+        } else if (noDetails) {
+          status = 'yellow';
+          statusText = 'ยังไม่ลงรายละเอียด';
+        }
+        
+        summary.push({
+          id: kpi.id,
+          part: kpi.part,
+          category: kpi.category,
+          name: kpi.name,
+          owner: kpi.owner,
+          department: kpi.department,
+          status: status,
+          statusText: statusText
+        });
+      });
+
+      const order = { 'red': 1, 'yellow': 2, 'green': 3 };
+      summary.sort((a, b) => order[a.status] - order[b.status]);
+      
+      globalProgressData = summary;
+      renderProgressTable(summary);
+    }
+
+    function renderProgressTable(data) {
+      const displayArea = document.getElementById('progress-content-area');
+      if (data.length === 0) {
+        displayArea.innerHTML = '<div class="empty-state">ไม่พบข้อมูลตัวชี้วัดในระบบ</div>';
+        return;
+      }
+      
+      let html = `
+        <div class="data-table-wrapper" style="box-shadow: 0 4px 10px rgba(0,0,0,0.12);">
+          <table>
+            <thead>
+              <tr>
+                <th style="width:130px;">สถานะงาน</th>
+                <th style="min-width:200px; text-align:left;">ชื่อตัวชี้วัด</th>
+                <th style="width:120px;">หมวดหมู่</th>
+                <th style="width:100px;">ผู้รับผิดชอบ</th>
+                <th style="width:120px;">หน่วยงาน</th>
+                <th style="width:70px;">แก้ไข</th>
+              </tr>
+            </thead>
+            <tbody>
+      `;
+      
+      data.forEach(item => {
+        let dotColor = item.status === 'red' ? '#ef4444' : (item.status === 'yellow' ? '#f59e0b' : '#10b981');
+        let badgeBg = item.status === 'red' ? '#fee2e2' : (item.status === 'yellow' ? '#fef3c7' : '#d1fae5');
+        let badgeColor = item.status === 'red' ? '#b91c1c' : (item.status === 'yellow' ? '#b45309' : '#047857');
+        
+        html += `
+          <tr style="cursor:pointer;" onclick="editKpiFromProgress('${item.part}', '${item.category}')" title="คลิกเพื่อกระโดดไปหน้าจัดการหมวดนี้">
+            <td>
+              <span style="background:${badgeBg}; color:${badgeColor}; padding:4px 8px; border-radius:12px; font-size:12px; font-weight:700; display:inline-block; white-space:nowrap;">
+                <span style="display:inline-block; width:8px; height:8px; background:${dotColor}; border-radius:50%; margin-right:4px;"></span>${item.statusText}
+              </span>
+            </td>
+            <td style="text-align:left; font-weight:600; color:#0f172a;">${item.name}</td>
+            <td>${item.category}</td>
+            <td>${item.owner || '-'}</td>
+            <td>${item.department || '-'}</td>
+            <td style="text-align:center;">
+               <button class="btn btn-secondary" style="padding: 4px 8px; font-size:11px;">✏️ แก้ไข</button>
+            </td>
+          </tr>
+        `;
+      });
+      html += `</tbody></table></div>`;
+      displayArea.innerHTML = html;
+    }
+
+    function filterProgressTable() {
+      const term = document.getElementById('progress-filter').value.toLowerCase();
+      const filtered = globalProgressData.filter(item => 
+        (item.owner || '').toLowerCase().includes(term) || 
+        (item.department || '').toLowerCase().includes(term) ||
+        (item.name || '').toLowerCase().includes(term)
+      );
+      renderProgressTable(filtered);
+    }
+
+    function editKpiFromProgress(part, category) {
+      if (currentUserRole === 'viewer') {
+        pendingAdminRoute = { part: part, category: category };
+        document.getElementById('modal-elevate-auth').style.display = 'flex';
+        document.getElementById('elevate-username').value = '';
+        document.getElementById('elevate-password').value = '';
+      } else {
+        routeToAdminCategory(part, category);
+      }
+    }
+
+    function routeToAdminCategory(part, category) {
+      selectedPartName = part;
+      selectedCategoryName = category;
+      currentTab = 'admin';
+      
+      document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.page-view').forEach(el => el.classList.remove('active'));
+      document.getElementById('menu-admin-btn').classList.add('active');
+      document.getElementById('page-admin').classList.add('active');
+      
+      renderAccordionTree();
+      loadAdminCategoryTable(part, category);
+    }
+
+    function loadAdminCategoryTable(partName, catName) {
+      const kpis = globalDatabase.filter(item => item.part === partName && item.category === catName);
+      currentAdminKpis = kpis; 
+      renderAdminCategoryTable(partName, catName, kpis);
+    }
+
+    function renderAdminCategoryTable(partName, catName, kpis) {
+      const displayArea = document.getElementById('admin-content-area');
+
+      let html = `
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+          <div class="dashboard-title" style="margin:0; border:none; font-size:16px;">ตารางแก้ไขหมวด: ${catName}</div>
+          <div style="display:flex; gap:6px;">
+            <button class="btn btn-accent" style="background:var(--secondary-gradient);" onclick="exportCurrentCategoryToPdf('${partName}', '${catName}')">📄 PDF (แนวนอน)</button>
+            <button class="btn btn-primary" onclick="saveBulkAdminChanges('${partName}', '${catName}')">💾 บันทึกตารางตัวเลข (Save Data)</button>
+          </div>
+        </div>
+
+        <div class="data-table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th class="sticky-col-1" style="width:45px; text-align:center;">ลำดับ</th>
+                <th class="sticky-col-2" style="min-width:400px; text-align:left;">ชื่อตัวชี้วัด</th>
+                <th class="col-target" style="width:65px;">เป้าหมาย</th>
+                <th style="width:52px;">ปี1</th><th style="width:52px;">ปี2</th><th style="width:52px;">ปี3</th><th style="width:52px;">ปี4</th><th style="width:52px;">ปีปัจจุบัน</th>
+                ${thMonthsNames.map(m => `<th style="background:#fffbeb; min-width:52px;">${m}</th>`).join('')}
+                <th style="text-align:center; min-width:140px;">จัดการ</th>
+              </tr>
+            </thead>
+            <tbody>
+      `;
+
+      if (kpis.length === 0) {
+        html += `<tr><td colspan="21" class="empty-state">ไม่พบตัวชี้วัดย่อยในหมวดนี้</td></tr>`;
+      } else {
+        kpis.forEach((kpi, idx) => {
+          html += `
+            <tr class="admin-data-row" data-id="${kpi.id}">
+              <td class="sticky-col-1" style="font-weight:700; color:#0f172a; text-align:center;">${idx + 1}</td>
+              <td class="sticky-col-2" style="padding: 0;">
+                <textarea class="editable-input kpi-field-name" style="font-weight:700; text-align:left; min-width:400px; min-height:60px; resize:vertical; padding:8px;">${kpi.name}</textarea>
+              </td>
+              <!-- เปลี่ยนคอลัมน์เป้าหมายหน้า Admin เป็นแบบข้อความ (text) -->
+              <td class="col-target" style="padding: 0;"><input type="text" class="editable-input kpi-field-target" value="${kpi.target}" style="width:65px; text-align:center; padding:6px 2px;"></td>
+              
+              <td style="padding: 0;"><input type="number" class="editable-input kpi-field-y0" value="${kpi.years[0] !== null ? kpi.years[0] : ''}" style="width:52px; text-align:center; padding:6px 2px;"></td>
+              <td style="padding: 0;"><input type="number" class="editable-input kpi-field-y1" value="${kpi.years[1] !== null ? kpi.years[1] : ''}" style="width:52px; text-align:center; padding:6px 2px;"></td>
+              <td style="padding: 0;"><input type="number" class="editable-input kpi-field-y2" value="${kpi.years[2] !== null ? kpi.years[2] : ''}" style="width:52px; text-align:center; padding:6px 2px;"></td>
+              <td style="padding: 0;"><input type="number" class="editable-input kpi-field-y3" value="${kpi.years[3] !== null ? kpi.years[3] : ''}" style="width:52px; text-align:center; padding:6px 2px;"></td>
+              <td style="padding: 0;"><input type="number" class="editable-input kpi-field-y4" value="${kpi.years[4] !== null ? kpi.years[4] : ''}" style="width:52px; text-align:center; padding:6px 2px;"></td>
+              
+              ${kpi.months.map((mv, mi) => `
+                <td style="padding: 0; background:#f8fafc;"><input type="number" class="editable-input kpi-field-m${mi}" value="${mv !== null ? mv : ''}" style="width:52px; text-align:center; padding:6px 2px;"></td>
+              `).join('')}
+
+              <td style="text-align:center; white-space:nowrap;">
+                <button class="btn btn-secondary" style="padding: 5px 8px; font-size:12px; margin-right:4px;" onclick="openDetailsModal('${partName}', '${kpi.id}')">รายละเอียด</button>
+                <button class="btn btn-danger" style="padding: 5px 8px; font-size:12px;" onclick="requestDeleteKpi('${partName}', '${kpi.id}', '${kpi.name}')">ลบ</button>
+              </td>
+            </tr>
+          `;
+        });
+      }
+      html += `</tbody></table></div>`;
+      displayArea.innerHTML = html;
+    }
+
+    function openDetailsModal(partName, id) {
+      const kpi = currentAdminKpis.find(k => k.id === id);
+      if(!kpi) return;
+      
+      document.getElementById('edit-detail-id').value = id;
+      document.getElementById('edit-detail-part').value = partName;
+      document.getElementById('edit-detail-template').value = kpi.templateDetails || '';
+      document.getElementById('edit-detail-source').value = kpi.dataSource || '';
+      document.getElementById('edit-detail-owner').value = kpi.owner || '';
+      document.getElementById('edit-detail-dept').value = kpi.department || '';
+      
+      document.getElementById('modal-details-edit').style.display = 'flex';
+    }
+
+    function saveDetailsChanges() {
+      const id = document.getElementById('edit-detail-id').value;
+      const partName = document.getElementById('edit-detail-part').value;
+      const details = {
+        templateDetails: document.getElementById('edit-detail-template').value,
+        dataSource: document.getElementById('edit-detail-source').value,
+        owner: document.getElementById('edit-detail-owner').value,
+        department: document.getElementById('edit-detail-dept').value
+      };
+      
+      document.getElementById('modal-details-edit').style.display = 'none';
+      showAlert("กำลังบันทึก...", "⏳", "ระบบกำลังประมวลผลการบันทึกรายละเอียด");
+      
+      google.script.run
+        .withSuccessHandler((res) => {
+          document.getElementById('modal-alert').style.display = 'none';
+          if(res.success) {
+            showAlert("บันทึกสำเร็จ", "✅", res.message);
+            fetchAllDataFromServer(true); 
+          } else {
+            showAlert("ข้อผิดพลาด", "❌", res.message);
+          }
+        })
+        .withFailureHandler((err) => showAlert("ข้อผิดพลาด", "❌", err.toString()))
+        .updateKpiDetails(partName, id, details);
+    }
+
+    function exportCurrentCategoryToPdf(partName, catName) {
+      showAlert("กำลังสร้างไฟล์รายงาน PDF", "⏳", "กรุณารอสักครู่ ระบบกำลังจัดตารางในแนวนอน (Landscape)...");
+      
+      google.script.run
+        .withSuccessHandler((res) => {
+          document.getElementById('modal-alert').style.display = 'none'; 
+          if (res.success) {
+            const link = document.createElement('a');
+            link.href = 'data:application/pdf;base64,' + res.base64;
+            link.download = res.filename;
+            link.click();
+          } else {
+            showAlert("ส่งออกไฟล์ล้มเหลว", "❌", res.message);
+          }
+        })
+        .withFailureHandler((err) => {
+          showAlert("เกิดข้อผิดพลาดขัดข้อง", "❌", err.toString());
+        })
+        .exportCategoryToPdf(partName, catName);
+    }
+
+    function saveBulkAdminChanges(partName, catName) {
+      showConfirm("คุณต้องการบันทึกการแก้ไขตัวเลขผลลัพธ์รายเดือนและข้อมูลทั้งหมดใช่หรือไม่?", () => {
+        const rows = document.querySelectorAll('.admin-data-row');
+        const updatedPayload = [];
+
+        rows.forEach((row, idx) => {
+          const id = row.getAttribute('data-id');
+          const parseVal = (inputEl) => inputEl && inputEl.value === "" ? null : Number(inputEl.value);
+
+          const monthsData = [];
+          for(let i=0; i<12; i++) {
+            monthsData.push(parseVal(row.querySelector(`.kpi-field-m${i}`)));
+          }
+
+          updatedPayload.push({
+            id: id, 
+            no: idx + 1,
+            part: partName, 
+            category: catName,
+            name: row.querySelector('.kpi-field-name').value,
+            // ส่ง target กลับไปเป็นข้อความดิบๆ แทนการบีบให้เป็น Number()
+            target: row.querySelector('.kpi-field-target').value.trim(),
+            years: [
+              parseVal(row.querySelector('.kpi-field-y0')), parseVal(row.querySelector('.kpi-field-y1')),
+              parseVal(row.querySelector('.kpi-field-y2')), parseVal(row.querySelector('.kpi-field-y3')), parseVal(row.querySelector('.kpi-field-y4'))
+            ],
+            months: monthsData
+          });
+        });
+
+        google.script.run
+          .withSuccessHandler((res) => {
+            if (res.success) { 
+              showAlert("บันทึกสำเร็จ", "✅", res.message); 
+              fetchAllDataFromServer(true); 
+            } else { 
+              showAlert("ข้อผิดพลาด", "❌", res.message); 
+            }
+          })
+          .withFailureHandler((err) => showAlert("เกิดข้อผิดพลาดในการบันทึก", "❌", err.toString()))
+          .updateIndicatorsBulk(partName, updatedPayload);
+      });
+    }
+
+    function openAddKpiModal() {
+      document.getElementById('modal-add-kpi').style.display = 'flex';
+      if (selectedPartName) document.getElementById('add-kpi-part').value = selectedPartName;
+      if (selectedCategoryName) document.getElementById('add-kpi-category').value = selectedCategoryName;
+      document.getElementById('add-kpi-name').value = '';
+      document.getElementById('add-kpi-target').value = '';
+    }
+
+    function submitAddKpi() {
+      const part = document.getElementById('add-kpi-part').value.trim();
+      const cat = document.getElementById('add-kpi-category').value.trim();
+      const name = document.getElementById('add-kpi-name').value.trim();
+      // ไม่ใช้ Number() เพื่อรองรับข้อความ
+      const target = document.getElementById('add-kpi-target').value.trim();
+      
+      if (!part || !cat || !name) {
+        showAlert("ข้อมูลไม่ครบ", "⚠️", "กรุณาระบุ หมวดหลัก หมวดหมู่ย่อย และ ชื่อตัวชี้วัด");
+        return;
+      }
+
+      const newItem = {
+        part: part, category: cat, name: name, target: target,
+        years: [null, null, null, null, null], 
+        months: [null, null, null, null, null, null, null, null, null, null, null, null],
+        templateDetails: document.getElementById('add-kpi-source').value,
+        dataSource: document.getElementById('add-kpi-source').value,
+        owner: document.getElementById('add-kpi-owner').value,
+        department: document.getElementById('add-kpi-dept').value
+      };
+
+      document.getElementById('modal-add-kpi').style.display = 'none';
+      
+      google.script.run
+        .withSuccessHandler((res) => {
+          if (res.success) {
+            showAlert("เพิ่มสำเร็จ", "✅", "ตัวชี้วัดถูกเพิ่มเข้าระบบแล้ว");
+            selectedPartName = part; selectedCategoryName = cat;
+            fetchAllDataFromServer(true); 
+          } else { showAlert("ข้อผิดพลาด", "❌", res.message); }
+        })
+        .withFailureHandler((err) => showAlert("เกิดข้อผิดพลาด", "❌", err.toString()))
+        .addIndicator(newItem);
+    }
+
+    function requestDeleteKpi(partName, id, name) {
+      showConfirm(`ยืนยันการลบตัวชี้วัด:\n"${name}"\nออกจากฐานข้อมูล ${partName} ถาวร?`, () => {
+        google.script.run
+          .withSuccessHandler((res) => {
+            if (res.success) { 
+              showAlert("ลบสำเร็จ", "🗑️", "ลบข้อมูลเรียบร้อยแล้ว"); 
+              fetchAllDataFromServer(true); 
+            } else { showAlert("ข้อผิดพลาด", "❌", res.message); }
+          })
+          .withFailureHandler((err) => showAlert("เกิดข้อผิดพลาดในการลบข้อมูล", "❌", err.toString()))
+          .deleteIndicator(partName, id);
+      });
+    }
+
+    function showAlert(title, icon, message) {
+      document.getElementById('alert-title').innerText = title;
+      document.getElementById('alert-icon').innerText = icon;
+      document.getElementById('alert-message').innerText = message;
+      document.getElementById('modal-alert').style.display = 'flex';
+    }
+
+    function showConfirm(msg, callback) {
+      document.getElementById('confirm-message').innerText = msg;
+      onConfirmCallback = callback;
+      document.getElementById('modal-confirm').style.display = 'flex';
+    }
+
+    function closeConfirm(isConfirmed) {
+      document.getElementById('modal-confirm').style.display = 'none';
+      if (isConfirmed && onConfirmCallback) onConfirmCallback();
+      onConfirmCallback = null;
+    }
+  </script>
+</body>
+</html>

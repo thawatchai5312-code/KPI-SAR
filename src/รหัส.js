@@ -1,0 +1,626 @@
+/**
+ * ระบบจัดการตัวชี้วัดโรงพยาบาล (Hospital KPI Management System)
+ * โค้ดฝั่ง Server-side (Code.gs) - เวอร์ชัน Single Database & รองรับเครื่องหมายในเป้าหมาย
+ */
+
+// อัปเดตลิงก์ฐานข้อมูลเป็นไฟล์ใหม่
+const SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/12UKdv0Y8fum7aXh2Uk05ZtcxM7SMatA_CusuC3j51gQ/edit?gid=404868087#gid=404868087";
+const DATABASE_SHEET_NAME = "Database";
+const USERS_SHEET_NAME = "Users";
+
+// ระบบต้นทาง: ระบบจัดการตัวชี้วัดคุณภาพการพยาบาล (ฝ่ายการพยาบาลเป็นต้นทางหลัก ดึงข้อมูลเข้ามาไว้ที่นี่)
+const NURSING_SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/1LmpMCQ-ijN_JTsXlokiQ4YtdwpiefXVMIMnMKmkQLfY/edit?gid=2041776270#gid=2041776270";
+const NURSING_DATABASE_SHEET_NAME = "Database";
+const NURSING_SYNC_ID_PREFIX = "NURSE-";
+const NURSING_SYNC_FUNCTION_NAME = "syncFromNursingSystem";
+
+function doGet() {
+  return HtmlService.createTemplateFromFile('Index')
+      .evaluate()
+      .setTitle('ระบบจัดการตัวชี้วัดโรงพยาบาล')
+      .addMetaTag('viewport', 'width=device-width, initial-scale=1')
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+}
+
+function setupDatabaseSheet() {
+  var ss = SpreadsheetApp.openByUrl(SPREADSHEET_URL);
+  var sheet = ss.getSheetByName(DATABASE_SHEET_NAME);
+  
+  if (!sheet) {
+    sheet = ss.insertSheet(DATABASE_SHEET_NAME);
+    var headers = [
+      "รหัสตัวชี้วัด (ID)", "ลำดับ (No)", "หมวดหลัก (Part)", "หมวดหมู่ย่อย (Category)", 
+      "ชื่อตัวชี้วัด (Name)", "ค่าเป้าหมาย (Target)",
+      "ปี -4", "ปี -3", "ปี -2", "ปี -1", "ปีปัจจุบัน",
+      "ต.ค.", "พ.ย.", "ธ.ค.", "ม.ค.", "ก.พ.", "มี.ค.", 
+      "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.",
+      "รายละเอียดตัวชี้วัด (Details)", "แหล่งข้อมูล (Data Source)", 
+      "ผู้รับผิดชอบ (Owner)", "หน่วยงาน (Department)"
+    ];
+    
+    var headerRange = sheet.getRange(1, 1, 1, headers.length);
+    headerRange.setValues([headers]);
+    headerRange.setFontWeight("bold").setBackground("#e0f2fe").setHorizontalAlignment("center");
+    sheet.setFrozenRows(1);
+    sheet.setColumnWidth(5, 300);
+    sheet.setColumnWidth(24, 250);
+  }
+}
+
+function cleanValue(val) {
+  if (val === "" || val === undefined || val === null) return null;
+  var str = val.toString().trim().toUpperCase();
+  if (str === "NA" || str === "N/A" || str === "-" || isNaN(val)) {
+    return null;
+  }
+  return Number(val);
+}
+
+function getAllData() {
+  try {
+    var ss = SpreadsheetApp.openByUrl(SPREADSHEET_URL);
+    var sheet = ss.getSheetByName(DATABASE_SHEET_NAME);
+    if (!sheet) {
+      return { success: true, data: [] }; 
+    }
+    
+    var data = sheet.getDataRange().getValues();
+    var allData = [];
+    if (data.length <= 1) return { success: true, data: [] };
+    
+    for (var i = 1; i < data.length; i++) {
+      var row = data[i];
+      if (row[0]) {
+        allData.push({
+          id: row[0].toString().trim(),
+          no: row[1] ? row[1].toString().trim() : "",
+          part: row[2] ? row[2].toString().trim() : "ทั่วไป",
+          category: row[3] ? row[3].toString().trim() : "ทั่วไป",
+          name: row[4] ? row[4].toString().trim() : "",
+          // ดึงค่าเป้าหมายเป็นข้อความ (String) เพื่อเก็บเครื่องหมายต่างๆ ไว้
+          target: row[5] ? row[5].toString().trim() : "",
+          years: [
+            cleanValue(row[6]), cleanValue(row[7]), cleanValue(row[8]), cleanValue(row[9]), cleanValue(row[10])
+          ],
+          months: [
+            cleanValue(row[11]), cleanValue(row[12]), cleanValue(row[13]), cleanValue(row[14]),
+            cleanValue(row[15]), cleanValue(row[16]), cleanValue(row[17]), cleanValue(row[18]),
+            cleanValue(row[19]), cleanValue(row[20]), cleanValue(row[21]), cleanValue(row[22])
+          ],
+          templateDetails: row[23] ? row[23].toString().trim() : "",
+          dataSource: row[24] ? row[24].toString().trim() : "",
+          owner: row[25] ? row[25].toString().trim() : "",
+          department: row[26] ? row[26].toString().trim() : ""
+        });
+      }
+    }
+    return { success: true, data: allData };
+  } catch(e) {
+    return { success: false, message: e.toString() };
+  }
+}
+
+function getCategoryKpis(partName, categoryName) {
+  try {
+    var ss = SpreadsheetApp.openByUrl(SPREADSHEET_URL);
+    var sheet = ss.getSheetByName(DATABASE_SHEET_NAME);
+    if (!sheet) return [];
+    var data = sheet.getDataRange().getValues();
+    var kpis = [];
+    var targetPart = partName.toString().trim();
+    var targetCategory = categoryName.toString().trim();
+    
+    for (var i = 1; i < data.length; i++) {
+      var row = data[i];
+      if (row[0] && row[2] && row[3] && row[2].toString().trim() === targetPart && row[3].toString().trim() === targetCategory) {
+        kpis.push({
+          id: row[0].toString().trim(),
+          no: row[1] ? row[1].toString().trim() : "",
+          part: targetPart,
+          category: targetCategory,
+          name: row[4] ? row[4].toString().trim() : "",
+          target: row[5] ? row[5].toString().trim() : "",
+          years: [cleanValue(row[6]), cleanValue(row[7]), cleanValue(row[8]), cleanValue(row[9]), cleanValue(row[10])],
+          months: [
+            cleanValue(row[11]), cleanValue(row[12]), cleanValue(row[13]), cleanValue(row[14]),
+            cleanValue(row[15]), cleanValue(row[16]), cleanValue(row[17]), cleanValue(row[18]),
+            cleanValue(row[19]), cleanValue(row[20]), cleanValue(row[21]), cleanValue(row[22])
+          ]
+        });
+      }
+    }
+    return kpis;
+  } catch(e) { return []; }
+}
+
+function updateKpiDetails(partName, id, details) {
+  try {
+    var ss = SpreadsheetApp.openByUrl(SPREADSHEET_URL);
+    var sheet = ss.getSheetByName(DATABASE_SHEET_NAME);
+    if (!sheet) return { success: false, message: "ไม่พบชีตฐานข้อมูล" };
+    
+    var data = sheet.getDataRange().getValues();
+    var targetId = id.toString().trim();
+    
+    for (var i = 1; i < data.length; i++) {
+      if (data[i][0] && data[i][0].toString().trim() === targetId) {
+        var actualRow = i + 1;
+        sheet.getRange(actualRow, 24).setValue(details.templateDetails || ""); 
+        sheet.getRange(actualRow, 25).setValue(details.dataSource || ""); 
+        sheet.getRange(actualRow, 26).setValue(details.owner || ""); 
+        sheet.getRange(actualRow, 27).setValue(details.department || ""); 
+        return { success: true, message: "บันทึกข้อมูลรายละเอียดสำเร็จ" };
+      }
+    }
+    return { success: false, message: "ไม่พบรหัสตัวชี้วัดในระบบ" };
+  } catch (error) {
+    return { success: false, message: "เกิดข้อผิดพลาด: " + error.toString() };
+  }
+}
+
+function updateIndicatorsBulk(partName, updatedItems) {
+  try {
+    var ss = SpreadsheetApp.openByUrl(SPREADSHEET_URL);
+    var sheet = ss.getSheetByName(DATABASE_SHEET_NAME);
+    if (!sheet) return { success: false, message: "ไม่พบชีตฐานข้อมูล" };
+    
+    var data = sheet.getDataRange().getValues();
+    var ids = data.map(function(r) { return r[0] ? r[0].toString().trim() : ""; });
+    
+    updatedItems.forEach(function(item) {
+      var rowIndex = ids.indexOf(item.id.toString().trim());
+      if (rowIndex !== -1) {
+        var actualRow = rowIndex + 1;
+        sheet.getRange(actualRow, 2).setValue(item.no);
+        sheet.getRange(actualRow, 5).setValue(item.name);
+        sheet.getRange(actualRow, 6).setValue(item.target);
+        for (var i = 0; i < 5; i++) sheet.getRange(actualRow, 7 + i).setValue(item.years[i]);
+        for (var j = 0; j < 12; j++) sheet.getRange(actualRow, 12 + j).setValue(item.months[j]);
+      }
+    });
+    return { success: true, message: "บันทึกข้อมูลปรับปรุงเรียบร้อยแล้ว" };
+  } catch (error) {
+    return { success: false, message: "เกิดข้อผิดพลาด: " + error.toString() };
+  }
+}
+
+function addIndicator(newItem) {
+  try {
+    setupDatabaseSheet(); 
+    
+    var ss = SpreadsheetApp.openByUrl(SPREADSHEET_URL);
+    var sheet = ss.getSheetByName(DATABASE_SHEET_NAME);
+    var data = sheet.getDataRange().getValues();
+    
+    var count = data.filter(function(r) { 
+      return r[2] && r[2].toString().trim() === newItem.part.trim() && 
+             r[3] && r[3].toString().trim() === newItem.category.trim(); 
+    }).length;
+    var autoNo = count + 1;
+    
+    var newId = "KPI-" + new Date().getTime();
+    var newRow = [
+      newId, autoNo, newItem.part, newItem.category, newItem.name, newItem.target,
+      newItem.years[0], newItem.years[1], newItem.years[2], newItem.years[3], newItem.years[4],
+      newItem.months[0], newItem.months[1], newItem.months[2], newItem.months[3],
+      newItem.months[4], newItem.months[5], newItem.months[6], newItem.months[7],
+      newItem.months[8], newItem.months[9], newItem.months[10], newItem.months[11],
+      newItem.templateDetails || "", newItem.dataSource || "", newItem.owner || "", newItem.department || ""
+    ];
+    sheet.appendRow(newRow);
+    return { success: true, message: "เพิ่มตัวชี้วัดเรียบร้อยแล้ว", newId: newId };
+  } catch (error) {
+    return { success: false, message: "เกิดข้อผิดพลาด: " + error.toString() };
+  }
+}
+
+function deleteIndicator(partName, id) {
+  try {
+    var ss = SpreadsheetApp.openByUrl(SPREADSHEET_URL);
+    var sheet = ss.getSheetByName(DATABASE_SHEET_NAME);
+    if (!sheet) return { success: false, message: "ไม่พบชีตฐานข้อมูล" };
+    
+    var data = sheet.getDataRange().getValues();
+    var ids = data.map(function(r) { return r[0] ? r[0].toString().trim() : ""; });
+    var rowIndex = ids.indexOf(id.toString().trim());
+    
+    if (rowIndex !== -1) {
+      sheet.deleteRow(rowIndex + 1);
+      return { success: true, message: "ลบตัวชี้วัดเรียบร้อยแล้ว" };
+    } else {
+      return { success: false, message: "ไม่พบรหัสตัวชี้วัดที่ต้องการลบ" };
+    }
+  } catch (error) {
+    return { success: false, message: "เกิดข้อผิดพลาด: " + error.toString() };
+  }
+}
+
+function exportCategoryToPdf(partName, categoryName) {
+  try {
+    var kpis = getCategoryKpis(partName, categoryName);
+    var currentYear = new Date().getFullYear() + 543;
+    var yLabels = [currentYear-4, currentYear-3, currentYear-2, currentYear-1, currentYear];
+    
+    var html = '<html><head><meta charset="utf-8"><style>' +
+               '@page { size: A4 landscape; margin: 10mm; }' +
+               'body { font-family: "sans-serif"; margin: 0; color: #1e293b; }' +
+               '.title { text-align: center; font-size: 18px; font-weight: bold; color: #0284c7; margin-bottom: 5px; }' +
+               '.subtitle { text-align: center; font-size: 13px; color: #64748b; margin-bottom: 20px; }' +
+               'table { width: 100%; border-collapse: collapse; font-size: 10px; margin-top: 10px; }' +
+               'th, td { border: 1px solid #cbd5e1; padding: 6px 4px; text-align: center; }' +
+               'th { background-color: #e0f2fe; font-weight: bold; color: #0f172a; }' +
+               '.col-target { background-color: #dcfce7 !important; }' + 
+               'td.left-align { text-align: left; font-weight: bold; }' +
+               '</style></head><body>' +
+               '<div class="title">รายงานสรุปผลการดำเนินงานระบบตัวชี้วัดคุณภาพ</div>' +
+               '<div class="subtitle">หมวดหมู่: ' + categoryName + ' (' + partName + ')</div>' +
+               '<table><thead><tr>' +
+               '<th rowspan="2" style="width:30px;">ลำดับ</th><th rowspan="2">ชื่อตัวชี้วัด</th><th rowspan="2" class="col-target" style="width:60px;">เป้าหมาย</th>' +
+               '<th colspan="5">ผลงานย้อนหลัง 5 ปี</th><th colspan="12">ผลงานรายเดือน ปีปัจจุบัน (ต.ค. - ก.ย.)</th>' +
+               '</tr><tr>' +
+               '<th>' + yLabels[0] + '</th><th>' + yLabels[1] + '</th><th>' + yLabels[2] + '</th><th>' + yLabels[3] + '</th><th>' + yLabels[4] + '</th>' +
+               '<th>ต.ค.</th><th>พ.ย.</th><th>ธ.ค.</th><th>ม.ค.</th><th>ก.พ.</th><th>มี.ค.</th><th>เม.ย.</th><th>พ.ค.</th><th>มิ.ย.</th><th>ก.ค.</th><th>ส.ค.</th><th>ก.ย.</th>' +
+               '</tr></thead><tbody>';
+               
+    if (kpis.length === 0) {
+      html += '<tr><td colspan="20">ไม่พบข้อมูลตัวชี้วัดในหมวดนี้</td></tr>';
+    } else {
+      kpis.forEach(function(kpi, idx) {
+        html += '<tr>' +
+                '<td>' + (idx + 1) + '</td>' +
+                '<td class="left-align">' + kpi.name + '</td>' +
+                '<td class="col-target">' + kpi.target + '</td>';
+                
+        for (var i = 0; i < 5; i++) {
+          html += '<td>' + (kpi.years[i] !== null ? kpi.years[i] : '-') + '</td>';
+        }
+        for (var j = 0; j < 12; j++) {
+          html += '<td>' + (kpi.months[j] !== null ? kpi.months[j] : '-') + '</td>';
+        }
+        html += '</tr>';
+      });
+    }
+    
+    html += '</tbody></table></body></html>';
+    
+    var blob = HtmlService.createHtmlOutput(html).getAs('application/pdf');
+    var filename = "รายงานตัวชี้วัด_" + categoryName.replace(/\s+/g, '_') + ".pdf";
+    blob.setName(filename);
+    
+    return {
+      success: true,
+      base64: Utilities.base64Encode(blob.getBytes()),
+      filename: filename
+    };
+  } catch(e) {
+    return { success: false, message: e.toString() };
+  }
+}
+
+function setupUsersSheet() {
+  var ss = SpreadsheetApp.openByUrl(SPREADSHEET_URL);
+  var sheet = ss.getSheetByName(USERS_SHEET_NAME);
+  
+  if (!sheet) {
+    sheet = ss.insertSheet(USERS_SHEET_NAME);
+    var headers = ["Role", "Username", "Password"];
+    sheet.getRange(1, 1, 1, 3).setValues([headers]).setFontWeight("bold").setBackground("#e0f2fe");
+    
+    var initialData = [
+      ["viewer", "", "11038"],
+      ["admin", "Admin", "Admin11038"]
+    ];
+    sheet.getRange(2, 1, initialData.length, 3).setValues(initialData);
+  }
+}
+
+function authenticateUser(username, password) {
+  try {
+    setupUsersSheet();
+    var ss = SpreadsheetApp.openByUrl(SPREADSHEET_URL);
+    var sheet = ss.getSheetByName(USERS_SHEET_NAME);
+    var data = sheet.getDataRange().getValues();
+    
+    username = username ? username.toString().trim() : "";
+    password = password ? password.toString().trim() : "";
+    
+    if (username === "") {
+      // Check viewer pin
+      for (var i = 1; i < data.length; i++) {
+        if (data[i][0] === "viewer" && data[i][2].toString() === password) {
+          return { success: true, role: "viewer" };
+        }
+      }
+    } else {
+      // Check admin or officer
+      for (var i = 1; i < data.length; i++) {
+        if ((data[i][0] === "admin" || data[i][0] === "officer") && 
+            data[i][1].toString() === username && 
+            data[i][2].toString() === password) {
+          return { success: true, role: data[i][0] };
+        }
+      }
+    }
+    return { success: false, message: "ข้อมูลบัญชีหรือรหัสผ่านไม่ถูกต้อง" };
+  } catch(e) {
+    return { success: false, message: e.toString() };
+  }
+}
+
+function getSettingsData() {
+  try {
+    var ss = SpreadsheetApp.openByUrl(SPREADSHEET_URL);
+    var sheet = ss.getSheetByName(USERS_SHEET_NAME);
+    if (!sheet) return { success: false };
+    var data = sheet.getDataRange().getValues();
+    
+    var viewerPin = "";
+    var adminData = { username: "", password: "" };
+    var officers = [];
+    
+    for (var i = 1; i < data.length; i++) {
+      if (data[i][0] === "viewer") viewerPin = data[i][2];
+      else if (data[i][0] === "admin") adminData = { username: data[i][1], password: data[i][2] };
+      else if (data[i][0] === "officer") officers.push({ username: data[i][1], password: data[i][2] });
+    }
+    
+    return { success: true, viewerPin: viewerPin, admin: adminData, officers: officers };
+  } catch(e) {
+    return { success: false, message: e.toString() };
+  }
+}
+
+function saveSettingsData(settings) {
+  try {
+    var ss = SpreadsheetApp.openByUrl(SPREADSHEET_URL);
+    var sheet = ss.getSheetByName(USERS_SHEET_NAME);
+    if (!sheet) return { success: false, message: "ไม่พบชีต Users" };
+    
+    // Clear existing data except headers
+    var lastRow = sheet.getLastRow();
+    if (lastRow > 1) {
+      sheet.getRange(2, 1, lastRow - 1, 3).clearContent();
+    }
+    
+    var newData = [];
+    newData.push(["viewer", "", settings.viewerPin]);
+    newData.push(["admin", settings.admin.username, settings.admin.password]);
+    
+    settings.officers.forEach(function(officer) {
+      newData.push(["officer", officer.username, officer.password]);
+    });
+    
+    sheet.getRange(2, 1, newData.length, 3).setValues(newData);
+    return { success: true, message: "บันทึกการตั้งค่าเรียบร้อยแล้ว" };
+  } catch(e) {
+    return { success: false, message: e.toString() };
+  }
+}
+
+// คอลัมน์ที่ 28 ของชีต Database เก็บ "รหัสอ้างอิงจากระบบพยาบาล" ไว้จับคู่ว่าแถวนี้ผูกกับ
+// ตัวชี้วัดตัวไหนในระบบพยาบาล ถ้ายังไม่มีคอลัมน์นี้ (ชีตที่มีข้อมูลจริงอยู่ก่อนฟีเจอร์นี้) จะเพิ่มให้
+// โดยไม่กระทบข้อมูลคอลัมน์ 1-27 ที่มีอยู่แล้ว
+function ensureNursingLinkColumn() {
+  var ss = SpreadsheetApp.openByUrl(SPREADSHEET_URL);
+  var sheet = ss.getSheetByName(DATABASE_SHEET_NAME);
+  if (!sheet) return;
+  var header = sheet.getRange(1, 28).getValue();
+  if (!header) {
+    sheet.getRange(1, 28).setValue("รหัสอ้างอิงระบบพยาบาล (Nursing Source ID)")
+      .setFontWeight("bold").setBackground("#e0f2fe").setHorizontalAlignment("center");
+  }
+}
+
+function normalizeKpiName(name) {
+  if (!name) return "";
+  return name.toString().toLowerCase()
+    .replace(/[\s ]+/g, ' ')
+    .replace(/[.,\-_()%\/]+/g, '')
+    .trim();
+}
+
+// เปรียบเทียบข้อมูลจากฝ่ายการพยาบาลกับของ KPI PH เพื่อให้แอดมินตรวจสอบและจับคู่เอง
+// (ไม่เขียนข้อมูลใดๆ แค่คำนวณรายการที่ต้องให้แอดมินตัดสินใจ)
+function getNursingSyncPreview() {
+  try {
+    ensureNursingLinkColumn();
+    var sourceSs = SpreadsheetApp.openByUrl(NURSING_SPREADSHEET_URL);
+    var sourceSheet = sourceSs.getSheetByName(NURSING_DATABASE_SHEET_NAME);
+    if (!sourceSheet) return { success: false, message: "ไม่พบชีต Database ในระบบพยาบาล" };
+    var sourceData = sourceSheet.getDataRange().getValues();
+
+    var ss = SpreadsheetApp.openByUrl(SPREADSHEET_URL);
+    var sheet = ss.getSheetByName(DATABASE_SHEET_NAME);
+    var destData = sheet.getDataRange().getValues();
+
+    var linkedBySourceId = {};
+    var destNameNormalizedMap = {};
+    var linkedDestIndexes = {};
+
+    for (var d = 1; d < destData.length; d++) {
+      var link = destData[d][27] ? destData[d][27].toString().trim() : "";
+      if (link) {
+        linkedBySourceId[link] = d;
+        linkedDestIndexes[d] = true;
+      }
+      var normName = normalizeKpiName(destData[d][4]);
+      if (!destNameNormalizedMap[normName]) destNameNormalizedMap[normName] = [];
+      destNameNormalizedMap[normName].push(d);
+    }
+
+    var items = [];
+    for (var i = 1; i < sourceData.length; i++) {
+      var row = sourceData[i];
+      if (!row[0]) continue;
+      var sourceId = row[0].toString().trim();
+
+      var result = {
+        sourceId: sourceId,
+        sourceName: row[4] ? row[4].toString().trim() : "",
+        sourcePart: row[2] ? row[2].toString().trim() : "",
+        sourceCategory: row[3] ? row[3].toString().trim() : "",
+        sourceTarget: row[5] ? row[5].toString().trim() : ""
+      };
+
+      if (linkedBySourceId.hasOwnProperty(sourceId)) {
+        var idx = linkedBySourceId[sourceId];
+        result.status = 'linked';
+        result.destId = destData[idx][0].toString().trim();
+        result.destName = destData[idx][4] ? destData[idx][4].toString().trim() : "";
+      } else {
+        var norm = normalizeKpiName(result.sourceName);
+        var candidates = (destNameNormalizedMap[norm] || []).filter(function(idx2) { return !linkedDestIndexes[idx2]; });
+        if (candidates.length === 1) {
+          var cIdx = candidates[0];
+          result.status = 'suggested';
+          result.suggestedDestId = destData[cIdx][0].toString().trim();
+          result.suggestedDestName = destData[cIdx][4] ? destData[cIdx][4].toString().trim() : "";
+        } else {
+          result.status = 'unmatched';
+        }
+      }
+      items.push(result);
+    }
+
+    var unlinkedDestList = [];
+    for (var d2 = 1; d2 < destData.length; d2++) {
+      if (!linkedDestIndexes[d2]) {
+        unlinkedDestList.push({
+          id: destData[d2][0].toString().trim(),
+          name: destData[d2][4] ? destData[d2][4].toString().trim() : "",
+          part: destData[d2][2] ? destData[d2][2].toString().trim() : "",
+          category: destData[d2][3] ? destData[d2][3].toString().trim() : ""
+        });
+      }
+    }
+
+    return { success: true, items: items, unlinkedDestList: unlinkedDestList };
+  } catch (e) {
+    return { success: false, message: "เกิดข้อผิดพลาด: " + e.toString() };
+  }
+}
+
+// บันทึกผลการจับคู่ที่แอดมินยืนยันแล้ว: ข้อมูลจากฝ่ายการพยาบาลชนะเสมอ (เขียนทับคอลัมน์ 2-27
+// ของแถวที่จับคู่ไว้ โดยคง ID เดิมของ KPI PH ไว้) — ดึงเฉพาะตัวชี้วัดที่ "ซ้ำกันจริง" เท่านั้น
+// ถ้าแอดมินเลือก "ข้าม" (destId ว่าง) จะไม่ทำอะไรกับรายการนั้นเลย ไม่สร้างแถวใหม่เด็ดขาด
+function commitNursingSync(mappings) {
+  try {
+    ensureNursingLinkColumn();
+    var sourceSs = SpreadsheetApp.openByUrl(NURSING_SPREADSHEET_URL);
+    var sourceSheet = sourceSs.getSheetByName(NURSING_DATABASE_SHEET_NAME);
+    if (!sourceSheet) return { success: false, message: "ไม่พบชีต Database ในระบบพยาบาล" };
+    var sourceData = sourceSheet.getDataRange().getValues();
+
+    var sourceById = {};
+    for (var i = 1; i < sourceData.length; i++) {
+      if (sourceData[i][0]) sourceById[sourceData[i][0].toString().trim()] = sourceData[i];
+    }
+
+    var ss = SpreadsheetApp.openByUrl(SPREADSHEET_URL);
+    var sheet = ss.getSheetByName(DATABASE_SHEET_NAME);
+    var destData = sheet.getDataRange().getValues();
+
+    var destIdRowMap = {};
+    for (var d = 1; d < destData.length; d++) {
+      if (destData[d][0]) destIdRowMap[destData[d][0].toString().trim()] = d + 1;
+    }
+
+    var linkedCount = 0;
+
+    mappings.forEach(function(m) {
+      if (!m.destId) return; // ข้าม: ไม่ใช่ตัวเดียวกัน ไม่ต้องดึงเข้ามา
+      var srcRow = sourceById[m.sourceId];
+      if (!srcRow) return;
+
+      var actualRow = destIdRowMap[m.destId.toString().trim()];
+      if (!actualRow) return;
+      var overwriteRow = srcRow.slice(1, 27);
+      sheet.getRange(actualRow, 2, 1, overwriteRow.length).setValues([overwriteRow]);
+      sheet.getRange(actualRow, 28).setValue(m.sourceId);
+      linkedCount++;
+    });
+
+    return { success: true, message: "บันทึกการจับคู่สำเร็จ: อัปเดต " + linkedCount + " รายการ" };
+  } catch (e) {
+    return { success: false, message: "เกิดข้อผิดพลาด: " + e.toString() };
+  }
+}
+
+// ซิงค์แบบปลอดภัย ("ต้นทางพยาบาลชนะเสมอ") — อัปเดตเฉพาะแถวที่แอดมินจับคู่ไว้แล้ว
+// (ผ่าน commitNursingSync) เท่านั้น จะไม่สร้างแถวใหม่โดยอัตโนมัติเด็ดขาด ใช้ได้ทั้งกดเอง
+// และรันอัตโนมัติผ่าน time-based trigger
+function syncFromNursingSystem() {
+  try {
+    ensureNursingLinkColumn();
+    var sourceSs = SpreadsheetApp.openByUrl(NURSING_SPREADSHEET_URL);
+    var sourceSheet = sourceSs.getSheetByName(NURSING_DATABASE_SHEET_NAME);
+    if (!sourceSheet) return { success: false, message: "ไม่พบชีต Database ในระบบพยาบาล" };
+    var sourceData = sourceSheet.getDataRange().getValues();
+
+    var sourceById = {};
+    for (var i = 1; i < sourceData.length; i++) {
+      if (sourceData[i][0]) sourceById[sourceData[i][0].toString().trim()] = sourceData[i];
+    }
+
+    var ss = SpreadsheetApp.openByUrl(SPREADSHEET_URL);
+    var sheet = ss.getSheetByName(DATABASE_SHEET_NAME);
+    var destData = sheet.getDataRange().getValues();
+
+    var updatedCount = 0;
+    var linkedSourceIds = {};
+
+    for (var d = 1; d < destData.length; d++) {
+      var link = destData[d][27] ? destData[d][27].toString().trim() : "";
+      if (!link) continue;
+      linkedSourceIds[link] = true;
+      var srcRow = sourceById[link];
+      if (!srcRow) continue;
+      var overwriteRow = srcRow.slice(1, 27);
+      sheet.getRange(d + 1, 2, 1, overwriteRow.length).setValues([overwriteRow]);
+      updatedCount++;
+    }
+
+    var pendingCount = 0;
+    for (var i2 = 1; i2 < sourceData.length; i2++) {
+      if (sourceData[i2][0] && !linkedSourceIds[sourceData[i2][0].toString().trim()]) pendingCount++;
+    }
+
+    var msg = "ซิงค์ข้อมูลรายการที่จับคู่ไว้แล้วสำเร็จ: อัปเดต " + updatedCount + " รายการ";
+    if (pendingCount > 0) {
+      msg += " (มี " + pendingCount + " รายการใหม่จากฝ่ายพยาบาลที่ยังไม่จับคู่ กรุณากด \"ตรวจสอบและจับคู่ข้อมูลใหม่\")";
+    }
+
+    return { success: true, message: msg, updated: updatedCount, pending: pendingCount };
+  } catch (e) {
+    return { success: false, message: "เกิดข้อผิดพลาด: " + e.toString() };
+  }
+}
+
+function getNursingSyncTriggerStatus() {
+  var triggers = ScriptApp.getProjectTriggers();
+  var enabled = triggers.some(function(t) { return t.getHandlerFunction() === NURSING_SYNC_FUNCTION_NAME; });
+  return { enabled: enabled };
+}
+
+// เปิด/ปิดการซิงค์ข้อมูลจากระบบพยาบาลอัตโนมัติทุกวัน (05:00 น. เวลาไทย)
+function toggleNursingSyncTrigger() {
+  try {
+    var triggers = ScriptApp.getProjectTriggers();
+    var existing = triggers.filter(function(t) { return t.getHandlerFunction() === NURSING_SYNC_FUNCTION_NAME; });
+
+    if (existing.length > 0) {
+      existing.forEach(function(t) { ScriptApp.deleteTrigger(t); });
+      return { success: true, enabled: false, message: "ปิดการซิงค์อัตโนมัติรายวันเรียบร้อยแล้ว" };
+    } else {
+      ScriptApp.newTrigger(NURSING_SYNC_FUNCTION_NAME)
+        .timeBased()
+        .everyDays(1)
+        .atHour(5)
+        .inTimezone("Asia/Bangkok")
+        .create();
+      return { success: true, enabled: true, message: "เปิดการซิงค์อัตโนมัติรายวัน (05:00 น.) เรียบร้อยแล้ว" };
+    }
+  } catch (e) {
+    return { success: false, message: "เกิดข้อผิดพลาด: " + e.toString() };
+  }
+}
