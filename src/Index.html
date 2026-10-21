@@ -48,6 +48,7 @@
     }
     .app-header h1 { font-size: 19px; font-weight: 700; letter-spacing: 0.3px; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); text-align: left; }
     .header-actions { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+    .pw-warning { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; background: #fef3c7; border: 1px solid #f59e0b; color: #92400e; border-radius: 10px; padding: 6px 12px; margin-bottom: 10px; font-size: 13px; font-weight: 700; }
     #user-info { font-size: 13px; font-weight: 700; margin-right: 6px; }
     .btn-icon { background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.4); color: white; padding: 5px 10px; border-radius: 6px; cursor: pointer; font-size: 13px; transition: 0.2s; font-weight: 700; }
     .btn-icon:hover { background: rgba(255,255,255,0.3); }
@@ -295,6 +296,11 @@
     </div>
   </div>
 
+  <div id="pw-warning-bar" class="pw-warning" style="display: none;">
+    <span>⚠️ บัญชีนี้ยังใช้รหัสผ่านตั้งต้น (11038) — ผู้อื่นที่รู้ชื่อของคุณอาจเข้าใช้แทนได้</span>
+    <button class="btn btn-sm btn-accent" onclick="guardUnsaved(() => openChangePassword(false))">🔑 เปลี่ยนรหัสผ่านตอนนี้</button>
+  </div>
+
   <!-- 1.2 แถบนำทาง -->
   <div class="nav-bar">
     <div class="nav-item static">📅 ปีงบ
@@ -371,7 +377,7 @@
         <div class="form-group"><label>ยืนยันรหัสผ่านใหม่</label><input type="password" id="chpw-confirm" class="editable-input"></div>
       </div>
       <div class="modal-footer" style="display: flex; justify-content: space-between;">
-        <button class="btn btn-secondary" id="chpw-cancel" onclick="document.getElementById('modal-change-password').style.display='none'">ยกเลิก</button>
+        <button class="btn btn-secondary" id="chpw-cancel" onclick="closeChangePassword()">ยกเลิก</button>
         <button class="btn btn-primary" id="chpw-submit" onclick="submitChangePassword()">💾 บันทึก</button>
       </div>
     </div>
@@ -678,7 +684,7 @@
           if (currentUser.mustChange) {
             document.getElementById('login-box-content').innerHTML = `
               <div style="font-size: 40px; margin-bottom: 10px;">🔑</div>
-              <h2>ต้องเปลี่ยนรหัสผ่านก่อนเข้าใช้งาน</h2>
+              <h2>แนะนำให้เปลี่ยนรหัสผ่าน</h2>
             `;
             openChangePassword(true);
           } else {
@@ -706,6 +712,7 @@
       document.getElementById('user-info').innerText = '👤 ' + currentUser.username + ' (' + (TIER_LABELS[currentUser.tier] || currentUser.tier) + ')';
       document.getElementById('admin-settings-btn').style.display = currentUser.tier === 'admin' ? 'inline-block' : 'none';
       document.getElementById('btn-add-kpi').style.display = isPrivilegedUser() ? 'inline-block' : 'none';
+      document.getElementById('pw-warning-bar').style.display = currentUser.mustChange ? 'flex' : 'none';
     }
 
     // ล้างสถานะทั้งหมดแล้วกลับไปหน้าล็อกอิน
@@ -721,6 +728,8 @@
       globalDatabase = [];
       selectedKpiId = null; selectedCategoryName = null; selectedPartName = null;
       document.getElementById('user-bar').style.display = 'none';
+      document.getElementById('pw-warning-bar').style.display = 'none';
+      chpwForced = false;
       ['modal-settings', 'modal-add-kpi', 'modal-pdf', 'modal-fy', 'modal-unsaved', 'modal-change-password', 'modal-alert', 'modal-confirm']
         .forEach(id => { document.getElementById(id).style.display = 'none'; });
       document.getElementById('accordion-tree-container').innerHTML = '<div class="empty-state">กรุณาเข้าสู่ระบบ...</div>';
@@ -738,15 +747,23 @@
       showLogin('ออกจากระบบเรียบร้อยแล้ว');
     }
 
+    // forced = หน้าต่างที่ขึ้นตอนล็อกอินด้วยรหัสตั้งต้น: เปลี่ยนเลยหรือกด "ข้ามไปก่อน" ก็ได้ (จะถามอีกทุกครั้งที่เข้าใช้ จนกว่าจะเปลี่ยน)
+    let chpwForced = false;
     function openChangePassword(forced) {
+      chpwForced = !!forced;
       document.getElementById('chpw-old').value = '';
       document.getElementById('chpw-new').value = '';
       document.getElementById('chpw-confirm').value = '';
-      document.getElementById('chpw-cancel').style.display = forced ? 'none' : 'inline-block';
+      document.getElementById('chpw-cancel').innerText = forced ? 'ข้ามไปก่อน' : 'ยกเลิก';
       document.getElementById('change-password-note').innerText = forced
-        ? 'บัญชีของคุณยังใช้รหัสผ่านตั้งต้น (11038) กรุณาตั้งรหัสผ่านใหม่ก่อนเข้าใช้งาน'
+        ? 'บัญชีของคุณยังใช้รหัสผ่านตั้งต้น (11038) แนะนำให้ตั้งรหัสผ่านใหม่เพื่อป้องกันผู้อื่นเข้าใช้แทน (ข้ามไปก่อนได้ แต่ระบบจะถามอีกทุกครั้งที่เข้าใช้)'
         : 'กรอกรหัสผ่านเดิมและรหัสผ่านใหม่';
       document.getElementById('modal-change-password').style.display = 'flex';
+    }
+
+    function closeChangePassword() {
+      document.getElementById('modal-change-password').style.display = 'none';
+      if (chpwForced) { chpwForced = false; loadAfterLogin(); }
     }
 
     function submitChangePassword() {
@@ -757,7 +774,7 @@
         showAlert('รหัสผ่านไม่ตรงกัน', '⚠️', 'กรุณายืนยันรหัสผ่านใหม่ให้ตรงกัน');
         return;
       }
-      const wasForced = currentUser.mustChange;
+      const wasForced = chpwForced;
       const btn = document.getElementById('chpw-submit');
       btn.disabled = true;
       google.script.run
@@ -766,6 +783,9 @@
           if (!res.success) { showAlert('เปลี่ยนรหัสผ่านไม่สำเร็จ', '⚠️', res.message); return; }
           document.getElementById('modal-change-password').style.display = 'none';
           currentUser.mustChange = false;
+          chpwForced = false;
+          applyUserUi();
+          setProgressHeight();
           showAlert('สำเร็จ', '✅', res.message);
           if (wasForced) loadAfterLogin();
         })
@@ -1586,7 +1606,7 @@
       const tierOptions = (cur) => Object.keys(TIER_LABELS)
         .map(t => `<option value="${t}" ${t === cur ? 'selected' : ''}>${t} (${TIER_LABELS[t]})</option>`).join('');
       let html = `<table class="user-table"><thead><tr>
-        <th>ชื่อผู้ใช้</th><th>Tier</th><th>หน่วยงาน (คั่นด้วย ,)</th><th>เข้าใช้ล่าสุด</th><th>แก้ไขล่าสุด</th><th style="width:150px;">จัดการ</th></tr></thead><tbody>`;
+        <th>ชื่อผู้ใช้</th><th>Tier</th><th>หน่วยงาน (คั่นด้วย ,)</th><th>รหัสผ่าน</th><th>เข้าใช้ล่าสุด</th><th>แก้ไขล่าสุด</th><th style="width:150px;">จัดการ</th></tr></thead><tbody>`;
       settingsUsers.forEach((u, i) => {
         const isSelf = !u.isNew && u.username === currentUser.username;
         const resetMark = settingsResets[u.username] ? ' ✔' : '';
@@ -1594,6 +1614,7 @@
           <td><input type="text" class="editable-input" value="${esc(u.username)}" ${u.isNew ? '' : 'disabled'} onchange="settingsUsers[${i}].username = this.value.trim()"></td>
           <td><select class="editable-input" onchange="settingsUsers[${i}].tier = this.value">${tierOptions(u.tier)}</select></td>
           <td><input type="text" class="editable-input" value="${esc(u.depts)}" placeholder="เช่น ER,IPD" onchange="settingsUsers[${i}].depts = this.value"></td>
+          <td style="font-size:11px; text-align:center; font-weight:700; color:${u.isNew || u.mustChange ? '#b45309' : '#047857'};">${u.isNew || u.mustChange ? '⚠️ ยังเป็นรหัสตั้งต้น' : '✓ เปลี่ยนแล้ว'}</td>
           <td style="font-size:11px; text-align:center;">${esc(u.lastAccess) || '-'}</td>
           <td style="font-size:11px; text-align:center;">${esc(u.lastEdit) || '-'}</td>
           <td style="white-space:nowrap; text-align:center;">
