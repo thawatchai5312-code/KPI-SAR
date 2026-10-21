@@ -36,11 +36,15 @@ function cleanValue_(val) {
 }
 
 function rowToKpi_(row) {
+  var part = row[2] ? row[2].toString().trim() : "ทั่วไป";
+  var category = row[3] ? row[3].toString().trim() : "ทั่วไป";
   return {
     id: row[0].toString().trim(),
     no: row[1] ? row[1].toString().trim() : "",
-    part: row[2] ? row[2].toString().trim() : "ทั่วไป",
-    category: row[3] ? row[3].toString().trim() : "ทั่วไป",
+    part: part,
+    category: category,
+    // หมวดทั้งหมดที่ตัวชี้วัดนี้แสดงอยู่ (หมวดแรก = หมวดหลัก) — ตัวเดียวกัน แก้ที่ไหนก็เปลี่ยนทุกที่
+    cats: kpiCats_({ cats: [{ part: part, category: category }].concat(parseExtraCats_(row[EXTRA_CATS_COL - 1])) }),
     name: row[4] ? row[4].toString().trim() : "",
     // ดึงค่าเป้าหมายเป็นข้อความ (String) เพื่อเก็บเครื่องหมายต่างๆ ไว้
     target: row[5] ? row[5].toString().trim() : "",
@@ -104,15 +108,65 @@ function decorateKpi_(user, fy, kpi, sources) {
   kpi.canEditResults = perm.editResults;
   kpi.canEditDetails = perm.editDetails;
   kpi.mine = perm.mine;
+  // ผอ./QMR เห็นเฉพาะหมวด Part I–IV ของตัวชี้วัดที่ไม่ใช่ของตัวเอง
+  kpi.cats = visibleCats_(user, kpi, perm);
+  kpi.part = kpi.cats[0].part;
+  kpi.category = kpi.cats[0].category;
   // ผลทั้งปีของปีที่มีชีตต้นทางอยู่ (และมีตัวชี้วัดนี้) แก้ได้เฉพาะ admin, ผอ., QMR
   kpi.lockedYears = sources.map(function(m) { return !!(m && m[kpi.id]); });
   return kpi;
+}
+
+// ตัดหมวดว่าง/ซ้ำ จากรายการที่ส่งมา
+function cleanCatList_(list) {
+  var seen = {}, out = [];
+  (list || []).forEach(function(c) {
+    var part = c && c.part ? c.part.toString().trim() : "";
+    var category = c && c.category ? c.category.toString().trim() : "";
+    if (!part || !category) return;
+    var key = catKey_({ part: part, category: category });
+    if (!seen[key]) { seen[key] = true; out.push({ part: part, category: category }); }
+  });
+  return out;
+}
+
+/**
+ * รวมรายการหมวดที่ผู้ใช้ส่งมา (เฉพาะหมวดที่เห็น) กับหมวดที่ซ่อนอยู่ แล้วตรวจกฎ
+ *  - ต้องมีอย่างน้อย 1 หมวด
+ *  - เจ้าของ (staff/head) เพิ่ม/เอาออกได้เฉพาะหมวดนอก Part I–IV · ผอ./QMR (ที่ไม่ใช่เจ้าของ) เพิ่มได้เฉพาะ Part I–IV
+ *  - ตัวชี้วัดที่อยู่ใน Part I–IV ต้องมีระดับ SAR หรือ QA-หน่วยงาน
+ * คืน { error } หรือ { cats, changed } (หมวดแรก = หมวดหลัก)
+ */
+function mergeCats_(user, perm, old, requested, levels) {
+  var wanted = cleanCatList_(requested);
+  if (wanted.length === 0) return { error: "ตัวชี้วัดต้องอยู่ในหมวดอย่างน้อย 1 หมวด (ระบุทั้งหมวดหลักและหมวดย่อย)" };
+  var has = function(list, c) { return list.some(function(x) { return catKey_(x) === catKey_(c); }); };
+  var visible = visibleCats_(user, old, perm);
+  var hidden = old.cats.filter(function(c) { return !has(visible, c); });
+  var added = wanted.filter(function(c) { return !has(old.cats, c); });
+  var removed = visible.filter(function(c) { return !has(wanted, c); });
+  if (user.tier !== "admin") {
+    var isExec = user.tier === "executive";
+    if (!isExec && (added.some(function(c) { return isCorePart_(c.part); }) || removed.some(function(c) { return isCorePart_(c.part); }))) {
+      return { error: "การเพิ่ม/เอาออกจาก Part I–IV ต้องให้ admin หรือ ผอ./QMR ดำเนินการ (ตั้งหมวดอื่นเพิ่มได้เอง)" };
+    }
+    if (isExec && !perm.mine && added.some(function(c) { return !isCorePart_(c.part); })) {
+      return { error: "ผอ./QMR เพิ่มตัวชี้วัดเข้าได้เฉพาะหมวด Part I–IV" };
+    }
+  }
+  var result = wanted.concat(hidden);
+  if (result.some(function(c) { return isCorePart_(c.part); }) && !hasHospitalLevel_(levels)) {
+    return { error: "ตัวชี้วัดที่อยู่ใน Part I–IV ต้องมีระดับ SAR หรือ QA-หน่วยงาน อย่างน้อย 1 ระดับ" };
+  }
+  var changed = result.map(catKey_).join("\n") !== old.cats.map(catKey_).join("\n");
+  return { cats: result, changed: changed };
 }
 
 /**
  * บันทึกตัวชี้วัดทีละตัวในปีงบที่เลือก (ผลลัพธ์ + รายละเอียดในครั้งเดียว) ส่วนที่ไม่ได้ส่งมา (undefined) จะไม่แตะ
  *  - years/months (ผลทั้งปี/รายเดือน): ต้องมีสิทธิ์กรอกผล; ช่องผลย้อนหลังที่มีชีตต้นทางล็อกไว้ให้ admin/ผอ./QMR
  *  - templateDetails/dataSource: ต้องมีสิทธิ์แก้รายละเอียด (ปีงบปัจจุบัน)
+ *  - cats (หมวดที่แสดง): เจ้าของแก้ได้เฉพาะหมวดนอก Part I–IV (ปีงบปัจจุบัน) · admin, ผอ., QMR ทุกหมวด
  *  - name/target/owner/department/levels/summaryMethod/frequency (ความถี่การเก็บข้อมูล): เฉพาะ admin, ผอ., QMR — แก้ในปีงบที่เลือกเท่านั้น ปีอื่นไม่เปลี่ยน
  * คืน kpi ที่อัปเดตแล้วให้หน้าเว็บแทนที่ได้ทันที
  */
@@ -145,8 +199,17 @@ function saveKpi(token, fy, item) {
     // ตรวจระดับก่อนเขียนข้อมูลใดๆ (หมวด Part I–IV ต้องมีระดับ SAR หรือ QA-หน่วยงาน)
     var levelList = item.levels !== undefined ? item.levels : (item.level !== undefined ? [item.level] : undefined);
     var newLevels = levelList !== undefined && privileged ? cleanLevelList_(levelList, old.levels) : [];
-    if (newLevels.length > 0 && isCorePart_(old.part) && !hasHospitalLevel_(newLevels)) {
-      return { success: false, message: "ตัวชี้วัดในหมวด " + old.part + " ต้องมีระดับ SAR หรือ QA-หน่วยงาน อย่างน้อย 1 ระดับ" };
+    // หมวดที่แสดง (หลายหมวดได้ — ตัวชี้วัดเดียวกัน) ตรวจก่อนเขียนเช่นกัน
+    var newCats = null; // null = ไม่เปลี่ยน
+    if (item.cats !== undefined) {
+      var merged = mergeCats_(user, perm, old, item.cats, newLevels.length > 0 ? newLevels : old.levels);
+      if (merged.error) return { success: false, message: merged.error };
+      if (!perm.editDetails && merged.changed) return { success: false, message: "ไม่มีสิทธิ์แก้ไขหมวดของตัวชี้วัดนี้ในปีงบ " + fy };
+      if (merged.changed) newCats = merged.cats;
+    }
+    var coreAfter = (newCats || old.cats).some(function(c) { return isCorePart_(c.part); });
+    if (newLevels.length > 0 && coreAfter && !hasHospitalLevel_(newLevels)) {
+      return { success: false, message: "ตัวชี้วัดที่อยู่ในหมวด Part I–IV ต้องมีระดับ SAR หรือ QA-หน่วยงาน อย่างน้อย 1 ระดับ" };
     }
 
     var row = rowIndex + 1;
@@ -209,6 +272,15 @@ function saveKpi(token, fy, item) {
       }
     }
 
+    if (newCats) {
+      sheet.getRange(row, 3, 1, 2).setValues([[newCats[0].part, newCats[0].category]]);
+      sheet.getRange(row, EXTRA_CATS_COL).setNumberFormat("@").setValue(formatExtraCats_(newCats.slice(1)));
+      if (!sheet.getRange(1, EXTRA_CATS_COL).getValue()) {
+        sheet.getRange(1, EXTRA_CATS_COL).setValue(EXTRA_CATS_HEADER).setFontWeight("bold").setBackground("#e0f2fe").setHorizontalAlignment("center");
+      }
+      changed = true;
+    }
+
     // วิธีสรุป/ความถี่/ระดับ: เฉพาะ admin, ผอ., QMR
     if (privileged) {
       if (item.summaryMethod !== undefined && SUMMARY_METHODS.indexOf(item.summaryMethod) !== -1 && item.summaryMethod !== old.summaryMethod) {
@@ -237,7 +309,7 @@ function saveKpi(token, fy, item) {
       touchUser_(user, "edit");
     }
 
-    var fresh = rowToKpi_(sheet.getRange(row, 1, 1, FREQ_COL).getValues()[0]);
+    var fresh = rowToKpi_(sheet.getRange(row, 1, 1, EXTRA_CATS_COL).getValues()[0]);
     return {
       success: true,
       changed: changed,
@@ -288,21 +360,24 @@ function addIndicator(token, fy, newItem) {
     if (!privileged && fy !== getCurrentFiscalYear_()) {
       return { success: false, message: "เพิ่มตัวชี้วัดใหม่ได้เฉพาะปีงบปัจจุบัน (" + getCurrentFiscalYear_() + ")" };
     }
-    newItem.part = (newItem.part || "").toString().trim();
-    newItem.category = (newItem.category || "").toString().trim();
+    // หมวด: ส่งมาเป็นรายการ cats (หมวดแรก = หมวดหลัก) หรือ part/category เดี่ยวๆ แบบเดิม
+    var cats = cleanCatList_(newItem.cats && newItem.cats.length ? newItem.cats : [{ part: newItem.part, category: newItem.category }]);
     newItem.name = (newItem.name || "").toString().trim();
-    if (!newItem.part || !newItem.category || !newItem.name) {
+    if (cats.length === 0 || !newItem.name) {
       return { success: false, message: "กรุณาระบุ หมวดหลัก หมวดหมู่ย่อย และชื่อตัวชี้วัด" };
     }
+    newItem.part = cats[0].part;
+    newItem.category = cats[0].category;
+    var coreInvolved = cats.some(function(c) { return isCorePart_(c.part); });
     var newLevels = cleanLevelList_(newItem.levels || (newItem.level ? [newItem.level] : []), []);
     if (newLevels.length === 0) newLevels = [DEFAULT_KPI_LEVEL];
-    if (isCorePart_(newItem.part) && !hasHospitalLevel_(newLevels)) {
-      return { success: false, message: "หมวด " + newItem.part + " ต้องเป็นตัวชี้วัดระดับ SAR หรือ QA-หน่วยงาน (ถ้าเป็นระดับรายบุคคล/หน่วยงาน/ฝ่ายการพยาบาล ให้ตั้งชื่อหมวดอื่น)" };
+    if (coreInvolved && !hasHospitalLevel_(newLevels)) {
+      return { success: false, message: "หมวด Part I–IV ต้องเป็นตัวชี้วัดระดับ SAR หรือ QA-หน่วยงาน (ถ้าเป็นระดับรายบุคคล/หน่วยงาน/ฝ่ายการพยาบาล ให้ตั้งชื่อหมวดอื่น)" };
     }
     var data = sheet.getDataRange().getValues();
     // ผู้เพิ่ม (ที่ไม่ใช่ admin) ต้องเห็นตัวชี้วัดที่ตัวเองเพิ่ม จึงใส่ตัวเองเป็นผู้รับผิดชอบให้
     // ยกเว้น ผอ./QMR ที่เพิ่มตัวชี้วัด Part I–IV ระดับ SAR/QA ซึ่งเห็นได้อยู่แล้ว
-    var seesAnyway = user.tier === "admin" || (user.tier === "executive" && isCorePart_(newItem.part) && hasHospitalLevel_(newLevels));
+    var seesAnyway = user.tier === "admin" || (user.tier === "executive" && coreInvolved && hasHospitalLevel_(newLevels));
     if (!seesAnyway) {
       var owners = parseOwners_(newItem.owner);
       if (owners.indexOf(user.username) === -1) owners.unshift(user.username);
@@ -310,7 +385,7 @@ function addIndicator(token, fy, newItem) {
     }
     if (!privileged && !(newItem.department || "").toString().trim()) newItem.department = user.depts.join(" / ");
     // ผู้เพิ่มต้องเห็นตัวชี้วัดที่ตัวเองเพิ่ม (เช่น ผอ. เพิ่มได้เฉพาะ Part I–IV ระดับ SAR/QA)
-    var probe = { part: newItem.part, owner: newItem.owner || "", department: newItem.department || "", levels: newLevels };
+    var probe = { part: newItem.part, category: newItem.category, cats: cats, owner: newItem.owner || "", department: newItem.department || "", levels: newLevels };
     if (!getKpiPermission_(user, probe, fy).view) {
       return { success: false, message: "บัญชีผอ./QMR เพิ่มได้เฉพาะตัวชี้วัด Part I–IV ระดับ SAR/QA หรือที่ตัวเองเป็นผู้รับผิดชอบ" };
     }
@@ -333,9 +408,13 @@ function addIndicator(token, fy, newItem) {
       "", levels.join(", "), nowStamp_(), user.username, "", "",
       SUMMARY_METHODS.indexOf(newItem.summaryMethod) !== -1 ? newItem.summaryMethod : DEFAULT_SUMMARY_METHOD,
       (newItem.templateDetails || newItem.dataSource) ? nowStamp_() : "",
-      FREQUENCIES.indexOf(newItem.frequency) !== -1 ? newItem.frequency : DEFAULT_FREQUENCY
+      FREQUENCIES.indexOf(newItem.frequency) !== -1 ? newItem.frequency : DEFAULT_FREQUENCY,
+      formatExtraCats_(cats.slice(1))
     ];
     sheet.appendRow(newRow);
+    if (cats.length > 1 && !sheet.getRange(1, EXTRA_CATS_COL).getValue()) {
+      sheet.getRange(1, EXTRA_CATS_COL).setValue(EXTRA_CATS_HEADER).setFontWeight("bold").setBackground("#e0f2fe").setHorizontalAlignment("center");
+    }
     touchUser_(user, "edit");
     return { success: true, message: "เพิ่มตัวชี้วัดในปีงบ " + fy + " เรียบร้อยแล้ว", newId: newId };
   } catch (error) {

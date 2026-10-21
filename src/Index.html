@@ -185,6 +185,9 @@
     .editable-input { width: 100%; padding: 6px 8px; border: 1px solid #94a3b8; border-radius: 6px; font-size: 13px; transition: 0.3s; color: #0f172a; font-weight: 600; }
     .editable-input:focus { border-color: var(--primary-color); outline: none; box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.2); background: #fff; }
     .editable-input:disabled { background: #f1f5f9; color: #475569; cursor: not-allowed; }
+    /* เมาส์ชี้ช่องกรอก: ใช้ลูกศรปกติ (ไม่ใช้ I-beam เส้นบางที่มองไม่เห็นบนช่องสีเข้ม/ตัวหนังสือ) */
+    .editable-input:not(:disabled), select.editable-input { cursor: default; }
+    .editable-input:not(:disabled):focus { cursor: text; }
     textarea.editable-input { resize: vertical; line-height: 1.5; }
     .empty-state { text-align: center; padding: 30px 15px; color: #64748b; font-size: 14px; font-weight: 500; }
 
@@ -440,6 +443,19 @@
     .st-dot.yellow { box-shadow: 0 0 0 3px rgba(250,204,21,0.3); }
     .st-dot.red { box-shadow: 0 0 0 3px rgba(239,68,68,0.2); }
     .lv-label { display: flex; align-items: center; gap: 8px; }
+
+    /* ช่องที่ล็อก: เมาส์ชี้แล้วขึ้นเหตุผล */
+    .lock-wrap { display: block; cursor: not-allowed; }
+    .lock-wrap > :disabled { pointer-events: none; }
+    .locked-cell { cursor: not-allowed; background: #f8fafc; color: #64748b; }
+    #lock-tip { position: fixed; z-index: 10000; max-width: 280px; background: #1e293b; color: #fff; padding: 7px 12px; border-radius: 10px; font-size: 12.5px; line-height: 1.45; font-weight: 600; box-shadow: 0 6px 18px rgba(0,0,0,0.25); pointer-events: none; display: none; }
+    /* ตัวชี้วัดเดียวกันอยู่หลายหมวด */
+    .multi-cat { margin-left: auto; padding-left: 6px; font-size: 11px; font-weight: 700; color: #0e7490; white-space: nowrap; }
+    .meta-badge.multi-badge { background: #e0f2fe; color: #075985; }
+    .cat-row { display: flex; gap: 6px; align-items: center; margin-bottom: 6px; }
+    .cat-row .lock-wrap { display: flex; gap: 6px; align-items: center; width: 100%; }
+    .cat-row .editable-input { margin: 0; flex: 1 1 0; min-width: 0; }
+    .cat-row .cat-del { flex: none; padding: 5px 10px; }
   </style>
 </head>
 <body>
@@ -583,6 +599,11 @@
           <label>หมวดหมู่ย่อย (Category) *</label>
           <input type="text" id="add-kpi-category" list="category-options" class="editable-input" placeholder="พิมพ์ชื่อหมวดหมู่ย่อยใหม่ หรือเลือกจากรายการ">
           <datalist id="category-options"></datalist>
+        </div>
+        <div class="form-group">
+          <label>แสดงในหมวดอื่นด้วย (ไม่บังคับ — ตัวชี้วัดเดียวกัน แสดงได้หลายหมวด)</label>
+          <div id="add-kpi-extra-cats"></div>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="addCatRow('add-kpi-extra-cats')">➕ เพิ่มอีกหมวด</button>
         </div>
         <div class="form-group">
           <label>ชื่อตัวชี้วัด (KPI Name) *</label>
@@ -736,6 +757,8 @@
     let currentFy = null;    // ปีงบปัจจุบันตามวันที่ (ขึ้นปีใหม่ 1 ต.ค.)
     let fiscalYears = [];
 
+    let editingKey = null;       // การ์ด (หมวด) ที่กำลังแก้ไข — ตัวชี้วัดเดียวกันอาจแสดงหลายหมวด แก้ได้ทีละการ์ด
+    let selectedKey = null;
     let editingId = null;        // รหัสตัวชี้วัดที่กำลังแก้ไข (แก้ได้ทีละตัว) — null = ไม่ได้แก้ไข
     let editSnapshot = null;     // ค่าในฟอร์มตอนเริ่มแก้ไข ใช้เทียบว่ามีการแก้ไขที่ยังไม่บันทึกหรือไม่
     let pendingAfterUnsaved = null;
@@ -781,9 +804,46 @@
       return !!currentUser && (currentUser.tier === 'admin' || currentUser.tier === 'executive');
     }
 
+    // ตัวชี้วัดตัวเดียวอยู่ได้หลายหมวด (kpi.cats) — "placement" คือตัวชี้วัดเดียวกันในมุมของหมวดหนึ่ง
+    // (สืบทอดข้อมูลทั้งหมดจากตัวชี้วัดจริง แต่ part/category เป็นของหมวดนั้น และมี key เฉพาะ) แก้ที่ไหนก็แก้ตัวเดียวกัน
+    function kpiCats(k) {
+      return (k.cats && k.cats.length) ? k.cats : [{ part: k.part, category: k.category }];
+    }
+    function placementsOf(k) {
+      return kpiCats(k).map((c, i) => {
+        const p = Object.create(k);
+        p.part = c.part; p.category = c.category; p.key = k.id + '@' + i;
+        return p;
+      });
+    }
+    function findPlacement(key) {
+      const i = String(key).lastIndexOf('@');
+      const k = globalDatabase.find(x => x.id === String(key).slice(0, i));
+      return k ? placementsOf(k)[Number(String(key).slice(i + 1))] || null : null;
+    }
+    function uniqueById(list) {
+      const seen = new Set();
+      return list.filter(x => !seen.has(x.id) && seen.add(x.id));
+    }
+
     function kpiNumber(kpi) {
-      const same = globalDatabase.filter(k => k.part === kpi.part && k.category === kpi.category);
+      const same = globalDatabase.filter(k => kpiCats(k).some(c => c.part === kpi.part && c.category === kpi.category));
       return same.findIndex(k => k.id === kpi.id) + 1;
+    }
+
+    // เหตุผลที่ช่องนั้นแก้ไม่ได้ (แสดงเมื่อเอาเมาส์ไปชี้ช่องที่ล็อก)
+    function whyNoResults() {
+      return selectedFy < currentFy - 1
+        ? `แก้ผลไม่ได้: ปีงบ ${selectedFy} ย้อนหลังเกิน 1 ปีงบ (แก้ผลได้เฉพาะปีงบปัจจุบันและปีก่อนหน้า)`
+        : 'แก้ผลไม่ได้: คุณไม่ได้เป็นผู้รับผิดชอบตัวชี้วัดนี้ (ดูได้อย่างเดียว)';
+    }
+    function whyNoDetails() {
+      return selectedFy !== currentFy
+        ? `แก้ไม่ได้: แก้รายละเอียดได้เฉพาะปีงบปัจจุบัน (${currentFy}) ปีงบ ${selectedFy} เป็นปีที่ผ่านมาแล้ว`
+        : 'แก้ไม่ได้: คุณไม่ได้เป็นผู้รับผิดชอบตัวชี้วัดนี้ (ดูได้อย่างเดียว)';
+    }
+    function lockWrap(html, reason) {
+      return `<span class="lock-wrap" data-reason="${esc(reason)}">${html}</span>`;
     }
 
     function showToast(msg) {
@@ -1052,8 +1112,7 @@
       const parts = new Set();
       const categories = new Set();
       globalDatabase.forEach(item => {
-        if (item.part) parts.add(item.part);
-        if (item.category) categories.add(item.category);
+        kpiCats(item).forEach(c => { if (c.part) parts.add(c.part); if (c.category) categories.add(c.category); });
       });
       document.getElementById('part-options').innerHTML = Array.from(parts).sort(comparePartNames).map(p => `<option value="${esc(p)}"></option>`).join('');
       document.getElementById('category-options').innerHTML = Array.from(categories).map(c => `<option value="${esc(c)}"></option>`).join('');
@@ -1246,7 +1305,10 @@
       });
       const order = new Map(globalDatabase.map((k, i) => [k.id, i]));
       const cmp = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
-      return list.sort((a, b) => comparePartNames(a.part, b.part) || cmp(a.category, b.category) || order.get(a.id) - order.get(b.id));
+      // ตัวชี้วัดที่อยู่หลายหมวดจะขึ้นในทุกหมวด (เป็นตัวเดียวกัน)
+      const placements = [];
+      list.forEach(k => placementsOf(k).forEach(p => placements.push(p)));
+      return placements.sort((a, b) => comparePartNames(a.part, b.part) || cmp(a.category, b.category) || order.get(a.id) - order.get(b.id));
     }
 
     // ค่าตั้งต้นตอนเข้าระบบ: staff / หัวหน้าหน่วย เห็นเฉพาะตัวชี้วัดของตัวเอง (หัวหน้า = ของหน่วยงานที่ดูแล) ผู้ดูแลและผู้บริหารเห็นทั้งหมด
@@ -1312,8 +1374,8 @@
       }
       const list = getOrderedKpis();
       const lv = { red: 0, yellow: 0, green: 0 };
-      getOrderedKpis(true).forEach(k => { lv[kpiStatus(k).level]++; }); // นับตามรายการที่แสดงอยู่ (ไม่รวมตัวกรองสถานะ)
-      countEl.innerHTML = `<span>แสดง ${list.length}/${globalDatabase.length}</span><span class="cnt red" title="ต้องแก้ไข">${lv.red}</span><span class="cnt yellow" title="รอติดตาม">${lv.yellow}</span><span class="cnt green" title="ครบถ้วน">${lv.green}</span>`;
+      uniqueById(getOrderedKpis(true)).forEach(k => { lv[kpiStatus(k).level]++; }); // นับตามรายการที่แสดงอยู่ (ไม่รวมตัวกรองสถานะ)
+      countEl.innerHTML = `<span>แสดง ${uniqueById(list).length}/${globalDatabase.length}</span><span class="cnt red" title="ต้องแก้ไข">${lv.red}</span><span class="cnt yellow" title="รอติดตาม">${lv.yellow}</span><span class="cnt green" title="ครบถ้วน">${lv.green}</span>`;
 
       if (list.length === 0) {
         container.innerHTML = `<div class="empty-state">${emptyListMessage()}</div>`;
@@ -1360,7 +1422,7 @@
             e.stopPropagation();
             catBlock.classList.add('open');
             openCats.add(catKey);
-            selectKpi(tree[partName][catName][0].id);
+            selectKpi(tree[partName][catName][0].id, tree[partName][catName][0].key);
           };
           catBlock.appendChild(catHeader);
 
@@ -1370,10 +1432,11 @@
             const item = document.createElement('div');
             item.className = 'kpi-link-item' + (selectedKpiId === kpi.id ? ' selected' : '');
             item.dataset.id = kpi.id;
-            item.title = kpi.name;
+            item.dataset.key = kpi.key;
+            item.title = kpi.name + (kpiCats(kpi).length > 1 ? '\n(ตัวชี้วัดเดียวกันอยู่ใน ' + kpiCats(kpi).length + ' หมวด)' : '');
             const stt = kpiStatus(kpi);
-            item.innerHTML = `<span class="st-dot ${stt.level}" title="${esc(stt.label + (stt.reasons.length ? ': ' + stt.reasons.join(' · ') : ''))}"></span><span class="kpi-link-text"><b class="kn">${kpiNumber(kpi)}.</b> ${esc(kpi.name)}</span>`;
-            item.onclick = (e) => { e.stopPropagation(); selectKpi(kpi.id); };
+            item.innerHTML = `<span class="st-dot ${stt.level}" title="${esc(stt.label + (stt.reasons.length ? ': ' + stt.reasons.join(' · ') : ''))}"></span><span class="kpi-link-text"><b class="kn">${kpiNumber(kpi)}.</b> ${esc(kpi.name)}</span>${kpiCats(kpi).length > 1 ? '<span class="multi-cat" title="ตัวชี้วัดเดียวกัน อยู่หลายหมวด">🔗</span>' : ''}`;
+            item.onclick = (e) => { e.stopPropagation(); selectKpi(kpi.id, kpi.key); };
             catContent.appendChild(item);
           });
           catBlock.appendChild(catContent);
@@ -1387,32 +1450,34 @@
     }
 
     // คลิกในผังรายการ → ไปหน้าที่มีตัวนั้น เลื่อนจอไปหา และไฮไลต์
-    function selectKpi(id) {
-      guardUnsaved(() => goToKpi(id));
+    function selectKpi(id, key) {
+      guardUnsaved(() => goToKpi(id, key));
     }
 
-    function goToKpi(id) {
+    function goToKpi(id, key) {
+      const find = (l) => (key ? l.findIndex(k => k.key === key) : -1) !== -1 ? l.findIndex(k => k.key === key) : l.findIndex(k => k.id === id);
       let list = getOrderedKpis();
-      let idx = list.findIndex(k => k.id === id);
+      let idx = find(list);
       if (idx === -1) {
         // ตัวที่ต้องการถูกตัวกรองซ่อนอยู่ (เช่น มาจากหน้าติดตามงาน) → ล้างตัวกรองก่อน
         resetTreeFilters();
         list = getOrderedKpis();
-        idx = list.findIndex(k => k.id === id);
+        idx = find(list);
         if (idx === -1) return;
       }
       const k = list[idx];
       selectedKpiId = id;
+      selectedKey = k.key;
       openParts.add(k.part);
       openCats.add(k.part + '||' + k.category);
       const page = Math.floor(idx / pageSize) + 1;
-      if (page !== currentPage || !document.getElementById('card-' + cssId(id))) {
+      if (page !== currentPage || !document.getElementById('card-' + cssId(k.key))) {
         currentPage = page;
         renderList();
       }
       renderTree();
       trackView(id);
-      const card = document.getElementById('card-' + cssId(id));
+      const card = document.getElementById('card-' + cssId(k.key));
       if (card) {
         card.scrollIntoView({ behavior: 'smooth', block: 'start' });
         card.classList.remove('flash');
@@ -1438,7 +1503,7 @@
       const btn = (label, p, disabled, active) =>
         `<button class="page-btn${active ? ' active' : ''}" ${disabled ? 'disabled' : `onclick="goPage(${p})"`}>${label}</button>`;
       return `<div class="pager">
-        <span class="pager-info">แสดง ${from}–${to} จาก ${n} ตัวชี้วัด</span>
+        <span class="pager-info">แสดง ${from}–${to} จาก ${n} รายการ</span>
         <span class="pager-buttons">
           ${btn('«', 1, currentPage === 1)}${btn('‹', currentPage - 1, currentPage === 1)}
           ${nums.map(p => p === '…' ? '<span class="page-gap">…</span>' : btn(p, p, false, p === currentPage)).join('')}
@@ -1499,25 +1564,78 @@
       afterCardsRendered();
     }
 
+    // วาดการ์ดของตัวชี้วัดใหม่ทุกใบ (ตัวเดียวกันที่อยู่หลายหมวดจะอัปเดตพร้อมกัน)
     function rerenderCard(id) {
-      const old = document.getElementById('card-' + cssId(id));
-      const kpi = globalDatabase.find(k => k.id === id);
-      if (!old || !kpi) return;
-      old.outerHTML = cardHtml(kpi);
-      afterCardsRendered();
+      let any = false;
+      document.querySelectorAll('.kpi-card').forEach(old => {
+        if (old.dataset.id !== id) return;
+        const p = findPlacement(old.dataset.key);
+        if (!p) return;
+        old.outerHTML = cardHtml(p);
+        any = true;
+      });
+      if (any) afterCardsRendered();
     }
 
-    function disabledYearAttr(kpi, i) {
-      if (!kpi.canEditResults) return 'disabled';
+    // ช่องผลทั้งปี: ถ้าแก้ไม่ได้ ครอบด้วยป้ายบอกเหตุผล (เอาเมาส์ไปชี้แล้วขึ้นข้อความ)
+    function yearInputHtml(kpi, i, v) {
+      const input = (dis) => `<input type="number" step="any" id="ed-y${i}" class="editable-input cell-input" value="${v !== null ? v : ''}" ${dis ? 'disabled' : ''}>`;
+      if (!kpi.canEditResults) return lockWrap(input(true), whyNoResults());
       if (i < 4 && kpi.lockedYears && kpi.lockedYears[i] && !isPrivilegedUser()) {
-        return 'disabled title="ผลปีนี้อ้างอิงจากชีตปีงบนั้น แก้ได้เฉพาะ admin / ผอ. / QMR"';
+        return lockWrap(input(true), `แก้ไม่ได้: ผลปีงบ ${selectedFy - 4 + i} อ้างอิงจากชีตปีงบนั้น (แก้ได้เฉพาะ admin / ผอ. / QMR)`);
+      }
+      return input(false);
+    }
+
+    function catRowHtml(c, locked) {
+      const dis = locked ? 'disabled' : '';
+      const part = `<input type="text" class="editable-input cat-part" list="part-options" placeholder="หมวดหลัก (Part)" value="${esc(c.part)}" ${dis}>`;
+      const cat = `<input type="text" class="editable-input cat-cat" list="category-options" placeholder="หมวดย่อย" value="${esc(c.category)}" ${dis}>`;
+      const del = `<button type="button" class="btn btn-secondary btn-sm cat-del" onclick="removeCatRow(this)" ${dis}>✕</button>`;
+      const why = 'ล็อกไว้: หมวด Part I–IV เป็นของตัวชี้วัดระดับ SAR/QA เพิ่มหรือเอาออกได้เฉพาะ admin / ผอ. / QMR';
+      return `<div class="cat-row" data-locked="${locked ? 1 : 0}">${locked ? lockWrap(part + cat + del, why) : part + cat + del}</div>`;
+    }
+
+    function addCatRow(containerId) {
+      document.getElementById(containerId).insertAdjacentHTML('beforeend', catRowHtml({ part: '', category: '' }, false));
+      onEditInput();
+    }
+
+    function removeCatRow(btn) {
+      const box = btn.closest('.cat-row').parentElement;
+      if (box.querySelectorAll('.cat-row').length <= 1) { showToast('ต้องอยู่ในหมวดอย่างน้อย 1 หมวด'); return; }
+      btn.closest('.cat-row').remove();
+      onEditInput();
+    }
+
+    // อ่านรายการหมวดจากแถวในฟอร์ม
+    function readCatRows(containerId) {
+      return Array.from(document.querySelectorAll('#' + containerId + ' .cat-row')).map(r => ({
+        part: r.querySelector('.cat-part').value.trim(),
+        category: r.querySelector('.cat-cat').value.trim()
+      }));
+    }
+
+    // ตรวจรายการหมวด: คืนข้อความผิดพลาด หรือ '' ถ้าผ่าน (oldCats = หมวดเดิม ใช้ตรวจการเพิ่ม Part I–IV)
+    function catListError(list, levels, oldCats, isNew) {
+      const filled = list.filter(c => c.part || c.category);
+      if (filled.length === 0) return 'ตัวชี้วัดต้องอยู่ในหมวดอย่างน้อย 1 หมวด';
+      if (filled.some(c => !c.part || !c.category)) return 'กรุณาระบุทั้งหมวดหลักและหมวดย่อยให้ครบทุกแถว';
+      const keys = filled.map(c => c.part + '||' + c.category);
+      if (new Set(keys).size !== keys.length) return 'มีหมวดซ้ำกัน กรุณาเอาแถวที่ซ้ำออก';
+      const oldKeys = (oldCats || []).map(c => c.part + '||' + c.category);
+      if (!isNew && !isPrivilegedUser() && filled.some(c => isCorePart(c.part) && oldKeys.indexOf(c.part + '||' + c.category) === -1)) {
+        return 'การเพิ่มตัวชี้วัดเข้า Part I–IV ต้องให้ admin หรือ ผอ./QMR ดำเนินการ\nคุณตั้งชื่อหมวดอื่นเพิ่มเองได้ (เช่น ชื่อหมวดของคุณ)';
+      }
+      if (filled.some(c => isCorePart(c.part)) && !hasHospitalLevel(levels)) {
+        return 'ตัวชี้วัดที่อยู่ใน Part I–IV ต้องมีระดับ SAR หรือ QA-หน่วยงาน อย่างน้อย 1 ระดับ';
       }
       return '';
     }
 
     function cardHtml(kpi) {
       const priv = isPrivilegedUser();
-      const ed = editingId === kpi.id;
+      const ed = editingId === kpi.id && editingKey === kpi.key;
       const yearsLabels = [selectedFy - 4, selectedFy - 3, selectedFy - 2, selectedFy - 1, selectedFy];
       const canRes = ed && kpi.canEditResults;
       const canDet = ed && kpi.canEditDetails;
@@ -1536,7 +1654,7 @@
           ${priv ? '<button class="btn btn-danger btn-sm" onclick="requestDeleteKpi()">🗑️ ลบตัวชี้วัด</button>' : ''}
           <span class="dirty-mark" id="dirty-mark">● ยังไม่ได้บันทึก</span>`;
       } else if (kpi.canEditResults || kpi.canEditDetails) {
-        actions = `<button class="btn btn-accent btn-sm" onclick="startEdit('${esc(kpi.id)}')">✏️ แก้ไข</button>`;
+        actions = `<button class="btn btn-accent btn-sm" onclick="startEdit('${esc(kpi.id)}', '${esc(kpi.key)}')">✏️ แก้ไข</button>`;
       } else {
         actions = `<span class="hint" style="margin:0;">ดูอย่างเดียว</span>`;
       }
@@ -1544,7 +1662,7 @@
       const yearsView = `<table><thead><tr>${yearsLabels.map(y => `<th>${y}</th>`).join('')}</tr></thead>
         <tbody><tr>${kpi.years.map(v => `<td>${v !== null ? v : '-'}</td>`).join('')}</tr></tbody></table>`;
       const yearsEdit = `<table><thead><tr>${yearsLabels.map(y => `<th>${y}</th>`).join('')}</tr></thead>
-        <tbody><tr>${kpi.years.map((v, i) => `<td style="padding:0;"><input type="number" step="any" id="ed-y${i}" class="editable-input cell-input" value="${v !== null ? v : ''}" ${disabledYearAttr(kpi, i)}></td>`).join('')}</tr></tbody></table>`;
+        <tbody><tr>${kpi.years.map((v, i) => `<td style="padding:0;">${yearInputHtml(kpi, i, v)}</td>`).join('')}</tr></tbody></table>`;
 
       // ผลรายเดือน แบ่ง 2 แถว (ต.ค.–มี.ค. / เม.ย.–ก.ย.)
       const monthRows = [0, 6].map(start => {
@@ -1552,25 +1670,31 @@
         return `<tr>${idx.map(i => `<th style="background:#fffbeb;">${thMonthsNames[i]}</th>`).join('')}</tr>` +
           `<tr>${idx.map(i => canRes
             ? `<td style="padding:0;"><input type="number" step="any" id="ed-m${i}" class="editable-input cell-input" value="${kpi.months[i] !== null ? kpi.months[i] : ''}"></td>`
-            : `<td>${kpi.months[i] !== null ? kpi.months[i] : '-'}</td>`).join('')}</tr>`;
+            : `<td ${ed ? `class="locked-cell" data-reason="${esc(whyNoResults())}"` : ''}>${kpi.months[i] !== null ? kpi.months[i] : '-'}</td>`).join('')}</tr>`;
       }).join('');
 
       const ownerHtml = canDet
         ? `<div class="form-group"><label>ผู้รับผิดชอบ (คั่นหลายคนด้วย /)</label><input type="text" id="ed-owner" class="editable-input" value="${esc(kpi.owner)}"></div>
-           <div class="form-group" style="${priv ? '' : 'margin-bottom:0;'}"><label>หน่วยงาน</label><input type="text" id="ed-dept" class="editable-input" value="${esc(kpi.department)}"></div>
+           <div class="form-group"><label>หน่วยงาน</label><input type="text" id="ed-dept" class="editable-input" value="${esc(kpi.department)}"></div>
+           <div class="form-group" style="${priv ? '' : 'margin-bottom:0;'}"><label>หมวดที่แสดง <span class="hint" style="margin:0;">(ตัวชี้วัดเดียวกัน แสดงได้หลายหมวด · แก้ที่ไหนก็เปลี่ยนทุกหมวด)</span></label>
+             <div id="ed-cats">${kpiCats(kpi).map(c => catRowHtml(c, !priv && isCorePart(c.part))).join('')}</div>
+             <button type="button" class="btn btn-secondary btn-sm" style="margin-top:4px;" onclick="addCatRow('ed-cats')">➕ เพิ่มหมวด</button>
+             ${priv ? '' : '<div class="hint">เพิ่มได้เฉพาะหมวดที่ตั้งชื่อเอง · หมวด Part I–IV ให้ admin / ผอ. / QMR เป็นผู้ดูแล</div>'}
+           </div>
            ${priv ? `<div class="form-group" style="margin-bottom:0;"><label>ระดับตัวชี้วัด (เลือกได้หลายระดับ — แสดงระดับสูงสุด)</label><div class="level-checks">${levelCheckboxesHtml('ed-level-cb', kpi.levels || [kpi.level])}</div></div>` : ''}`
         : `<p style="font-weight:700; color:#1e293b;">${esc(kpi.owner) || '-'} (${esc(kpi.department) || '-'})</p>`;
 
       const stt = kpiStatus(kpi);
-      const cls = 'kpi-card st-' + stt.level + (ed ? ' editing' : '') + (expandedCards.has(kpi.id) ? ' expanded' : '') + (selectedKpiId === kpi.id ? ' selected' : '');
+      const cls = 'kpi-card st-' + stt.level + (ed ? ' editing' : '') + (expandedCards.has(kpi.key) ? ' expanded' : '') + (selectedKpiId === kpi.id ? ' selected' : '');
       return `
-        <div class="${cls}" id="card-${cssId(kpi.id)}" data-id="${esc(kpi.id)}">
+        <div class="${cls}" id="card-${cssId(kpi.key)}" data-id="${esc(kpi.id)}" data-key="${esc(kpi.key)}">
           <div class="kpi-card-head">
             <div class="kpi-card-title">${nameHtml}</div>
             <div class="kpi-card-actions">${actions}</div>
             <div class="kpi-card-badges">
               <span class="st-badge ${stt.level}">${stt.icon} ${stt.label}</span>
               <span class="meta-badge">หมวดหมู่: ${esc(kpi.category)}</span>
+              ${kpiCats(kpi).length > 1 ? `<span class="meta-badge multi-badge" title="ตัวชี้วัดเดียวกัน แก้ที่หมวดไหนก็เปลี่ยนทุกหมวด">🔗 อยู่ใน ${kpiCats(kpi).length} หมวด: ${esc(kpiCats(kpi).map(c => c.part + ' › ' + c.category).join(' · '))}</span>` : ''}
               <span class="meta-badge" title="ทุกระดับ: ${esc((kpi.levels || [kpi.level]).join(', '))}">ระดับ: ${esc(kpi.level)}${(kpi.levels || []).length > 1 ? ' (+' + (kpi.levels.length - 1) + ')' : ''}</span>
               <span class="meta-badge">ปีงบ: ${selectedFy}${selectedFy === currentFy ? ' (ปัจจุบัน)' : ''}</span>
               ${kpi.frequency && kpi.frequency !== 'รายเดือน' ? `<span class="meta-badge">ความถี่: ${esc(kpi.frequency)}</span>` : ''}
@@ -1598,14 +1722,14 @@
             <div class="card-right"><div class="card-right-inner">
               <div class="info-card clip-box">
                 <div class="info-card-title">📝 รายละเอียด/การวิเคราะห์ตัวชี้วัด</div>
-                ${ed ? `<textarea id="ed-details" class="editable-input" rows="8" ${canDet ? '' : 'disabled'}>${esc(kpi.templateDetails)}</textarea>`
+                ${ed ? (canDet ? `<textarea id="ed-details" class="editable-input" rows="8">${esc(kpi.templateDetails)}</textarea>` : lockWrap(`<textarea id="ed-details" class="editable-input" rows="8" disabled>${esc(kpi.templateDetails)}</textarea>`, whyNoDetails()))
                      : `<p>${esc(kpi.templateDetails) || 'ไม่มีข้อมูลรายละเอียดเพิ่มเติม'}</p>`}
               </div>
               <div class="info-card clip-box">
                 <div class="info-card-title">🔗 ที่มาแหล่งข้อมูล / สูตรคำนวณ</div>
-                ${ed ? `<textarea id="ed-source" class="editable-input" rows="6" ${canDet ? '' : 'disabled'}>${esc(kpi.dataSource)}</textarea>`
+                ${ed ? (canDet ? `<textarea id="ed-source" class="editable-input" rows="6">${esc(kpi.dataSource)}</textarea>` : lockWrap(`<textarea id="ed-source" class="editable-input" rows="6" disabled>${esc(kpi.dataSource)}</textarea>`, whyNoDetails()))
                      : `<p>${esc(kpi.dataSource) || 'ไม่ระบุที่มาข้อมูล'}</p>`}
-                ${ed && !canDet ? '<div class="hint">รายละเอียดและที่มาข้อมูลแก้ไขได้เฉพาะปีงบปัจจุบัน</div>' : ''}
+                ${ed && !canDet ? `<div class="hint">${esc(whyNoDetails())}</div>` : ''}
               </div>
               <div class="info-card owner-box" style="border-left: 5px solid var(--primary-color);">
                 <div class="info-card-title">👤 ผู้รับผิดชอบดูแล</div>
@@ -1613,7 +1737,7 @@
               </div>
               <div class="card-foot">
                 <span class="stamp-line">👁️ เข้าดูล่าสุด: ${stampText(kpi.viewedAt, kpi.viewedBy)}</span>
-                <button class="btn btn-secondary btn-sm readmore-btn" style="display:none;" onclick="toggleExpand('${esc(kpi.id)}')">${expandedCards.has(kpi.id) ? '▲ ย่อ' : '▼ อ่านเพิ่ม'}</button>
+                <button class="btn btn-secondary btn-sm readmore-btn" style="display:none;" onclick="toggleExpand('${esc(kpi.key)}')">${expandedCards.has(kpi.key) ? '▲ ย่อ' : '▼ อ่านเพิ่ม'}</button>
               </div>
             </div></div>
           </div>
@@ -1670,15 +1794,15 @@
       if (!('IntersectionObserver' in window)) return;
       cardObserver = new IntersectionObserver(entries => {
         entries.forEach(e => {
-          const id = e.target.dataset.id;
+          const id = e.target.dataset.id, key = e.target.dataset.key;
           const seen = e.intersectionRatio >= 0.5 || e.intersectionRect.height >= window.innerHeight * 0.5;
           if (seen) {
-            if (!viewTimers[id]) viewTimers[id] = setTimeout(() => { trackView(id); delete viewTimers[id]; }, 2000);
-          } else if (viewTimers[id]) {
-            clearTimeout(viewTimers[id]);
-            delete viewTimers[id];
+            if (!viewTimers[key]) viewTimers[key] = setTimeout(() => { trackView(id); delete viewTimers[key]; }, 2000);
+          } else if (viewTimers[key]) {
+            clearTimeout(viewTimers[key]);
+            delete viewTimers[key];
           }
-          if (e.isIntersecting) visibleCards.add(id); else visibleCards.delete(id);
+          if (e.isIntersecting) visibleCards.add(key); else visibleCards.delete(key);
         });
         updateTreeInView();
       }, { threshold: [0, 0.25, 0.5, 0.75, 1] });
@@ -1686,8 +1810,8 @@
     }
 
     function updateTreeInView() {
-      const first = Array.from(document.querySelectorAll('.kpi-card')).map(c => c.dataset.id).find(id => visibleCards.has(id));
-      document.querySelectorAll('.kpi-link-item').forEach(el => el.classList.toggle('in-view', el.dataset.id === first));
+      const first = Array.from(document.querySelectorAll('.kpi-card')).map(c => c.dataset.key).find(key => visibleCards.has(key));
+      document.querySelectorAll('.kpi-link-item').forEach(el => el.classList.toggle('in-view', el.dataset.key === first));
     }
 
     function toggleCharts() {
@@ -1731,6 +1855,7 @@
         p.target = getVal('ed-target');
         p.owner = getVal('ed-owner');
         p.department = getVal('ed-dept');
+        if (document.getElementById('ed-cats')) p.cats = readCatRows('ed-cats');
       }
       if (isPrivilegedUser()) {
         if (document.querySelector('.ed-level-cb')) p.levels = checkedLevels('ed-level-cb');
@@ -1745,14 +1870,20 @@
       if (mark) mark.style.display = isDirty() ? 'inline' : 'none';
     }
 
-    function startEdit(id) {
-      guardUnsaved(() => startEditNow(id));
+    function startEdit(id, key) {
+      guardUnsaved(() => startEditNow(id, key));
     }
 
-    function startEditNow(id) {
+    function startEditNow(id, key) {
       const kpi = globalDatabase.find(k => k.id === id);
       if (!kpi || !(kpi.canEditResults || kpi.canEditDetails)) return;
+      if (!key) {
+        // ไม่ระบุการ์ด (เช่น มาจากหน้าติดตามงาน): ใช้การ์ดที่อยู่บนจอ ถ้าไม่มีใช้ใบแรก
+        const card = document.querySelector('.kpi-card[data-id="' + id + '"]');
+        key = card ? card.dataset.key : placementsOf(kpi)[0].key;
+      }
       editingId = id;
+      editingKey = key;
       selectedKpiId = id;
       rerenderCard(id);
       editSnapshot = JSON.stringify(collectDraft());
@@ -1762,6 +1893,7 @@
     function exitEdit() {
       const id = editingId;
       editingId = null;
+      editingKey = null;
       editSnapshot = null;
       if (id !== null) rerenderCard(id);
     }
@@ -1783,18 +1915,25 @@
         showAlert('ข้อมูลไม่ครบ', '⚠️', 'กรุณาเลือกระดับตัวชี้วัดอย่างน้อย 1 ระดับ');
         return;
       }
-      if (draft.levels !== undefined && isCorePart(kpi.part) && !hasHospitalLevel(draft.levels)) {
-        showAlert('ระดับไม่ถูกต้อง', '⚠️', 'ตัวชี้วัดในหมวด ' + kpi.part + ' ต้องมีระดับ SAR หรือ QA-หน่วยงาน อย่างน้อย 1 ระดับ');
+      if (draft.cats !== undefined) {
+        const err = catListError(draft.cats, draft.levels !== undefined ? draft.levels : (kpi.levels || [kpi.level]), kpiCats(kpi));
+        if (err) { showAlert('หมวดไม่ถูกต้อง', '⚠️', err); return; }
+        draft.cats = draft.cats.filter(c => c.part && c.category);
+      } else if (draft.levels !== undefined && kpiCats(kpi).some(c => isCorePart(c.part)) && !hasHospitalLevel(draft.levels)) {
+        showAlert('ระดับไม่ถูกต้อง', '⚠️', 'ตัวชี้วัดที่อยู่ใน Part I–IV ต้องมีระดับ SAR หรือ QA-หน่วยงาน อย่างน้อย 1 ระดับ');
         return;
       }
       google.script.run
         .withSuccessHandler((res) => {
           if (!res.success) { showAlert('บันทึกไม่สำเร็จ', '❌', res.message); return; }
           const idx = globalDatabase.findIndex(k => k.id === res.kpi.id);
+          const oldCatKeys = idx !== -1 ? kpiCats(globalDatabase[idx]).map(c => c.part + '||' + c.category).join('\n') : '';
           if (idx !== -1) globalDatabase[idx] = res.kpi;
           editingId = null;
+          editingKey = null;
           editSnapshot = null;
-          rerenderCard(res.kpi.id);
+          // หมวดเปลี่ยน → ตัวชี้วัดย้าย/เพิ่ม/หายจากบางหมวด ต้องวาดรายการใหม่ทั้งหมด
+          if (kpiCats(res.kpi).map(c => c.part + '||' + c.category).join('\n') !== oldCatKeys) renderList(); else rerenderCard(res.kpi.id);
           renderTree();
           if (currentTab === 'progress') loadProgressSummary();
           showToast(res.changed ? '✅ ' + res.message : 'ℹ️ ' + res.message);
@@ -1837,6 +1976,7 @@
         document.getElementById('add-kpi-owner').value = currentUser.username;
         document.getElementById('add-kpi-dept').value = (currentUser.depts || []).join(' / ');
       }
+      document.getElementById('add-kpi-extra-cats').innerHTML = '';
       document.getElementById('add-kpi-levels').innerHTML = levelCheckboxesHtml('add-level-cb', ['SAR']);
       document.getElementById('add-kpi-summary').value = 'เฉลี่ย';
       document.getElementById('add-kpi-frequency').value = 'รายเดือน';
@@ -1867,10 +2007,15 @@
         showAlert('ข้อมูลไม่ครบ', '⚠️', 'กรุณาเลือกระดับตัวชี้วัดอย่างน้อย 1 ระดับ');
         return;
       }
-      if (isCorePart(part) && !hasHospitalLevel(newItem.levels)) {
-        showAlert('ระดับไม่ถูกต้อง', '⚠️', 'ตัวชี้วัดในหมวด ' + part + ' ต้องเป็นระดับ SAR หรือ QA-หน่วยงาน อย่างน้อย 1 ระดับ\nถ้าเป็นระดับรายบุคคล/หน่วยงาน/ฝ่ายการพยาบาล ให้ตั้งชื่อหมวดอื่นเอง (เช่น ชื่อหมวดของคุณ)');
+      const extra = readCatRows('add-kpi-extra-cats').filter(c => c.part || c.category);
+      const cats = [{ part: part, category: cat }].concat(extra);
+      const catErr = catListError(cats, newItem.levels, [], true);
+      if (catErr) { showAlert('หมวดไม่ถูกต้อง', '⚠️', catErr); return; }
+      if (cats.some(c => isCorePart(c.part)) && !hasHospitalLevel(newItem.levels)) {
+        showAlert('ระดับไม่ถูกต้อง', '⚠️', 'ตัวชี้วัดในหมวด Part I–IV ต้องเป็นระดับ SAR หรือ QA-หน่วยงาน อย่างน้อย 1 ระดับ\nถ้าเป็นระดับรายบุคคล/หน่วยงาน/ฝ่ายการพยาบาล ให้ตั้งชื่อหมวดอื่นเอง (เช่น ชื่อหมวดของคุณ)');
         return;
       }
+      newItem.cats = cats;
       document.getElementById('modal-add-kpi').style.display = 'none';
       google.script.run
         .withSuccessHandler((res) => {
@@ -2056,7 +2201,7 @@
         if (appliedFilters.mine && !kpi.mine) return; // ค่าตั้งต้นตามผู้ใช้ (staff / หัวหน้า = เฉพาะของตัวเอง) ใช้ร่วมกับหน้าแรก
         const stt = kpiStatus(kpi);
         summary.push({
-          id: kpi.id, part: kpi.part, category: kpi.category, name: kpi.name,
+          id: kpi.id, part: kpi.part, category: kpi.category, cats: kpiCats(kpi), name: kpi.name,
           owner: kpi.owner, department: kpi.department, status: stt.level, statusText: stt.label, reasons: stt.reasons,
           canEdit: kpi.canEditResults || kpi.canEditDetails
         });
@@ -2097,7 +2242,7 @@
               ${item.reasons.length ? `<div class="st-reasons-sm">${item.reasons.map(r => esc(r)).join('<br>')}</div>` : ''}
             </td>
             <td style="text-align:left; font-weight:600; color:#0f172a;">${esc(item.name)}</td>
-            <td>${esc(item.category)}</td>
+            <td>${esc(item.category)}${(item.cats || []).length > 1 ? ` <span class="multi-cat" title="${esc(item.cats.map(c => c.part + ' › ' + c.category).join('\n'))}">🔗+${item.cats.length - 1}</span>` : ''}</td>
             <td>${esc(item.owner) || '-'}</td>
             <td>${esc(item.department) || '-'}</td>
             <td style="text-align:center;"><button class="btn btn-secondary btn-sm">${item.canEdit ? '✏️ แก้ไข' : '👁️ ดู'}</button></td>
@@ -2152,7 +2297,8 @@
 
       // แยกตามหมวดหลัก
       const parts = {};
-      data.forEach(x => { (parts[x.part] = parts[x.part] || []).push(x); });
+      // ตัวชี้วัดที่อยู่หลายหมวดนับในทุกหมวดหลักที่อยู่ (หมวดหลักเดียวกันนับครั้งเดียว) ส่วนยอดรวมนับตัวละครั้งเดียว
+      data.forEach(x => { new Set((x.cats || [{ part: x.part }]).map(c => c.part)).forEach(pn => { (parts[pn] = parts[pn] || []).push(x); }); });
       const partRows = Object.keys(parts).sort(comparePartNames).map(p => {
         const list = parts[p], n = list.length;
         const pg = count(list, 'green'), py = count(list, 'yellow'), pr = count(list, 'red');
@@ -2187,17 +2333,25 @@
     function gotoKpi(id, edit) {
       switchMenu('home');
       goToKpi(id);
-      if (edit) startEditNow(id);
+      if (edit) startEditNow(id, selectedKey);
     }
 
     // ===================== Export PDF (พิมพ์จากเบราว์เซอร์) =====================
     function pdfGroups() {
       const g = {};
-      globalDatabase.forEach(k => {
-        if (!g[k.part]) g[k.part] = {};
-        g[k.part][k.category] = (g[k.part][k.category] || 0) + 1;
-      });
+      globalDatabase.forEach(k => placementsOf(k).forEach(p => {
+        if (!g[p.part]) g[p.part] = {};
+        g[p.part][p.category] = (g[p.part][p.category] || 0) + 1;
+      }));
       return g;
+    }
+
+    // ตัวชี้วัดในหมวดที่เลือก — ตัวที่อยู่หลายหมวดพิมพ์ครั้งเดียว (ในหมวดแรกที่เรียงได้)
+    function pdfChosen() {
+      const keys = pdfSelectedKeys();
+      const ps = [];
+      globalDatabase.forEach(k => placementsOf(k).forEach(p => { if (keys.has(p.part + '||' + p.category)) ps.push(p); }));
+      return ps;
     }
 
     function openPdfModal() {
@@ -2232,7 +2386,7 @@
 
     function pdfUpdateCount() {
       const keys = pdfSelectedKeys();
-      const n = globalDatabase.filter(k => keys.has(k.part + '||' + k.category)).length;
+      const n = uniqueById(pdfChosen()).length;
       document.getElementById('pdf-count').innerText = `เลือก ${n} ตัวชี้วัด`;
     }
 
@@ -2275,13 +2429,22 @@
     }
 
     function buildPrintHtml(opts, landscape) {
-      const keys = pdfSelectedKeys();
-      const chosen = globalDatabase.filter(k => keys.has(k.part + '||' + k.category));
+      const chosenAll = pdfChosen();
+      const chosen = uniqueById(chosenAll);
       const tree = {};
-      chosen.forEach(k => {
+      chosenAll.forEach(k => {
         if (!tree[k.part]) tree[k.part] = {};
         if (!tree[k.part][k.category]) tree[k.part][k.category] = [];
         tree[k.part][k.category].push(k);
+      });
+      // ตัวที่อยู่หลายหมวดพิมพ์ครั้งเดียว: เก็บไว้ในหมวดแรก (ตามลำดับหมวดหลัก → หมวดย่อย) ตัดออกจากหมวดถัดไป
+      const printed = new Set();
+      Object.keys(tree).sort(comparePartNames).forEach(part => {
+        Object.keys(tree[part]).sort().forEach(cat => {
+          tree[part][cat] = tree[part][cat].filter(k => !printed.has(k.id) && printed.add(k.id));
+          if (tree[part][cat].length === 0) delete tree[part][cat];
+        });
+        if (Object.keys(tree[part]).length === 0) delete tree[part];
       });
       const printedAt = new Date().toLocaleString('th-TH', { dateStyle: 'long', timeStyle: 'short' });
       let html = `<div class="pr-head"><div class="pr-hosp">โรงพยาบาลภูหลวง</div>
@@ -2372,6 +2535,36 @@
 
     // ===================== เริ่มต้น =====================
     resetLoginBox();
+
+    // ===================== ป้ายเหตุผลของช่องที่ล็อก =====================
+    (function () {
+      const tip = document.createElement('div');
+      tip.id = 'lock-tip';
+      document.body.appendChild(tip);
+      let hideTimer = null;
+      const place = (e) => {
+        const w = tip.offsetWidth, h = tip.offsetHeight;
+        tip.style.left = Math.max(8, Math.min(e.clientX + 14, window.innerWidth - w - 8)) + 'px';
+        tip.style.top = (e.clientY + 22 + h > window.innerHeight ? Math.max(8, e.clientY - h - 12) : e.clientY + 22) + 'px';
+      };
+      const hide = () => { tip.style.display = 'none'; };
+      const show = (e) => {
+        const w = e.target.closest ? e.target.closest('[data-reason]') : null;
+        if (!w) { hide(); return; }
+        tip.innerText = w.dataset.reason;
+        tip.style.display = 'block';
+        place(e);
+        clearTimeout(hideTimer);
+        hideTimer = setTimeout(hide, 6000); // จอสัมผัส: ไม่มี mouseout ให้ซ่อนเอง
+      };
+      document.addEventListener('mouseover', show);
+      document.addEventListener('mousemove', (e) => {
+        if (tip.style.display === 'block') place(e);
+        else if (e.target.closest && e.target.closest('[data-reason]')) show(e); // เลื่อนจอแล้วป้ายหาย → เมาส์ขยับให้ขึ้นใหม่
+      });
+      document.addEventListener('mouseout', (e) => { if (!e.relatedTarget || !(e.relatedTarget.closest && e.relatedTarget.closest('[data-reason]'))) hide(); });
+      document.addEventListener('scroll', hide, true);
+    })();
   </script>
 </body>
 </html>

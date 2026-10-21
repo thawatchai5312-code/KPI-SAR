@@ -47,6 +47,10 @@ var FREQ_COL = 36;
 var FREQUENCIES = ["รายเดือน", "รายไตรมาส", "ครึ่งปี", "รายปี"];
 var DEFAULT_FREQUENCY = "รายเดือน";
 var FREQ_HEADER = "ความถี่การเก็บข้อมูล (Frequency)";
+// คอลัมน์ AK: หมวดเพิ่มเติม — ตัวชี้วัดตัวเดียวแสดงได้หลายหมวด (แถวเดียวกัน แก้ที่ไหนก็เปลี่ยนทุกที่)
+// เก็บบรรทัดละ 1 หมวด รูปแบบ "หมวดหลัก | หมวดย่อย" ส่วนหมวดแรกยังอยู่ที่คอลัมน์ C/D
+var EXTRA_CATS_COL = 37;
+var EXTRA_CATS_HEADER = "หมวดเพิ่มเติม (บรรทัดละ 1 หมวด: หมวดหลัก | หมวดย่อย)";
 
 // หัวหน้าหน่วยตั้งต้น (ใช้ครั้งเดียวหลังอัปเดตนี้) — ชื่อ → หน่วยงานที่ดูแล
 // ผู้บริหาร (executive) จะไม่ถูกลดสิทธิ์ แค่บันทึกหน่วยงานไว้
@@ -445,6 +449,45 @@ function isCorePart_(part) {
   return /^part\s+(iv|iii|ii|i)(?![a-z])/i.test((part || "").toString().trim());
 }
 
+function catKey_(c) { return c.part + "||" + c.category; }
+
+/** หมวดทั้งหมดของตัวชี้วัด (หมวดแรก = หมวดหลักประจำตัว) ตัดซ้ำ */
+function kpiCats_(kpi) {
+  var list = kpi.cats && kpi.cats.length ? kpi.cats : [{ part: kpi.part, category: kpi.category }];
+  var seen = {}, out = [];
+  list.forEach(function(c) { if (!seen[catKey_(c)]) { seen[catKey_(c)] = true; out.push(c); } });
+  return out;
+}
+
+/** แปลงข้อความคอลัมน์ AK เป็นรายการหมวด */
+function parseExtraCats_(text) {
+  var out = [];
+  if (!text) return out;
+  text.toString().split(/\r?\n/).forEach(function(line) {
+    var i = line.indexOf("|");
+    if (i === -1) return;
+    var part = line.slice(0, i).trim(), cat = line.slice(i + 1).trim();
+    if (part && cat) out.push({ part: part, category: cat });
+  });
+  return out;
+}
+
+function formatExtraCats_(cats) {
+  return cats.map(function(c) { return c.part + " | " + c.category; }).join("\n");
+}
+
+/** ตัวชี้วัดมีหมวดใดหมวดหนึ่งเป็น Part I–IV */
+function inCorePart_(kpi) {
+  return kpiCats_(kpi).some(function(c) { return isCorePart_(c.part); });
+}
+
+/** หมวดที่ผู้ใช้เห็น: ผอ./QMR (ที่ไม่ใช่เจ้าของ) เห็นเฉพาะ Part I–IV */
+function visibleCats_(user, kpi, perm) {
+  var cats = kpiCats_(kpi);
+  if (user.tier === "executive" && !perm.mine) cats = cats.filter(function(c) { return isCorePart_(c.part); });
+  return cats;
+}
+
 /** ตัวชี้วัดมีระดับ SAR หรือ QA (ระดับโรงพยาบาล) อย่างน้อยหนึ่งระดับ */
 function hasHospitalLevel_(levels) {
   return (levels || []).some(function(l) { return l === "SAR" || l === "QA-หน่วยงาน"; });
@@ -455,8 +498,8 @@ function hasHospitalLevel_(levels) {
  * editResults = กรอกผลทั้งปี/รายเดือน (ผู้รับผิดชอบ/หัวหน้าหน่วย: ปีงบปัจจุบันและปีก่อนหน้า)
  * editDetails = แก้ชื่อ/เป้าหมาย/รายละเอียด/ที่มาข้อมูล/ผู้รับผิดชอบ/หน่วยงาน (ปีงบปัจจุบันเท่านั้น) — admin, ผอ., QMR แก้ได้ทุกอย่างทุกปี
  * การมองเห็น: admin เห็นทั้งหมด · ผอ./QMR เห็นเฉพาะ Part I–IV ระดับ SAR/QA (หรือที่ตัวเองเป็นผู้รับผิดชอบ)
- *   · หัวหน้า/เจ้าหน้าที่: ตัวที่ตัวเองรับผิดชอบ, ระดับ SAR (ทุกคน), QA-หน่วยงานของหน่วยตัวเอง
- *     ส่วนระดับรายบุคคล/หน่วยงาน/ฝ่ายการพยาบาล เห็นถึงหัวหน้าหน่วยนั้นเท่านั้น
+ *   · หัวหน้า/เจ้าหน้าที่: ตัวที่ตัวเองรับผิดชอบ, ระดับ SAR (ทุกคน), ระดับหน่วยงาน/QA-หน่วยงานของหน่วยตัวเอง
+ *     ส่วนระดับรายบุคคล/ฝ่ายการพยาบาล เห็นถึงเจ้าของและหัวหน้าหน่วยนั้นเท่านั้น
  */
 function getKpiPermission_(user, kpi, fy) {
   var isOwner = parseOwners_(kpi.owner).indexOf(user.username) !== -1;
@@ -467,7 +510,7 @@ function getKpiPermission_(user, kpi, fy) {
   var levels = kpi.levels || normalizeLevels_(kpi.level);
   if (user.tier === "admin") return { view: true, editResults: true, editDetails: true, mine: isOwner };
   if (user.tier === "executive") {
-    var execView = isOwner || (isCorePart_(kpi.part) && hasHospitalLevel_(levels));
+    var execView = isOwner || (inCorePart_(kpi) && hasHospitalLevel_(levels));
     return { view: execView, editResults: execView, editDetails: execView, mine: isOwner };
   }
   var inDept = parseDepts_(kpi.department).some(function(d) { return user.depts.indexOf(d) !== -1; });
@@ -479,9 +522,9 @@ function getKpiPermission_(user, kpi, fy) {
     // หลายระดับ: เห็นได้ถ้าระดับใดระดับหนึ่งให้สิทธิ์ดู
     view = levels.some(function(l) {
       if (l === "SAR") return true;
-      if (l === "QA-หน่วยงาน") return inDept;
+      if (l === "หน่วยงาน" || l === "QA-หน่วยงาน") return inDept; // ทุกคนในหน่วยงานเห็น
       if (l === "ฝ่ายการพยาบาล") return user.tier === "head" && user.depts.indexOf(NURSING_DIVISION_TAG) !== -1;
-      return false; // รายบุคคล/หน่วยงาน: เห็นถึงหัวหน้าหน่วยเท่านั้น (ผ่านเงื่อนไข edit ด้านบน)
+      return false; // รายบุคคล: เห็นถึงเจ้าของและหัวหน้าหน่วยเท่านั้น (ผ่านเงื่อนไข edit ด้านบน)
     });
   }
   var current = getCurrentFiscalYear_();
