@@ -654,7 +654,12 @@
       <div class="modal-header">📄 Export PDF</div>
       <div class="modal-body" style="max-height: 72vh; overflow-y: auto;">
         <div class="form-group">
-          <label>1. เลือกหมวดตัวชี้วัดที่จะพิมพ์</label>
+          <label>1. เลือกตัวชี้วัดที่จะพิมพ์</label>
+          <div style="display: flex; gap: 4px 14px; flex-wrap: wrap; margin-bottom: 6px;">
+            <label class="check-row"><input type="radio" name="pdf-scope" value="mine" checked onchange="renderPdfCatList()"> เฉพาะที่ฉันรับผิดชอบ</label>
+            <label class="check-row" id="pdf-scope-dept-label"><input type="radio" name="pdf-scope" value="dept" onchange="renderPdfCatList()"> เฉพาะหน่วยงานที่ฉันสังกัด</label>
+            <label class="check-row"><input type="radio" name="pdf-scope" value="all" onchange="renderPdfCatList()"> ทุกตัวชี้วัด</label>
+          </div>
           <div style="display: flex; gap: 6px; margin-bottom: 6px;">
             <button class="btn btn-secondary btn-sm" onclick="pdfSelectAll(true)">เลือกทั้งหมด</button>
             <button class="btn btn-secondary btn-sm" onclick="pdfSelectAll(false)">ล้างทั้งหมด</button>
@@ -2341,9 +2346,25 @@
     }
 
     // ===================== Export PDF (พิมพ์จากเบราว์เซอร์) =====================
+    // ขอบเขตตัวชี้วัดที่จะพิมพ์: ของฉัน / หน่วยงานที่ฉันสังกัด / ทั้งหมด
+    const PDF_DEPT_ALIASES = { 'จิิตเวช': 'จิตเวช', 'งานIC': 'IC', 'ICWN': 'IC', 'ทีมบริหารความเสี่ยง(RM)': 'RM', 'แพทย์แผนไทย': 'แผนไทย' };
+    function pdfKpiDepts(k) {
+      return String(k.department || '').replace(/TB clinic/g, 'TB').split(/[\/\s,]+/).map(d => PDF_DEPT_ALIASES[d.trim()] || d.trim()).filter(Boolean);
+    }
+    function pdfScope() {
+      const r = document.querySelector('input[name="pdf-scope"]:checked');
+      return r ? r.value : 'mine';
+    }
+    function pdfInScope(k) {
+      const scope = pdfScope();
+      if (scope === 'mine') return !!k.mine;
+      if (scope === 'dept') return pdfKpiDepts(k).some(d => (currentUser.depts || []).indexOf(d) !== -1);
+      return true;
+    }
+
     function pdfGroups() {
       const g = {};
-      globalDatabase.forEach(k => placementsOf(k).forEach(p => {
+      globalDatabase.filter(pdfInScope).forEach(k => placementsOf(k).forEach(p => {
         if (!g[p.part]) g[p.part] = {};
         g[p.part][p.category] = (g[p.part][p.category] || 0) + 1;
       }));
@@ -2354,11 +2375,23 @@
     function pdfChosen() {
       const keys = pdfSelectedKeys();
       const ps = [];
-      globalDatabase.forEach(k => placementsOf(k).forEach(p => { if (keys.has(p.part + '||' + p.category)) ps.push(p); }));
+      globalDatabase.filter(pdfInScope).forEach(k => placementsOf(k).forEach(p => { if (keys.has(p.part + '||' + p.category)) ps.push(p); }));
       return ps;
     }
 
     function openPdfModal() {
+      // ค่าตั้งต้น: เฉพาะที่ฉันรับผิดชอบ (ถ้าไม่มีตัวที่รับผิดชอบเลย เช่น admin ให้เริ่มที่ทุกตัวชี้วัด)
+      const hasMine = globalDatabase.some(k => k.mine);
+      const hasDept = (currentUser.depts || []).length > 0;
+      document.querySelector('input[name="pdf-scope"][value="dept"]').disabled = !hasDept;
+      document.getElementById('pdf-scope-dept-label').title = hasDept ? 'หน่วยงาน: ' + currentUser.depts.join(', ') : 'บัญชีนี้ยังไม่ได้ระบุหน่วยงาน';
+      document.querySelector('input[name="pdf-scope"][value="' + (hasMine ? 'mine' : 'all') + '"]').checked = true;
+      renderPdfCatList();
+      document.getElementById('modal-pdf').style.display = 'flex';
+    }
+
+    // รายการหมวด (ติ๊กเลือก) ตามขอบเขตที่เลือก — เปลี่ยนขอบเขตแล้วติ๊กทุกหมวดใหม่
+    function renderPdfCatList() {
       const groups = pdfGroups();
       let html = '';
       Object.keys(groups).sort(comparePartNames).forEach((part, pi) => {
@@ -2367,9 +2400,8 @@
           html += `<label class="check-row" style="margin-left:22px;"><input type="checkbox" class="pdf-cat" data-part="${esc(part)}" data-cat="${esc(cat)}" checked onchange="pdfUpdateCount()"> ${esc(cat)} (${groups[part][cat]})</label>`;
         });
       });
-      document.getElementById('pdf-cat-list').innerHTML = html || '<div class="empty-state">ไม่มีตัวชี้วัด</div>';
+      document.getElementById('pdf-cat-list').innerHTML = html || '<div class="empty-state">ไม่มีตัวชี้วัดในขอบเขตที่เลือก</div>';
       pdfUpdateCount();
-      document.getElementById('modal-pdf').style.display = 'flex';
     }
 
     function pdfSelectAll(on) {
@@ -2475,7 +2507,7 @@
         source: document.getElementById('pdf-opt-source').checked,
         owner: document.getElementById('pdf-opt-owner').checked
       };
-      if (pdfSelectedKeys().size === 0) { showAlert('ยังไม่ได้เลือกหมวด', '⚠️', 'กรุณาเลือกหมวดตัวชี้วัดอย่างน้อย 1 หมวด'); return; }
+      if (pdfSelectedKeys().size === 0 || pdfChosen().length === 0) { showAlert('ยังไม่ได้เลือกตัวชี้วัด', '⚠️', 'กรุณาเลือกหมวดตัวชี้วัดอย่างน้อย 1 หมวด'); return; }
       if (!opts.table && !opts.chart && !opts.detail && !opts.source && !opts.owner) {
         showAlert('ยังไม่ได้เลือกเนื้อหา', '⚠️', 'กรุณาเลือกเนื้อหาที่จะพิมพ์อย่างน้อย 1 อย่าง');
         return;
