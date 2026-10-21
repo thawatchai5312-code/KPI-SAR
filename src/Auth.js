@@ -2,7 +2,7 @@
  * ระบบยืนยันตัวตนและสิทธิ์การเข้าถึง (Authentication & Authorization)
  *
  * Tier ผู้ใช้:  admin | executive (ผอ./QMR) | head (หัวหน้าหน่วย) | staff (รายบุคคล)
- * ระดับตัวชี้วัด (คอลัมน์ AC ของชีต Database): รายบุคคล | หน่วยงาน | QA-หน่วยงาน | QA-รพ | SAR
+ * ระดับตัวชี้วัด (คอลัมน์ AC ของชีตปีงบ เลือกได้หลายระดับ): รายบุคคล | หน่วยงาน | ฝ่ายการพยาบาล | QA-หน่วยงาน | SAR
  *
  * ทุกฟังก์ชันที่เว็บเรียกต้องส่ง session token มา และ server ตรวจสิทธิ์เองทุกครั้ง
  * ฟังก์ชันที่ลงท้ายด้วย _ เป็น private เรียกจากหน้าเว็บไม่ได้
@@ -21,9 +21,9 @@ var TIERS = ["admin", "executive", "head", "staff"];
 
 // ระดับตัวชี้วัด เรียงจากต่ำไปสูง — 1 ตัวชี้วัดเลือกได้หลายระดับ (คอลัมน์ AC คั่นด้วย ", ") แสดงผลเป็นระดับสูงสุด
 var KPI_LEVELS = ["รายบุคคล", "หน่วยงาน", "ฝ่ายการพยาบาล", "QA-หน่วยงาน", "SAR"];
-// ระดับเดิมที่ยังรองรับถ้ามีอยู่ในชีตแล้ว แต่ไม่มีให้เลือกใหม่
-var LEGACY_KPI_LEVELS = ["QA-รพ"];
-var LEVEL_RANK = ["รายบุคคล", "หน่วยงาน", "ฝ่ายการพยาบาล", "QA-หน่วยงาน", "QA-รพ", "SAR"];
+var LEVEL_RANK = KPI_LEVELS;
+// ระดับเดิมที่เลิกใช้แล้ว อ่านเป็นระดับใหม่แทน (QA มีระดับเดียวคือ QA-หน่วยงาน)
+var LEVEL_ALIASES = { "QA-รพ": "QA-หน่วยงาน" };
 // ผู้ใช้ที่มี "ฝ่ายการพยาบาล" ในช่องหน่วยงาน เห็นตัวชี้วัดระดับ "ฝ่ายการพยาบาล" ทั้งหมด
 var NURSING_DIVISION_TAG = "ฝ่ายการพยาบาล";
 var DEFAULT_KPI_LEVEL = "SAR";
@@ -105,19 +105,20 @@ function normalizeLevels_(value) {
   var out = [];
   text.split(/[,\/]/).forEach(function(t) {
     t = t.trim();
+    t = LEVEL_ALIASES[t] || t;
     if (LEVEL_RANK.indexOf(t) !== -1 && out.indexOf(t) === -1) out.push(t);
   });
   if (out.length === 0) return [KPI_LEVELS[0]];
   return sortLevels_(out);
 }
 
-/** ระดับที่ส่งมาจากหน้าเว็บ → เก็บเฉพาะที่เลือกได้ (ระดับเดิมแบบ legacy คงไว้ได้ถ้าตัวชี้วัดมีอยู่แล้ว) */
+/** ระดับที่ส่งมาจากหน้าเว็บ → เก็บเฉพาะระดับที่เลือกได้ */
 function cleanLevelList_(list, oldLevels) {
   var out = [];
   (list || []).forEach(function(t) {
     t = (t || "").toString().trim();
-    var ok = KPI_LEVELS.indexOf(t) !== -1 || (LEGACY_KPI_LEVELS.indexOf(t) !== -1 && (oldLevels || []).indexOf(t) !== -1);
-    if (ok && out.indexOf(t) === -1) out.push(t);
+    t = LEVEL_ALIASES[t] || t;
+    if (KPI_LEVELS.indexOf(t) !== -1 && out.indexOf(t) === -1) out.push(t);
   });
   return sortLevels_(out);
 }
@@ -435,7 +436,7 @@ function getKpiPermission_(user, kpi, fy) {
   if (!view) {
     // หลายระดับ: เห็นได้ถ้าระดับใดระดับหนึ่งให้สิทธิ์ดู
     view = (kpi.levels || normalizeLevels_(kpi.level)).some(function(l) {
-      if (l === "SAR" || l === "QA-รพ") return true;
+      if (l === "SAR") return true;
       if (l === "หน่วยงาน" || l === "QA-หน่วยงาน") return inDept;
       if (l === "ฝ่ายการพยาบาล") return inDept || user.depts.indexOf(NURSING_DIVISION_TAG) !== -1;
       return false;
