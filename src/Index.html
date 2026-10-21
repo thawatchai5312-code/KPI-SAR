@@ -54,8 +54,9 @@
 
     /* ---------- 1.2 แถบนำทาง ---------- */
     .nav-bar {
-      background: #ffffff; padding: 5px 8px; border-radius: var(--radius-pill); box-shadow: 0 4px 10px rgba(0,0,0,0.06);
+      background: #ffffff; padding: 5px 8px; border-radius: var(--radius-pill); box-shadow: 0 4px 10px rgba(0,0,0,0.12);
       margin-bottom: 10px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+      position: sticky; top: 6px; z-index: 50;
     }
     .nav-item {
       padding: 7px 16px; cursor: pointer; font-weight: 700; font-size: 14px; color: #475569;
@@ -67,13 +68,49 @@
     .nav-spacer { flex: 1; }
     .nav-actions { display: flex; gap: 6px; align-items: center; }
 
-    /* ---------- 1.3 ส่วนแสดงข้อมูล: 20 : 40 : 40 ---------- */
-    .home-grid { display: grid; grid-template-columns: 20fr 40fr 40fr; gap: 10px; align-items: start; }
+    /* ---------- 1.3 หน้าแรก: ผังรายการ 20 : รายการการ์ดตัวชี้วัด 80 ---------- */
+    .home-grid { display: grid; grid-template-columns: 20fr 80fr; gap: 10px; align-items: start; }
     .panel {
       background: #ffffff; border-radius: var(--radius-large); box-shadow: var(--box-shadow); padding: 12px;
       border: 1px solid rgba(0,0,0,0.05); min-width: 0;
-      max-height: calc(100vh - 175px); overflow-y: auto;
     }
+    #panel-tree { position: sticky; top: var(--tree-top, 70px); max-height: calc(100vh - var(--tree-top, 70px) - 10px); overflow-y: auto; }
+    #kpi-list-area { min-width: 0; scroll-margin-top: var(--tree-top, 70px); }
+
+    .pager { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; background: #fff; border-radius: 10px; padding: 6px 10px; margin-bottom: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.06); font-size: 13px; font-weight: 700; color: #334155; }
+    .pager-buttons { display: flex; gap: 3px; flex-wrap: wrap; align-items: center; }
+    .page-btn { min-width: 32px; padding: 4px 8px; border: 1px solid #cbd5e1; background: #fff; border-radius: 6px; cursor: pointer; font-weight: 700; color: #334155; font-size: 13px; }
+    .page-btn:hover:not(:disabled) { background: #e0f2fe; }
+    .page-btn.active { background: var(--secondary-gradient); color: #fff; border-color: transparent; }
+    .page-btn:disabled { opacity: 0.4; cursor: default; }
+    .page-gap { padding: 0 4px; color: #64748b; }
+    .list-section { font-size: 15px; font-weight: 700; color: #fff; background: var(--primary-gradient); padding: 6px 14px; border-radius: 10px; margin: 4px 0 8px; }
+    .list-section-part { opacity: 0.85; }
+
+    .kpi-card { background: #fff; border-radius: var(--radius-large); box-shadow: var(--box-shadow); border: 1px solid rgba(0,0,0,0.06); padding: 12px; margin-bottom: 12px; scroll-margin-top: var(--tree-top, 70px); }
+    .kpi-card.selected { border: 2px solid #86efac; }
+    .kpi-card.editing { border: 2px solid var(--accent-color); }
+    .kpi-card.flash { animation: cardFlash 1.6s ease; }
+    @keyframes cardFlash { 0%, 40% { box-shadow: 0 0 0 4px #fde68a, var(--box-shadow); } 100% { box-shadow: var(--box-shadow); } }
+    .kpi-card-head { display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; align-items: start; border-bottom: 2px solid #e2e8f0; padding-bottom: 6px; margin-bottom: 10px; }
+    .kpi-card-title { font-size: 16px; font-weight: 700; color: #015c8b; text-align: left; }
+    .kpi-card-actions { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+    .kpi-card-badges { grid-column: 1 / -1; }
+    /* ซ้าย (ผลลัพธ์) กับ ขวา (รายละเอียด) ขอบบน-ล่างเท่ากันเสมอ: ฝั่งขวาสูงตามฝั่งซ้าย ข้อความยาวถูกตัด + ปุ่มอ่านเพิ่ม */
+    .kpi-card-body { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; min-height: 300px; }
+    .card-left, .card-right { min-width: 0; }
+    .card-right { position: relative; }
+    .card-right-inner { position: absolute; inset: 0; display: flex; flex-direction: column; gap: 8px; overflow: hidden; }
+    .kpi-card.expanded .card-right-inner, .kpi-card.editing .card-right-inner { position: static; }
+    .card-right .info-card { margin-top: 0; }
+    .clip-box { flex: 0 1 auto; min-height: 5.5em; overflow: hidden; position: relative; }
+    .kpi-card.expanded .clip-box, .kpi-card.editing .clip-box { overflow: visible; }
+    .clip-box.clipped::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 2.2em; background: linear-gradient(rgba(255,255,255,0), #fff); }
+    .owner-box, .card-foot { flex: none; }
+    .card-foot { display: flex; justify-content: space-between; align-items: center; gap: 6px; margin-top: auto; }
+    .card-foot .stamp-line { margin-top: 0; }
+    .charts-hidden .chart-wrap { display: none; }
+    .kpi-link-item.in-view { box-shadow: inset 3px 0 0 #f59e0b; background: #fffbeb; }
     .page-view { display: none; animation: fadeIn 0.4s ease; }
     .page-view.active { display: block; }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
@@ -112,7 +149,6 @@
     .dot-missing { color: #ef4444; font-size: 10px; flex: none; }
 
     /* ส่วนที่ 1 / 2 */
-    .dashboard-title { font-size: 17px; font-weight: 700; color: #015c8b; margin-bottom: 8px; padding-bottom: 6px; border-bottom: 2px solid #e2e8f0; text-align: left; }
     .meta-badge { display: inline-block; padding: 3px 9px; background: #f1f5f9; border-radius: 20px; font-size: 12px; font-weight: 700; margin-right: 5px; margin-bottom: 5px; color: #015c8b; border: 1px solid #cbd5e1; }
     .kpi-target-callout { background: var(--accent-gradient); color: #fff; padding: 10px 12px; border-radius: 10px; font-weight: 700; font-size: 14px; margin: 6px 0 10px; box-shadow: 0 4px 10px rgba(234, 88, 12, 0.3); text-shadow: 1px 1px 2px rgba(0,0,0,0.25); }
     .section-bar { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin: 10px 0 6px; }
@@ -122,7 +158,6 @@
     .info-card { background: #ffffff; border-radius: 10px; padding: 12px; margin-top: 10px; border: 1px solid #cbd5e1; box-shadow: 0 2px 6px rgba(0,0,0,0.04); text-align: left; }
     .info-card-title { font-weight: 700; font-size: 14px; color: #015c8b; margin-bottom: 4px; }
     .info-card p { font-size: 13px; color: #475569; white-space: pre-line; font-weight: 500; }
-    .action-bar { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; padding-bottom: 8px; border-bottom: 2px solid #e2e8f0; position: sticky; top: -12px; background: #fff; padding-top: 12px; margin-top: -12px; z-index: 5; }
     .dirty-mark { font-size: 12px; font-weight: 700; color: #b45309; display: none; }
     .stamp-line { font-size: 11.5px; color: #64748b; margin-top: 10px; text-align: left; font-weight: 600; }
     .hint { font-size: 11.5px; color: #64748b; font-weight: 600; margin-top: 4px; }
@@ -171,12 +206,16 @@
 
     #toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: #064e3b; color: #fff; padding: 10px 20px; border-radius: 30px; font-weight: 700; font-size: 14px; box-shadow: 0 8px 20px rgba(0,0,0,0.3); z-index: 2000; display: none; }
 
-    /* จอเล็ก: เรียง 3 ส่วนต่อกันแนวตั้ง */
+    /* จอเล็ก: ผังรายการอยู่บน การ์ดเรียงซ้าย-ขวาเป็นบน-ล่าง */
     @media (max-width: 1000px) {
       .home-grid { grid-template-columns: 1fr; }
-      .panel { max-height: none; }
-      #panel-tree { max-height: 320px; }
+      #panel-tree { position: static; max-height: 320px; }
       .nav-spacer { display: none; }
+      .nav-bar { position: static; }
+      .kpi-card-body { grid-template-columns: 1fr; min-height: 0; }
+      .card-right-inner { position: static; }
+      .clip-box { max-height: 12em; }
+      .kpi-card.expanded .clip-box, .kpi-card.editing .clip-box { max-height: none; }
     }
 
     /* ---------- พิมพ์ / Export PDF ---------- */
@@ -236,12 +275,13 @@
     <div class="nav-item" id="menu-progress-btn" onclick="guardUnsaved(() => switchMenu('progress'))">📋 ติดตามงาน (Progress)</div>
     <div class="nav-spacer"></div>
     <div class="nav-actions">
+      <button class="btn btn-secondary" id="btn-toggle-chart" onclick="toggleCharts()">🙈 ซ่อนกราฟ</button>
       <button class="btn btn-accent" id="btn-add-kpi" style="display: none;" onclick="guardUnsaved(openAddKpiModal)">➕ เพิ่มตัวชี้วัดใหม่</button>
       <button class="btn btn-primary" id="btn-export-pdf" onclick="guardUnsaved(openPdfModal)">📄 Export PDF</button>
     </div>
   </div>
 
-  <!-- 1.3 หน้าแรก (Dashboard): ผังรายการ 20 : ผลลัพธ์ 40 : รายละเอียด 40 -->
+  <!-- 1.3 หน้าแรก (Dashboard): ผังรายการ 20 : รายการการ์ดตัวชี้วัด 80 (หน้าละ 10/20/50 ตัว) -->
   <div id="page-home" class="page-view active">
     <div class="home-grid">
       <div class="panel" id="panel-tree">
@@ -259,11 +299,7 @@
         <div id="accordion-tree-container"><div class="empty-state">กรุณาเข้าสู่ระบบ...</div></div>
       </div>
 
-      <div class="panel" id="panel-result">
-        <div class="empty-state"><div style="font-size: 35px; margin-bottom: 10px; color:#94a3b8;">👈</div>กรุณาเลือกตัวชี้วัดจากผังรายการ</div>
-      </div>
-
-      <div class="panel" id="panel-detail"></div>
+      <div id="kpi-list-area"></div>
     </div>
   </div>
 
@@ -462,12 +498,19 @@
     let currentFy = null;    // ปีงบปัจจุบันตามวันที่ (ขึ้นปีใหม่ 1 ต.ค.)
     let fiscalYears = [];
 
-    let editMode = false;        // กำลังแก้ไขตัวชี้วัดที่เลือกอยู่หรือไม่
+    let editingId = null;        // รหัสตัวชี้วัดที่กำลังแก้ไข (แก้ได้ทีละตัว) — null = ไม่ได้แก้ไข
     let editSnapshot = null;     // ค่าในฟอร์มตอนเริ่มแก้ไข ใช้เทียบว่ามีการแก้ไขที่ยังไม่บันทึกหรือไม่
     let pendingAfterUnsaved = null;
     let pendingSelectAfterLoad = null;
     let chartVisible = true;
-    try { if (localStorage.getItem('kpi_chart_visible') === '0') chartVisible = false; } catch (e) {}
+    let currentPage = 1;
+    let pageSize = 10;
+    const expandedCards = new Set(); // การ์ดที่กด "อ่านเพิ่ม" ไว้
+    try {
+      if (localStorage.getItem('kpi_chart_visible') === '0') chartVisible = false;
+      const ps = Number(localStorage.getItem('kpi_page_size'));
+      if ([10, 20, 50].indexOf(ps) !== -1) pageSize = ps;
+    } catch (e) {}
 
     const openParts = new Set();
     const openCats = new Set();
@@ -487,10 +530,6 @@
 
     function isPrivilegedUser() {
       return !!currentUser && (currentUser.tier === 'admin' || currentUser.tier === 'executive');
-    }
-
-    function currentKpi() {
-      return globalDatabase.find(k => k.id === selectedKpiId) || null;
     }
 
     function kpiNumber(kpi) {
@@ -605,17 +644,18 @@
       sessionToken = null;
       currentUser = null;
       isAppUnlocked = false;
-      editMode = false;
+      editingId = null;
       editSnapshot = null;
       pendingViews.clear();
+      expandedCards.clear();
+      currentPage = 1;
       globalDatabase = [];
       selectedKpiId = null; selectedCategoryName = null; selectedPartName = null;
       document.getElementById('user-bar').style.display = 'none';
       ['modal-settings', 'modal-add-kpi', 'modal-pdf', 'modal-unsaved', 'modal-change-password', 'modal-alert', 'modal-confirm']
         .forEach(id => { document.getElementById(id).style.display = 'none'; });
       document.getElementById('accordion-tree-container').innerHTML = '<div class="empty-state">กรุณาเข้าสู่ระบบ...</div>';
-      document.getElementById('panel-result').innerHTML = '<div class="empty-state">กรุณาเลือกตัวชี้วัดจากผังรายการ</div>';
-      document.getElementById('panel-detail').innerHTML = '';
+      document.getElementById('kpi-list-area').innerHTML = '';
       document.getElementById('progress-content-area').innerHTML = '<div class="empty-state">รอโหลดข้อมูลความคืบหน้า...</div>';
       resetLoginBox(notice);
       document.getElementById('app-login-screen').style.display = 'flex';
@@ -680,19 +720,23 @@
           renderFiscalYearSelect();
           updateDatalists();
 
-          if (pendingSelectAfterLoad) {
-            const p = pendingSelectAfterLoad;
-            pendingSelectAfterLoad = null;
-            const k = globalDatabase.find(x => x.id === p.id);
-            if (k) { selectedKpiId = k.id; selectedPartName = k.part; selectedCategoryName = k.category; openParts.add(k.part); openCats.add(k.part + '||' + k.category); trackView(k.id); }
-          }
           if (selectedKpiId && !globalDatabase.some(k => k.id === selectedKpiId)) selectedKpiId = null;
 
           if (!quiet) document.getElementById('app-login-screen').style.display = 'none';
-          editMode = false; editSnapshot = null;
+          editingId = null; editSnapshot = null;
+          appliedFilters = readTreeFilters();
+          document.getElementById('btn-toggle-chart').innerText = chartVisible ? '🙈 ซ่อนกราฟ' : '📈 แสดงกราฟ';
+          setStickyOffsets();
           renderTree();
-          renderKpiDetail();
+          renderList();
           if (currentTab === 'progress') loadProgressSummary();
+
+          // หลังเพิ่มตัวชี้วัดใหม่: ไปที่การ์ดนั้นแล้วเปิดโหมดแก้ไขทันที
+          if (pendingSelectAfterLoad) {
+            const p = pendingSelectAfterLoad;
+            pendingSelectAfterLoad = null;
+            if (globalDatabase.some(x => x.id === p.id)) { goToKpi(p.id); if (p.edit) startEditNow(p.id); }
+          }
         })
         .withFailureHandler((err) => { renderFiscalYearSelect(); showAlert('เกิดข้อผิดพลาดเครือข่าย', '❌', err.toString()); })
         .getAllData(sessionToken, selectedFy);
@@ -713,6 +757,7 @@
     function changeFiscalYear(value) {
       flushViews();
       selectedFy = Number(value);
+      currentPage = 1;
       document.getElementById('fy-select').disabled = true;
       fetchAllDataFromServer(true);
     }
@@ -745,12 +790,12 @@
 
     // ===================== แก้ไขที่ยังไม่บันทึก: ป๊อปอัพเตือน =====================
     function isDirty() {
-      return editMode && editSnapshot !== null && JSON.stringify(collectDraft()) !== editSnapshot;
+      return editingId !== null && editSnapshot !== null && JSON.stringify(collectDraft()) !== editSnapshot;
     }
 
     // ทำ fn ต่อเมื่อไม่มีงานค้าง ถ้ามีการแก้ไขที่ยังไม่บันทึกจะถามก่อน (บันทึก / ไม่บันทึก / กลับไปแก้ต่อ)
     function guardUnsaved(fn) {
-      if (!editMode) { fn(); return; }
+      if (editingId === null) { fn(); return; }
       if (!isDirty()) { exitEdit(); fn(); return; }
       pendingAfterUnsaved = fn;
       document.getElementById('modal-unsaved').style.display = 'flex';
@@ -760,7 +805,7 @@
       document.getElementById('modal-unsaved').style.display = 'none';
       const fn = pendingAfterUnsaved;
       pendingAfterUnsaved = null;
-      if (choice === 'stay') { renderFiscalYearSelect(); return; }
+      if (choice === 'stay') { renderFiscalYearSelect(); restoreTreeFilters(); return; }
       if (choice === 'discard') { exitEdit(); if (fn) fn(); return; }
       saveKpiEdit(fn);
     }
@@ -769,7 +814,7 @@
       if (isDirty()) { e.preventDefault(); e.returnValue = ''; }
     });
 
-    // ===================== ผังรายการตัวชี้วัด (ส่วนที่ 1 ซ้าย) =====================
+    // ===================== ตัวกรอง + ลำดับการแสดง =====================
     // ผลมักกรอกย้อนหลัง 1 เดือน จึงเช็กเดือนที่แล้ว: ปีงบปัจจุบัน = เดือนก่อนหน้า (ต.ค. = ยังไม่ต้องเช็ก)
     // ปีงบที่ผ่านมาแล้ว = เช็ก ก.ย. (เดือนสุดท้าย)
     function expectedMonthIdx() {
@@ -781,26 +826,58 @@
       return i >= 0 && kpi.months[i] === null;
     }
 
-    function treeFiltersActive() {
-      return document.getElementById('tree-search').value.trim() !== '' ||
-             document.getElementById('tree-mode').value !== 'all' ||
-             document.getElementById('tree-mine').checked;
+    let appliedFilters = { term: '', mode: 'all', mine: false };
+
+    function readTreeFilters() {
+      return {
+        term: document.getElementById('tree-search').value.trim().toLowerCase(),
+        mode: document.getElementById('tree-mode').value,
+        mine: document.getElementById('tree-mine').checked
+      };
     }
 
-    function getFilteredKpis() {
-      const term = document.getElementById('tree-search').value.trim().toLowerCase();
-      const mode = document.getElementById('tree-mode').value;
-      const mine = document.getElementById('tree-mine').checked;
-      return globalDatabase.filter(k => {
-        if (mode === 'missing' && !isMissing(k)) return false;
-        if (mine && !k.mine) return false;
-        if (term && !((k.name + ' ' + k.owner + ' ' + k.department).toLowerCase().includes(term))) return false;
+    // ผู้ใช้กด "กลับไปแก้ต่อ" ตอนเปลี่ยนตัวกรอง → คืนค่าตัวกรองเดิมในช่อง
+    function restoreTreeFilters() {
+      document.getElementById('tree-search').value = appliedFilters.term;
+      document.getElementById('tree-mode').value = appliedFilters.mode;
+      document.getElementById('tree-mine').checked = appliedFilters.mine;
+    }
+
+    function treeFiltersActive() {
+      return appliedFilters.term !== '' || appliedFilters.mode !== 'all' || appliedFilters.mine;
+    }
+
+    // ตัวชี้วัดที่ผ่านตัวกรอง เรียงแบบเดียวกับผังรายการ: หมวดหลัก → หมวดย่อย → ลำดับในชีต
+    function getOrderedKpis() {
+      const f = appliedFilters;
+      const list = globalDatabase.filter(k => {
+        if (f.mode === 'missing' && !isMissing(k)) return false;
+        if (f.mine && !k.mine) return false;
+        if (f.term && !((k.name + ' ' + k.owner + ' ' + k.department).toLowerCase().includes(f.term))) return false;
         return true;
+      });
+      const order = new Map(globalDatabase.map((k, i) => [k.id, i]));
+      const cmp = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
+      return list.sort((a, b) => cmp(a.part, b.part) || cmp(a.category, b.category) || order.get(a.id) - order.get(b.id));
+    }
+
+    function onTreeFilterChange() {
+      guardUnsaved(() => {
+        appliedFilters = readTreeFilters();
+        currentPage = 1;
+        renderTree();
+        renderList();
       });
     }
 
-    function onTreeFilterChange() { renderTree(); }
+    function resetTreeFilters() {
+      document.getElementById('tree-search').value = '';
+      document.getElementById('tree-mode').value = 'all';
+      document.getElementById('tree-mine').checked = false;
+      appliedFilters = readTreeFilters();
+    }
 
+    // ===================== ผังรายการ (ซ้าย) =====================
     function renderTree() {
       const container = document.getElementById('accordion-tree-container');
       const countEl = document.getElementById('tree-count');
@@ -809,7 +886,7 @@
         countEl.innerText = '';
         return;
       }
-      const list = getFilteredKpis();
+      const list = getOrderedKpis();
       const missingTotal = globalDatabase.filter(isMissing).length;
       countEl.innerText = `แสดง ${list.length} จาก ${globalDatabase.length} ตัวชี้วัด` +
         (expectedMonthIdx() >= 0 ? ` · ยังไม่เติมข้อมูล ${missingTotal} ตัว` : ' · (ต.ค. ยังไม่ถึงกำหนดกรอก)');
@@ -854,10 +931,12 @@
           const catHeader = document.createElement('div');
           catHeader.className = 'category-header';
           catHeader.innerText = `${catName} (${tree[partName][catName].length})`;
+          // คลิกหมวด: เปิดรายการในผัง และเลื่อนไปการ์ดแรกของหมวดนั้น
           catHeader.onclick = (e) => {
             e.stopPropagation();
-            catBlock.classList.toggle('open');
-            if (catBlock.classList.contains('open')) openCats.add(catKey); else openCats.delete(catKey);
+            catBlock.classList.add('open');
+            openCats.add(catKey);
+            selectKpi(tree[partName][catName][0].id);
           };
           catBlock.appendChild(catHeader);
 
@@ -866,6 +945,7 @@
           tree[partName][catName].forEach(kpi => {
             const item = document.createElement('div');
             item.className = 'kpi-link-item' + (selectedKpiId === kpi.id ? ' selected' : '');
+            item.dataset.id = kpi.id;
             item.title = kpi.name;
             item.innerHTML = `${isMissing(kpi) ? '<span class="dot-missing" title="ยังไม่เติมข้อมูลล่าสุด">🔴</span>' : ''}<span class="kpi-link-text">${kpiNumber(kpi)}. ${esc(kpi.name)}</span>`;
             item.onclick = (e) => { e.stopPropagation(); selectKpi(kpi.id); };
@@ -878,24 +958,130 @@
         partDiv.appendChild(content);
         container.appendChild(partDiv);
       });
+      updateTreeInView();
     }
 
+    // คลิกในผังรายการ → ไปหน้าที่มีตัวนั้น เลื่อนจอไปหา และไฮไลต์
     function selectKpi(id) {
+      guardUnsaved(() => goToKpi(id));
+    }
+
+    function goToKpi(id) {
+      let list = getOrderedKpis();
+      let idx = list.findIndex(k => k.id === id);
+      if (idx === -1) {
+        // ตัวที่ต้องการถูกตัวกรองซ่อนอยู่ (เช่น มาจากหน้าติดตามงาน) → ล้างตัวกรองก่อน
+        resetTreeFilters();
+        list = getOrderedKpis();
+        idx = list.findIndex(k => k.id === id);
+        if (idx === -1) return;
+      }
+      const k = list[idx];
+      selectedKpiId = id;
+      openParts.add(k.part);
+      openCats.add(k.part + '||' + k.category);
+      const page = Math.floor(idx / pageSize) + 1;
+      if (page !== currentPage || !document.getElementById('card-' + cssId(id))) {
+        currentPage = page;
+        renderList();
+      }
+      renderTree();
+      trackView(id);
+      const card = document.getElementById('card-' + cssId(id));
+      if (card) {
+        card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        card.classList.remove('flash');
+        void card.offsetWidth;
+        card.classList.add('flash');
+      }
+    }
+
+    // ===================== รายการการ์ดตัวชี้วัด (ขวา) =====================
+    function cssId(id) { return String(id).replace(/[^A-Za-z0-9_-]/g, '_'); }
+
+    function totalPages(n) { return Math.max(1, Math.ceil(n / pageSize)); }
+
+    function pagerHtml(n, withSize) {
+      const pages = totalPages(n);
+      const from = n === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+      const to = Math.min(n, currentPage * pageSize);
+      const nums = [];
+      for (let p = 1; p <= pages; p++) {
+        if (p === 1 || p === pages || Math.abs(p - currentPage) <= 2) nums.push(p);
+        else if (nums[nums.length - 1] !== '…') nums.push('…');
+      }
+      const btn = (label, p, disabled, active) =>
+        `<button class="page-btn${active ? ' active' : ''}" ${disabled ? 'disabled' : `onclick="goPage(${p})"`}>${label}</button>`;
+      return `<div class="pager">
+        <span class="pager-info">แสดง ${from}–${to} จาก ${n} ตัวชี้วัด</span>
+        <span class="pager-buttons">
+          ${btn('«', 1, currentPage === 1)}${btn('‹', currentPage - 1, currentPage === 1)}
+          ${nums.map(p => p === '…' ? '<span class="page-gap">…</span>' : btn(p, p, false, p === currentPage)).join('')}
+          ${btn('›', currentPage + 1, currentPage === pages)}${btn('»', pages, currentPage === pages)}
+        </span>
+        ${withSize ? `<span class="pager-size">แสดงหน้าละ
+          <select class="editable-input" style="width:auto; display:inline-block; padding:2px 6px;" onchange="setPageSize(this)">
+            ${[10, 20, 50].map(s => `<option value="${s}" ${s === pageSize ? 'selected' : ''}>${s}</option>`).join('')}
+          </select> ตัว</span>` : ''}
+      </div>`;
+    }
+
+    function goPage(p) {
       guardUnsaved(() => {
-        const k = globalDatabase.find(x => x.id === id);
-        if (!k) return;
-        selectedKpiId = id;
-        selectedPartName = k.part;
-        selectedCategoryName = k.category;
-        openParts.add(k.part);
-        openCats.add(k.part + '||' + k.category);
-        trackView(id);
-        renderTree();
-        renderKpiDetail();
+        currentPage = p;
+        renderList();
+        document.getElementById('kpi-list-area').scrollIntoView({ behavior: 'smooth', block: 'start' });
       });
     }
 
-    // ===================== ส่วนที่ 2-3: ผลลัพธ์ + รายละเอียด =====================
+    function setPageSize(sel) {
+      const value = Number(sel.value);
+      guardUnsaved(() => {
+        pageSize = value;
+        try { localStorage.setItem('kpi_page_size', String(value)); } catch (e) {}
+        currentPage = 1;
+        renderList();
+      });
+      sel.value = String(pageSize);
+    }
+
+    function renderList() {
+      const area = document.getElementById('kpi-list-area');
+      const list = getOrderedKpis();
+      if (globalDatabase.length === 0) {
+        area.innerHTML = '<div class="panel"><div class="empty-state">ไม่พบข้อมูลตัวชี้วัดในปีงบนี้</div></div>';
+        return;
+      }
+      if (list.length === 0) {
+        area.innerHTML = '<div class="panel"><div class="empty-state">ไม่พบตัวชี้วัดตามตัวกรองที่เลือก</div></div>';
+        return;
+      }
+      currentPage = Math.min(Math.max(1, currentPage), totalPages(list.length));
+      const pageItems = list.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+      let html = pagerHtml(list.length, true);
+      let lastPart = null, lastCat = null;
+      pageItems.forEach(kpi => {
+        if (kpi.part !== lastPart || kpi.category !== lastCat) {
+          html += `<div class="list-section"><span class="list-section-part">${esc(kpi.part)}</span> › ${esc(kpi.category)}</div>`;
+          lastPart = kpi.part; lastCat = kpi.category;
+        }
+        html += cardHtml(kpi);
+      });
+      html += pagerHtml(list.length, false);
+      area.innerHTML = html;
+      area.classList.toggle('charts-hidden', !chartVisible);
+      afterCardsRendered();
+    }
+
+    function rerenderCard(id) {
+      const old = document.getElementById('card-' + cssId(id));
+      const kpi = globalDatabase.find(k => k.id === id);
+      if (!old || !kpi) return;
+      old.outerHTML = cardHtml(kpi);
+      afterCardsRendered();
+    }
+
     function disabledYearAttr(kpi, i) {
       if (!kpi.canEditResults) return 'disabled';
       if (i < 4 && kpi.lockedYears && kpi.lockedYears[i] && !isPrivilegedUser()) {
@@ -904,17 +1090,9 @@
       return '';
     }
 
-    function renderKpiDetail() {
-      const left = document.getElementById('panel-result');
-      const right = document.getElementById('panel-detail');
-      const kpi = currentKpi();
-      if (!kpi) {
-        left.innerHTML = '<div class="empty-state"><div style="font-size: 35px; margin-bottom: 10px; color:#94a3b8;">👈</div>กรุณาเลือกตัวชี้วัดจากผังรายการ</div>';
-        right.innerHTML = '';
-        return;
-      }
+    function cardHtml(kpi) {
       const priv = isPrivilegedUser();
-      const ed = editMode;
+      const ed = editingId === kpi.id;
       const yearsLabels = [selectedFy - 4, selectedFy - 3, selectedFy - 2, selectedFy - 1, selectedFy];
       const canRes = ed && kpi.canEditResults;
       const canDet = ed && kpi.canEditDetails;
@@ -926,7 +1104,18 @@
         ? `🎯 ค่าเป้าหมาย: <input type="text" id="ed-target" class="editable-input" value="${esc(kpi.target)}" style="width: 160px; display: inline-block;">`
         : `🎯 ค่าเป้าหมาย: ${esc(kpi.target) || '-'}`;
 
-      // ผลรายปี
+      let actions;
+      if (ed) {
+        actions = `<button class="btn btn-primary btn-sm" onclick="saveKpiEdit()">💾 บันทึกข้อมูล</button>
+          <button class="btn btn-secondary btn-sm" onclick="cancelEdit()">ยกเลิก</button>
+          ${priv ? '<button class="btn btn-danger btn-sm" onclick="requestDeleteKpi()">🗑️ ลบตัวชี้วัด</button>' : ''}
+          <span class="dirty-mark" id="dirty-mark">● ยังไม่ได้บันทึก</span>`;
+      } else if (kpi.canEditResults || kpi.canEditDetails) {
+        actions = `<button class="btn btn-accent btn-sm" onclick="startEdit('${esc(kpi.id)}')">✏️ แก้ไข</button>`;
+      } else {
+        actions = `<span class="hint" style="margin:0;">ดูอย่างเดียว</span>`;
+      }
+
       const yearsView = `<table><thead><tr>${yearsLabels.map(y => `<th>${y}</th>`).join('')}</tr></thead>
         <tbody><tr>${kpi.years.map(v => `<td>${v !== null ? v : '-'}</td>`).join('')}</tr></tbody></table>`;
       const yearsEdit = `<table><thead><tr>${yearsLabels.map(y => `<th>${y}</th>`).join('')}</tr></thead>
@@ -941,86 +1130,148 @@
             : `<td>${kpi.months[i] !== null ? kpi.months[i] : '-'}</td>`).join('')}</tr>`;
       }).join('');
 
-      left.innerHTML = `
-        <div class="dashboard-title">${nameHtml}</div>
-        <div>
-          <span class="meta-badge">หมวดหมู่: ${esc(kpi.category)}</span>
-          <span class="meta-badge">หมวดหลัก: ${esc(kpi.part)}</span>
-          <span class="meta-badge">ปีงบ: ${selectedFy}${selectedFy === currentFy ? ' (ปัจจุบัน)' : ''}</span>
-          <span class="meta-badge">ระดับ: ${esc(kpi.level)}</span>
-          <span class="meta-badge">✏️ แก้ไขล่าสุด: ${stampText(kpi.editedAt, kpi.editedBy)}</span>
-        </div>
-        <div class="kpi-target-callout">${targetHtml}</div>
-
-        <div class="section-bar">
-          <h4>📈 แผนภูมิเส้นผลลัพธ์ 5 ปีงบประมาณ</h4>
-          <button class="btn btn-secondary btn-sm" id="btn-toggle-chart" onclick="toggleChart()">${chartVisible ? '🙈 ซ่อนกราฟ' : '👁️ แสดงกราฟ'}</button>
-        </div>
-        <div class="chart-box" id="chart-box" style="display:${chartVisible ? 'block' : 'none'};">${generateSvgLineChart(kpi.years, kpi.target, yearsLabels)}</div>
-
-        <div class="section-bar"><h4>📅 ผลทั้งปี (ปีงบประมาณ)</h4></div>
-        <div class="data-table-wrapper">${ed && canRes ? yearsEdit : yearsView}</div>
-        ${ed && kpi.lockedYears && kpi.lockedYears.some(x => x) && !priv ? '<div class="hint">ช่องสีเทา = ผลของปีที่มีชีตปีงบนั้นอยู่แล้ว (แก้ได้เฉพาะ admin / ผอ. / QMR)</div>' : ''}
-
-        <div class="section-bar"><h4>📊 ผลลัพธ์รายเดือน (ปีงบประมาณ ${selectedFy})</h4></div>
-        <div class="data-table-wrapper"><table><tbody>${monthRows}</tbody></table></div>
-        <div class="hint">ค่าเฉลี่ยรายเดือน: <b>${calculateMonthlySummary(kpi.months)}</b></div>
-        ${ed && !kpi.canEditResults ? '<div class="hint">ไม่มีสิทธิ์แก้ไขผลของตัวชี้วัดนี้ในปีงบนี้</div>' : ''}
-      `;
-
-      // ปุ่มจัดการ
-      let actions;
-      if (ed) {
-        actions = `<button class="btn btn-primary" onclick="saveKpiEdit()">💾 บันทึกข้อมูล</button>
-          <button class="btn btn-secondary" onclick="cancelEdit()">ยกเลิก</button>
-          ${priv ? '<button class="btn btn-danger" onclick="requestDeleteKpi()">🗑️ ลบตัวชี้วัด</button>' : ''}
-          <span class="dirty-mark" id="dirty-mark">● ยังไม่ได้บันทึก</span>`;
-      } else if (kpi.canEditResults || kpi.canEditDetails) {
-        actions = `<button class="btn btn-accent" onclick="startEdit()">✏️ แก้ไข</button>`;
-      } else {
-        actions = `<span class="hint" style="margin:0;">ดูอย่างเดียว (ไม่มีสิทธิ์แก้ไขตัวชี้วัดนี้)</span>`;
-      }
-
       const ownerHtml = ed && priv
         ? `<div class="form-group"><label>ผู้รับผิดชอบ (คั่นหลายคนด้วย /)</label><input type="text" id="ed-owner" class="editable-input" value="${esc(kpi.owner)}"></div>
            <div class="form-group"><label>หน่วยงาน</label><input type="text" id="ed-dept" class="editable-input" value="${esc(kpi.department)}"></div>
-           <div class="form-group"><label>ระดับตัวชี้วัด</label><select id="ed-level" class="editable-input">${KPI_LEVELS.map(l => `<option value="${l}" ${l === kpi.level ? 'selected' : ''}>${l}</option>`).join('')}</select></div>`
+           <div class="form-group" style="margin-bottom:0;"><label>ระดับตัวชี้วัด</label><select id="ed-level" class="editable-input">${KPI_LEVELS.map(l => `<option value="${l}" ${l === kpi.level ? 'selected' : ''}>${l}</option>`).join('')}</select></div>`
         : `<p style="font-weight:700; color:#1e293b;">${esc(kpi.owner) || '-'} (${esc(kpi.department) || '-'})</p>`;
 
-      right.innerHTML = `
-        <div class="action-bar">${actions}</div>
-        <div class="info-card">
-          <div class="info-card-title">📝 รายละเอียด/การวิเคราะห์ตัวชี้วัด</div>
-          ${ed ? `<textarea id="ed-details" class="editable-input" rows="9" ${canDet ? '' : 'disabled'}>${esc(kpi.templateDetails)}</textarea>`
-               : `<p>${esc(kpi.templateDetails) || 'ไม่มีข้อมูลรายละเอียดเพิ่มเติม'}</p>`}
-        </div>
-        <div class="info-card">
-          <div class="info-card-title">🔗 ที่มาแหล่งข้อมูล / สูตรคำนวณ</div>
-          ${ed ? `<textarea id="ed-source" class="editable-input" rows="7" ${canDet ? '' : 'disabled'}>${esc(kpi.dataSource)}</textarea>`
-               : `<p>${esc(kpi.dataSource) || 'ไม่ระบุที่มาข้อมูล'}</p>`}
-          ${ed && !canDet ? '<div class="hint">รายละเอียดและที่มาข้อมูลแก้ไขได้เฉพาะปีงบปัจจุบัน</div>' : ''}
-        </div>
-        <div class="info-card" style="border-left: 5px solid var(--primary-color);">
-          <div class="info-card-title">👤 ผู้รับผิดชอบดูแล</div>
-          ${ownerHtml}
-        </div>
-        <div class="stamp-line">👁️ เข้าดูล่าสุด: ${stampText(kpi.viewedAt, kpi.viewedBy)}</div>
-      `;
-
-      right.oninput = onEditInput;
-      left.oninput = onEditInput;
-      if (ed) onEditInput();
+      const cls = 'kpi-card' + (ed ? ' editing' : '') + (expandedCards.has(kpi.id) ? ' expanded' : '') + (selectedKpiId === kpi.id ? ' selected' : '');
+      return `
+        <div class="${cls}" id="card-${cssId(kpi.id)}" data-id="${esc(kpi.id)}">
+          <div class="kpi-card-head">
+            <div class="kpi-card-title">${nameHtml}</div>
+            <div class="kpi-card-actions">${actions}</div>
+            <div class="kpi-card-badges">
+              <span class="meta-badge">หมวดหมู่: ${esc(kpi.category)}</span>
+              <span class="meta-badge">ระดับ: ${esc(kpi.level)}</span>
+              <span class="meta-badge">ปีงบ: ${selectedFy}${selectedFy === currentFy ? ' (ปัจจุบัน)' : ''}</span>
+              <span class="meta-badge">✏️ แก้ไขล่าสุด: ${stampText(kpi.editedAt, kpi.editedBy)}</span>
+            </div>
+          </div>
+          <div class="kpi-card-body">
+            <div class="card-left">
+              <div class="kpi-target-callout">${targetHtml}</div>
+              <div class="chart-wrap">
+                <div class="section-bar"><h4>📈 แผนภูมิเส้นผลลัพธ์ 5 ปีงบประมาณ</h4></div>
+                <div class="chart-box">${generateSvgLineChart(kpi.years, kpi.target, yearsLabels)}</div>
+              </div>
+              <div class="section-bar"><h4>📅 ผลทั้งปี (ปีงบประมาณ)</h4></div>
+              <div class="data-table-wrapper">${canRes ? yearsEdit : yearsView}</div>
+              ${ed && kpi.lockedYears && kpi.lockedYears.some(x => x) && !priv ? '<div class="hint">ช่องสีเทา = ผลของปีที่มีชีตปีงบนั้นอยู่แล้ว (แก้ได้เฉพาะ admin / ผอ. / QMR)</div>' : ''}
+              <div class="section-bar"><h4>📊 ผลลัพธ์รายเดือน (ปีงบประมาณ ${selectedFy})</h4></div>
+              <div class="data-table-wrapper"><table><tbody>${monthRows}</tbody></table></div>
+              <div class="hint">ค่าเฉลี่ยรายเดือน: <b>${calculateMonthlySummary(kpi.months)}</b></div>
+              ${ed && !kpi.canEditResults ? '<div class="hint">ไม่มีสิทธิ์แก้ไขผลของตัวชี้วัดนี้ในปีงบนี้</div>' : ''}
+            </div>
+            <div class="card-right"><div class="card-right-inner">
+              <div class="info-card clip-box">
+                <div class="info-card-title">📝 รายละเอียด/การวิเคราะห์ตัวชี้วัด</div>
+                ${ed ? `<textarea id="ed-details" class="editable-input" rows="8" ${canDet ? '' : 'disabled'}>${esc(kpi.templateDetails)}</textarea>`
+                     : `<p>${esc(kpi.templateDetails) || 'ไม่มีข้อมูลรายละเอียดเพิ่มเติม'}</p>`}
+              </div>
+              <div class="info-card clip-box">
+                <div class="info-card-title">🔗 ที่มาแหล่งข้อมูล / สูตรคำนวณ</div>
+                ${ed ? `<textarea id="ed-source" class="editable-input" rows="6" ${canDet ? '' : 'disabled'}>${esc(kpi.dataSource)}</textarea>`
+                     : `<p>${esc(kpi.dataSource) || 'ไม่ระบุที่มาข้อมูล'}</p>`}
+                ${ed && !canDet ? '<div class="hint">รายละเอียดและที่มาข้อมูลแก้ไขได้เฉพาะปีงบปัจจุบัน</div>' : ''}
+              </div>
+              <div class="info-card owner-box" style="border-left: 5px solid var(--primary-color);">
+                <div class="info-card-title">👤 ผู้รับผิดชอบดูแล</div>
+                ${ownerHtml}
+              </div>
+              <div class="card-foot">
+                <span class="stamp-line">👁️ เข้าดูล่าสุด: ${stampText(kpi.viewedAt, kpi.viewedBy)}</span>
+                <button class="btn btn-secondary btn-sm readmore-btn" style="display:none;" onclick="toggleExpand('${esc(kpi.id)}')">${expandedCards.has(kpi.id) ? '▲ ย่อ' : '▼ อ่านเพิ่ม'}</button>
+              </div>
+            </div></div>
+          </div>
+        </div>`;
     }
 
-    function toggleChart() {
+    // หลังวาดการ์ด: แสดงปุ่ม "อ่านเพิ่ม" เฉพาะการ์ดที่ข้อความถูกตัด, เริ่มติดตามการ์ดที่อยู่บนจอ
+    function afterCardsRendered() {
+      refreshClamps();
+      observeCards();
+      const area = document.getElementById('kpi-list-area');
+      area.oninput = onEditInput;
+      if (editingId !== null) onEditInput();
+    }
+
+    function refreshClamps() {
+      document.querySelectorAll('.kpi-card').forEach(card => {
+        const btn = card.querySelector('.readmore-btn');
+        if (!btn) return;
+        if (card.classList.contains('editing')) { btn.style.display = 'none'; return; }
+        if (card.classList.contains('expanded')) { btn.style.display = 'inline-block'; return; }
+        let clipped = false;
+        card.querySelectorAll('.clip-box').forEach(box => {
+          const over = box.scrollHeight > box.clientHeight + 2;
+          box.classList.toggle('clipped', over);
+          if (over) clipped = true;
+        });
+        btn.style.display = clipped ? 'inline-block' : 'none';
+      });
+    }
+
+    function toggleExpand(id) {
+      if (expandedCards.has(id)) expandedCards.delete(id); else expandedCards.add(id);
+      const card = document.getElementById('card-' + cssId(id));
+      if (!card) return;
+      card.classList.toggle('expanded', expandedCards.has(id));
+      card.querySelector('.readmore-btn').innerText = expandedCards.has(id) ? '▲ ย่อ' : '▼ อ่านเพิ่ม';
+      if (!expandedCards.has(id)) card.querySelectorAll('.clip-box').forEach(b => b.classList.remove('clipped'));
+      refreshClamps();
+    }
+
+    window.addEventListener('resize', () => { clearTimeout(refreshClamps._t); refreshClamps._t = setTimeout(refreshClamps, 200); });
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => refreshClamps());
+
+    // ===================== การ์ดบนจอ: ไฮไลต์ในผังรายการ + นับ "เข้าดู" เมื่ออยู่บนจอเกิน 2 วินาที =====================
+    let cardObserver = null;
+    const viewTimers = {};
+    const visibleCards = new Set();
+
+    function observeCards() {
+      if (cardObserver) cardObserver.disconnect();
+      Object.keys(viewTimers).forEach(id => { clearTimeout(viewTimers[id]); delete viewTimers[id]; });
+      visibleCards.clear();
+      if (!('IntersectionObserver' in window)) return;
+      cardObserver = new IntersectionObserver(entries => {
+        entries.forEach(e => {
+          const id = e.target.dataset.id;
+          const seen = e.intersectionRatio >= 0.5 || e.intersectionRect.height >= window.innerHeight * 0.5;
+          if (seen) {
+            if (!viewTimers[id]) viewTimers[id] = setTimeout(() => { trackView(id); delete viewTimers[id]; }, 2000);
+          } else if (viewTimers[id]) {
+            clearTimeout(viewTimers[id]);
+            delete viewTimers[id];
+          }
+          if (e.isIntersecting) visibleCards.add(id); else visibleCards.delete(id);
+        });
+        updateTreeInView();
+      }, { threshold: [0, 0.25, 0.5, 0.75, 1] });
+      document.querySelectorAll('.kpi-card').forEach(c => cardObserver.observe(c));
+    }
+
+    function updateTreeInView() {
+      const first = Array.from(document.querySelectorAll('.kpi-card')).map(c => c.dataset.id).find(id => visibleCards.has(id));
+      document.querySelectorAll('.kpi-link-item').forEach(el => el.classList.toggle('in-view', el.dataset.id === first));
+    }
+
+    function toggleCharts() {
       chartVisible = !chartVisible;
       try { localStorage.setItem('kpi_chart_visible', chartVisible ? '1' : '0'); } catch (e) {}
-      const box = document.getElementById('chart-box');
-      if (box) box.style.display = chartVisible ? 'block' : 'none';
-      document.getElementById('btn-toggle-chart').innerText = chartVisible ? '🙈 ซ่อนกราฟ' : '👁️ แสดงกราฟ';
+      document.getElementById('kpi-list-area').classList.toggle('charts-hidden', !chartVisible);
+      document.getElementById('btn-toggle-chart').innerText = chartVisible ? '🙈 ซ่อนกราฟ' : '📈 แสดงกราฟ';
+      refreshClamps();
     }
 
     // ===================== แก้ไข / บันทึก ทีละตัวชี้วัด =====================
+    function editingKpi() {
+      return globalDatabase.find(k => k.id === editingId) || null;
+    }
+
     function getNum(id) {
       const el = document.getElementById(id);
       if (!el || el.value === '') return null;
@@ -1035,7 +1286,7 @@
 
     // ฟอร์มปัจจุบัน → ข้อมูลที่จะส่งบันทึก (เฉพาะส่วนที่ผู้ใช้มีสิทธิ์แก้)
     function collectDraft() {
-      const kpi = currentKpi();
+      const kpi = editingKpi();
       if (!kpi) return {};
       const p = { id: kpi.id };
       if (kpi.canEditResults) {
@@ -1061,19 +1312,25 @@
       if (mark) mark.style.display = isDirty() ? 'inline' : 'none';
     }
 
-    function startEdit() {
-      const kpi = currentKpi();
+    function startEdit(id) {
+      guardUnsaved(() => startEditNow(id));
+    }
+
+    function startEditNow(id) {
+      const kpi = globalDatabase.find(k => k.id === id);
       if (!kpi || !(kpi.canEditResults || kpi.canEditDetails)) return;
-      editMode = true;
-      renderKpiDetail();
+      editingId = id;
+      selectedKpiId = id;
+      rerenderCard(id);
       editSnapshot = JSON.stringify(collectDraft());
       onEditInput();
     }
 
     function exitEdit() {
-      editMode = false;
+      const id = editingId;
+      editingId = null;
       editSnapshot = null;
-      renderKpiDetail();
+      if (id !== null) rerenderCard(id);
     }
 
     function cancelEdit() {
@@ -1082,7 +1339,7 @@
     }
 
     function saveKpiEdit(afterSave) {
-      const kpi = currentKpi();
+      const kpi = editingKpi();
       if (!kpi) return;
       const draft = collectDraft();
       if (isPrivilegedUser() && draft.name !== undefined && draft.name.trim() === '') {
@@ -1094,10 +1351,10 @@
           if (!res.success) { showAlert('บันทึกไม่สำเร็จ', '❌', res.message); return; }
           const idx = globalDatabase.findIndex(k => k.id === res.kpi.id);
           if (idx !== -1) globalDatabase[idx] = res.kpi;
-          editMode = false;
+          editingId = null;
           editSnapshot = null;
+          rerenderCard(res.kpi.id);
           renderTree();
-          renderKpiDetail();
           if (currentTab === 'progress') loadProgressSummary();
           showToast(res.changed ? '✅ ' + res.message : 'ℹ️ ' + res.message);
           if (afterSave) afterSave();
@@ -1107,14 +1364,14 @@
     }
 
     function requestDeleteKpi() {
-      const kpi = currentKpi();
+      const kpi = editingKpi();
       if (!kpi) return;
       showConfirm(`ยืนยันการลบตัวชี้วัด:\n"${kpi.name}"\nออกจากปีงบ ${selectedFy} (ปีงบอื่นยังเก็บไว้เป็นประวัติ)?`, () => {
         google.script.run
           .withSuccessHandler((res) => {
             if (res.success) {
               showToast('🗑️ ' + res.message);
-              editMode = false; editSnapshot = null;
+              editingId = null; editSnapshot = null;
               selectedKpiId = null;
               fetchAllDataFromServer(true);
             } else { showAlert('ข้อผิดพลาด', '❌', res.message); }
@@ -1157,14 +1414,9 @@
         .withSuccessHandler((res) => {
           if (!res.success) { showAlert('ข้อผิดพลาด', '❌', res.message); return; }
           showToast('✅ เพิ่มตัวชี้วัดเรียบร้อยแล้ว');
-          pendingSelectAfterLoad = { id: res.newId };
+          pendingSelectAfterLoad = { id: res.newId, edit: true };
           switchMenu('home');
           fetchAllDataFromServer(true);
-          // เปิดโหมดแก้ไขให้ทันทีหลังโหลดเสร็จ
-          const wait = setInterval(() => {
-            if (!pendingSelectAfterLoad) { clearInterval(wait); if (currentKpi() && currentKpi().id === res.newId) startEdit(); }
-          }, 150);
-          setTimeout(() => clearInterval(wait), 15000);
         })
         .withFailureHandler((err) => showAlert('เกิดข้อผิดพลาด', '❌', err.toString()))
         .addIndicator(sessionToken, selectedFy, newItem);
@@ -1396,8 +1648,8 @@
     // เปิดตัวชี้วัดในหน้าแรก (และเข้าโหมดแก้ไขถ้ามีสิทธิ์)
     function gotoKpi(id, edit) {
       switchMenu('home');
-      selectKpi(id);
-      if (edit && selectedKpiId === id) startEdit();
+      goToKpi(id);
+      if (edit) startEditNow(id);
     }
 
     // ===================== Export PDF (พิมพ์จากเบราว์เซอร์) =====================
@@ -1558,6 +1810,13 @@
       if (isConfirmed && onConfirmCallback) onConfirmCallback();
       onConfirmCallback = null;
     }
+
+    // ผังรายการติดจอใต้แถบนำทาง: คำนวณระยะจากความสูงจริงของแถบนำทาง
+    function setStickyOffsets() {
+      const nav = document.querySelector('.nav-bar');
+      if (nav) document.documentElement.style.setProperty('--tree-top', (nav.offsetHeight + 14) + 'px');
+    }
+    window.addEventListener('resize', setStickyOffsets);
 
     // ===================== เริ่มต้น =====================
     document.querySelectorAll('.kpi-level-select').forEach(sel => {
