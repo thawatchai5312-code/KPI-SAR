@@ -118,6 +118,9 @@
     /* ผังรายการตัวชี้วัด */
     .tree-filters { position: sticky; top: -12px; background: #fff; padding: 12px 0 8px; margin-top: -12px; z-index: 5; border-bottom: 1px solid #e2e8f0; margin-bottom: 8px; }
     .tree-filters .editable-input { margin-bottom: 6px; }
+    .tree-level-filter { border: 1px solid #e2e8f0; border-radius: 8px; padding: 4px 8px; margin-bottom: 6px; }
+    .tree-level-title { font-size: 12px; font-weight: 700; color: #015c8b; }
+    .tree-level-filter .check-row { font-size: 12.5px; padding: 1px 0; }
     .tree-filter-row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: 12px; font-weight: 700; color: #334155; }
     .tree-count { font-size: 11px; color: #64748b; font-weight: 600; margin-top: 4px; }
     .accordion-part { margin-bottom: 6px; border: 1px solid #cbd5e1; border-radius: 8px; overflow: hidden; }
@@ -288,6 +291,14 @@
       <div class="panel" id="panel-tree">
         <div class="tree-filters">
           <input type="text" id="tree-search" class="editable-input" placeholder="🔍 ค้นหาชื่อ/ผู้รับผิดชอบ/หน่วยงาน" oninput="onTreeFilterChange()">
+          <div class="tree-level-filter">
+            <div class="tree-level-title">ระดับตัวชี้วัด</div>
+            <label class="check-row"><input type="checkbox" class="tree-level-cb" value="รายบุคคล" checked onchange="onTreeFilterChange()"> รายบุคคล</label>
+            <label class="check-row"><input type="checkbox" class="tree-level-cb" value="หน่วยงาน" checked onchange="onTreeFilterChange()"> หน่วยงาน</label>
+            <label class="check-row"><input type="checkbox" class="tree-level-cb" value="ฝ่ายการพยาบาล" checked onchange="onTreeFilterChange()"> ฝ่ายการพยาบาล</label>
+            <label class="check-row"><input type="checkbox" class="tree-level-cb" value="QA-หน่วยงาน" checked onchange="onTreeFilterChange()"> QA หน่วยงาน</label>
+            <label class="check-row"><input type="checkbox" class="tree-level-cb" value="SAR" checked onchange="onTreeFilterChange()"> SAR โรงพยาบาล</label>
+          </div>
           <div class="tree-filter-row">
             <select id="tree-mode" class="editable-input" style="width: auto;" onchange="onTreeFilterChange()">
               <option value="all">แสดงทั้งหมด</option>
@@ -838,14 +849,20 @@
       return i >= 0 && kpi.months[i] === null;
     }
 
-    let appliedFilters = { term: '', mode: 'all', mine: false };
+    let appliedFilters = { term: '', mode: 'all', mine: false, levels: KPI_LEVELS.slice() };
 
     function readTreeFilters() {
       return {
         term: document.getElementById('tree-search').value.trim().toLowerCase(),
         mode: document.getElementById('tree-mode').value,
-        mine: document.getElementById('tree-mine').checked
+        mine: document.getElementById('tree-mine').checked,
+        levels: Array.from(document.querySelectorAll('.tree-level-cb:checked')).map(c => c.value)
       };
+    }
+
+    // ตัวกรองระดับ: ติ๊กครบทุกระดับ = ไม่กรอง
+    function levelFilterActive() {
+      return appliedFilters.levels.length < document.querySelectorAll('.tree-level-cb').length;
     }
 
     // ผู้ใช้กด "กลับไปแก้ต่อ" ตอนเปลี่ยนตัวกรอง → คืนค่าตัวกรองเดิมในช่อง
@@ -853,10 +870,11 @@
       document.getElementById('tree-search').value = appliedFilters.term;
       document.getElementById('tree-mode').value = appliedFilters.mode;
       document.getElementById('tree-mine').checked = appliedFilters.mine;
+      document.querySelectorAll('.tree-level-cb').forEach(c => { c.checked = appliedFilters.levels.indexOf(c.value) !== -1; });
     }
 
     function treeFiltersActive() {
-      return appliedFilters.term !== '' || appliedFilters.mode !== 'all' || appliedFilters.mine;
+      return appliedFilters.term !== '' || appliedFilters.mode !== 'all' || appliedFilters.mine || levelFilterActive();
     }
 
     // ตัวชี้วัดที่ผ่านตัวกรอง เรียงแบบเดียวกับผังรายการ: หมวดหลัก → หมวดย่อย → ลำดับในชีต
@@ -865,6 +883,8 @@
       const list = globalDatabase.filter(k => {
         if (f.mode === 'missing' && !isMissing(k)) return false;
         if (f.mine && !k.mine) return false;
+        // หลายระดับ: แสดงถ้าตัวชี้วัดมีระดับใดระดับหนึ่งที่ติ๊กไว้
+        if (levelFilterActive() && !(k.levels || [k.level]).some(l => f.levels.indexOf(l) !== -1)) return false;
         if (f.term && !((k.name + ' ' + k.owner + ' ' + k.department).toLowerCase().includes(f.term))) return false;
         return true;
       });
@@ -886,6 +906,7 @@
       document.getElementById('tree-search').value = '';
       document.getElementById('tree-mode').value = 'all';
       document.getElementById('tree-mine').checked = false;
+      document.querySelectorAll('.tree-level-cb').forEach(c => { c.checked = true; });
       appliedFilters = readTreeFilters();
     }
 
