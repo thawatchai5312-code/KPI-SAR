@@ -132,6 +132,33 @@ function cleanCatList_(list) {
 }
 
 /**
+ * จัดหมวดหน่วยงานอัตโนมัติ: หน่วยงานที่เพิ่มเข้ามา → เพิ่มหมวดชื่อหน่วยนั้น (หมวดย่อยชั่วคราว) · หน่วยงานที่เอาออก → เอาหมวดหน่วยนั้นออก
+ * (เหลืออย่างน้อย 1 หมวดเสมอ) ไม่แตะหมวดอื่น
+ */
+function syncUnitCats_(cats, oldDepts, newDepts) {
+  var out = cats.filter(function(c) { return !(oldDepts.indexOf(c.part) !== -1 && newDepts.indexOf(c.part) === -1); });
+  if (out.length === 0) out = cats.slice();
+  newDepts.forEach(function(d) {
+    if (oldDepts.indexOf(d) === -1 && !out.some(function(c) { return c.part === d; })) {
+      out.push({ part: d, category: UNIT_CATS_PLACEHOLDER });
+    }
+  });
+  return out;
+}
+
+/** ผู้รับผิดชอบ (ชื่อผู้ใช้) → หน่วยงานที่สังกัดของคนเหล่านั้น (ไม่รวมผู้บริหาร) ใช้เติมช่องหน่วยงานที่ว่างอยู่ */
+function deptsOfOwners_(ownerText) {
+  var names = parseOwners_(ownerText), depts = [];
+  if (names.length === 0) return depts;
+  var sheet = getUsersSpreadsheet_().getSheetByName(USERS_SHEET_NAME);
+  (sheet ? readUsers_(sheet) : []).forEach(function(u) {
+    if (names.indexOf(u.username) === -1 || u.tier === "executive" || u.tier === "admin") return;
+    u.depts.forEach(function(d) { if (depts.indexOf(d) === -1) depts.push(d); });
+  });
+  return depts;
+}
+
+/**
  * รวมรายการหมวดที่ผู้ใช้ส่งมา (เฉพาะหมวดที่เห็น) กับหมวดที่ซ่อนอยู่ แล้วตรวจกฎ
  *  - ต้องมีอย่างน้อย 1 หมวด
  *  - เจ้าของ (staff/head) เพิ่ม/เอาออกได้เฉพาะหมวดนอก Part I–IV · ผอ./QMR (ที่ไม่ใช่เจ้าของ) เพิ่มได้เฉพาะ Part I–IV
@@ -172,8 +199,12 @@ function mergeCats_(user, perm, old, requested, levels) {
  * คืน kpi ที่อัปเดตแล้วให้หน้าเว็บแทนที่ได้ทันที
  */
 function saveKpi(token, fy, item) {
+  var lock = null;
   try {
     var user = requireUser_(token);
+    // ล็อกตลอดช่วงอ่าน-แก้-เขียน: ถ้ามีคนลบ/เพิ่มแถวพร้อมกัน เลขแถวจะไม่เลื่อนจนเขียนทับตัวอื่น
+    lock = LockService.getScriptLock();
+    lock.waitLock(30000);
     var privileged = isPrivileged_(user);
     fy = resolveFiscalYear_(fy);
     var sheet = getFiscalSheet_(fy);
@@ -208,6 +239,15 @@ function saveKpi(token, fy, item) {
       if (merged.error) return { success: false, message: merged.error };
       if (!perm.editDetails && merged.changed) return { success: false, message: "ไม่มีสิทธิ์แก้ไขหมวดของตัวชี้วัดนี้ในปีงบ " + fy };
       if (merged.changed) newCats = merged.cats;
+    }
+    // ช่องหน่วยงานว่างแต่มีผู้รับผิดชอบ → เติมจากหน่วยงานที่ผู้รับผิดชอบสังกัด แล้วจัดหมวดหน่วยงานให้อัตโนมัติ
+    var ownerAfter = perm.editDetails && item.owner !== undefined ? item.owner.toString().trim() : old.owner;
+    var deptAfter = perm.editDetails && item.department !== undefined ? item.department.toString().trim() : old.department;
+    if (perm.editDetails && !deptAfter && ownerAfter) deptAfter = deptsOfOwners_(ownerAfter).join(" / ");
+    if (deptAfter !== old.department) {
+      var baseCats = newCats || old.cats;
+      var syncedCats = syncUnitCats_(baseCats, parseDepts_(old.department), parseDepts_(deptAfter));
+      if (syncedCats.map(catKey_).join("\n") !== baseCats.map(catKey_).join("\n")) newCats = syncedCats;
     }
     var coreAfter = (newCats || old.cats).some(function(c) { return isCorePart_(c.part); });
     if (newLevels.length > 0 && coreAfter && !hasHospitalLevel_(newLevels)) {
@@ -268,8 +308,8 @@ function saveKpi(token, fy, item) {
         sheet.getRange(row, 26).setValue(item.owner.toString().trim());
         changed = true;
       }
-      if (item.department !== undefined && item.department.toString().trim() !== old.department) {
-        sheet.getRange(row, 27).setValue(item.department.toString().trim());
+      if (deptAfter !== old.department) {
+        sheet.getRange(row, 27).setValue(deptAfter);
         changed = true;
       }
     }
@@ -320,14 +360,20 @@ function saveKpi(token, fy, item) {
     };
   } catch (error) {
     return { success: false, message: "เกิดข้อผิดพลาด: " + error.toString() };
+  } finally {
+    if (lock) lock.releaseLock();
   }
 }
 
 // บันทึกเวลาเข้าดูตัวชี้วัด — หน้าเว็บรวมรายการแล้วส่งเป็นชุดทุก ~30 วินาที (ไม่ให้ช้าตอนคลิกดู)
 function recordViews(token, fy, ids) {
+  var lock = null;
   try {
     var user = requireUser_(token);
     if (!ids || ids.length === 0) return { success: true, count: 0 };
+    // ใช้ล็อกเดียวกับการแก้ไข (เลขแถวไม่เลื่อนระหว่างลงเวลา) ถ้าล็อกไม่ว่างใน 5 วินาที ข้ามรอบนี้ไป ไม่ให้หน้าเว็บค้าง
+    lock = LockService.getScriptLock();
+    if (!lock.tryLock(5000)) { lock = null; return { success: true, count: 0 }; }
     fy = resolveFiscalYear_(fy);
     var sheet = getFiscalSheet_(fy);
     if (!sheet) return { success: true, count: 0 };
@@ -346,6 +392,8 @@ function recordViews(token, fy, ids) {
     return { success: true, count: count };
   } catch (error) {
     return { success: false, message: error.toString() };
+  } finally {
+    if (lock) lock.releaseLock();
   }
 }
 
@@ -353,8 +401,11 @@ function recordViews(token, fy, ids) {
 //  - staff/head: เพิ่มได้เฉพาะปีงบปัจจุบัน และระบบใส่ตัวเองเป็นผู้รับผิดชอบให้เสมอ
 //  - หมวด Part I–IV ต้องมีระดับ SAR หรือ QA-หน่วยงาน อย่างน้อย 1 ระดับ (หมวดอื่นตั้งชื่อเองได้)
 function addIndicator(token, fy, newItem) {
+  var lock = null;
   try {
     var user = requireUser_(token);
+    lock = LockService.getScriptLock();
+    lock.waitLock(30000);
     var privileged = isPrivileged_(user);
     fy = resolveFiscalYear_(fy);
     var sheet = getFiscalSheet_(fy);
@@ -387,6 +438,10 @@ function addIndicator(token, fy, newItem) {
       newItem.owner = owners.join(" / ");
     }
     if (!privileged && !(newItem.department || "").toString().trim()) newItem.department = user.depts.join(" / ");
+    // ช่องหน่วยงานยังว่าง แต่ระบุผู้รับผิดชอบ → ใช้หน่วยงานของผู้รับผิดชอบ
+    if (!(newItem.department || "").toString().trim() && newItem.owner) newItem.department = deptsOfOwners_(newItem.owner).join(" / ");
+    // จัดหมวดหน่วยงานให้อัตโนมัติตามหน่วยงานของตัวชี้วัด (หมวดย่อยชั่วคราว "รอจัดหมวดย่อย")
+    cats = syncUnitCats_(cats, [], parseDepts_(newItem.department));
     // ผู้เพิ่มต้องเห็นตัวชี้วัดที่ตัวเองเพิ่ม (เช่น ผอ. เพิ่มได้เฉพาะ Part I–IV ระดับ SAR/QA)
     var probe = { part: newItem.part, category: newItem.category, cats: cats, owner: newItem.owner || "", department: newItem.department || "", levels: newLevels };
     if (!getKpiPermission_(user, probe, fy).view) {
@@ -422,13 +477,18 @@ function addIndicator(token, fy, newItem) {
     return { success: true, message: "เพิ่มตัวชี้วัดในปีงบ " + fy + " เรียบร้อยแล้ว", newId: newId };
   } catch (error) {
     return { success: false, message: "เกิดข้อผิดพลาด: " + error.toString() };
+  } finally {
+    if (lock) lock.releaseLock();
   }
 }
 
 // ลบตัวชี้วัดออกจากปีงบที่เลือกเท่านั้น (ปีงบอื่นยังเก็บไว้เป็นประวัติ) — เฉพาะ admin, ผอ., QMR
 function deleteIndicator(token, fy, partName, id) {
+  var lock = null;
   try {
-    requirePrivileged_(token);
+    var user = requirePrivileged_(token);
+    lock = LockService.getScriptLock();
+    lock.waitLock(30000);
     fy = resolveFiscalYear_(fy);
     var sheet = getFiscalSheet_(fy);
     if (!sheet) return { success: false, message: "ไม่พบชีตปีงบประมาณ" };
@@ -438,6 +498,8 @@ function deleteIndicator(token, fy, partName, id) {
     var rowIndex = ids.indexOf(id.toString().trim());
 
     if (rowIndex !== -1) {
+      // ผอ./QMR ลบได้เฉพาะตัวที่ตัวเองมองเห็น
+      if (!getKpiPermission_(user, rowToKpi_(data[rowIndex]), fy).view) return { success: false, message: "ไม่มีสิทธิ์ลบตัวชี้วัดนี้" };
       sheet.deleteRow(rowIndex + 1);
       return { success: true, message: "ลบตัวชี้วัดออกจากปีงบ " + fy + " เรียบร้อยแล้ว" };
     } else {
@@ -445,6 +507,8 @@ function deleteIndicator(token, fy, partName, id) {
     }
   } catch (error) {
     return { success: false, message: "เกิดข้อผิดพลาด: " + error.toString() };
+  } finally {
+    if (lock) lock.releaseLock();
   }
 }
 

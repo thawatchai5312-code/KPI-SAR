@@ -254,7 +254,7 @@ function readUsers_(sheet) {
       username: name,
       hash: data[i][1] ? data[i][1].toString() : "",
       tier: data[i][2] ? data[i][2].toString().trim() : "staff",
-      depts: data[i][3] ? data[i][3].toString().split(",").map(function(s) { return s.trim(); }).filter(Boolean) : [],
+      depts: parseDepts_(data[i][3]),
       mustChange: isTrue_(data[i][4]),
       lastAccess: formatStamp_(data[i][5]),
       lastEdit: formatStamp_(data[i][6])
@@ -410,20 +410,24 @@ function publicUser_(user) {
   return { username: user.username, tier: user.tier, depts: user.depts, mustChange: user.mustChange };
 }
 
-function createSession_(username) {
+// session ผูกกับรหัสผ่านปัจจุบัน — เปลี่ยน/รีเซ็ตรหัสผ่านแล้ว session เก่าทั้งหมดใช้ไม่ได้
+function createSession_(username, hash) {
   var token = Utilities.getUuid() + Utilities.getUuid();
-  CacheService.getScriptCache().put("sess_" + token, username, SESSION_TTL_SECONDS);
+  CacheService.getScriptCache().put("sess_" + token, username + "\n" + (hash || "").slice(-16), SESSION_TTL_SECONDS);
   return token;
 }
 
 /** คืนผู้ใช้ปัจจุบันจาก token (อ่านสิทธิ์ล่าสุดจากชีตทุกครั้ง) ถ้าหมดอายุให้ throw SESSION_EXPIRED */
 function requireUser_(token) {
-  var username = token ? CacheService.getScriptCache().get("sess_" + token) : null;
-  if (!username) throw new Error("SESSION_EXPIRED");
+  var cached = token ? CacheService.getScriptCache().get("sess_" + token) : null;
+  if (!cached) throw new Error("SESSION_EXPIRED");
+  var parts = cached.split("\n"), username = parts[0];
   var sheet = getUsersSpreadsheet_().getSheetByName(USERS_SHEET_NAME);
   var users = sheet ? readUsers_(sheet) : [];
   for (var i = 0; i < users.length; i++) {
-    if (users[i].username === username) return users[i];
+    if (users[i].username !== username) continue;
+    if (parts.length > 1 && parts[1] !== users[i].hash.slice(-16)) throw new Error("SESSION_EXPIRED"); // เปลี่ยนรหัสผ่านแล้ว
+    return users[i];
   }
   throw new Error("SESSION_EXPIRED");
 }
@@ -514,8 +518,9 @@ function hasHospitalLevel_(levels) {
  */
 function getKpiPermission_(user, kpi, fy) {
   var isOwner = parseOwners_(kpi.owner).indexOf(user.username) !== -1;
-  if (!isOwner && user.tier === "head") {
-    // ตัวชี้วัดที่ผู้รับผิดชอบเขียนว่า "หัวหน้าหน่วย" ให้หัวหน้าหน่วยทุกคนรับผิดชอบ
+  var inDept = parseDepts_(kpi.department).some(function(d) { return user.depts.indexOf(d) !== -1; });
+  if (!isOwner && user.tier === "head" && inDept) {
+    // ตัวชี้วัดที่ผู้รับผิดชอบเขียนว่า "หัวหน้าหน่วย" = หัวหน้าของหน่วยงานในแถวนั้นรับผิดชอบ (ข้ามหน่วยไม่ได้)
     isOwner = (kpi.owner || "").toString().split("/").some(function(t) { return t.trim() === HEAD_OWNER_TOKEN; });
   }
   var levels = kpi.levels || normalizeLevels_(kpi.level);
@@ -524,11 +529,11 @@ function getKpiPermission_(user, kpi, fy) {
     var execView = isOwner || (inCorePart_(kpi) && hasHospitalLevel_(levels));
     return { view: execView, editResults: execView, editDetails: execView, mine: isOwner };
   }
-  var inDept = parseDepts_(kpi.department).some(function(d) { return user.depts.indexOf(d) !== -1; });
-  var edit = isOwner || (user.tier === "head" && inDept);
-  // "ของฉัน" = ตัวชี้วัดที่ผู้ใช้เป็นผู้รับผิดชอบ
-  var mine = edit;
-  var view = edit;
+  // แก้ได้: เจ้าหน้าที่ = ตัวที่ตนรับผิดชอบ · หัวหน้าหน่วย = ทุกตัวของหน่วยที่ตนสังกัดเท่านั้น (ถึงจะระบุชื่อเป็นผู้รับผิดชอบของหน่วยอื่น ก็ดูได้อย่างเดียว)
+  var edit = user.tier === "head" ? inDept : isOwner;
+  // "ของฉัน" = ตัวที่แก้ได้ หรือที่ระบุชื่อตัวเองเป็นผู้รับผิดชอบ
+  var mine = edit || isOwner;
+  var view = edit || isOwner;
   if (!view) {
     // หลายระดับ: เห็นได้ถ้าระดับใดระดับหนึ่งให้สิทธิ์ดู
     view = levels.some(function(l) {
@@ -568,7 +573,7 @@ function authenticateUser(username, password) {
       if (users[i].username === username && verifyPassword_(password, users[i].hash)) {
         cache.remove(failKey);
         touchUser_(users[i], "access");
-        return { success: true, token: createSession_(username), user: publicUser_(users[i]) };
+        return { success: true, token: createSession_(username, users[i].hash), user: publicUser_(users[i]) };
       }
     }
     cache.put(failKey, String(parseInt(cache.get(failKey) || "0", 10) + 1), LOGIN_LOCK_SECONDS);
@@ -598,17 +603,19 @@ function changePassword(token, oldPassword, newPassword) {
     }
     var lock = LockService.getScriptLock();
     lock.waitLock(30000);
+    var newHash = hashPassword_(newPassword);
     try {
       var sheet = getUsersSpreadsheet_().getSheetByName(USERS_SHEET_NAME);
       var users = readUsers_(sheet);
       users.forEach(function(u) {
-        if (u.username === user.username) { u.hash = hashPassword_(newPassword); u.mustChange = false; }
+        if (u.username === user.username) { u.hash = newHash; u.mustChange = false; }
       });
       writeUsers_(sheet, users);
     } finally {
       lock.releaseLock();
     }
-    return { success: true, message: "เปลี่ยนรหัสผ่านเรียบร้อยแล้ว" };
+    // session เดิม (ทุกเครื่อง) ใช้ไม่ได้แล้ว — ออก token ใหม่ให้เครื่องที่เปลี่ยนรหัส
+    return { success: true, message: "เปลี่ยนรหัสผ่านเรียบร้อยแล้ว", token: createSession_(user.username, newHash) };
   } catch (e) {
     return { success: false, message: e.toString() };
   }
@@ -653,7 +660,7 @@ function saveUsersForAdmin(token, list, resetList) {
         if (seen[name]) return { success: false, message: "ชื่อผู้ใช้ซ้ำกัน: " + name };
         seen[name] = true;
         if (TIERS.indexOf(list[i].tier) === -1) return { success: false, message: "Tier ไม่ถูกต้องของ " + name };
-        var depts = (list[i].depts || "").toString().split(",").map(function(s) { return s.trim(); }).filter(Boolean);
+        var depts = parseDepts_(list[i].depts); // รับ "ER IPD", "ER/IPD", "ER,IPD" ได้ทุกแบบ
         var existing = current[name];
         var user = existing
           ? { username: name, hash: existing.hash, tier: list[i].tier, depts: depts, mustChange: existing.mustChange, lastAccess: existing.lastAccess, lastEdit: existing.lastEdit }
