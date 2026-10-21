@@ -275,6 +275,7 @@
     .pr-kpi-title { font-size: 16pt; font-weight: 700; color: #14532d; }
     .pr-meta { font-size: 12pt; color: #475569; margin-bottom: 4px; }
     .pr-chart svg { width: 100%; height: auto; max-height: 70mm; }
+    .pr-method { font-size: 7.5pt; font-weight: 400; color: #475569; }
     .pr-label { font-size: 14pt; font-weight: 700; color: #166534; margin-top: 4px; }
     .pr-text { font-size: 14pt; white-space: pre-line; }
     /* ================= สไตล์ใหม่ (ตัวอย่าง): Google Sans, การ์ดโค้งมน, สีสดขึ้น ================= */
@@ -547,6 +548,10 @@
         <div class="form-group">
           <label>ระดับตัวชี้วัด (เลือกได้หลายระดับ — แสดงระดับสูงสุด)</label>
           <div id="add-kpi-levels" class="level-checks"></div>
+        </div>
+        <div class="form-group">
+          <label>วิธีสรุปผลรายเดือน</label>
+          <select id="add-kpi-summary" class="editable-input"><option value="เฉลี่ย">เฉลี่ย</option><option value="ผลรวม">ผลรวม</option><option value="เดือนล่าสุด">เดือนล่าสุด</option></select>
         </div>
       </div>
       <div class="modal-footer">
@@ -1417,7 +1422,8 @@
               ${ed && kpi.lockedYears && kpi.lockedYears.some(x => x) && !priv ? '<div class="hint">ช่องสีเทา = ผลของปีที่มีชีตปีงบนั้นอยู่แล้ว (แก้ได้เฉพาะ admin / ผอ. / QMR)</div>' : ''}
               <div class="section-bar"><h4>📊 ผลลัพธ์รายเดือน (ปีงบประมาณ ${selectedFy})</h4></div>
               <div class="data-table-wrapper"><table><tbody>${monthRows}</tbody></table></div>
-              <div class="hint">สรุปรายเดือน: <b>${calculateMonthlySummary(kpi.months)}</b></div>
+              ${ed && priv ? `<div class="form-group" style="margin: 6px 0 0;"><label>วิธีสรุปผลรายเดือน</label><select id="ed-summary" class="editable-input" style="width:auto;">${SUMMARY_METHODS.map(m => `<option value="${m}" ${m === (kpi.summaryMethod || 'เฉลี่ย') ? 'selected' : ''}>${m}</option>`).join('')}</select></div>` : ''}
+              <div class="hint">สรุปรายเดือน (${esc(kpi.summaryMethod || 'เฉลี่ย')}): <b>${calculateMonthlySummary(kpi.months, kpi.summaryMethod)}</b></div>
               ${ed && !kpi.canEditResults ? '<div class="hint">ไม่มีสิทธิ์แก้ไขผลของตัวชี้วัดนี้ในปีงบนี้</div>' : ''}
             </div>
             <div class="card-right"><div class="card-right-inner">
@@ -1559,6 +1565,7 @@
         p.owner = getVal('ed-owner');
         p.department = getVal('ed-dept');
         if (document.querySelector('.ed-level-cb')) p.levels = checkedLevels('ed-level-cb');
+        p.summaryMethod = getVal('ed-summary');
       }
       return p;
     }
@@ -1648,6 +1655,7 @@
       if (selectedCategoryName) document.getElementById('add-kpi-category').value = selectedCategoryName;
       ['add-kpi-name', 'add-kpi-target', 'add-kpi-source', 'add-kpi-owner', 'add-kpi-dept'].forEach(id => { document.getElementById(id).value = ''; });
       document.getElementById('add-kpi-levels').innerHTML = levelCheckboxesHtml('add-level-cb', ['SAR']);
+      document.getElementById('add-kpi-summary').value = 'เฉลี่ย';
     }
 
     function submitAddKpi() {
@@ -1667,7 +1675,8 @@
         dataSource: document.getElementById('add-kpi-source').value,
         owner: document.getElementById('add-kpi-owner').value,
         department: document.getElementById('add-kpi-dept').value,
-        levels: checkedLevels('add-level-cb')
+        levels: checkedLevels('add-level-cb'),
+        summaryMethod: document.getElementById('add-kpi-summary').value
       };
       if (newItem.levels.length === 0) {
         showAlert('ข้อมูลไม่ครบ', '⚠️', 'กรุณาเลือกระดับตัวชี้วัดอย่างน้อย 1 ระดับ');
@@ -1767,9 +1776,13 @@
     }
 
     // ===================== กราฟ =====================
-    function calculateMonthlySummary(mArray) {
+    // วิธีสรุปผลรายเดือนที่ผู้ดูแลกำหนดต่อตัวชี้วัด: เฉลี่ย / ผลรวม / เดือนล่าสุด (ที่มีข้อมูล)
+    const SUMMARY_METHODS = ['เฉลี่ย', 'ผลรวม', 'เดือนล่าสุด'];
+    function calculateMonthlySummary(mArray, method) {
       const validValues = mArray.filter(v => v !== null);
       if (validValues.length === 0) return '-';
+      if (method === 'ผลรวม') return String(Math.round(validValues.reduce((a, b) => a + b, 0) * 100) / 100);
+      if (method === 'เดือนล่าสุด') return String(validValues[validValues.length - 1]);
       return (validValues.reduce((a, b) => a + b, 0) / validValues.length).toFixed(2);
     }
 
@@ -2064,7 +2077,7 @@
       kpis.forEach(k => {
         const no = kpiNumber(k);
         a += `<tr><td>${no}</td><td class="pr-left">${esc(k.name)}</td><td class="pr-target">${esc(k.target) || '-'}</td>${k.years.map(v => `<td>${prNum(v)}</td>`).join('')}</tr>`;
-        b += `<tr><td>${no}</td><td class="pr-left">${esc(prShort(k.name, landscape ? 40 : 18))}</td>${k.months.map(v => `<td>${prNum(v)}</td>`).join('')}<td>${calculateMonthlySummary(k.months)}</td></tr>`;
+        b += `<tr><td>${no}</td><td class="pr-left">${esc(prShort(k.name, landscape ? 40 : 18))}</td>${k.months.map(v => `<td>${prNum(v)}</td>`).join('')}<td>${calculateMonthlySummary(k.months, k.summaryMethod)}<br><span class="pr-method">${esc(k.summaryMethod || 'เฉลี่ย')}</span></td></tr>`;
       });
       return a + '</tbody></table>' + b + '</tbody></table>';
     }
@@ -2076,7 +2089,7 @@
       if (opts.chart) {
         h += `<div class="pr-chart">${generateSvgLineChart(k.years, k.target, yl)}</div>
           <table class="pr-table" style="font-size:${landscape ? '12pt' : '9.5pt'};"><thead><tr>${thMonthsNames.map(m => `<th>${m}</th>`).join('')}<th>สรุป</th></tr></thead>
-          <tbody><tr>${k.months.map(v => `<td>${prNum(v)}</td>`).join('')}<td>${calculateMonthlySummary(k.months)}</td></tr></tbody></table>`;
+          <tbody><tr>${k.months.map(v => `<td>${prNum(v)}</td>`).join('')}<td>${calculateMonthlySummary(k.months, k.summaryMethod)}<br><span class="pr-method">${esc(k.summaryMethod || 'เฉลี่ย')}</span></td></tr></tbody></table>`;
       }
       if (opts.detail) h += `<div class="pr-label">รายละเอียด/การวิเคราะห์ตัวชี้วัด</div><div class="pr-text">${esc(k.templateDetails) || '-'}</div>`;
       if (opts.source) h += `<div class="pr-label">ที่มาแหล่งข้อมูล / สูตรคำนวณ</div><div class="pr-text">${esc(k.dataSource) || '-'}</div>`;

@@ -34,6 +34,11 @@ var STAMP_EDIT_BY_COL = 31;
 var STAMP_VIEW_AT_COL = 32;
 var STAMP_VIEW_BY_COL = 33;
 var STAMP_HEADERS = ["แก้ไขล่าสุดเมื่อ", "แก้ไขล่าสุดโดย", "เข้าดูล่าสุดเมื่อ", "เข้าดูล่าสุดโดย"];
+// วิธีสรุปผลรายเดือนของแต่ละตัวชี้วัด (คอลัมน์ AH ของชีตปีงบ — กำหนดต่อปีงบ ปีใหม่คัดลอกตามปีก่อน)
+var SUMMARY_COL = 34;
+var SUMMARY_METHODS = ["เฉลี่ย", "ผลรวม", "เดือนล่าสุด"];
+var DEFAULT_SUMMARY_METHOD = "เฉลี่ย";
+var SUMMARY_HEADER = "วิธีสรุปผลรายเดือน (Summary)";
 
 // หัวหน้าหน่วยตั้งต้น (ใช้ครั้งเดียวหลังอัปเดตนี้) — ชื่อ → หน่วยงานที่ดูแล
 // ผู้บริหาร (executive) จะไม่ถูกลดสิทธิ์ แค่บันทึกหน่วยงานไว้
@@ -92,6 +97,12 @@ function parseDepts_(text) {
     if (d && out.indexOf(d) === -1) out.push(d);
   });
   return out;
+}
+
+/** ค่าในคอลัมน์วิธีสรุป → วิธีที่ใช้ได้ (ว่าง/ไม่รู้จัก = เฉลี่ย) */
+function normalizeSummaryMethod_(value) {
+  var v = value ? value.toString().trim() : "";
+  return SUMMARY_METHODS.indexOf(v) !== -1 ? v : DEFAULT_SUMMARY_METHOD;
 }
 
 function sortLevels_(levels) {
