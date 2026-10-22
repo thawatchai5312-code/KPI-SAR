@@ -482,10 +482,11 @@
 
     /* ปุ่มเลือกมุมมองแถบซ้าย */
     .view-tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin-bottom: 10px; }
-    .view-tab { display: grid; justify-items: center; gap: 1px; padding: 7px 4px 6px; border: 1.5px solid var(--line); border-radius: 14px; background: #fff; color: #475569; font-family: inherit; cursor: pointer; line-height: 1.2; }
-    .view-tab .vt-ico { font-size: 17px; }
-    .view-tab .vt-label { font-size: 11.5px; font-weight: 700; text-align: center; }
-    .view-tab .vt-count { font-size: 12px; font-weight: 800; background: #f1f5f9; border-radius: 999px; padding: 0 8px; min-width: 24px; text-align: center; margin-top: 2px; }
+    .view-tab { display: grid; justify-items: center; gap: 2px; padding: 6px 4px 5px; border: 1.5px solid var(--line); border-radius: 14px; background: #fff; color: #475569; font-family: inherit; cursor: pointer; line-height: 1.2; }
+    .view-tab .vt-top { display: flex; align-items: center; justify-content: center; gap: 5px; }
+    .view-tab .vt-ico { font-size: 15px; }
+    .view-tab .vt-label { font-size: 12px; font-weight: 700; text-align: center; }
+    .view-tab .vt-count { font-size: 12px; font-weight: 800; background: #f1f5f9; border-radius: 999px; padding: 0 7px; min-width: 22px; text-align: center; }
     .view-tab:hover { background: #f8fafc; }
     .view-tab[data-view="hosp"].active { background: #e7f6ec; border-color: #16a34a; color: #14532d; }
     .view-tab[data-view="qa"].active { background: #e0f4f6; border-color: #0e7490; color: #155e75; }
@@ -546,9 +547,9 @@
     <div class="home-grid">
       <div class="panel" id="panel-tree">
         <div class="view-tabs" id="view-tabs" role="tablist" aria-label="มุมมองตัวชี้วัด">
-          <button type="button" class="view-tab" data-view="hosp" role="tab" onclick="setTreeView('hosp')"><span class="vt-ico">🏥</span><span class="vt-label">รพ.<br>Part I–IV</span><span class="vt-count">0</span></button>
-          <button type="button" class="view-tab" data-view="qa" role="tab" onclick="setTreeView('qa')"><span class="vt-ico">🩺</span><span class="vt-label">QA /<br>การพยาบาล</span><span class="vt-count">0</span></button>
-          <button type="button" class="view-tab" data-view="unit" role="tab" onclick="setTreeView('unit')"><span class="vt-ico">🏷️</span><span class="vt-label">หน่วยงาน /<br>ของฉัน</span><span class="vt-count">0</span></button>
+          <button type="button" class="view-tab" data-view="hosp" role="tab" title="ตัวชี้วัดโรงพยาบาล Part I–IV" onclick="setTreeView('hosp')"><span class="vt-top"><span class="vt-ico">🏥</span><span class="vt-count">0</span></span><span class="vt-label">รพ.</span></button>
+          <button type="button" class="view-tab" data-view="qa" role="tab" title="QA / ฝ่ายการพยาบาล" onclick="setTreeView('qa')"><span class="vt-top"><span class="vt-ico">🩺</span><span class="vt-count">0</span></span><span class="vt-label">QA</span></button>
+          <button type="button" class="view-tab" data-view="unit" role="tab" title="หมวดของหน่วยงาน / ของฉัน" onclick="setTreeView('unit')"><span class="vt-top"><span class="vt-ico">🏷️</span><span class="vt-count">0</span></span><span class="vt-label">หน่วยงาน</span></button>
         </div>
         <div class="tree-filters">
           <div class="tree-level-filter">
