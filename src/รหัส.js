@@ -367,6 +367,39 @@ function saveKpi(token, fy, item) {
   }
 }
 
+// ---------------------------------------------------------------- ตัวกรองหน้า "สรุปรายงาน" (จำแยกตามผู้ใช้)
+var REPORT_PREFS_PREFIX = "REPORT_PREFS_V1:";
+var REPORT_PREFS_MAX = 8000; // ค่าใน PropertiesService จำกัด ~9KB ต่อคีย์
+
+function getReportPrefs(token) {
+  try {
+    var user = requireUser_(token);
+    var raw = PropertiesService.getScriptProperties().getProperty(REPORT_PREFS_PREFIX + user.username);
+    return { success: true, prefs: raw ? JSON.parse(raw) : null };
+  } catch (e) {
+    return { success: false, message: e.toString() };
+  }
+}
+
+function saveReportPrefs(token, prefs) {
+  try {
+    var user = requireUser_(token);
+    var p = prefs || {}, o = p.opts || {};
+    var clean = {
+      scope: ["mine", "dept", "all"].indexOf(p.scope) !== -1 ? p.scope : "mine",
+      orient: p.orient === "portrait" ? "portrait" : "landscape",
+      opts: { table: o.table !== false, chart: o.chart !== false, detail: o.detail !== false, source: o.source !== false, owner: o.owner !== false },
+      unchecked: (Array.isArray(p.unchecked) ? p.unchecked : []).slice(0, 400).map(function(x) { return String(x).slice(0, 120); })
+    };
+    var json = JSON.stringify(clean);
+    if (json.length > REPORT_PREFS_MAX) { clean.unchecked = []; json = JSON.stringify(clean); } // ยาวเกิน: ไม่เก็บรายการหมวดที่ไม่ติ๊ก
+    PropertiesService.getScriptProperties().setProperty(REPORT_PREFS_PREFIX + user.username, json);
+    return { success: true };
+  } catch (e) {
+    return { success: false, message: e.toString() };
+  }
+}
+
 // บันทึกเวลาเข้าดูตัวชี้วัด — หน้าเว็บรวมรายการแล้วส่งเป็นชุดทุก ~30 วินาที (ไม่ให้ช้าตอนคลิกดู)
 function recordViews(token, fy, ids) {
   var lock = null;

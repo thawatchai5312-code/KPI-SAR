@@ -234,8 +234,26 @@
     .pg-bar span { display: block; height: 100%; }
     .pg-part-foot { font-size: 11.5px; color: #64748b; font-weight: 600; margin-top: 2px; }
 
+    /* ---------- หน้าสรุปรายงาน ---------- */
+    .report-grid { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 10px; align-items: start; }
+    #rp-side { position: sticky; top: var(--tree-top, 70px); max-height: calc(100vh - var(--tree-top, 70px) - 10px); overflow-y: auto; }
+    #rp-main { background: #e8eeea; }
+    #rp-scroll { overflow-x: auto; }
+    #rp-paper { background: #fff; margin: 0 auto; box-sizing: content-box; padding: 10mm; box-shadow: 0 2px 14px rgba(16, 40, 24, 0.18); }
+    #rp-paper.landscape { width: 277mm; }
+    #rp-paper.portrait { width: 190mm; }
+    .rp-more { text-align: center; padding: 10px 0 2px; color: #475569; font-size: 13px; }
+    .rp-toggle { display: none; width: 100%; margin-bottom: 8px; }
+    .rpt-scope { display: flex; flex-direction: column; gap: 2px; margin-bottom: 6px; }
+    .rpt-bar { display: flex; gap: 6px; margin-bottom: 6px; flex-wrap: wrap; align-items: center; }
+    .rpt-cat-list { border: 1px solid #cbd5e1; border-radius: 8px; padding: 6px 10px; max-height: 220px; overflow-y: auto; }
+    #rp-cat-list { max-height: 36vh; }
     /* จอเล็ก: ผังรายการอยู่บน การ์ดเรียงซ้าย-ขวาเป็นบน-ล่าง */
     @media (max-width: 1000px) {
+      .report-grid { grid-template-columns: 1fr; }
+      #rp-side { position: static; max-height: none; }
+      .rp-toggle { display: block; }
+      #rp-side.collapsed #rp-controls { display: none; }
       .home-grid { grid-template-columns: 1fr; }
       #panel-tree { position: static; max-height: 320px; }
       .nav-spacer { display: none; }
@@ -258,8 +276,8 @@
       #print-root { display: block !important; }
       * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     }
-    #print-root { font-family: 'Google Sans', sans-serif !important; font-size: 14pt; color: #0f172a; line-height: 1.4; }
-    #print-root * { font-family: 'Google Sans', sans-serif !important; }
+    #print-root, #rp-paper { font-family: 'Google Sans', sans-serif !important; font-size: 14pt; color: #0f172a; line-height: 1.4; }
+    #print-root *, #rp-paper * { font-family: 'Google Sans', sans-serif !important; }
     .pr-head { text-align: center; border-bottom: 3px solid #166534; padding-bottom: 6px; margin-bottom: 10px; }
     .pr-head .pr-hosp { font-size: 16pt; font-weight: 700; color: #166534; }
     .pr-head .pr-sub { font-size: 14pt; font-weight: 600; }
@@ -533,12 +551,13 @@
       <select id="fy-select" class="editable-input" style="width: auto; display: inline-block; padding: 3px 6px; margin-left: 4px;" onchange="onFiscalYearChange(this)"></select>
     </div>
     <div class="nav-item active" id="menu-home-btn" onclick="guardUnsaved(() => switchMenu('home'))">📊 หน้าแรก (Dashboard)</div>
+    <div class="nav-item" id="menu-report-btn" onclick="guardUnsaved(() => switchMenu('report'))">📑 สรุปรายงาน</div>
     <div class="nav-item" id="menu-progress-btn" onclick="guardUnsaved(() => switchMenu('progress'))">📋 ติดตามงาน (Progress)</div>
     <div class="nav-spacer"></div>
     <div class="nav-actions">
       <button class="btn btn-secondary" id="btn-toggle-chart" onclick="toggleCharts()">🙈 ซ่อนกราฟ</button>
       <button class="btn btn-accent" id="btn-add-kpi" style="display: none;" onclick="guardUnsaved(openAddKpiModal)">➕ เพิ่มตัวชี้วัดใหม่</button>
-      <button class="btn btn-primary" id="btn-export-pdf" onclick="guardUnsaved(openPdfModal)">📄 Export PDF</button>
+      <button class="btn btn-primary" id="btn-export-pdf" onclick="guardUnsaved(exportPdfClick)">📄 Export PDF</button>
     </div>
   </div>
 
@@ -577,6 +596,22 @@
       </div>
 
       <div id="kpi-list-area"></div>
+    </div>
+  </div>
+
+  <!-- 1.3b สรุปรายงาน: ตัวกรองซ้าย (ชุดเดียวกับหน้าต่าง Export PDF) + ตัวอย่างรายงานขวา -->
+  <div id="page-report" class="page-view">
+    <div class="report-grid">
+      <div class="panel" id="rp-side">
+        <button type="button" class="btn btn-secondary btn-sm rp-toggle" onclick="document.getElementById('rp-side').classList.toggle('collapsed')">⚙️ ตัวกรองรายงาน (กดเพื่อเปิด/ปิด)</button>
+        <div id="rp-controls"></div>
+        <button type="button" class="btn btn-primary" style="width: 100%; margin-top: 6px;" onclick="generatePdf()">📄 Export PDF</button>
+        <p class="hint" style="margin-top: 6px;">ตัวอย่างด้านขวาคือรายงานที่จะพิมพ์ กด Export แล้วเลือกปลายทาง "บันทึกเป็น PDF" · ระบบจำตัวกรองของคุณไว้ให้</p>
+      </div>
+      <div class="panel" id="rp-main">
+        <div id="rp-scroll"><div id="rp-paper" class="landscape"></div></div>
+        <div id="rp-more" class="rp-more"></div>
+      </div>
     </div>
   </div>
 
@@ -719,33 +754,7 @@
     <div class="modal-card" style="max-width: 560px; width: 95%;">
       <div class="modal-header">📄 Export PDF</div>
       <div class="modal-body" style="max-height: 72vh; overflow-y: auto;">
-        <div class="form-group">
-          <label>1. เลือกตัวชี้วัดที่จะพิมพ์</label>
-          <div style="display: flex; gap: 4px 14px; flex-wrap: wrap; margin-bottom: 6px;">
-            <label class="check-row"><input type="radio" name="pdf-scope" value="mine" checked onchange="renderPdfCatList()"> เฉพาะที่ฉันรับผิดชอบ</label>
-            <label class="check-row" id="pdf-scope-dept-label"><input type="radio" name="pdf-scope" value="dept" onchange="renderPdfCatList()"> เฉพาะหน่วยงานที่ฉันสังกัด</label>
-            <label class="check-row"><input type="radio" name="pdf-scope" value="all" onchange="renderPdfCatList()"> ทุกตัวชี้วัด</label>
-          </div>
-          <div style="display: flex; gap: 6px; margin-bottom: 6px;">
-            <button class="btn btn-secondary btn-sm" onclick="pdfSelectAll(true)">เลือกทั้งหมด</button>
-            <button class="btn btn-secondary btn-sm" onclick="pdfSelectAll(false)">ล้างทั้งหมด</button>
-            <span id="pdf-count" class="hint" style="margin: 0 0 0 auto; align-self: center;"></span>
-          </div>
-          <div id="pdf-cat-list" style="border: 1px solid #cbd5e1; border-radius: 8px; padding: 6px 10px; max-height: 220px; overflow-y: auto;"></div>
-        </div>
-        <div class="form-group">
-          <label>2. เนื้อหาที่จะพิมพ์</label>
-          <label class="check-row"><input type="checkbox" id="pdf-opt-table" checked> ตารางตัวชี้วัด (เป้าหมาย ผล 5 ปี ผลรายเดือน)</label>
-          <label class="check-row"><input type="checkbox" id="pdf-opt-chart" checked> กราฟผลลัพธ์ + ตารางรายเดือนรายตัว</label>
-          <label class="check-row"><input type="checkbox" id="pdf-opt-detail" checked> รายละเอียด/การวิเคราะห์ตัวชี้วัด</label>
-          <label class="check-row"><input type="checkbox" id="pdf-opt-source" checked> ที่มาแหล่งข้อมูล / สูตรคำนวณ</label>
-          <label class="check-row"><input type="checkbox" id="pdf-opt-owner" checked> ผู้รับผิดชอบดูแล</label>
-        </div>
-        <div class="form-group">
-          <label>3. แนวกระดาษ</label>
-          <label class="check-row"><input type="radio" name="pdf-orient" value="landscape" checked> แนวนอน</label>
-          <label class="check-row"><input type="radio" name="pdf-orient" value="portrait"> แนวตั้ง</label>
-        </div>
+        <div id="pdf-controls"></div>
         <p class="hint">กด "สร้าง PDF" แล้วในหน้าต่างพิมพ์ให้เลือกปลายทางเป็น <b>บันทึกเป็น PDF</b> (ฟอนต์ Google Sans พิมพ์สี)</p>
       </div>
       <div class="modal-footer" style="display: flex; justify-content: space-between;">
@@ -1042,6 +1051,7 @@
       editingKey = null; selectedKey = null; pendingSelectAfterLoad = null; selectedFy = null;
       openParts.clear(); openCats.clear(); lastInViewKey = null;
       globalProgressData = [];
+      rptReset();
       resetTreeFilters(); // ตัวกรองสถานะ/ระดับ/เฉพาะของฉัน กลับเป็นค่าเริ่มต้น ไม่ให้ติดไปยังผู้ใช้คนถัดไป
       document.getElementById('progress-filter').value = '';
       document.getElementById('user-bar').style.display = 'none';
@@ -1149,6 +1159,7 @@
           renderTree();
           renderList();
           if (currentTab === 'progress') loadProgressSummary();
+          if (currentTab === 'report') rptOpenPage();
 
           // หลังเพิ่มตัวชี้วัดใหม่: ไปที่การ์ดนั้นแล้วเปิดโหมดแก้ไขทันที
           if (pendingSelectAfterLoad) {
@@ -1230,7 +1241,11 @@
       currentTab = tabName;
       document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
       document.querySelectorAll('.page-view').forEach(el => el.classList.remove('active'));
-      if (tabName === 'progress') {
+      if (tabName === 'report') {
+        document.getElementById('menu-report-btn').classList.add('active');
+        document.getElementById('page-report').classList.add('active');
+        rptOpenPage();
+      } else if (tabName === 'progress') {
         document.getElementById('menu-progress-btn').classList.add('active');
         document.getElementById('page-progress').classList.add('active');
         setProgressHeight();
@@ -2708,85 +2723,246 @@
       if (edit) startEditNow(id, selectedKey);
     }
 
-    // ===================== Export PDF (พิมพ์จากเบราว์เซอร์) =====================
-    // ขอบเขตตัวชี้วัดที่จะพิมพ์: ของฉัน / หน่วยงานที่ฉันสังกัด / ทั้งหมด
+    // ===================== สรุปรายงาน / Export PDF (พิมพ์จากเบราว์เซอร์) =====================
+    // ตัวกรองชุดเดียว (rpt) ใช้ร่วมกันระหว่างหน้า "สรุปรายงาน" (คำนำหน้า rp) และหน้าต่าง Export PDF (คำนำหน้า pdf)
+    // จำค่าตามผู้ใช้ที่ล็อกอิน (เก็บฝั่งเซิร์ฟเวอร์: getReportPrefs / saveReportPrefs)
     const PDF_DEPT_ALIASES = { 'จิิตเวช': 'จิตเวช', 'งานIC': 'IC', 'ICWN': 'IC', 'ทีมบริหารความเสี่ยง(RM)': 'RM', 'แพทย์แผนไทย': 'แผนไทย', 'ฝ่ายการพยาบาล': 'NSO', 'ฝ่ายการ': 'NSO' };
     function pdfKpiDepts(k) {
       return String(k.department || '').replace(/TB clinic/g, 'TB').split(/[\/\s,]+/).map(d => PDF_DEPT_ALIASES[d.trim()] || d.trim()).filter(Boolean);
     }
-    function pdfScope() {
-      const r = document.querySelector('input[name="pdf-scope"]:checked');
-      return r ? r.value : 'mine';
+
+    const RPT_STEP = 30; // ตัวอย่างบนจอแสดงทีละ 30 ตัวชี้วัด เลื่อนลงแล้วโหลดต่อ (ตอน Export ใส่ครบทุกตัว)
+    const RPT_DEFAULT_OPTS = { table: true, chart: true, detail: true, source: true, owner: true };
+    const rpt = { loaded: false, loading: false, waiters: [], scope: null, orient: 'landscape', opts: Object.assign({}, RPT_DEFAULT_OPTS), unchecked: new Set(), limit: RPT_STEP };
+    let rptSaveTimer = null, rptPreviewTimer = null, rptControlsBuilt = false;
+
+    function rptReset() {
+      clearTimeout(rptSaveTimer); clearTimeout(rptPreviewTimer);
+      rpt.loaded = false; rpt.loading = false; rpt.waiters = []; rpt.scope = null; rpt.orient = 'landscape';
+      rpt.opts = Object.assign({}, RPT_DEFAULT_OPTS); rpt.unchecked = new Set(); rpt.limit = RPT_STEP;
     }
-    function pdfInScope(k) {
-      const scope = pdfScope();
-      if (scope === 'mine') return !!k.mine;
-      if (scope === 'dept') return pdfKpiDepts(k).some(d => (currentUser.depts || []).indexOf(d) !== -1);
+
+    function rptApplyPrefs(p) {
+      if (['mine', 'dept', 'all'].indexOf(p.scope) !== -1) rpt.scope = p.scope;
+      if (p.orient === 'portrait' || p.orient === 'landscape') rpt.orient = p.orient;
+      if (p.opts) Object.keys(RPT_DEFAULT_OPTS).forEach(k => { if (typeof p.opts[k] === 'boolean') rpt.opts[k] = p.opts[k]; });
+      if (Array.isArray(p.unchecked)) rpt.unchecked = new Set(p.unchecked);
+    }
+
+    // โหลดค่าที่จำไว้ครั้งแรกครั้งเดียวต่อการล็อกอิน (ถ้าโหลดไม่ได้ใช้ค่าตั้งต้น)
+    function rptEnsure(cb) {
+      if (rpt.loaded) { cb(); return; }
+      rpt.waiters.push(cb);
+      if (rpt.loading) return;
+      rpt.loading = true;
+      const token = sessionToken;
+      const done = () => {
+        if (sessionToken !== token) return;
+        rpt.loaded = true; rpt.loading = false;
+        const w = rpt.waiters; rpt.waiters = [];
+        w.forEach(f => f());
+      };
+      google.script.run
+        .withSuccessHandler((res) => { if (res && res.success && res.prefs) rptApplyPrefs(res.prefs); done(); })
+        .withFailureHandler(done)
+        .getReportPrefs(token);
+    }
+
+    function rptSaveSoon() {
+      clearTimeout(rptSaveTimer);
+      rptSaveTimer = setTimeout(() => {
+        if (!sessionToken) return;
+        google.script.run.withFailureHandler(() => {}).saveReportPrefs(sessionToken, { scope: rpt.scope, orient: rpt.orient, opts: rpt.opts, unchecked: Array.from(rpt.unchecked) });
+      }, 800);
+    }
+
+    // ขอบเขตที่ใช้ไม่ได้ (เช่น ไม่มีตัวที่ฉันรับผิดชอบ / ไม่มีหน่วยงาน) → ใช้ค่าตั้งต้น
+    function rptNormalize() {
+      if (globalDatabase.length === 0) return;
+      const hasMine = globalDatabase.some(k => k.mine);
+      const hasDept = (currentUser.depts || []).length > 0;
+      if (!rpt.scope || (rpt.scope === 'mine' && !hasMine) || (rpt.scope === 'dept' && !hasDept)) rpt.scope = hasMine ? 'mine' : 'all';
+    }
+
+    function rptInScope(k) {
+      if (rpt.scope === 'mine') return !!k.mine;
+      if (rpt.scope === 'dept') return pdfKpiDepts(k).some(d => (currentUser.depts || []).indexOf(d) !== -1);
       return true;
     }
 
-    function pdfGroups() {
+    function rptGroups() {
       const g = {};
-      globalDatabase.filter(pdfInScope).forEach(k => placementsOf(k).forEach(p => {
+      globalDatabase.filter(rptInScope).forEach(k => placementsOf(k).forEach(p => {
         if (!g[p.part]) g[p.part] = {};
         g[p.part][p.category] = (g[p.part][p.category] || 0) + 1;
       }));
       return g;
     }
 
-    // ตัวชี้วัดในหมวดที่เลือก — ตัวที่อยู่หลายหมวดพิมพ์ครั้งเดียว (ในหมวดแรกที่เรียงได้)
-    function pdfChosen() {
-      const keys = pdfSelectedKeys();
+    // ตัวชี้วัดในหมวดที่ติ๊ก — ตัวที่อยู่หลายหมวดพิมพ์ครั้งเดียว (ในหมวดแรกที่เรียงได้)
+    function rptChosen() {
       const ps = [];
-      globalDatabase.filter(pdfInScope).forEach(k => placementsOf(k).forEach(p => { if (keys.has(p.part + '||' + p.category)) ps.push(p); }));
+      globalDatabase.filter(rptInScope).forEach(k => placementsOf(k).forEach(p => { if (!rpt.unchecked.has(p.part + '||' + p.category)) ps.push(p); }));
       return ps;
     }
 
-    function openPdfModal() {
-      // ค่าตั้งต้น: เฉพาะที่ฉันรับผิดชอบ (ถ้าไม่มีตัวที่รับผิดชอบเลย เช่น admin ให้เริ่มที่ทุกตัวชี้วัด)
-      const hasMine = globalDatabase.some(k => k.mine);
-      const hasDept = (currentUser.depts || []).length > 0;
-      document.querySelector('input[name="pdf-scope"][value="dept"]').disabled = !hasDept;
-      document.getElementById('pdf-scope-dept-label').title = hasDept ? 'หน่วยงาน: ' + currentUser.depts.join(', ') : 'บัญชีนี้ยังไม่ได้ระบุหน่วยงาน';
-      document.querySelector('input[name="pdf-scope"][value="' + (hasMine ? 'mine' : 'all') + '"]').checked = true;
-      renderPdfCatList();
-      document.getElementById('modal-pdf').style.display = 'flex';
+    function rptControlsHtml(p) {
+      const opt = (key, label) => `<label class="check-row"><input type="checkbox" id="${p}-opt-${key}" onchange="rptSetOpt('${p}', '${key}', this.checked)"> ${label}</label>`;
+      const scope = (v, label, id) => `<label class="check-row"${id ? ` id="${p}-${id}"` : ''}><input type="radio" name="${p}-scope" value="${v}" onchange="rptSetScope('${p}', '${v}')"> ${label}</label>`;
+      const orient = (v, label) => `<label class="check-row"><input type="radio" name="${p}-orient" value="${v}" onchange="rptSetOrient('${p}', '${v}')"> ${label}</label>`;
+      return `<div class="form-group"><label>1. เลือกตัวชี้วัดที่จะพิมพ์</label>
+          <div class="rpt-scope">${scope('mine', 'เฉพาะที่ฉันรับผิดชอบ')}${scope('dept', 'เฉพาะหน่วยงานที่ฉันสังกัด', 'scope-dept-label')}${scope('all', 'ทุกตัวชี้วัด')}</div>
+          <div class="rpt-bar">
+            <button type="button" class="btn btn-secondary btn-sm" onclick="rptSelectAll('${p}', true)">เลือกทั้งหมด</button>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="rptSelectAll('${p}', false)">ล้างทั้งหมด</button>
+            <span id="${p}-count" class="hint" style="margin: 0 0 0 auto;"></span>
+          </div>
+          <div id="${p}-cat-list" class="rpt-cat-list"></div>
+        </div>
+        <div class="form-group"><label>2. เนื้อหาที่จะพิมพ์</label>
+          ${opt('table', 'ตารางตัวชี้วัด (เป้าหมาย ผล 5 ปี ผลรายเดือน)')}${opt('chart', 'กราฟผลลัพธ์ + ตารางรายเดือนรายตัว')}${opt('detail', 'รายละเอียด/การวิเคราะห์ตัวชี้วัด')}${opt('source', 'ที่มาแหล่งข้อมูล / สูตรคำนวณ')}${opt('owner', 'ผู้รับผิดชอบดูแล')}
+        </div>
+        <div class="form-group"><label>3. แนวกระดาษ</label>${orient('landscape', 'แนวนอน')}${orient('portrait', 'แนวตั้ง')}</div>`;
     }
 
-    // รายการหมวด (ติ๊กเลือก) ตามขอบเขตที่เลือก — เปลี่ยนขอบเขตแล้วติ๊กทุกหมวดใหม่
-    function renderPdfCatList() {
-      const groups = pdfGroups();
+    // ตั้งค่าช่องต่างๆ ของชุดควบคุม p ('rp' หน้าสรุปรายงาน / 'pdf' หน้าต่าง Export) ให้ตรงกับ rpt
+    function rptSync(p) {
+      rptNormalize();
+      const hasDept = (currentUser.depts || []).length > 0;
+      document.querySelector(`input[name="${p}-scope"][value="dept"]`).disabled = !hasDept;
+      document.getElementById(p + '-scope-dept-label').title = hasDept ? 'หน่วยงาน: ' + currentUser.depts.join(', ') : 'บัญชีนี้ยังไม่ได้ระบุหน่วยงาน';
+      const sc = document.querySelector(`input[name="${p}-scope"][value="${rpt.scope}"]`);
+      if (sc) sc.checked = true;
+      Object.keys(rpt.opts).forEach(k => { document.getElementById(`${p}-opt-${k}`).checked = rpt.opts[k]; });
+      document.querySelector(`input[name="${p}-orient"][value="${rpt.orient}"]`).checked = true;
+      rptRenderCats(p);
+    }
+
+    function rptRenderCats(p) {
+      const box = document.getElementById(p + '-cat-list');
+      const keepScroll = box.scrollTop;
+      const groups = rptGroups();
       let html = '';
-      Object.keys(groups).sort(comparePartNames).forEach((part, pi) => {
-        html += `<label class="check-row" style="font-weight:700; color:#015c8b;"><input type="checkbox" class="pdf-part" data-part="${esc(part)}" checked onchange="pdfTogglePart(this)"> ${esc(part)}</label>`;
-        Object.keys(groups[part]).sort().forEach(cat => {
-          html += `<label class="check-row" style="margin-left:22px;"><input type="checkbox" class="pdf-cat" data-part="${esc(part)}" data-cat="${esc(cat)}" checked onchange="pdfUpdateCount()"> ${esc(cat)} (${groups[part][cat]})</label>`;
+      Object.keys(groups).sort(comparePartNames).forEach(part => {
+        const cats = Object.keys(groups[part]).sort();
+        const on = cats.filter(c => !rpt.unchecked.has(part + '||' + c)).length;
+        html += `<label class="check-row" style="font-weight:700; color:#015c8b;"><input type="checkbox" class="${p}-part" data-part="${esc(part)}" data-on="${on}" data-n="${cats.length}"${on === cats.length ? ' checked' : ''} onchange="rptTogglePart('${p}', this)"> ${esc(part)}</label>`;
+        cats.forEach(cat => {
+          html += `<label class="check-row" style="margin-left:22px;"><input type="checkbox" class="${p}-cat" data-part="${esc(part)}" data-cat="${esc(cat)}"${rpt.unchecked.has(part + '||' + cat) ? '' : ' checked'} onchange="rptToggleCat('${p}', this)"> ${esc(cat)} (${groups[part][cat]})</label>`;
         });
       });
-      document.getElementById('pdf-cat-list').innerHTML = html || '<div class="empty-state">ไม่มีตัวชี้วัดในขอบเขตที่เลือก</div>';
-      pdfUpdateCount();
+      box.innerHTML = html || '<div class="empty-state">ไม่มีตัวชี้วัดในขอบเขตที่เลือก</div>';
+      box.querySelectorAll('.' + p + '-part').forEach(c => { const on = +c.dataset.on, n = +c.dataset.n; c.indeterminate = on > 0 && on < n; });
+      box.scrollTop = keepScroll;
+      rptUpdateCount(p);
     }
 
-    function pdfSelectAll(on) {
-      document.querySelectorAll('#pdf-cat-list input').forEach(c => { c.checked = on; });
-      pdfUpdateCount();
+    function rptUpdateCount(p) {
+      const el = document.getElementById(p + '-count');
+      if (el) el.innerText = `เลือก ${uniqueById(rptChosen()).length} ตัวชี้วัด`;
     }
 
-    function pdfTogglePart(el) {
-      document.querySelectorAll('.pdf-cat').forEach(c => { if (c.dataset.part === el.dataset.part) c.checked = el.checked; });
-      pdfUpdateCount();
+    // ทุกครั้งที่ตัวกรองเปลี่ยน: อัปเดตรายการหมวด/จำนวน, ตัวอย่าง (ถ้าอยู่หน้าสรุปรายงาน), และจำค่าไว้
+    function rptChanged(p, rerender) {
+      if (rerender) rptRenderCats(p); else rptUpdateCount(p);
+      if (p === 'rp') rptPreviewSoon();
+      rptSaveSoon();
     }
 
-    function pdfSelectedKeys() {
-      const keys = new Set();
-      document.querySelectorAll('.pdf-cat').forEach(c => { if (c.checked) keys.add(c.dataset.part + '||' + c.dataset.cat); });
-      return keys;
+    function rptSetScope(p, v) { rpt.scope = v; rpt.unchecked = new Set(); rptChanged(p, true); } // เปลี่ยนขอบเขตแล้วติ๊กทุกหมวดใหม่
+    function rptSetOrient(p, v) { rpt.orient = v; rptChanged(p, false); }
+    function rptSetOpt(p, key, on) { rpt.opts[key] = on; rptChanged(p, false); }
+
+    function rptSelectAll(p, on) {
+      rpt.unchecked = new Set();
+      if (!on) {
+        const g = rptGroups();
+        Object.keys(g).forEach(part => Object.keys(g[part]).forEach(cat => rpt.unchecked.add(part + '||' + cat)));
+      }
+      rptChanged(p, true);
     }
 
-    function pdfUpdateCount() {
-      const keys = pdfSelectedKeys();
-      const n = uniqueById(pdfChosen()).length;
-      document.getElementById('pdf-count').innerText = `เลือก ${n} ตัวชี้วัด`;
+    function rptTogglePart(p, el) {
+      const g = rptGroups()[el.dataset.part] || {};
+      Object.keys(g).forEach(cat => { const key = el.dataset.part + '||' + cat; if (el.checked) rpt.unchecked.delete(key); else rpt.unchecked.add(key); });
+      rptChanged(p, true);
+    }
+
+    function rptToggleCat(p, el) {
+      const key = el.dataset.part + '||' + el.dataset.cat;
+      if (el.checked) rpt.unchecked.delete(key); else rpt.unchecked.add(key);
+      rptChanged(p, true);
+    }
+
+    // ---------- หน้าสรุปรายงาน: ตัวอย่างรายงาน ----------
+    function rptOpenPage() {
+      rptEnsure(() => {
+        if (currentTab !== 'report') return;
+        if (!rptControlsBuilt) { document.getElementById('rp-controls').innerHTML = rptControlsHtml('rp'); rptControlsBuilt = true; }
+        rptSync('rp');
+        rpt.limit = RPT_STEP;
+        rptRenderPreview();
+      });
+    }
+
+    function rptPreviewSoon() {
+      clearTimeout(rptPreviewTimer);
+      rptPreviewTimer = setTimeout(() => { rpt.limit = RPT_STEP; rptRenderPreview(); }, 250);
+    }
+
+    function rptRenderPreview() {
+      if (currentTab !== 'report') return;
+      const paper = document.getElementById('rp-paper'), more = document.getElementById('rp-more');
+      const landscape = rpt.orient === 'landscape';
+      paper.className = landscape ? 'landscape' : 'portrait';
+      const total = uniqueById(rptChosen()).length;
+      const hasContent = Object.keys(rpt.opts).some(k => rpt.opts[k]);
+      if (total === 0 || !hasContent) {
+        paper.innerHTML = `<div class="empty-state">${total === 0 ? 'ยังไม่ได้เลือกตัวชี้วัด — ติ๊กหมวดตัวชี้วัดทางซ้าย' : 'ยังไม่ได้เลือกเนื้อหา — ติ๊กเนื้อหาที่จะพิมพ์ทางซ้าย'}</div>`;
+        more.innerHTML = '';
+      } else {
+        paper.innerHTML = buildPrintHtml(rpt.opts, landscape, rpt.limit);
+        const shown = Math.min(rpt.limit, total);
+        more.innerHTML = shown < total
+          ? `ตัวอย่างแสดง ${shown} จาก ${total} ตัวชี้วัด (เลื่อนลงเพื่อดูต่อ) · Export PDF จะใส่ครบทุกตัว <button type="button" class="btn btn-secondary btn-sm" onclick="rptMore()">แสดงเพิ่ม</button>`
+          : `แสดงครบ ${total} ตัวชี้วัด`;
+      }
+      rptFit();
+      rptMaybeMore();
+    }
+
+    function rptMore() { rpt.limit += RPT_STEP; rptRenderPreview(); }
+
+    // เลื่อนลงใกล้ท้ายตัวอย่างแล้วโหลดเพิ่มอัตโนมัติ
+    function rptMaybeMore() {
+      if (currentTab !== 'report') return;
+      const more = document.getElementById('rp-more');
+      if (!more || !more.querySelector('button')) return;
+      if (more.getBoundingClientRect().top < window.innerHeight + 400) setTimeout(rptMore, 30);
+    }
+
+    // ย่อกระดาษตัวอย่างให้พอดีความกว้างจอ (ขนาดตัวอักษรกับการตัดบรรทัดคงเดิมเหมือนตอนพิมพ์)
+    function rptFit() {
+      const paper = document.getElementById('rp-paper'), wrap = document.getElementById('rp-scroll');
+      if (!paper || !wrap) return;
+      const px = (rpt.orient === 'landscape' ? 297 : 210) * 96 / 25.4;
+      const avail = wrap.clientWidth - 4;
+      paper.style.zoom = avail > 0 ? Math.max(0.25, Math.min(1, avail / px)) : 1;
+    }
+    window.addEventListener('resize', () => { if (currentTab === 'report') rptFit(); });
+    window.addEventListener('scroll', () => { if (currentTab === 'report') rptMaybeMore(); }, { passive: true });
+
+    // ---------- ปุ่ม Export PDF บนแถบเมนู ----------
+    function exportPdfClick() {
+      if (currentTab === 'report') generatePdf(); else openPdfModal();
+    }
+
+    function openPdfModal() {
+      rptEnsure(() => {
+        document.getElementById('pdf-controls').innerHTML = rptControlsHtml('pdf');
+        rptSync('pdf');
+        document.getElementById('modal-pdf').style.display = 'flex';
+      });
     }
 
     function prNum(v) { return v !== null && v !== undefined ? Math.round(v * 100) / 100 : '-'; }
@@ -2827,8 +3003,8 @@
       return h + '</div>';
     }
 
-    function buildPrintHtml(opts, landscape) {
-      const chosenAll = pdfChosen();
+    function buildPrintHtml(opts, landscape, limit) {
+      const chosenAll = rptChosen();
       const chosen = uniqueById(chosenAll);
       const tree = {};
       chosenAll.forEach(k => {
@@ -2845,6 +3021,17 @@
         });
         if (Object.keys(tree[part]).length === 0) delete tree[part];
       });
+      if (limit) { // ตัวอย่างบนจอ: ตัดให้เหลือ limit ตัวแรก
+        let left = limit;
+        Object.keys(tree).sort(comparePartNames).forEach(part => {
+          Object.keys(tree[part]).sort().forEach(cat => {
+            tree[part][cat] = tree[part][cat].slice(0, Math.max(left, 0));
+            left -= tree[part][cat].length;
+            if (tree[part][cat].length === 0) delete tree[part][cat];
+          });
+          if (Object.keys(tree[part]).length === 0) delete tree[part];
+        });
+      }
       const printedAt = new Date().toLocaleString('th-TH', { dateStyle: 'long', timeStyle: 'short' });
       let html = `<div class="pr-head"><div class="pr-hosp">โรงพยาบาลภูหลวง</div>
         <div class="pr-sub">รายงานตัวชี้วัดคุณภาพ ปีงบประมาณ ${selectedFy}</div>
@@ -2863,26 +3050,21 @@
     }
 
     function generatePdf() {
-      const opts = {
-        table: document.getElementById('pdf-opt-table').checked,
-        chart: document.getElementById('pdf-opt-chart').checked,
-        detail: document.getElementById('pdf-opt-detail').checked,
-        source: document.getElementById('pdf-opt-source').checked,
-        owner: document.getElementById('pdf-opt-owner').checked
-      };
-      if (pdfSelectedKeys().size === 0 || pdfChosen().length === 0) { showAlert('ยังไม่ได้เลือกตัวชี้วัด', '⚠️', 'กรุณาเลือกหมวดตัวชี้วัดอย่างน้อย 1 หมวด'); return; }
-      if (!opts.table && !opts.chart && !opts.detail && !opts.source && !opts.owner) {
-        showAlert('ยังไม่ได้เลือกเนื้อหา', '⚠️', 'กรุณาเลือกเนื้อหาที่จะพิมพ์อย่างน้อย 1 อย่าง');
-        return;
-      }
-      const orient = document.querySelector('input[name="pdf-orient"]:checked').value;
-      const landscape = orient === 'landscape';
-      document.getElementById('print-page-style').textContent = `@page { size: A4 ${orient}; margin: 10mm; }`;
-      document.getElementById('print-root').innerHTML = buildPrintHtml(opts, landscape);
-      document.getElementById('modal-pdf').style.display = 'none';
-      // รอให้เบราว์เซอร์จัดหน้าและฟอนต์พร้อมก่อนเปิดหน้าต่างพิมพ์
-      const go = () => setTimeout(() => window.print(), 250);
-      if (document.fonts && document.fonts.ready) document.fonts.ready.then(go); else go();
+      rptEnsure(() => {
+        const opts = rpt.opts;
+        if (rptChosen().length === 0) { showAlert('ยังไม่ได้เลือกตัวชี้วัด', '⚠️', 'กรุณาเลือกหมวดตัวชี้วัดอย่างน้อย 1 หมวด'); return; }
+        if (!opts.table && !opts.chart && !opts.detail && !opts.source && !opts.owner) {
+          showAlert('ยังไม่ได้เลือกเนื้อหา', '⚠️', 'กรุณาเลือกเนื้อหาที่จะพิมพ์อย่างน้อย 1 อย่าง');
+          return;
+        }
+        const landscape = rpt.orient === 'landscape';
+        document.getElementById('print-page-style').textContent = `@page { size: A4 ${rpt.orient}; margin: 10mm; }`;
+        document.getElementById('print-root').innerHTML = buildPrintHtml(opts, landscape);
+        document.getElementById('modal-pdf').style.display = 'none';
+        // รอให้เบราว์เซอร์จัดหน้าและฟอนต์พร้อมก่อนเปิดหน้าต่างพิมพ์
+        const go = () => setTimeout(() => window.print(), 250);
+        if (document.fonts && document.fonts.ready) document.fonts.ready.then(go); else go();
+      });
     }
 
     window.addEventListener('afterprint', () => { document.getElementById('print-root').innerHTML = ''; });
