@@ -2340,9 +2340,9 @@
         <div style="display:flex; gap:8px; flex-wrap:wrap;">
           ${box(c.added, 'เพิ่มใหม่', '#16a34a')}${box(c.merged, 'รวมเข้าตัวเดิม (ซ้ำ)', '#0e7490')}${box(c.updated, 'อัปเดตจากต้นทาง', '#ca8a04')}${box(c.unchanged, 'ไม่เปลี่ยน', '#94a3b8')}${box(c.conflicts, 'ขัดแย้ง (ต้นทางชนะ)', '#dc2626')}
         </div>
-        ${sec('รวมเข้าตัวชี้วัดเดิม (ชื่อตรงกัน 1:1)', rep.merged.length, nsoList(rep.merged, x => short(x.name) + ' ← ' + esc(x.part) + ' → ' + esc(x.ourId)))}
-        ${sec('ชื่อซ้ำกับตัวเดิมหลายตัว/หลายแถว — ไม่รวมอัตโนมัติ นำเข้าเป็นตัวใหม่', c.ambiguous, nsoList(rep.ambiguous, x => short(x.name) + ' (' + esc(x.part) + ') ~ ' + esc(x.with)))}
-        ${sec('ชื่อคล้ายตัวเดิม (ไม่รวมอัตโนมัติ ตรวจเองถ้าซ้ำจริง)', c.similar, nsoList(rep.similar, x => short(x.name) + ' (' + esc(x.part) + ') ~ ' + short(x.like)))}
+        ${sec('รวมเข้าตัวชี้วัด รพ. (ตามตารางจับคู่ NSO↔SAR)', rep.merged.length, nsoList(rep.merged, x => short(x.name) + ' ← ' + esc(x.part) + ' → ' + esc(x.ourId)))}
+        ${sec('ตัวชี้วัด รพ. ที่ต้องรวมด้วยถูกลบ/ผูกกับตัวอื่นแล้ว — นำเข้าเป็นตัวใหม่แทน', c.ambiguous, nsoList(rep.ambiguous, x => short(x.name) + ' (' + esc(x.part) + ') ~ ' + esc(x.with)))}
+        ${sec('ตัวย่อยของหน่วย (นำเข้าแยก ระบุตัวชี้วัด รพ. ที่เกี่ยวข้องในรายละเอียด)', c.similar, nsoList(rep.similar, x => short(x.name) + ' (' + esc(x.part) + ') ~ ' + short(x.like)))}
         ${sec('ตัวที่เพิ่มใหม่ (ตัวอย่าง)', c.added, nsoList(rep.added, x => short(x.name) + ' · ' + esc(x.part) + ' · ' + esc(x.levels)))}
         ${sec('ขัดแย้ง: แก้ทั้งสองฝั่งในช่องเดียวกัน ใช้ของต้นทาง NSO', c.conflicts, nsoList(rep.conflicts, x => short(x.name)))}
         ${sec('ลบออกจากระบบนี้แล้ว (ไม่นำกลับ)', c.deletedLocally, nsoList(rep.deletedLocally, x => short(x)))}

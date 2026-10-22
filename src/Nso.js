@@ -2,7 +2,7 @@
  * นำเข้า / อัปเดตตัวชี้วัดของฝ่ายการพยาบาล (NSO) จากไฟล์เดิม (NURSING_SPREADSHEET_URL) เข้าชีตปีงบ 2569
  *
  * หลักการ
- *  - ตัวชี้วัดโรงพยาบาล (Part I–IV / SAR) คงเดิม ตัวที่ซ้ำกับ NSO (ชื่อตรงกัน 1:1) รวมข้อมูลเข้าตัวเดิม ส่วนตัวที่ไม่ซ้ำเพิ่มเป็นตัวใหม่ รหัส "NURSE-<รหัสต้นทาง>"
+ *  - ตัวชี้วัดโรงพยาบาล (Part I–IV / SAR) คงเดิม ตัวที่เป็นตัวเดียวกับ NSO (ตามตาราง NSO_MATCH ใน NsoMatch.js) รวมข้อมูลเข้าตัวเดิม ส่วนตัวที่ไม่ซ้ำเพิ่มเป็นตัวใหม่ รหัส "NURSE-<รหัสต้นทาง>"
  *  - ทุกตัวเป็นของหน่วยงานนั้น + NSO · ตัวที่ Part ลงท้าย QA = ระดับ QA-หน่วยงาน · มีผู้รับผิดชอบ = รายบุคคล · มีหน่วยงาน = หน่วยงาน
  *  - รันซ้ำได้ (อัปเดต): เทียบรายตัวชี้วัด รายช่อง กับสำเนาต้นทางที่นำเข้าครั้งก่อน (ชีตซ่อน NSO_Sync)
  *      ต้นทางเปลี่ยน/ฝั่งนี้ไม่เปลี่ยน → ใช้ของต้นทาง · ต้นทางไม่เปลี่ยน → คงของเรา · เปลี่ยนทั้งสองฝั่งช่องเดียวกัน → ต้นทาง NSO ชนะ (ช่วงเปลี่ยนผ่าน) และแจ้งเป็นรายการขัดแย้ง
@@ -35,19 +35,6 @@ function nsoNorm_(s) {
   return t.replace(/^[0-9๐-๙]+/, "");
 }
 
-function nsoBigrams_(s) {
-  var m = {}, n = 0;
-  for (var i = 0; i < s.length - 1; i++) { var g = s.substr(i, 2); m[g] = (m[g] || 0) + 1; n++; }
-  return { map: m, n: n };
-}
-
-function nsoDice_(a, b) {
-  if (!a.n || !b.n) return 0;
-  var common = 0;
-  Object.keys(a.map).forEach(function(g) { if (b.map[g]) common += Math.min(a.map[g], b.map[g]); });
-  return 2 * common / (a.n + b.n);
-}
-
 /** Part ของ NSO → หน่วยงาน (ตัด "QA"/"TTM-QA" ออก) */
 function nsoUnitOfPart_(part) {
   var p = (part || "").toString().trim();
@@ -77,6 +64,13 @@ function nsoOwnerNames_(text) {
 
 function nsoStr_(v) { return v === null || v === undefined ? "" : v.toString().trim(); }
 
+/** ข้อความบอกว่าเป็นตัวย่อยของตัวชี้วัด รพ. ตัวไหน (ตามตาราง NSO_MATCH ชนิด U) */
+function nsoSubNote_(sourceId) {
+  var mt = NSO_MATCH[sourceId];
+  if (!mt || mt[1] !== "U") return "";
+  return "ตัวย่อยของตัวชี้วัด รพ. (SAR): " + (NSO_MATCH_NAMES[mt[0]] || "") + " [" + mt[0].replace(/^KPI-0*/, "KPI-") + "]";
+}
+
 /** แถวต้นทาง → ข้อมูลมาตรฐานที่จะใช้ในระบบนี้ (ไม่มีรหัสหรือชื่อ = แถวหัวข้อ ข้าม) */
 function nsoMapRow_(row) {
   var id = nsoStr_(row[0]), fullName = nsoStr_(row[4]);
@@ -105,7 +99,7 @@ function nsoMapRow_(row) {
   return {
     sourceId: id, name: name, partLabel: partLabel, unit: up.unit, isQa: up.isQa,
     target: nsoStr_(row[5]), years: years, months: months,
-    details: [extraDetail, nsoStr_(row[23])].filter(Boolean).join("\n\n"), dataSource: nsoStr_(row[24]),
+    details: [nsoSubNote_(id), extraDetail, nsoStr_(row[23])].filter(Boolean).join("\n\n"), dataSource: nsoStr_(row[24]),
     owner: owners.join(" / "), ownerRaw: nsoStr_(row[25]), owners: owners, depts: depts, levels: levels, cats: cats
   };
 }
@@ -230,21 +224,6 @@ function nsoPlan_() {
   var plan = { ops: [], counts: { source: src.mapped.length, headings: src.skipped, added: 0, merged: 0, updated: 0, unchanged: 0, conflicts: 0, ambiguous: 0, similar: 0, deletedLocally: 0 },
     added: [], merged: [], updated: [], conflicts: [], ambiguous: [], similar: [], unknownOwners: {}, deletedLocally: [] };
 
-  // ชื่อที่ยังไม่มีคู่: เทียบกับตัวชี้วัดโรงพยาบาลเดิม (ที่ยังไม่ผูกกับต้นทาง และไม่ใช่ตัวที่นำเข้าจาก NSO)
-  var hospByName = {}, hospBig = [];
-  rows.forEach(function(r, i) {
-    var id = nsoStr_(r[0]);
-    if (!id || id.indexOf(NURSING_SYNC_ID_PREFIX) === 0 || nsoStr_(r[27])) return;
-    var k = nsoNorm_(r[4]);
-    if (!k) return;
-    (hospByName[k] = hospByName[k] || []).push(i);
-    hospBig.push({ i: i, big: nsoBigrams_(k) });
-  });
-  var unlinked = src.mapped.filter(function(m) { return !sync[m.sourceId] && idx.byLink[m.sourceId] === undefined && idx.byId[NURSING_SYNC_ID_PREFIX + m.sourceId] === undefined; });
-  // แถวต้นทางที่ชื่อตรงกับตัวชี้วัดเดิมตัวเดียวกัน → นับว่าแย่งกัน (ไม่รวมอัตโนมัติ)
-  var claims = {};
-  unlinked.forEach(function(m) { var c = hospByName[nsoNorm_(m.name)]; if (c && c.length === 1) claims[c[0]] = (claims[c[0]] || 0) + 1; });
-
   src.mapped.forEach(function(m) {
     m.owners.forEach(function(n) { if (!users[n]) plan.unknownOwners[n] = (plan.unknownOwners[n] || 0) + 1; });
     var link = sync[m.sourceId];
@@ -259,24 +238,22 @@ function nsoPlan_() {
     }
 
     if (rowIdx === undefined) {
-      // ไม่เคยนำเข้า: หาตัวซ้ำในตัวชี้วัดเดิม
-      var cand = hospByName[nsoNorm_(m.name)];
-      if (cand && cand.length === 1 && claims[cand[0]] === 1) {
-        plan.ops.push({ type: "merge", m: m, rowIdx: cand[0] });
-        plan.counts.merged++;
-        plan.merged.push({ name: m.name, ourId: nsoStr_(rows[cand[0]][0]), part: m.partLabel });
-        return;
-      }
-      if (cand && cand.length >= 1) {
-        plan.counts.ambiguous++;
-        if (plan.ambiguous.length < 40) plan.ambiguous.push({ name: m.name, part: m.partLabel, with: cand.map(function(i) { return nsoStr_(rows[i][0]); }).join(", ") });
-      } else {
-        var big = nsoBigrams_(nsoNorm_(m.name)), best = 0, bestI = -1;
-        hospBig.forEach(function(h) { var d = nsoDice_(big, h.big); if (d > best) { best = d; bestI = h.i; } });
-        if (best >= 0.88) {
-          plan.counts.similar++;
-          if (plan.similar.length < 40) plan.similar.push({ name: m.name, part: m.partLabel, like: nsoStr_(rows[bestI][4]), ourId: nsoStr_(rows[bestI][0]) });
+      // ไม่เคยนำเข้า: ดูตารางจับคู่ (NSO_MATCH) ชนิด S = ตัวเดียวกับตัวชี้วัด รพ. → รวมเข้าตัวนั้น
+      var mt = NSO_MATCH[m.sourceId];
+      if (mt && mt[1] === "S") {
+        var hi = idx.byId[mt[0]];
+        var taken = hi !== undefined && nsoStr_(rows[hi][27]) && nsoStr_(rows[hi][27]) !== m.sourceId;
+        if (hi !== undefined && !taken) {
+          plan.ops.push({ type: "merge", m: m, rowIdx: hi });
+          plan.counts.merged++;
+          plan.merged.push({ name: m.name, ourId: mt[0], part: m.partLabel });
+          return;
         }
+        plan.counts.ambiguous++; // ตัวชี้วัด รพ. ถูกลบ หรือผูกกับต้นทางอื่นแล้ว → นำเข้าเป็นตัวใหม่แทน
+        if (plan.ambiguous.length < 40) plan.ambiguous.push({ name: m.name, part: m.partLabel, with: mt[0] });
+      } else if (mt) {
+        plan.counts.similar++; // ตัวย่อยของหน่วย: นำเข้าแยก (ระบุตัวชี้วัด รพ. ที่เกี่ยวข้องในรายละเอียด)
+        if (plan.similar.length < 40) plan.similar.push({ name: m.name, part: m.partLabel, like: NSO_MATCH_NAMES[mt[0]] || "", ourId: mt[0] });
       }
       plan.ops.push({ type: "add", m: m });
       plan.counts.added++;
