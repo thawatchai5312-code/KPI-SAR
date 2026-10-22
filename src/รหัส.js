@@ -84,6 +84,7 @@ function getAllData(token, requestedFy) {
     ensureFiscalSheets_();
     migrateNursingUnit_(); // ต้องทำก่อน (อ่านระดับ "ฝ่ายการพยาบาล" เดิมก่อนถูกปรับ)
     migrateUnitCategories_();
+    migrateOwnerLevels_();
     var years = listFiscalYears_();
     var currentFy = getCurrentFiscalYear_();
     if (years.length === 0) return { success: true, data: [], fy: currentFy, currentFy: currentFy, years: [] };

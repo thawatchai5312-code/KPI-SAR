@@ -630,12 +630,27 @@
         <div style="display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap;">
           <button class="btn btn-secondary" onclick="addUserRow()">+ เพิ่มผู้ใช้</button>
           <button class="btn btn-secondary" onclick="generateAccounts()">👥 สร้างบัญชีจากผู้รับผิดชอบที่ยังไม่มีบัญชี</button>
+          <button class="btn btn-accent" onclick="openNsoImport()">📥 นำเข้า/อัปเดตตัวชี้วัดฝ่ายการพยาบาล (NSO)</button>
         </div>
         <div id="settings-users-list"></div>
       </div>
       <div class="modal-footer">
         <button class="btn btn-secondary" onclick="document.getElementById('modal-settings').style.display='none'">ยกเลิก</button>
         <button class="btn btn-primary" onclick="saveSettings()">💾 บันทึกการตั้งค่า</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modal-nso" class="modal-overlay">
+    <div class="modal-card" style="max-width: 760px; width: 95%;">
+      <div class="modal-header">📥 นำเข้า / อัปเดตตัวชี้วัดฝ่ายการพยาบาล (NSO) → ปีงบ 2569</div>
+      <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
+        <p class="hint" style="margin-bottom: 8px;">ระบบอ่านไฟล์ฝ่ายการพยาบาลเดิม แล้วเทียบรายตัวชี้วัด ตัวใหม่เพิ่มเข้าให้ ตัวที่เคยนำเข้าแล้วอัปเดตเฉพาะช่องที่ต้นทางเปลี่ยน (ช่องที่เราแก้เองและต้นทางไม่ได้แก้ จะคงไว้) ตัวชี้วัดโรงพยาบาล SAR ไม่ถูกเปลี่ยนค่า กดรันซ้ำได้ทุกครั้งที่ต้องการอัปเดต</p>
+        <div id="nso-body"><div class="empty-state">กำลังตรวจสอบไฟล์ต้นทาง (ยังไม่เขียนข้อมูล)...</div></div>
+      </div>
+      <div class="modal-footer" style="display: flex; justify-content: space-between;">
+        <button class="btn btn-secondary" onclick="document.getElementById('modal-nso').style.display='none'">ปิด</button>
+        <button class="btn btn-primary" id="nso-commit-btn" onclick="confirmNsoImport()" disabled>📥 เริ่มนำเข้า/อัปเดต</button>
       </div>
     </div>
   </div>
@@ -2309,6 +2324,65 @@
     }
 
     // ===================== ตั้งค่าผู้ใช้ (admin) =====================
+    // ===================== นำเข้า/อัปเดตตัวชี้วัดฝ่ายการพยาบาล (NSO) — admin =====================
+    function nsoList(items, fn) {
+      if (!items || items.length === 0) return '<div class="hint" style="margin:0;">-</div>';
+      return '<ul style="margin:4px 0 0; padding-left:1.2em; font-size:12.5px;">' + items.slice(0, 15).map(it => '<li>' + fn(it) + '</li>').join('') + (items.length > 15 ? '<li>… และอีก ' + (items.length - 15) + ' รายการ</li>' : '') + '</ul>';
+    }
+
+    function renderNsoReport(rep, done) {
+      const c = rep.counts;
+      const box = (n, label, color) => `<div style="flex:1; min-width:110px; border:1px solid var(--line); border-top:4px solid ${color}; border-radius:12px; padding:8px 10px; background:#fff;"><div style="font-size:22px; font-weight:800;">${n}</div><div style="font-size:12px; color:#475569; font-weight:600;">${label}</div></div>`;
+      const short = (t) => esc(String(t).length > 70 ? String(t).slice(0, 70) + '…' : t);
+      const sec = (title, n, body) => n > 0 ? `<details style="margin-top:8px;"><summary style="cursor:pointer; font-weight:700;">${title} (${n})</summary>${body}</details>` : '';
+      document.getElementById('nso-body').innerHTML = `
+        <div style="font-weight:700; margin-bottom:6px;">${done ? '✅ ผลการนำเข้า' : '🔍 ตัวอย่างก่อนนำเข้า (ยังไม่เขียนข้อมูล)'} · ตัวชี้วัดในไฟล์ต้นทาง ${c.source} ตัว (ข้ามแถวหัวข้อ ${c.headings} แถว)</div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          ${box(c.added, 'เพิ่มใหม่', '#16a34a')}${box(c.merged, 'รวมเข้าตัวเดิม (ซ้ำ)', '#0e7490')}${box(c.updated, 'อัปเดตจากต้นทาง', '#ca8a04')}${box(c.unchanged, 'ไม่เปลี่ยน', '#94a3b8')}${box(c.conflicts, 'ขัดแย้ง (ต้นทางชนะ)', '#dc2626')}
+        </div>
+        ${sec('รวมเข้าตัวชี้วัดเดิม (ชื่อตรงกัน 1:1)', rep.merged.length, nsoList(rep.merged, x => short(x.name) + ' ← ' + esc(x.part) + ' → ' + esc(x.ourId)))}
+        ${sec('ชื่อซ้ำกับตัวเดิมหลายตัว/หลายแถว — ไม่รวมอัตโนมัติ นำเข้าเป็นตัวใหม่', c.ambiguous, nsoList(rep.ambiguous, x => short(x.name) + ' (' + esc(x.part) + ') ~ ' + esc(x.with)))}
+        ${sec('ชื่อคล้ายตัวเดิม (ไม่รวมอัตโนมัติ ตรวจเองถ้าซ้ำจริง)', c.similar, nsoList(rep.similar, x => short(x.name) + ' (' + esc(x.part) + ') ~ ' + short(x.like)))}
+        ${sec('ตัวที่เพิ่มใหม่ (ตัวอย่าง)', c.added, nsoList(rep.added, x => short(x.name) + ' · ' + esc(x.part) + ' · ' + esc(x.levels)))}
+        ${sec('ขัดแย้ง: แก้ทั้งสองฝั่งในช่องเดียวกัน ใช้ของต้นทาง NSO', c.conflicts, nsoList(rep.conflicts, x => short(x.name)))}
+        ${sec('ลบออกจากระบบนี้แล้ว (ไม่นำกลับ)', c.deletedLocally, nsoList(rep.deletedLocally, x => short(x)))}
+        ${sec('ชื่อผู้รับผิดชอบที่ยังไม่มีบัญชี — กดปุ่ม "สร้างบัญชีจากผู้รับผิดชอบ" ได้หลังนำเข้า', rep.unknownOwners.length, '<div style="font-size:12.5px; margin-top:4px;">' + rep.unknownOwners.map(o => esc(o.name) + ' (' + o.count + ')').join(' · ') + '</div>')}`;
+    }
+
+    function openNsoImport() {
+      if (!currentUser || currentUser.tier !== 'admin') return;
+      document.getElementById('modal-nso').style.display = 'flex';
+      document.getElementById('nso-commit-btn').disabled = true;
+      document.getElementById('nso-body').innerHTML = '<div class="empty-state">กำลังอ่านไฟล์ต้นทางและเทียบกับข้อมูลในระบบ (อาจใช้เวลาครู่หนึ่ง)...</div>';
+      google.script.run
+        .withSuccessHandler((res) => {
+          if (!res.success) { document.getElementById('nso-body').innerHTML = '<div class="empty-state">' + esc(res.message) + '</div>'; return; }
+          renderNsoReport(res.preview, false);
+          document.getElementById('nso-commit-btn').disabled = false;
+        })
+        .withFailureHandler((err) => { document.getElementById('nso-body').innerHTML = '<div class="empty-state">' + esc(err.toString()) + '</div>'; })
+        .nsoImportPreview(sessionToken);
+    }
+
+    function confirmNsoImport() {
+      showConfirm('เริ่มนำเข้า/อัปเดตตัวชี้วัดจากไฟล์ฝ่ายการพยาบาลเข้าปีงบ 2569 (และสำเนาไปปีงบ 2570)?\nครั้งแรกระบบเก็บสำเนาสำรองไว้ในชีตซ่อน', () => {
+        const btn = document.getElementById('nso-commit-btn');
+        btn.disabled = true;
+        document.getElementById('nso-body').innerHTML = '<div class="empty-state">กำลังนำเข้า กรุณารอ อย่าปิดหน้านี้...</div>';
+        google.script.run
+          .withSuccessHandler((res) => {
+            if (!res.success) { document.getElementById('nso-body').innerHTML = '<div class="empty-state">' + esc(res.message) + '</div>'; btn.disabled = false; return; }
+            renderNsoReport(res.result, true);
+            const w = res.wrote;
+            document.getElementById('nso-body').insertAdjacentHTML('afterbegin', `<div class="hint" style="margin:0 0 6px;">เขียนจริง: เพิ่ม ${w.added} · อัปเดต ${w.updated} · สำเนาไปปีงบ 2570: เพิ่ม ${w.mirrored2570New} อัปเดต ${w.mirrored2570Updated}</div>`);
+            btn.disabled = false;
+            fetchAllDataFromServer(true);
+          })
+          .withFailureHandler((err) => { document.getElementById('nso-body').innerHTML = '<div class="empty-state">' + esc(err.toString()) + '</div>'; btn.disabled = false; })
+          .nsoImportCommit(sessionToken);
+      });
+    }
+
     function openSettings() {
       if (!currentUser || currentUser.tier !== 'admin') return;
       document.getElementById('modal-settings').style.display = 'flex';
