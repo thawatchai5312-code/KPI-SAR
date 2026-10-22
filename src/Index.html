@@ -209,7 +209,7 @@
     #toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: #064e3b; color: #fff; padding: 10px 20px; border-radius: 30px; font-weight: 700; font-size: 14px; box-shadow: 0 8px 20px rgba(0,0,0,0.3); z-index: 2000; display: none; }
 
     /* หน้าติดตามงาน: ซ้าย = กราฟความคืบหน้า, ขวา = ค้นหา + ตารางเดิม */
-    .progress-grid { display: grid; grid-template-columns: 40fr 60fr; gap: 10px; align-items: start; }
+    .progress-grid { display: grid; grid-template-columns: 22fr 78fr; gap: 10px; align-items: start; }
     /* ทั้งสองฝั่งสูงพอดีจอ (ความสูงตั้งด้วย setProgressHeight) ฝั่งขวาเลื่อนตารางอยู่ในกรอบ */
     #progress-chart-panel { height: 100%; overflow-y: auto; }
     #progress-table-panel { height: 100%; display: flex; flex-direction: column; overflow: hidden; }
@@ -228,7 +228,7 @@
     .pg-part-foot { font-size: 11.5px; color: #64748b; font-weight: 600; margin-top: 2px; }
 
     /* ---------- หน้าสรุปรายงาน ---------- */
-    .report-grid { display: grid; grid-template-columns: 320px minmax(0, 1fr); gap: 10px; align-items: start; }
+    .report-grid { display: grid; grid-template-columns: 22fr 78fr; gap: 10px; align-items: start; }
     #rp-side { position: sticky; top: var(--tree-top, 70px); max-height: calc(100vh - var(--tree-top, 70px) - 10px); overflow-y: auto; }
     #rp-main { background: #e8eeea; }
     #rp-scroll { overflow-x: auto; }
@@ -503,7 +503,7 @@
     .tree-count .tree-collapse:hover { background: #f1f5f9; }
 
     /* ปุ่มเลือกมุมมองแถบซ้าย */
-    .view-tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin-bottom: 10px; }
+    .view-tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin-bottom: 14px; } /* เว้นล่างให้พ้นแถบตัวกรองที่ดึงทับขึ้นมา 12px (ไม่ให้เส้นขอบล่างของปุ่มโดนบัง) */
     .view-tab { display: flex; align-items: center; justify-content: center; gap: 4px; padding: 5px 4px; border: 1.5px solid var(--line); border-radius: 12px; background: #fff; color: #475569; font-family: inherit; cursor: pointer; line-height: 1.2; white-space: nowrap; }
     .view-tab .vt-top { display: contents; } /* ไอคอน · ชื่อ · จำนวน เรียงบรรทัดเดียว */
     .view-tab .vt-ico { font-size: 13px; order: 1; }
