@@ -548,7 +548,7 @@
       <div class="panel" id="panel-tree">
         <div class="view-tabs" id="view-tabs" role="tablist" aria-label="มุมมองตัวชี้วัด">
           <button type="button" class="view-tab" data-view="hosp" role="tab" title="ตัวชี้วัดโรงพยาบาล Part I–IV" onclick="setTreeView('hosp')"><span class="vt-top"><span class="vt-ico">🏥</span><span class="vt-count">0</span></span><span class="vt-label">รพ.</span></button>
-          <button type="button" class="view-tab" data-view="qa" role="tab" title="QA / ฝ่ายการพยาบาล" onclick="setTreeView('qa')"><span class="vt-top"><span class="vt-ico">🩺</span><span class="vt-count">0</span></span><span class="vt-label">QA</span></button>
+          <button type="button" class="view-tab" data-view="qa" role="tab" title="ตัวชี้วัดระดับ QA-หน่วยงาน" onclick="setTreeView('qa')"><span class="vt-top"><span class="vt-ico">🩺</span><span class="vt-count">0</span></span><span class="vt-label">QA</span></button>
           <button type="button" class="view-tab" data-view="unit" role="tab" title="หมวดของหน่วยงาน / ของฉัน" onclick="setTreeView('unit')"><span class="vt-top"><span class="vt-ico">🏷️</span><span class="vt-count">0</span></span><span class="vt-label">หน่วยงาน</span></button>
         </div>
         <div class="tree-filters">
@@ -558,7 +558,6 @@
             <span class="tree-level-all" onclick="selectAllLevels()">เลือกทั้งหมด</span>
             <label class="check-row"><input type="checkbox" class="tree-level-cb" value="รายบุคคล" checked onchange="onTreeFilterChange()"> รายบุคคล</label>
             <label class="check-row"><input type="checkbox" class="tree-level-cb" value="หน่วยงาน" checked onchange="onTreeFilterChange()"> หน่วยงาน</label>
-            <label class="check-row"><input type="checkbox" class="tree-level-cb" value="ฝ่ายการพยาบาล" checked onchange="onTreeFilterChange()"> ฝ่ายการพยาบาล</label>
             <label class="check-row"><input type="checkbox" class="tree-level-cb" value="QA-หน่วยงาน" checked onchange="onTreeFilterChange()"> QA หน่วยงาน</label>
             <label class="check-row"><input type="checkbox" class="tree-level-cb" value="SAR" checked onchange="onTreeFilterChange()"> SAR โรงพยาบาล</label>
             </div>
@@ -626,7 +625,7 @@
           <b>head</b> (หัวหน้าหน่วย) แก้ได้ทุกตัวของหน่วยงานที่ระบุ · เห็นระดับรายบุคคลของหน่วยตัวเองด้วย<br>
           <b>staff</b> (รายบุคคล) แก้ได้เฉพาะตัวที่ตนรับผิดชอบ (ชื่อ เป้าหมาย รายละเอียด ที่มา ผู้รับผิดชอบ หน่วยงาน หมวดที่ตั้งเอง) · เพิ่มตัวชี้วัดใหม่ได้<br>
           ทุก Tier ที่ไม่ใช่ผู้รับผิดชอบดูได้อย่างเดียว: ระดับ SAR ทุกคนเห็น · ระดับหน่วยงาน/QA-หน่วยงาน คนในหน่วยนั้นเห็น<br>
-          ช่อง "หน่วยงาน" คั่นด้วยเครื่องหมายจุลภาค เช่น ER,IPD · หัวหน้าหน่วยที่ใส่ <b>ฝ่ายการพยาบาล</b> จะเห็นตัวชี้วัดระดับฝ่ายการพยาบาล · ผู้ใช้ใหม่/รีเซ็ตรหัสผ่านจะได้รหัส 11038 (ระบบแนะนำให้เปลี่ยน แต่ไม่บังคับ)
+          ช่อง "หน่วยงาน" คั่นด้วยเครื่องหมายจุลภาค เช่น ER,IPD · ฝ่ายการพยาบาล = หน่วยงาน <b>NSO</b> (พิมพ์ ฝ่ายการพยาบาล หรือ NSO ก็ได้) · ผู้ใช้ใหม่/รีเซ็ตรหัสผ่านจะได้รหัส 11038 (ระบบแนะนำให้เปลี่ยน แต่ไม่บังคับ)
         </p>
         <div style="display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap;">
           <button class="btn btn-secondary" onclick="addUserRow()">+ เพิ่มผู้ใช้</button>
@@ -839,7 +838,7 @@
     const openCats = new Set();
 
     // ระดับตัวชี้วัด เรียงจากต่ำไปสูง — เลือกได้หลายระดับ แสดงระดับสูงสุด
-    const KPI_LEVELS = ['รายบุคคล', 'หน่วยงาน', 'ฝ่ายการพยาบาล', 'QA-หน่วยงาน', 'SAR'];
+    const KPI_LEVELS = ['รายบุคคล', 'หน่วยงาน', 'QA-หน่วยงาน', 'SAR'];
 
     // ช่องติ๊กเลือกระดับ (ระดับเดิมที่ไม่มีในรายการแล้ว แสดงต่อท้ายถ้าตัวชี้วัดมีอยู่)
     function levelCheckboxesHtml(cls, selected) {
@@ -1388,7 +1387,7 @@
     const VIEWS = ['hosp', 'qa', 'unit'];
     const VIEW_INFO = {
       hosp: { label: 'ตัวชี้วัดโรงพยาบาล (Part I–IV)', kind: 'core', name: 'รพ. Part I–IV' },
-      qa: { label: 'QA / ฝ่ายการพยาบาล แยกตามหน่วยงาน', kind: 'qa', name: 'QA / การพยาบาล' },
+      qa: { label: 'QA แยกตามหน่วยงาน', kind: 'qa', name: 'QA' },
       unit: { label: 'หมวดของหน่วยงาน / ของฉัน', kind: 'other', name: 'หน่วยงาน / ของฉัน' }
     };
     let treeView = 'hosp';
@@ -1398,8 +1397,8 @@
       const ps = placementsOf(k);
       if (view === 'hosp') return ps.filter(p => isCorePart(p.part));
       if (view === 'unit') return ps.filter(p => !isCorePart(p.part));
-      // qa: ตัวที่มีระดับ QA-หน่วยงาน หรือ ฝ่ายการพยาบาล — แยกตามหมวดหน่วยงาน (ไม่มีหมวดหน่วยงานให้ใช้หมวดแรกแทน ไม่ให้ตกหล่น)
-      if (!(k.levels || [k.level]).some(l => l === 'QA-หน่วยงาน' || l === 'ฝ่ายการพยาบาล')) return [];
+      // qa: ตัวที่มีระดับ QA-หน่วยงาน — แยกตามหมวดหน่วยงาน (ไม่มีหมวดหน่วยงานให้ใช้หมวดแรกแทน ไม่ให้ตกหล่น)
+      if (!(k.levels || [k.level]).some(l => l === 'QA-หน่วยงาน')) return [];
       const non = ps.filter(p => !isCorePart(p.part));
       return non.length ? non : ps.slice(0, 1);
     }
@@ -1485,7 +1484,7 @@
 
     function emptyListMessage() {
       if (treeView === 'qa' && !appliedFilters.mine && appliedFilters.mode === 'all' && !levelFilterActive()) {
-        return 'ยังไม่มีตัวชี้วัดระดับ QA-หน่วยงาน หรือ ฝ่ายการพยาบาล<br>(ตัวชี้วัดที่ติ๊กระดับเหล่านี้จะแสดงที่นี่)';
+        return 'ยังไม่มีตัวชี้วัดระดับ QA-หน่วยงาน<br>(ตัวชี้วัดที่ติ๊กระดับนี้จะแสดงที่นี่)';
       }
       if (treeView === 'unit' && !appliedFilters.mine && appliedFilters.mode === 'all' && !levelFilterActive()) {
         return 'ยังไม่มีหมวดของหน่วยงานหรือหมวดของคุณ';
@@ -2292,7 +2291,7 @@
       const catErr = catListError(cats, newItem.levels, [], true);
       if (catErr) { showAlert('หมวดไม่ถูกต้อง', '⚠️', catErr); return; }
       if (cats.some(c => isCorePart(c.part)) && !hasHospitalLevel(newItem.levels)) {
-        showAlert('ระดับไม่ถูกต้อง', '⚠️', 'ตัวชี้วัดในหมวด Part I–IV ต้องเป็นระดับ SAR หรือ QA-หน่วยงาน อย่างน้อย 1 ระดับ\nถ้าเป็นระดับรายบุคคล/หน่วยงาน/ฝ่ายการพยาบาล ให้ตั้งชื่อหมวดอื่นเอง (เช่น ชื่อหมวดของคุณ)');
+        showAlert('ระดับไม่ถูกต้อง', '⚠️', 'ตัวชี้วัดในหมวด Part I–IV ต้องเป็นระดับ SAR หรือ QA-หน่วยงาน อย่างน้อย 1 ระดับ\nถ้าเป็นระดับรายบุคคล/หน่วยงาน ให้ตั้งชื่อหมวดอื่นเอง (เช่น ชื่อหมวดของคุณ)');
         return;
       }
       newItem.cats = cats;
@@ -2637,7 +2636,7 @@
 
     // ===================== Export PDF (พิมพ์จากเบราว์เซอร์) =====================
     // ขอบเขตตัวชี้วัดที่จะพิมพ์: ของฉัน / หน่วยงานที่ฉันสังกัด / ทั้งหมด
-    const PDF_DEPT_ALIASES = { 'จิิตเวช': 'จิตเวช', 'งานIC': 'IC', 'ICWN': 'IC', 'ทีมบริหารความเสี่ยง(RM)': 'RM', 'แพทย์แผนไทย': 'แผนไทย' };
+    const PDF_DEPT_ALIASES = { 'จิิตเวช': 'จิตเวช', 'งานIC': 'IC', 'ICWN': 'IC', 'ทีมบริหารความเสี่ยง(RM)': 'RM', 'แพทย์แผนไทย': 'แผนไทย', 'ฝ่ายการพยาบาล': 'NSO', 'ฝ่ายการ': 'NSO' };
     function pdfKpiDepts(k) {
       return String(k.department || '').replace(/TB clinic/g, 'TB').split(/[\/\s,]+/).map(d => PDF_DEPT_ALIASES[d.trim()] || d.trim()).filter(Boolean);
     }

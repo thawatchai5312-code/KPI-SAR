@@ -251,3 +251,81 @@ function migrateUnitCategories_() {
     lock.releaseLock();
   }
 }
+
+// ---------------------------------------------------------------- ย้าย "ฝ่ายการพยาบาล" จากระดับตัวชี้วัดไปเป็นหน่วยงาน NSO (ทำครั้งเดียว)
+
+var NURSING_UNIT_FLAG = "NURSING_LEVEL_TO_UNIT_V1";
+var NURSING_UNIT_NAME = "NSO";
+
+// เขียนชื่อฝ่ายการพยาบาลในข้อความหน่วยงานให้เป็น NSO ("ฝ่ายการพยาบาล" / "ฝ่ายการ")
+function renameNursingUnitText_(text) {
+  return (text || "").toString().replace(/ฝ่ายการพยาบาล/g, NURSING_UNIT_NAME).replace(/ฝ่ายการ(?!พยาบาล)/g, NURSING_UNIT_NAME);
+}
+
+/**
+ * - ตัวชี้วัดที่เคยติ๊กระดับ "ฝ่ายการพยาบาล" → ระดับ "หน่วยงาน" + ใส่ NSO ในช่องหน่วยงาน + จัดหมวด NSO ให้
+ * - ช่องหน่วยงาน/ชื่อหมวดที่เขียนว่า "ฝ่ายการพยาบาล" → NSO · ช่องหน่วยงานของบัญชีผู้ใช้ก็เปลี่ยนเป็น NSO
+ * ทุกชีตปีงบ (เก็บสำเนาสำรองแบบซ่อน) จดใน Script Properties ว่าทำแล้ว
+ */
+function migrateNursingUnit_() {
+  var props = PropertiesService.getScriptProperties();
+  if (props.getProperty(NURSING_UNIT_FLAG)) return;
+  var lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  try {
+    if (props.getProperty(NURSING_UNIT_FLAG)) return;
+    var ss = SpreadsheetApp.openByUrl(SPREADSHEET_URL);
+    var stamp = Utilities.formatDate(new Date(), "Asia/Bangkok", "yyyyMMdd_HHmmss");
+    listFiscalYears_().forEach(function(fy) {
+      var sheet = getFiscalSheet_(fy);
+      var last = sheet.getLastRow();
+      if (last < 2) return;
+      ensureColumns_(sheet, EXTRA_CATS_COL);
+      var rows = sheet.getRange(2, 1, last - 1, EXTRA_CATS_COL).getValues();
+      var catsOut = [], deptOut = [], levelOut = [], extraOut = [], changed = 0;
+      rows.forEach(function(row) {
+        var primary = [row[2], row[3]], deptCell = row[26], levelCell = row[LEVEL_COLUMN - 1], extraCell = row[EXTRA_CATS_COL - 1];
+        if (!row[0]) { catsOut.push(primary); deptOut.push([deptCell]); levelOut.push([levelCell]); extraOut.push([extraCell]); return; }
+        var hadNursingLevel = (levelCell || "").toString().indexOf(NURSING_LEVEL_LEGACY) !== -1;
+        var oldDepts = parseDepts_(deptCell);
+        var newDeptText = renameNursingUnitText_(deptCell);
+        if (hadNursingLevel && parseDepts_(newDeptText).indexOf(NURSING_UNIT_NAME) === -1) {
+          newDeptText = newDeptText ? newDeptText + " / " + NURSING_UNIT_NAME : NURSING_UNIT_NAME;
+        }
+        var newLevelText = hadNursingLevel ? normalizeLevels_(levelCell).join(", ") : levelCell;
+        // หมวด: เปลี่ยนชื่อหมวดหลักที่เป็น "ฝ่ายการพยาบาล" เป็น NSO ตัดซ้ำ แล้วเติมหมวดหน่วยงานที่เพิ่มเข้ามา
+        var cats = [{ part: renameNursingUnitText_(row[2]) || "ทั่วไป", category: (row[3] || "ทั่วไป").toString() }]
+          .concat(parseExtraCats_(extraCell).map(function(c) { return { part: renameNursingUnitText_(c.part), category: c.category }; }));
+        cats = kpiCats_({ cats: cats });
+        cats = syncUnitCats_(cats, oldDepts, parseDepts_(newDeptText));
+        var newExtra = formatExtraCats_(cats.slice(1));
+        if (cats[0].part !== (row[2] || "").toString() || cats[0].category !== (row[3] || "").toString() ||
+            newDeptText !== (deptCell || "").toString() || newLevelText !== levelCell || newExtra !== (extraCell || "").toString()) changed++;
+        catsOut.push([cats[0].part, cats[0].category]);
+        deptOut.push([newDeptText]);
+        levelOut.push([newLevelText]);
+        extraOut.push([newExtra]);
+      });
+      if (changed === 0) return;
+      var backup = sheet.copyTo(ss);
+      backup.setName("สำรองก่อนย้ายฝ่ายการพยาบาลเป็น NSO " + fiscalSheetName_(fy) + " " + stamp);
+      backup.hideSheet();
+      var n = rows.length;
+      sheet.getRange(2, 3, n, 2).setValues(catsOut);
+      sheet.getRange(2, 27, n, 1).setValues(deptOut);
+      sheet.getRange(2, LEVEL_COLUMN, n, 1).setValues(levelOut);
+      sheet.getRange(2, EXTRA_CATS_COL, n, 1).setNumberFormat("@").setValues(extraOut);
+    });
+    // บัญชีผู้ใช้ที่ช่องหน่วยงานเขียนว่า ฝ่ายการพยาบาล → NSO
+    var usersSheet = ss.getSheetByName(USERS_SHEET_NAME);
+    if (usersSheet && usersSheet.getLastRow() > 1) {
+      var cells = usersSheet.getRange(2, 4, usersSheet.getLastRow() - 1, 1).getValues();
+      if (cells.some(function(c) { return /ฝ่ายการ/.test((c[0] || "").toString()); })) {
+        writeUsers_(usersSheet, readUsers_(usersSheet));
+      }
+    }
+    props.setProperty(NURSING_UNIT_FLAG, Utilities.formatDate(new Date(), "Asia/Bangkok", "yyyy-MM-dd HH:mm:ss"));
+  } finally {
+    lock.releaseLock();
+  }
+}

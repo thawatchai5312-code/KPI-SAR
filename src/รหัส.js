@@ -82,6 +82,7 @@ function getAllData(token, requestedFy) {
   try {
     var user = requireUser_(token);
     ensureFiscalSheets_();
+    migrateNursingUnit_(); // ต้องทำก่อน (อ่านระดับ "ฝ่ายการพยาบาล" เดิมก่อนถูกปรับ)
     migrateUnitCategories_();
     var years = listFiscalYears_();
     var currentFy = getCurrentFiscalYear_();
@@ -426,7 +427,7 @@ function addIndicator(token, fy, newItem) {
     var newLevels = cleanLevelList_(newItem.levels || (newItem.level ? [newItem.level] : []), []);
     if (newLevels.length === 0) newLevels = [DEFAULT_KPI_LEVEL];
     if (coreInvolved && !hasHospitalLevel_(newLevels)) {
-      return { success: false, message: "หมวด Part I–IV ต้องเป็นตัวชี้วัดระดับ SAR หรือ QA-หน่วยงาน (ถ้าเป็นระดับรายบุคคล/หน่วยงาน/ฝ่ายการพยาบาล ให้ตั้งชื่อหมวดอื่น)" };
+      return { success: false, message: "หมวด Part I–IV ต้องเป็นตัวชี้วัดระดับ SAR หรือ QA-หน่วยงาน (ถ้าเป็นระดับรายบุคคล/หน่วยงาน ให้ตั้งชื่อหมวดอื่น)" };
     }
     var data = sheet.getDataRange().getValues();
     // ผู้เพิ่ม (ที่ไม่ใช่ admin) ต้องเห็นตัวชี้วัดที่ตัวเองเพิ่ม จึงใส่ตัวเองเป็นผู้รับผิดชอบให้
