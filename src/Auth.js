@@ -525,10 +525,10 @@ function getKpiPermission_(user, kpi, fy) {
     isOwner = (kpi.owner || "").toString().split("/").some(function(t) { return t.trim() === HEAD_OWNER_TOKEN; });
   }
   var levels = kpi.levels || normalizeLevels_(kpi.level);
-  if (user.tier === "admin") return { view: true, editResults: true, editDetails: true, mine: isOwner };
+  if (user.tier === "admin") return { view: true, editResults: true, editDetails: true, mine: isOwner, inDept: inDept, isOwner: isOwner };
   if (user.tier === "executive") {
     var execView = isOwner || (inCorePart_(kpi) && hasHospitalLevel_(levels));
-    return { view: execView, editResults: execView, editDetails: execView, mine: isOwner };
+    return { view: execView, editResults: execView, editDetails: execView, mine: isOwner, inDept: inDept, isOwner: isOwner };
   }
   // แก้ได้: เจ้าหน้าที่ = ตัวที่ตนรับผิดชอบ · หัวหน้าหน่วย = ทุกตัวของหน่วยที่ตนสังกัดเท่านั้น (ถึงจะระบุชื่อเป็นผู้รับผิดชอบของหน่วยอื่น ก็ดูได้อย่างเดียว)
   var edit = user.tier === "head" ? inDept : isOwner;
@@ -547,6 +547,8 @@ function getKpiPermission_(user, kpi, fy) {
   return {
     view: view,
     mine: mine,
+    inDept: inDept,
+    isOwner: isOwner,
     editResults: edit && fy >= current - 1,
     editDetails: edit && fy === current
   };

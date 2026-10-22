@@ -111,6 +111,8 @@ function decorateKpi_(user, fy, kpi, sources) {
   kpi.canEditResults = perm.editResults;
   kpi.canEditDetails = perm.editDetails;
   kpi.mine = perm.mine;
+  kpi.isOwner = perm.isOwner; // ผู้ใช้เป็นผู้รับผิดชอบ (หรือเป็นหัวหน้าหน่วยของตัวชี้วัดที่ระบุ "หัวหน้าหน่วย")
+  kpi.inDept = perm.inDept; // ตัวชี้วัดของหน่วยงานที่ผู้ใช้สังกัด (ใช้กับตัวกรองระดับหน่วยงาน/QA ฝั่งหน้าเว็บ)
   // ผอ./QMR เห็นเฉพาะหมวด Part I–IV ของตัวชี้วัดที่ไม่ใช่ของตัวเอง
   kpi.cats = visibleCats_(user, kpi, perm);
   kpi.part = kpi.cats[0].part;

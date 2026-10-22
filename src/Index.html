@@ -118,13 +118,6 @@
 
     /* ผังรายการตัวชี้วัด */
     .tree-filters { position: sticky; top: -12px; background: #fff; padding: 12px 0 8px; margin-top: -12px; z-index: 5; border-bottom: 1px solid #e2e8f0; margin-bottom: 8px; }
-    .tree-filters .editable-input { margin-bottom: 6px; }
-    .tree-level-filter { position: relative; margin-bottom: 6px; }
-    .tree-level-filter > .btn { width: 100%; text-align: left; }
-    .tree-level-menu { position: absolute; left: 0; right: 0; top: calc(100% + 4px); z-index: 30; background: #fff; border: 1px solid #cbd5e1; border-radius: 8px; padding: 6px 10px; box-shadow: 0 8px 20px rgba(0,0,0,0.18); }
-    .tree-level-menu .check-row { font-size: 12.5px; padding: 2px 0; }
-    .tree-level-all { font-size: 12px; font-weight: 700; color: #015c8b; cursor: pointer; text-decoration: underline; padding: 2px 0 4px; display: block; }
-    .tree-filter-row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: 12px; font-weight: 700; color: #334155; }
     .tree-count { font-size: 11px; color: #64748b; font-weight: 600; margin-top: 4px; }
     .accordion-part { margin-bottom: 6px; border: 1px solid #cbd5e1; border-radius: 8px; overflow: hidden; }
     .accordion-header {
@@ -244,7 +237,6 @@
     #rp-paper.portrait { width: 190mm; }
     .rp-more { text-align: center; padding: 10px 0 2px; color: #475569; font-size: 13px; }
     .rp-toggle { display: none; width: 100%; margin-bottom: 8px; }
-    .rpt-scope { display: flex; flex-direction: column; gap: 2px; margin-bottom: 6px; }
     .rpt-bar { display: flex; gap: 6px; margin-bottom: 6px; flex-wrap: wrap; align-items: center; }
     .rpt-cat-list { border: 1px solid #cbd5e1; border-radius: 8px; padding: 6px 10px; max-height: 220px; overflow-y: auto; }
     #rp-cat-list { max-height: 36vh; }
@@ -253,7 +245,7 @@
       .report-grid { grid-template-columns: 1fr; }
       #rp-side { position: static; max-height: none; }
       .rp-toggle { display: block; }
-      #rp-side.collapsed #rp-controls { display: none; }
+      #rp-side.collapsed #rp-controls, #rp-side.collapsed #rp-filterbar, #rp-side.collapsed #rp-view-tabs { display: none; }
       .home-grid { grid-template-columns: 1fr; }
       #panel-tree { position: static; max-height: 320px; }
       .nav-spacer { display: none; }
@@ -425,21 +417,28 @@
     /* ================= ผังรายการตัวชี้วัด (ตัวอย่างสไตล์ใหม่) ================= */
     #panel-tree { padding: 14px 12px 12px; }
     .tree-filters { padding: 12px 0 10px; border-bottom: 1px solid var(--line); margin-bottom: 10px; display: grid; gap: 8px; }
-    .tree-filters .editable-input { margin-bottom: 0; }
-    .tree-level-filter { margin-bottom: 0; }
-    .tree-level-filter > .btn { border-radius: 999px; background: #f1f6f2; color: #14532d; border: 1px solid #d5e5da; box-shadow: none; font-size: 13px; padding: 8px 14px; display: flex; justify-content: space-between; align-items: center; }
-    .tree-level-filter > .btn.btn-accent { background: #fff7ed; border-color: #fdba74; color: #c2410c; }
-    .tree-level-menu { border-radius: 16px; border: 1px solid var(--line); box-shadow: 0 12px 28px rgba(16,40,24,0.16); padding: 8px 14px; }
-    .tree-level-all { color: var(--primary-color); }
-    .tree-filter-row { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; }
-    #tree-mode { border-radius: 999px; background: #f1f6f2; border: 1px solid #d5e5da; font-weight: 600; color: #14532d; padding: 8px 12px; width: 100% !important; }
-    .tree-filter-row .check-row { background: #f1f6f2; border: 1px solid #d5e5da; border-radius: 999px; padding: 7px 12px; font-size: 12.5px; white-space: nowrap; }
     .tree-count { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-top: 0; color: #64748b; font-size: 12px; font-weight: 600; }
     .tree-count .cnt { display: inline-flex; align-items: center; gap: 5px; padding: 2px 10px; border-radius: 999px; font-weight: 700; font-size: 12px; }
     .tree-count .cnt::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
-    .cnt.red { background: #fee2e2; color: #dc2626; }
-    .cnt.yellow { background: #fef9c3; color: #a16207; }
-    .cnt.green { background: #dcfce7; color: #16a34a; }
+    /* ---------- ตัวกรองปุ่ม: ระดับตัวชี้วัด / สถานะ (ใช้ร่วมกันทั้งหน้าแรกและหน้าสรุปรายงาน) ---------- */
+    .filterbar { display: grid; gap: 8px; }
+    .fb-title { font-size: 11.5px; font-weight: 800; color: #475569; margin-bottom: 4px; }
+    .fb-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 5px; }
+    .fb-btn { position: relative; display: grid; justify-items: center; gap: 1px; padding: 6px 1px 5px; border: 1.5px solid #e2e8f0; border-radius: 12px; background: #f1f5f9; color: #94a3b8; font-family: inherit; cursor: pointer; line-height: 1.2; box-shadow: none; }
+    .fb-btn:hover { background: #e9eef3; }
+    .fb-lab { font-size: 10.5px; font-weight: 700; display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; }
+    .fb-n { font-size: 10.5px; font-weight: 700; }
+    .fb-dot { width: 6px; height: 6px; border-radius: 50%; flex: none; }
+    .fb-btn.st-red .fb-dot { background: #ef4444; }
+    .fb-btn.st-yellow .fb-dot { background: #facc15; }
+    .fb-btn.st-green .fb-dot { background: #22c55e; }
+    .fb-tick { display: none; position: absolute; top: -6px; right: -5px; width: 16px; height: 16px; border-radius: 50%; background: #16a34a; color: #fff; font-size: 10px; line-height: 16px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.25); }
+    .fb-btn.on .fb-tick { display: block; }
+    .fb-btn.on { background: #e7f6ec; border-color: #16a34a; color: #14532d; }
+    .fb-btn.st-all.on { background: #d1fae5; border-color: #047857; color: #064e3b; }
+    .fb-btn.st-red.on { background: #fee2e2; border-color: #dc2626; color: #b91c1c; }
+    .fb-btn.st-yellow.on { background: #fef9c3; border-color: #ca8a04; color: #854d0e; }
+    .fb-btn.st-green.on { background: #dcfce7; border-color: #16a34a; color: #166534; }
 
     .accordion-header { padding: 11px 14px; }
     .accordion-header .part-count { margin-left: auto; margin-right: 22px; background: #fff; border: 1px solid var(--line); border-radius: 999px; padding: 0 9px; font-size: 12px; color: #475569; font-weight: 700; }
@@ -571,25 +570,7 @@
           <button type="button" class="view-tab" data-view="unit" role="tab" title="หมวดของหน่วยงาน / ของฉัน" onclick="setTreeView('unit')"><span class="vt-top"><span class="vt-ico">🏷️</span><span class="vt-count">0</span></span><span class="vt-label">หน่วยงาน</span></button>
         </div>
         <div class="tree-filters">
-          <div class="tree-level-filter">
-            <button type="button" class="btn btn-secondary btn-sm" id="tree-level-btn" onclick="toggleLevelMenu(event)"><span class="lv-label"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg>ระดับตัวชี้วัด: ทั้งหมด</span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg></button>
-            <div class="tree-level-menu" id="tree-level-menu" style="display: none;">
-            <span class="tree-level-all" onclick="selectAllLevels()">เลือกทั้งหมด</span>
-            <label class="check-row"><input type="checkbox" class="tree-level-cb" value="รายบุคคล" checked onchange="onTreeFilterChange()"> รายบุคคล</label>
-            <label class="check-row"><input type="checkbox" class="tree-level-cb" value="หน่วยงาน" checked onchange="onTreeFilterChange()"> หน่วยงาน</label>
-            <label class="check-row"><input type="checkbox" class="tree-level-cb" value="QA-หน่วยงาน" checked onchange="onTreeFilterChange()"> QA หน่วยงาน</label>
-            <label class="check-row"><input type="checkbox" class="tree-level-cb" value="SAR" checked onchange="onTreeFilterChange()"> SAR โรงพยาบาล</label>
-            </div>
-          </div>
-          <div class="tree-filter-row">
-            <select id="tree-mode" class="editable-input" style="width: auto;" onchange="onTreeFilterChange()">
-              <option value="all">ทั้งหมด</option>
-              <option value="red">🔴 ต้องแก้ไข</option>
-              <option value="yellow">🟡 รอติดตาม</option>
-              <option value="green">🟢 ครบถ้วน</option>
-            </select>
-            <label class="check-row"><input type="checkbox" id="tree-mine" onchange="onMineToggle(this)"> เฉพาะของฉัน</label>
-          </div>
+          <div class="filterbar" id="tree-filterbar"></div>
           <div class="tree-count" id="tree-count"></div>
         </div>
         <div id="accordion-tree-container"><div class="empty-state">กรุณาเข้าสู่ระบบ...</div></div>
@@ -604,9 +585,11 @@
     <div class="report-grid">
       <div class="panel" id="rp-side">
         <button type="button" class="btn btn-secondary btn-sm rp-toggle" onclick="document.getElementById('rp-side').classList.toggle('collapsed')">⚙️ ตัวกรองรายงาน (กดเพื่อเปิด/ปิด)</button>
+        <div class="view-tabs" id="rp-view-tabs" role="tablist" aria-label="มุมมองตัวชี้วัด"></div>
+        <div class="filterbar" id="rp-filterbar" style="margin-bottom: 10px;"></div>
         <div id="rp-controls"></div>
         <button type="button" class="btn btn-primary" style="width: 100%; margin-top: 6px;" onclick="generatePdf()">📄 Export PDF</button>
-        <p class="hint" style="margin-top: 6px;">ตัวอย่างด้านขวาคือรายงานที่จะพิมพ์ กด Export แล้วเลือกปลายทาง "บันทึกเป็น PDF" · ระบบจำตัวกรองของคุณไว้ให้</p>
+        <p class="hint" style="margin-top: 6px;">ตัวอย่างด้านขวาคือรายงานที่จะพิมพ์ กด Export แล้วเลือกปลายทาง "บันทึกเป็น PDF" · ระบบจำหมวดที่ติ๊ก เนื้อหา และแนวกระดาษของคุณไว้ให้</p>
       </div>
       <div class="panel" id="rp-main">
         <div id="rp-scroll"><div id="rp-paper" class="landscape"></div></div>
@@ -746,20 +729,6 @@
       <div class="modal-footer">
         <button class="btn btn-secondary" onclick="document.getElementById('modal-add-kpi').style.display='none'">ยกเลิก</button>
         <button class="btn btn-primary" onclick="submitAddKpi()">💾 บันทึกข้อมูล</button>
-      </div>
-    </div>
-  </div>
-
-  <div id="modal-pdf" class="modal-overlay">
-    <div class="modal-card" style="max-width: 560px; width: 95%;">
-      <div class="modal-header">📄 Export PDF</div>
-      <div class="modal-body" style="max-height: 72vh; overflow-y: auto;">
-        <div id="pdf-controls"></div>
-        <p class="hint">กด "สร้าง PDF" แล้วในหน้าต่างพิมพ์ให้เลือกปลายทางเป็น <b>บันทึกเป็น PDF</b> (ฟอนต์ Google Sans พิมพ์สี)</p>
-      </div>
-      <div class="modal-footer" style="display: flex; justify-content: space-between;">
-        <button class="btn btn-secondary" onclick="document.getElementById('modal-pdf').style.display='none'">ยกเลิก</button>
-        <button class="btn btn-primary" onclick="generatePdf()">🖨️ สร้าง PDF</button>
       </div>
     </div>
   </div>
@@ -1052,12 +1021,14 @@
       openParts.clear(); openCats.clear(); lastInViewKey = null;
       globalProgressData = [];
       rptReset();
-      resetTreeFilters(); // ตัวกรองสถานะ/ระดับ/เฉพาะของฉัน กลับเป็นค่าเริ่มต้น ไม่ให้ติดไปยังผู้ใช้คนถัดไป
+      resetTreeFilters(); // ตัวกรองสถานะ/ระดับ กลับเป็นค่าเริ่มต้น ไม่ให้ติดไปยังผู้ใช้คนถัดไป
+      document.getElementById('pg-mine').checked = false;
+      homeStale = false;
       document.getElementById('progress-filter').value = '';
       document.getElementById('user-bar').style.display = 'none';
       document.getElementById('pw-warning-bar').style.display = 'none';
       chpwForced = false;
-      ['modal-settings', 'modal-add-kpi', 'modal-pdf', 'modal-fy', 'modal-unsaved', 'modal-change-password', 'modal-alert', 'modal-confirm']
+      ['modal-settings', 'modal-add-kpi', 'modal-fy', 'modal-unsaved', 'modal-change-password', 'modal-alert', 'modal-confirm']
         .forEach(id => { document.getElementById(id).style.display = 'none'; });
       document.getElementById('accordion-tree-container').innerHTML = '<div class="empty-state">กรุณาเข้าสู่ระบบ...</div>';
       document.getElementById('kpi-list-area').innerHTML = '';
@@ -1152,7 +1123,6 @@
           if (selectedKpiId && !globalDatabase.some(k => k.id === selectedKpiId)) selectedKpiId = null;
 
           editingId = null; editSnapshot = null;
-          appliedFilters = readTreeFilters();
           if (!quiet) pickInitialView(); // เข้าระบบครั้งแรก: ถ้ามุมมองตั้งต้นว่าง ให้ไปมุมมองแรกที่มีตัวชี้วัด
           document.getElementById('btn-toggle-chart').innerText = chartVisible ? '🙈 ซ่อนกราฟ' : '📈 แสดงกราฟ';
           setStickyOffsets();
@@ -1253,6 +1223,7 @@
       } else {
         document.getElementById('menu-home-btn').classList.add('active');
         document.getElementById('page-home').classList.add('active');
+        if (homeStale) { homeStale = false; currentPage = 1; renderTree(); renderList(); } // ตัวกรองถูกเปลี่ยนที่หน้าสรุปรายงาน
       }
     }
 
@@ -1345,55 +1316,96 @@
       return { level: level, label: STATUS_META[level].label, icon: STATUS_META[level].icon, reasons: red.concat(yellow) };
     }
 
-    let appliedFilters = { mode: 'all', mine: false, levels: KPI_LEVELS.slice() };
+    // ตัวกรองชุดเดียว ใช้ร่วมกันทั้งหน้าแรก / หน้าสรุปรายงาน / ตอนพิมพ์: มุมมอง (treeView) + ระดับตัวชี้วัด (levels, เลือกได้หลายปุ่ม) + สถานะ (mode)
+    let appliedFilters = { mode: 'all', levels: KPI_LEVELS.slice() };
+    const LEVEL_SHORT = { 'รายบุคคล': 'รายบุคคล', 'หน่วยงาน': 'หน่วยงาน', 'QA-หน่วยงาน': 'QA', 'SAR': 'SAR' };
+    const STATUS_BTNS = [['all', 'ทั้งหมด'], ['red', 'ต้องแก้ไข'], ['yellow', 'รอติดตาม'], ['green', 'ครบถ้วน']];
+    let homeStale = false; // ตัวกรองถูกเปลี่ยนที่หน้าสรุปรายงาน → หน้าแรกต้องวาดใหม่ตอนกลับไป
 
-    function readTreeFilters() {
-      return {
-        mode: document.getElementById('tree-mode').value,
-        mine: document.getElementById('tree-mine').checked,
-        levels: Array.from(document.querySelectorAll('.tree-level-cb:checked')).map(c => c.value)
-      };
+    // ตัวชี้วัดนี้ "อยู่ในระดับ lv" สำหรับผู้ใช้คนนี้ไหม (ความหมายของแต่ละระดับขึ้นกับผู้ใช้)
+    //  รายบุคคล = ของฉัน (staff: ที่ฉันรับผิดชอบ · หัวหน้า: ของฉัน + ของคนในหน่วย) · หน่วยงาน/QA = ของหน่วยที่ฉันสังกัด · SAR = ทุกคนเห็น · admin/ผู้บริหาร = ตามป้ายระดับของตัวชี้วัด
+    function kpiHasLevel(k, lv) {
+      const has = (k.levels || [k.level]).indexOf(lv) !== -1;
+      if (isPrivilegedUser() || lv === 'SAR') return has;
+      // รายบุคคล: ตัวที่ฉันรับผิดชอบ (ไม่ขึ้นกับป้ายระดับ) · หัวหน้าเห็นเพิ่มตัวระดับรายบุคคลของคนในหน่วย
+      if (lv === 'รายบุคคล') return !!k.isOwner || (has && !!k.mine);
+      return has && !!(k.inDept || k.mine);
     }
 
-    // ปุ่มตัวกรองระดับ: กดแล้วแสดงรายการติ๊กเลือก กดที่อื่นเพื่อปิด
-    function toggleLevelMenu(e) {
-      e.stopPropagation();
-      const m = document.getElementById('tree-level-menu');
-      m.style.display = m.style.display === 'none' ? 'block' : 'none';
+    function defaultLevels() {
+      if (isPrivilegedUser()) return KPI_LEVELS.slice();
+      return currentUser && currentUser.tier === 'head' ? ['รายบุคคล', 'หน่วยงาน', 'QA-หน่วยงาน'] : ['รายบุคคล'];
     }
 
-    function selectAllLevels() {
-      document.querySelectorAll('.tree-level-cb').forEach(c => { c.checked = true; });
-      onTreeFilterChange();
+    // จำนวนตัวชี้วัดบนปุ่ม (นับเฉพาะตัวที่อยู่ในมุมมองปัจจุบัน): ปุ่มระดับ นับตามสถานะที่เลือก · ปุ่มสถานะ นับตามระดับที่เลือก
+    function filterCounts() {
+      const lv = {}, st = { all: 0, red: 0, yellow: 0, green: 0 };
+      KPI_LEVELS.forEach(l => { lv[l] = 0; });
+      globalDatabase.forEach(k => {
+        if (viewPlacements(k, treeView).length === 0) return;
+        const has = KPI_LEVELS.filter(l => kpiHasLevel(k, l));
+        const s = kpiStatus(k).level;
+        if (appliedFilters.mode === 'all' || appliedFilters.mode === s) has.forEach(l => { lv[l]++; });
+        if (has.some(l => appliedFilters.levels.indexOf(l) !== -1)) { st.all++; st[s]++; }
+      });
+      return { lv: lv, st: st };
     }
 
-    function updateLevelButton() {
-      const btn = document.getElementById('tree-level-btn');
-      const total = document.querySelectorAll('.tree-level-cb').length;
-      const n = document.querySelectorAll('.tree-level-cb:checked').length;
-      btn.innerHTML = '<span class="lv-label"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg>ระดับตัวชี้วัด: ' + (n === total ? 'ทั้งหมด' : n + '/' + total) + '</span><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>';
-      btn.classList.toggle('btn-accent', n !== total);
-      btn.classList.toggle('btn-secondary', n === total);
+    function levelTip(l) {
+      const head = currentUser && currentUser.tier === 'head';
+      if (l === 'รายบุคคล') return isPrivilegedUser() ? 'ตัวชี้วัดระดับรายบุคคลทั้งหมด' : (head ? 'ตัวชี้วัดของคุณ และของคนในหน่วยที่คุณดูแล' : 'ตัวชี้วัดที่คุณรับผิดชอบ');
+      if (l === 'หน่วยงาน') return isPrivilegedUser() ? 'ตัวชี้วัดระดับหน่วยงานทุกหน่วย' : 'ตัวชี้วัดระดับหน่วยงานของหน่วยที่คุณสังกัด (รวมของคนอื่นในหน่วย)';
+      if (l === 'QA-หน่วยงาน') return isPrivilegedUser() ? 'ตัวชี้วัดระดับ QA ทุกหน่วย' : 'ตัวชี้วัดระดับ QA ของหน่วยที่คุณสังกัด';
+      return 'ตัวชี้วัดระดับ SAR ของโรงพยาบาล';
     }
 
-    document.addEventListener('click', (e) => {
-      const m = document.getElementById('tree-level-menu');
-      if (m && m.style.display !== 'none' && !m.contains(e.target)) m.style.display = 'none';
-    });
-
-    // ตัวกรองระดับ: ติ๊กครบทุกระดับ = ไม่กรอง
-    function levelFilterActive() {
-      return appliedFilters.levels.length < document.querySelectorAll('.tree-level-cb').length;
+    function filterBarHtml() {
+      const c = filterCounts();
+      const lvBtns = KPI_LEVELS.map(l => {
+        const on = appliedFilters.levels.indexOf(l) !== -1;
+        return `<button type="button" class="fb-btn${on ? ' on' : ''}" data-level="${l}" aria-pressed="${on}" title="${esc(levelTip(l))}" onclick="toggleLevel('${l}')"><span class="fb-lab">${LEVEL_SHORT[l]}</span><span class="fb-n">${c.lv[l]}</span><span class="fb-tick">✔</span></button>`;
+      }).join('');
+      const stBtns = STATUS_BTNS.map(([v, label]) => {
+        const on = appliedFilters.mode === v;
+        return `<button type="button" class="fb-btn st-${v}${on ? ' on' : ''}" data-status="${v}" aria-pressed="${on}" onclick="setStatusFilter('${v}')"><span class="fb-lab">${v === 'all' ? '' : '<span class="fb-dot"></span>'}${label}</span><span class="fb-n">${c.st[v]}</span><span class="fb-tick">✔</span></button>`;
+      }).join('');
+      return `<div><div class="fb-title">ระดับตัวชี้วัด</div><div class="fb-row">${lvBtns}</div></div><div><div class="fb-title">สถานะ</div><div class="fb-row">${stBtns}</div></div>`;
     }
 
-    // ผู้ใช้กด "กลับไปแก้ต่อ" ตอนเปลี่ยนตัวกรอง → คืนค่าตัวกรองเดิมในช่อง
-    function restoreTreeFilters() {
-      document.getElementById('tree-mode').value = appliedFilters.mode;
-      document.getElementById('tree-mine').checked = appliedFilters.mine;
-      syncMineBoxes();
-      document.querySelectorAll('.tree-level-cb').forEach(c => { c.checked = appliedFilters.levels.indexOf(c.value) !== -1; });
-      updateLevelButton();
+    // วาดปุ่มตัวกรองทั้งสองที่ (หน้าแรก / หน้าสรุปรายงาน) ให้ตรงกับค่าปัจจุบัน
+    function renderFilterUi() {
+      const html = filterBarHtml();
+      ['tree-filterbar', 'rp-filterbar'].forEach(id => { const el = document.getElementById(id); if (el) el.innerHTML = html; });
     }
+
+    // ตัวกรอง/มุมมองเปลี่ยน: หน้าแรกวาดผังรายการ+การ์ดใหม่ · หน้าสรุปรายงานวาดตัวอย่างใหม่ (หน้าแรกวาดตอนกลับไป)
+    function filtersChanged() {
+      currentPage = 1;
+      if (currentTab === 'report') {
+        homeStale = true;
+        renderFilterUi(); updateViewTabs();
+        rptSync('rp'); rptPreviewSoon();
+        return;
+      }
+      renderTree();
+      renderList();
+    }
+
+    function toggleLevel(l) {
+      guardUnsaved(() => {
+        const i = appliedFilters.levels.indexOf(l);
+        if (i === -1) appliedFilters.levels.push(l); else appliedFilters.levels.splice(i, 1);
+        filtersChanged();
+      });
+    }
+
+    function setStatusFilter(v) {
+      if (appliedFilters.mode === v) return;
+      guardUnsaved(() => { appliedFilters.mode = v; filtersChanged(); });
+    }
+
+    // ผู้ใช้กด "กลับไปแก้ต่อ" ตอนเปลี่ยนตัวกรอง → ตัวกรองยังเป็นค่าเดิม แค่วาดปุ่มใหม่ให้ตรง
+    function restoreTreeFilters() { renderFilterUi(); }
 
     // หมวด Part I–IV = หมวดหลักของ QA/SAR (ต้องเป็นตัวชี้วัดระดับ SAR หรือ QA-หน่วยงาน) อยู่บนสุดเสมอ ตามด้วยหมวดอื่นเรียงตามตัวอักษร
     const CORE_PART_RE = /^part\s+(iv|iii|ii|i)(?![a-z])/i;
@@ -1438,10 +1450,8 @@
       const f = appliedFilters;
       const list = globalDatabase.filter(k => {
         if (!ignoreStatus && f.mode !== 'all' && kpiStatus(k).level !== f.mode) return false;
-        if (f.mine && !k.mine) return false;
-        // หลายระดับ: แสดงถ้าตัวชี้วัดมีระดับใดระดับหนึ่งที่ติ๊กไว้
-        if (levelFilterActive() && !(k.levels || [k.level]).some(l => f.levels.indexOf(l) !== -1)) return false;
-        return true;
+        // หลายระดับ: แสดงถ้าตัวชี้วัดอยู่ในระดับใดระดับหนึ่งที่กดเลือกไว้ (ไม่เลือกเลย = ว่าง)
+        return f.levels.some(l => kpiHasLevel(k, l));
       });
       const order = new Map(globalDatabase.map((k, i) => [k.id, i]));
       const cmp = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
@@ -1451,12 +1461,12 @@
       return placements.sort((a, b) => comparePartNames(a.part, b.part) || cmp(a.category, b.category) || order.get(a.id) - order.get(b.id));
     }
 
-    // ค่าตั้งต้นตอนเข้าระบบ: staff / หัวหน้าหน่วย เห็นเฉพาะตัวชี้วัดของตัวเอง (หัวหน้า = ของหน่วยงานที่ดูแล) ผู้ดูแลและผู้บริหารเห็นทั้งหมด
+    // ค่าตั้งต้นตอนเข้าระบบ: staff เห็นเฉพาะที่ตัวเองรับผิดชอบ · หัวหน้าเห็นของหน่วยที่ดูแล · ผู้ดูแลและผู้บริหารเห็นทุกระดับ
     function applyDefaultFilters() {
-      document.getElementById('tree-mine').checked = !isPrivilegedUser();
-      syncMineBoxes();
-      appliedFilters = readTreeFilters();
+      appliedFilters = { mode: 'all', levels: defaultLevels() }; // staff = รายบุคคล (ของตัวเอง) · หัวหน้า = รายบุคคล+หน่วยงาน+QA · ผู้บริหาร/admin = ทุกระดับ
+      document.getElementById('pg-mine').checked = !isPrivilegedUser(); // หน้าติดตามงาน: "เฉพาะของฉัน"
       treeView = isPrivilegedUser() ? 'hosp' : 'unit'; // เจ้าหน้าที่/หัวหน้าเริ่มที่หมวดของหน่วยงาน · ผู้บริหาร/admin เริ่มที่ Part I–IV
+      homeStale = false;
     }
 
     function pickInitialView() {
@@ -1469,7 +1479,7 @@
     function updateViewTabs() {
       const counts = {};
       VIEWS.forEach(v => { counts[v] = uniqueById(getOrderedKpis(false, v)).length; });
-      document.querySelectorAll('#view-tabs .view-tab').forEach(btn => {
+      document.querySelectorAll('.view-tabs .view-tab').forEach(btn => {
         const v = btn.dataset.view;
         btn.classList.toggle('active', v === treeView);
         btn.setAttribute('aria-selected', v === treeView ? 'true' : 'false');
@@ -1483,6 +1493,7 @@
       guardUnsaved(() => {
         treeView = view;
         currentPage = 1;
+        if (currentTab === 'report') { filtersChanged(); return; }
         openParts.clear(); openCats.clear();
         renderTree();
         renderList();
@@ -1493,18 +1504,9 @@
       });
     }
 
-    // เอาติ๊ก "เฉพาะของฉัน" ออก: เตือนก่อนว่าตัวชี้วัดอื่นดูได้อย่างเดียว แก้ไขไม่ได้
-    // ช่อง "เฉพาะของฉัน" มี 2 ที่ (ผังรายการหน้าแรก / หน้าติดตามงาน) ใช้ค่าเดียวกัน
-    function syncMineBoxes() {
-      document.getElementById('pg-mine').checked = document.getElementById('tree-mine').checked;
-    }
-
+    // ช่อง "เฉพาะของฉัน" (หน้าติดตามงาน): เอาติ๊กออก เตือนก่อนว่าตัวชี้วัดอื่นดูได้อย่างเดียว แก้ไขไม่ได้
     function onMineToggle(cb) {
-      const apply = () => {
-        document.getElementById('tree-mine').checked = cb.checked;
-        syncMineBoxes();
-        onTreeFilterChange();
-      };
+      const apply = () => loadProgressSummary();
       if (!cb.checked && !isPrivilegedUser()) {
         showConfirm('ตัวชี้วัดที่ไม่ใช่ของคุณ ดูได้อย่างเดียว ไม่สามารถแก้ไขได้\nต้องการดูตัวชี้วัดทั้งหมดใช่หรือไม่?', apply, () => { cb.checked = true; });
         return;
@@ -1513,39 +1515,26 @@
     }
 
     function emptyListMessage() {
-      if (treeView === 'qa' && !appliedFilters.mine && appliedFilters.mode === 'all' && !levelFilterActive()) {
-        return 'ยังไม่มีตัวชี้วัดระดับ QA-หน่วยงาน<br>(ตัวชี้วัดที่ติ๊กระดับนี้จะแสดงที่นี่)';
+      const f = appliedFilters;
+      if (f.levels.length === 0) return 'ยังไม่ได้เลือกระดับตัวชี้วัด<br>กดปุ่มระดับด้านบนเพื่อเลือกดู';
+      const plain = f.mode === 'all';
+      if (plain && !isPrivilegedUser() && f.levels.length === 1 && f.levels[0] === 'รายบุคคล') {
+        return 'ยังไม่มีตัวชี้วัดที่คุณรับผิดชอบในมุมมองนี้<br>กดปุ่ม "หน่วยงาน" เพื่อดูตัวชี้วัดของหน่วยของคุณ';
       }
-      if (treeView === 'unit' && !appliedFilters.mine && appliedFilters.mode === 'all' && !levelFilterActive()) {
-        return 'ยังไม่มีหมวดของหน่วยงานหรือหมวดของคุณ';
-      }
-      if (appliedFilters.mine && !isPrivilegedUser() && appliedFilters.mode === 'all' && !levelFilterActive()) {
-        return 'ยังไม่มีตัวชี้วัดที่คุณรับผิดชอบ<br>ถ้าต้องการดูตัวชี้วัดอื่น (ดูอย่างเดียว) ให้เอาติ๊ก "เฉพาะของฉัน" ออก';
+      if (plain && f.levels.length === KPI_LEVELS.length) {
+        if (treeView === 'qa') return 'ยังไม่มีตัวชี้วัดระดับ QA-หน่วยงาน<br>(ตัวชี้วัดที่ติ๊กระดับนี้จะแสดงที่นี่)';
+        if (treeView === 'unit') return 'ยังไม่มีหมวดของหน่วยงานหรือหมวดของคุณ';
       }
       return 'ไม่พบตัวชี้วัดในมุมมอง "' + VIEW_INFO[treeView].name + '" ตามตัวกรองที่เลือก';
     }
 
-    function onTreeFilterChange() {
-      guardUnsaved(() => {
-        appliedFilters = readTreeFilters();
-        currentPage = 1;
-        renderTree();
-        renderList();
-        if (currentTab === 'progress') loadProgressSummary();
-      });
-    }
-
     function resetTreeFilters() {
-      document.getElementById('tree-mode').value = 'all';
-      document.getElementById('tree-mine').checked = false;
-      syncMineBoxes();
-      document.querySelectorAll('.tree-level-cb').forEach(c => { c.checked = true; });
-      appliedFilters = readTreeFilters();
+      appliedFilters = { mode: 'all', levels: KPI_LEVELS.slice() }; // แสดงทุกระดับ/ทุกสถานะ
     }
 
     // ===================== ผังรายการ (ซ้าย) =====================
     function renderTree() {
-      updateLevelButton();
+      renderFilterUi();
       const container = document.getElementById('accordion-tree-container');
       const countEl = document.getElementById('tree-count');
       if (globalDatabase.length === 0) {
@@ -1555,9 +1544,7 @@
       }
       const list = getOrderedKpis();
       updateViewTabs();
-      const lv = { red: 0, yellow: 0, green: 0 };
-      uniqueById(getOrderedKpis(true)).forEach(k => { lv[kpiStatus(k).level]++; }); // นับตามรายการที่แสดงอยู่ (ไม่รวมตัวกรองสถานะ)
-      countEl.innerHTML = `<span>แสดง ${uniqueById(list).length} ตัว</span><span class="cnt red" title="ต้องแก้ไข">${lv.red}</span><span class="cnt yellow" title="รอติดตาม">${lv.yellow}</span><span class="cnt green" title="ครบถ้วน">${lv.green}</span><button type="button" class="tree-collapse" onclick="collapseTree()" title="ย่อทุกหมวด">ย่อทั้งหมด</button>`;
+      countEl.innerHTML = `<span>แสดง ${uniqueById(list).length} ตัว</span><button type="button" class="tree-collapse" onclick="collapseTree()" title="ย่อทุกหมวด">ย่อทั้งหมด</button>`;
 
       if (list.length === 0) {
         container.innerHTML = `<div class="empty-state">${emptyListMessage()}</div>`;
@@ -2583,7 +2570,7 @@
     function loadProgressSummary() {
       const summary = [];
       globalDatabase.forEach(kpi => {
-        if (appliedFilters.mine && !kpi.mine) return; // ค่าตั้งต้นตามผู้ใช้ (staff / หัวหน้า = เฉพาะของตัวเอง) ใช้ร่วมกับหน้าแรก
+        if (document.getElementById('pg-mine').checked && !kpi.mine) return; // ค่าตั้งต้นตามผู้ใช้ (staff / หัวหน้า = เฉพาะของตัวเอง)
         const stt = kpiStatus(kpi);
         summary.push({
           id: kpi.id, part: kpi.part, category: kpi.category, cats: kpiCats(kpi), name: kpi.name,
@@ -2601,7 +2588,7 @@
     function renderProgressTable(data) {
       const displayArea = document.getElementById('progress-content-area');
       if (data.length === 0) {
-        displayArea.innerHTML = '<div class="empty-state">' + (appliedFilters.mine && !isPrivilegedUser() ? 'ยังไม่มีตัวชี้วัดที่คุณรับผิดชอบ<br>ถ้าต้องการดูตัวชี้วัดอื่น (ดูอย่างเดียว) ให้เอาติ๊ก "เฉพาะของฉัน" ออก' : 'ไม่พบข้อมูลตัวชี้วัดในระบบ') + '</div>';
+        displayArea.innerHTML = '<div class="empty-state">' + (document.getElementById('pg-mine').checked && !isPrivilegedUser() ? 'ยังไม่มีตัวชี้วัดที่คุณรับผิดชอบ<br>ถ้าต้องการดูตัวชี้วัดอื่น (ดูอย่างเดียว) ให้เอาติ๊ก "เฉพาะของฉัน" ออก' : 'ไม่พบข้อมูลตัวชี้วัดในระบบ') + '</div>';
         return;
       }
       let html = `
@@ -2724,8 +2711,8 @@
     }
 
     // ===================== สรุปรายงาน / Export PDF (พิมพ์จากเบราว์เซอร์) =====================
-    // ตัวกรองชุดเดียว (rpt) ใช้ร่วมกันระหว่างหน้า "สรุปรายงาน" (คำนำหน้า rp) และหน้าต่าง Export PDF (คำนำหน้า pdf)
-    // จำค่าตามผู้ใช้ที่ล็อกอิน (เก็บฝั่งเซิร์ฟเวอร์: getReportPrefs / saveReportPrefs)
+    // หน้า "สรุปรายงาน" ใช้ตัวกรองชุดเดียวกับหน้าแรก (มุมมอง + ระดับ + สถานะ ที่ appliedFilters / treeView) ส่วนที่ตั้งเฉพาะงานพิมพ์ (rpt) = หมวดที่ไม่ติ๊ก / เนื้อหา / แนวกระดาษ
+    // จำค่าส่วนนี้ตามผู้ใช้ที่ล็อกอิน (เก็บฝั่งเซิร์ฟเวอร์: getReportPrefs / saveReportPrefs)
     const PDF_DEPT_ALIASES = { 'จิิตเวช': 'จิตเวช', 'งานIC': 'IC', 'ICWN': 'IC', 'ทีมบริหารความเสี่ยง(RM)': 'RM', 'แพทย์แผนไทย': 'แผนไทย', 'ฝ่ายการพยาบาล': 'NSO', 'ฝ่ายการ': 'NSO' };
     function pdfKpiDepts(k) {
       return String(k.department || '').replace(/TB clinic/g, 'TB').split(/[\/\s,]+/).map(d => PDF_DEPT_ALIASES[d.trim()] || d.trim()).filter(Boolean);
@@ -2733,17 +2720,16 @@
 
     const RPT_STEP = 30; // ตัวอย่างบนจอแสดงทีละ 30 ตัวชี้วัด เลื่อนลงแล้วโหลดต่อ (ตอน Export ใส่ครบทุกตัว)
     const RPT_DEFAULT_OPTS = { table: true, chart: true, detail: true, source: true, owner: true };
-    const rpt = { loaded: false, loading: false, waiters: [], scope: null, orient: 'landscape', opts: Object.assign({}, RPT_DEFAULT_OPTS), unchecked: new Set(), limit: RPT_STEP };
+    const rpt = { loaded: false, loading: false, waiters: [], orient: 'landscape', opts: Object.assign({}, RPT_DEFAULT_OPTS), unchecked: new Set(), limit: RPT_STEP };
     let rptSaveTimer = null, rptPreviewTimer = null, rptControlsBuilt = false;
 
     function rptReset() {
       clearTimeout(rptSaveTimer); clearTimeout(rptPreviewTimer);
-      rpt.loaded = false; rpt.loading = false; rpt.waiters = []; rpt.scope = null; rpt.orient = 'landscape';
+      rpt.loaded = false; rpt.loading = false; rpt.waiters = []; rpt.orient = 'landscape';
       rpt.opts = Object.assign({}, RPT_DEFAULT_OPTS); rpt.unchecked = new Set(); rpt.limit = RPT_STEP;
     }
 
     function rptApplyPrefs(p) {
-      if (['mine', 'dept', 'all'].indexOf(p.scope) !== -1) rpt.scope = p.scope;
       if (p.orient === 'portrait' || p.orient === 'landscape') rpt.orient = p.orient;
       if (p.opts) Object.keys(RPT_DEFAULT_OPTS).forEach(k => { if (typeof p.opts[k] === 'boolean') rpt.opts[k] = p.opts[k]; });
       if (Array.isArray(p.unchecked)) rpt.unchecked = new Set(p.unchecked);
@@ -2772,46 +2758,29 @@
       clearTimeout(rptSaveTimer);
       rptSaveTimer = setTimeout(() => {
         if (!sessionToken) return;
-        google.script.run.withFailureHandler(() => {}).saveReportPrefs(sessionToken, { scope: rpt.scope, orient: rpt.orient, opts: rpt.opts, unchecked: Array.from(rpt.unchecked) });
+        google.script.run.withFailureHandler(() => {}).saveReportPrefs(sessionToken, { orient: rpt.orient, opts: rpt.opts, unchecked: Array.from(rpt.unchecked) });
       }, 800);
     }
 
-    // ขอบเขตที่ใช้ไม่ได้ (เช่น ไม่มีตัวที่ฉันรับผิดชอบ / ไม่มีหน่วยงาน) → ใช้ค่าตั้งต้น
-    function rptNormalize() {
-      if (globalDatabase.length === 0) return;
-      const hasMine = globalDatabase.some(k => k.mine);
-      const hasDept = (currentUser.depts || []).length > 0;
-      if (!rpt.scope || (rpt.scope === 'mine' && !hasMine) || (rpt.scope === 'dept' && !hasDept)) rpt.scope = hasMine ? 'mine' : 'all';
-    }
-
-    function rptInScope(k) {
-      if (rpt.scope === 'mine') return !!k.mine;
-      if (rpt.scope === 'dept') return pdfKpiDepts(k).some(d => (currentUser.depts || []).indexOf(d) !== -1);
-      return true;
-    }
-
+    // ตัวชี้วัด (แยกเป็นหมวด) ที่ผ่านตัวกรองหลักของมุมมองปัจจุบัน — ตัวที่อยู่หลายหมวดพิมพ์ครั้งเดียว (ในหมวดแรกที่เรียงได้)
     function rptGroups() {
       const g = {};
-      globalDatabase.filter(rptInScope).forEach(k => placementsOf(k).forEach(p => {
+      getOrderedKpis().forEach(p => {
         if (!g[p.part]) g[p.part] = {};
         g[p.part][p.category] = (g[p.part][p.category] || 0) + 1;
-      }));
+      });
       return g;
     }
 
-    // ตัวชี้วัดในหมวดที่ติ๊ก — ตัวที่อยู่หลายหมวดพิมพ์ครั้งเดียว (ในหมวดแรกที่เรียงได้)
+    // ตัวชี้วัดในหมวดที่ติ๊ก
     function rptChosen() {
-      const ps = [];
-      globalDatabase.filter(rptInScope).forEach(k => placementsOf(k).forEach(p => { if (!rpt.unchecked.has(p.part + '||' + p.category)) ps.push(p); }));
-      return ps;
+      return getOrderedKpis().filter(p => !rpt.unchecked.has(p.part + '||' + p.category));
     }
 
     function rptControlsHtml(p) {
       const opt = (key, label) => `<label class="check-row"><input type="checkbox" id="${p}-opt-${key}" onchange="rptSetOpt('${p}', '${key}', this.checked)"> ${label}</label>`;
-      const scope = (v, label, id) => `<label class="check-row"${id ? ` id="${p}-${id}"` : ''}><input type="radio" name="${p}-scope" value="${v}" onchange="rptSetScope('${p}', '${v}')"> ${label}</label>`;
       const orient = (v, label) => `<label class="check-row"><input type="radio" name="${p}-orient" value="${v}" onchange="rptSetOrient('${p}', '${v}')"> ${label}</label>`;
-      return `<div class="form-group"><label>1. เลือกตัวชี้วัดที่จะพิมพ์</label>
-          <div class="rpt-scope">${scope('mine', 'เฉพาะที่ฉันรับผิดชอบ')}${scope('dept', 'เฉพาะหน่วยงานที่ฉันสังกัด', 'scope-dept-label')}${scope('all', 'ทุกตัวชี้วัด')}</div>
+      return `<div class="form-group"><label>1. เลือกหมวดที่จะพิมพ์ (ตามตัวกรองด้านบน)</label>
           <div class="rpt-bar">
             <button type="button" class="btn btn-secondary btn-sm" onclick="rptSelectAll('${p}', true)">เลือกทั้งหมด</button>
             <button type="button" class="btn btn-secondary btn-sm" onclick="rptSelectAll('${p}', false)">ล้างทั้งหมด</button>
@@ -2825,14 +2794,11 @@
         <div class="form-group"><label>3. แนวกระดาษ</label>${orient('landscape', 'แนวนอน')}${orient('portrait', 'แนวตั้ง')}</div>`;
     }
 
-    // ตั้งค่าช่องต่างๆ ของชุดควบคุม p ('rp' หน้าสรุปรายงาน / 'pdf' หน้าต่าง Export) ให้ตรงกับ rpt
+    // ตั้งค่าช่องต่างๆ ของชุดควบคุม p ให้ตรงกับ rpt และตัวกรองหลัก
     function rptSync(p) {
-      rptNormalize();
-      const hasDept = (currentUser.depts || []).length > 0;
-      document.querySelector(`input[name="${p}-scope"][value="dept"]`).disabled = !hasDept;
-      document.getElementById(p + '-scope-dept-label').title = hasDept ? 'หน่วยงาน: ' + currentUser.depts.join(', ') : 'บัญชีนี้ยังไม่ได้ระบุหน่วยงาน';
-      const sc = document.querySelector(`input[name="${p}-scope"][value="${rpt.scope}"]`);
-      if (sc) sc.checked = true;
+      renderFilterUi();
+      updateViewTabs();
+      if (!rptControlsBuilt) return;
       Object.keys(rpt.opts).forEach(k => { document.getElementById(`${p}-opt-${k}`).checked = rpt.opts[k]; });
       document.querySelector(`input[name="${p}-orient"][value="${rpt.orient}"]`).checked = true;
       rptRenderCats(p);
@@ -2869,7 +2835,6 @@
       rptSaveSoon();
     }
 
-    function rptSetScope(p, v) { rpt.scope = v; rpt.unchecked = new Set(); rptChanged(p, true); } // เปลี่ยนขอบเขตแล้วติ๊กทุกหมวดใหม่
     function rptSetOrient(p, v) { rpt.orient = v; rptChanged(p, false); }
     function rptSetOpt(p, key, on) { rpt.opts[key] = on; rptChanged(p, false); }
 
@@ -2896,6 +2861,8 @@
 
     // ---------- หน้าสรุปรายงาน: ตัวอย่างรายงาน ----------
     function rptOpenPage() {
+      const rv = document.getElementById('rp-view-tabs');
+      if (!rv.firstElementChild) rv.innerHTML = document.getElementById('view-tabs').innerHTML; // ปุ่มมุมมองชุดเดียวกับหน้าแรก
       rptEnsure(() => {
         if (currentTab !== 'report') return;
         if (!rptControlsBuilt) { document.getElementById('rp-controls').innerHTML = rptControlsHtml('rp'); rptControlsBuilt = true; }
@@ -2952,17 +2919,9 @@
     window.addEventListener('resize', () => { if (currentTab === 'report') rptFit(); });
     window.addEventListener('scroll', () => { if (currentTab === 'report') rptMaybeMore(); }, { passive: true });
 
-    // ---------- ปุ่ม Export PDF บนแถบเมนู ----------
+    // ---------- ปุ่ม Export PDF บนแถบเมนู: ไปหน้าสรุปรายงาน (ใช้ตัวกรองชุดเดียวกัน ดูตัวอย่างก่อน) ถ้าอยู่หน้านั้นแล้วสั่งพิมพ์เลย ----------
     function exportPdfClick() {
-      if (currentTab === 'report') generatePdf(); else openPdfModal();
-    }
-
-    function openPdfModal() {
-      rptEnsure(() => {
-        document.getElementById('pdf-controls').innerHTML = rptControlsHtml('pdf');
-        rptSync('pdf');
-        document.getElementById('modal-pdf').style.display = 'flex';
-      });
+      if (currentTab === 'report') generatePdf(); else switchMenu('report');
     }
 
     function prNum(v) { return v !== null && v !== undefined ? Math.round(v * 100) / 100 : '-'; }
@@ -3060,7 +3019,6 @@
         const landscape = rpt.orient === 'landscape';
         document.getElementById('print-page-style').textContent = `@page { size: A4 ${rpt.orient}; margin: 10mm; }`;
         document.getElementById('print-root').innerHTML = buildPrintHtml(opts, landscape);
-        document.getElementById('modal-pdf').style.display = 'none';
         // รอให้เบราว์เซอร์จัดหน้าและฟอนต์พร้อมก่อนเปิดหน้าต่างพิมพ์
         const go = () => setTimeout(() => window.print(), 250);
         if (document.fonts && document.fonts.ready) document.fonts.ready.then(go); else go();
