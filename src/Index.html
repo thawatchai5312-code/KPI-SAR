@@ -450,15 +450,14 @@
     /* ปุ่มที่เลือก: ขอบเขต = สีของมุมมอง · สถานะ = สีของสถานะ */
     .fb-btn[data-scope].on, .nav-group .fb-btn[data-scope].on { background: #fff; border-color: var(--vc, #16a34a); color: var(--vc-ink, #14532d); box-shadow: 0 2px 6px rgba(15, 23, 42, 0.12); }
     .fb-btn[data-scope].on .fb-n { background: var(--vc, #16a34a); color: #fff; }
-    .fb-btn.st-all.on { background: #d1fae5; border-color: #047857; color: #064e3b; }
     .fb-btn.st-red.on { background: #fee2e2; border-color: #dc2626; color: #b91c1c; }
     .fb-btn.st-yellow.on { background: #fef9c3; border-color: #ca8a04; color: #854d0e; }
     .fb-btn.st-green.on { background: #dcfce7; border-color: #16a34a; color: #166534; }
     .pg-scope { min-width: 300px; }
-    /* สถานะ 4 ปุ่มเรียง 2×2 ให้ชื่อและจำนวนอ่านง่ายในแถบซ้ายที่แคบ */
-    .filterbar .fb-row.fb-status { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
-    .filterbar .fb-status .fb-btn { justify-content: flex-start; padding: 4px 8px; }
-    .filterbar .fb-status .fb-n { margin-left: auto; }
+    /* สถานะ 3 ปุ่มแบบไล่ระดับ: สีที่รวมอยู่ในการแสดงผลเป็นสีเต็ม ปุ่มที่กดเลือกมีขอบหนา */
+    .filterbar .fb-row.fb-status { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 3px; }
+    .filterbar .fb-status .fb-btn { padding: 4px 3px; }
+    .fb-btn.cut { border-width: 2px; box-shadow: 0 2px 6px rgba(15, 23, 42, 0.14); }
 
     .accordion-header { padding: 11px 14px; }
     .accordion-header .part-count { margin-left: auto; margin-right: 22px; background: #fff; border: 1px solid var(--line); border-radius: 999px; padding: 0 9px; font-size: 12px; color: #475569; font-weight: 700; }
@@ -528,11 +527,11 @@
 
     /* ปุ่มเลือกมุมมองแถบซ้าย: ปุ่มใหญ่ (ไอคอน + จำนวน / ชื่อ) เด่นกว่าปุ่มตัวกรอง */
     .view-tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
-    .view-tab { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; padding: 9px 4px 8px; min-height: 62px; border: 1.5px solid transparent; border-radius: 14px; background: #fff; color: #334155; font-family: inherit; cursor: pointer; line-height: 1.15; white-space: nowrap; box-shadow: 0 1px 3px rgba(16, 40, 24, 0.10); transition: background .15s, color .15s, box-shadow .15s, transform .15s; }
+    .view-tab { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; padding: 5px 4px 4px; min-height: 46px; border: 1.5px solid transparent; border-radius: 13px; background: #fff; color: #334155; font-family: inherit; cursor: pointer; line-height: 1.15; white-space: nowrap; box-shadow: 0 1px 3px rgba(16, 40, 24, 0.10); transition: background .15s, color .15s, box-shadow .15s, transform .15s; }
     .view-tab .vt-top { display: flex; align-items: center; gap: 6px; }
-    .view-tab .vt-ico { font-size: 20px; line-height: 1; }
-    .view-tab .vt-label { font-size: 14px; font-weight: 800; text-align: center; }
-    .view-tab .vt-count { font-size: 11.5px; font-weight: 800; background: #f1f5f9; color: #475569; border-radius: 999px; padding: 1px 7px; min-width: 22px; text-align: center; }
+    .view-tab .vt-ico { font-size: 16px; line-height: 1; }
+    .view-tab .vt-label { font-size: 13px; font-weight: 800; text-align: center; }
+    .view-tab .vt-count { font-size: 11px; font-weight: 800; background: #f1f5f9; color: #475569; border-radius: 999px; padding: 0 7px; min-width: 22px; text-align: center; }
     .view-tab:hover { background: #f8fafc; transform: translateY(-1px); }
     /* ปุ่มที่เลือกอยู่: พื้นสีเข้มเต็มปุ่มตามมุมมอง ตัวอักษรขาว มีเงา ให้เห็นชัดว่าอยู่มุมมองไหน */
     .view-tab[data-view="hosp"].active { background-color: #16a34a; background-image: linear-gradient(160deg, #22b35a, #15803d); border-color: #15803d; color: #fff; box-shadow: 0 6px 14px rgba(22, 163, 74, 0.35); }
@@ -1444,9 +1443,12 @@
 
     // ตัวกรองชุดเดียว ใช้ร่วมกันทั้งหน้าแรก / หน้าสรุปรายงาน / ตอนพิมพ์ / หน้าติดตามงาน: มุมมอง (treeView) + ขอบเขต (scope) + สถานะ (mode)
     //  ขอบเขต: mine = ตัวที่ฉันเป็นผู้รับผิดชอบ · unit = ของหน่วยที่ฉันสังกัด (รวมของฉัน) · all = ทุกตัวที่บัญชีนี้เห็นได้
-    let appliedFilters = { mode: 'all', scope: 'all' };
+    let appliedFilters = { mode: 'green', scope: 'all' };
     const SCOPE_BTNS = [['mine', '👤', 'ของฉัน'], ['unit', '🏢', 'หน่วยของฉัน'], ['all', '🌐', 'ทั้งหมด']];
-    const STATUS_BTNS = [['all', 'ทุกสถานะ'], ['red', 'ต้องแก้ไข'], ['yellow', 'รอติดตาม'], ['green', 'ครบถ้วน']];
+    // สถานะแบบไล่ระดับ: ต้องแก้ไข = แดงอย่างเดียว · รอติดตาม = แดง + เหลือง · ครบถ้วน = ทั้ง 3 สี (ค่าตั้งต้น)
+    const STATUS_BTNS = [['red', 'ต้องแก้ไข'], ['yellow', 'รอติดตาม'], ['green', 'ครบถ้วน']];
+    const STATUS_RANK = { red: 0, yellow: 1, green: 2 };
+    function statusPasses(level, mode) { return STATUS_RANK[level] <= STATUS_RANK[mode]; }
     let homeStale = false; // ตัวกรองถูกเปลี่ยนที่หน้าสรุปรายงาน → หน้าแรกต้องวาดใหม่ตอนกลับไป
 
     function inScope(k, scope) {
@@ -1467,7 +1469,7 @@
       globalDatabase.forEach(k => {
         if (viewPlacements(k, treeView).length === 0) return;
         const s = kpiStatus(k).level;
-        if (appliedFilters.mode === 'all' || appliedFilters.mode === s) SCOPE_BTNS.forEach(([v]) => { if (inScope(k, v)) sc[v]++; });
+        if (statusPasses(s, appliedFilters.mode)) SCOPE_BTNS.forEach(([v]) => { if (inScope(k, v)) sc[v]++; });
         if (inScope(k, appliedFilters.scope)) { st.all++; st[s]++; }
       });
       return { sc: sc, st: st };
@@ -1489,8 +1491,8 @@
     function filterBarHtml() {
       const c = filterCounts();
       const stBtns = STATUS_BTNS.map(([v, label]) => {
-        const on = appliedFilters.mode === v;
-        return `<button type="button" class="fb-btn st-${v}${on ? ' on' : ''}" data-status="${v}" aria-pressed="${on}" onclick="setStatusFilter('${v}')">${v === 'all' ? '<span class="fb-ico">📋</span>' : '<span class="fb-dot"></span>'}<span class="fb-lab">${label}</span><span class="fb-n">${c.st[v]}</span></button>`;
+        const on = statusPasses(v, appliedFilters.mode), cut = appliedFilters.mode === v;
+        return `<button type="button" class="fb-btn st-${v}${on ? ' on' : ''}${cut ? ' cut' : ''}" data-status="${v}" aria-pressed="${cut}" onclick="setStatusFilter('${v}')"><span class="fb-dot"></span><span class="fb-lab">${label}</span><span class="fb-n">${c.st[v]}</span></button>`;
       }).join('');
       return `<div class="fb-group"><div class="fb-title">ขอบเขต</div><div class="fb-row fb-scope">${scopeBtnsHtml(c.sc)}</div></div>
         <div class="fb-group"><div class="fb-title">สถานะ</div><div class="fb-row fb-status">${stBtns}</div></div>`;
@@ -1608,7 +1610,7 @@
     function getOrderedKpis(ignoreStatus = false, view = treeView) {
       const f = appliedFilters;
       const list = globalDatabase.filter(k => {
-        if (!ignoreStatus && f.mode !== 'all' && kpiStatus(k).level !== f.mode) return false;
+        if (!ignoreStatus && !statusPasses(kpiStatus(k).level, f.mode)) return false;
         return inScope(k, f.scope);
       });
       const order = new Map(globalDatabase.map((k, i) => [k.id, i]));
@@ -1652,7 +1654,7 @@
 
     // ค่าตั้งต้นตอนเข้าระบบ: staff เห็นเฉพาะที่ตัวเองรับผิดชอบ · หัวหน้าเห็นของหน่วยที่ดูแล · ผู้ดูแลและผู้บริหารเห็นทุกระดับ
     function applyDefaultFilters() {
-      appliedFilters = { mode: 'all', scope: defaultScope() };
+      appliedFilters = { mode: 'green', scope: defaultScope() };
       treeView = isPrivilegedUser() ? 'hosp' : 'unit'; // เจ้าหน้าที่/หัวหน้าเริ่มที่หมวดของหน่วยงาน · ผู้บริหาร/admin เริ่มที่ Part I–IV
       homeStale = false;
     }
@@ -1696,10 +1698,10 @@
     // ช่อง "เฉพาะของฉัน" (หน้าติดตามงาน): เอาติ๊กออก เตือนก่อนว่าตัวชี้วัดอื่นดูได้อย่างเดียว แก้ไขไม่ได้
     function emptyListMessage() {
       const f = appliedFilters;
-      if (f.mode === 'all' && f.scope === 'mine') {
+      if (f.mode === 'green' && f.scope === 'mine') {
         return 'ยังไม่มีตัวชี้วัดที่คุณรับผิดชอบในมุมมองนี้<br>กดปุ่ม "หน่วยของฉัน" หรือ "ทั้งหมด" เพื่อดูตัวชี้วัดอื่น';
       }
-      if (f.mode === 'all' && f.scope === 'all') {
+      if (f.mode === 'green' && f.scope === 'all') {
         if (treeView === 'qa') return 'ยังไม่มีตัวชี้วัด QA<br>(ตัวชี้วัดที่มีหมวด QA ของหน่วยจะแสดงที่นี่)';
         if (treeView === 'unit') return 'ยังไม่มีหมวดของหน่วยงานหรือหมวดของคุณ';
       }
@@ -1707,7 +1709,7 @@
     }
 
     function resetTreeFilters() {
-      appliedFilters = { mode: 'all', scope: 'all' }; // แสดงทุกตัว/ทุกสถานะ
+      appliedFilters = { mode: 'green', scope: 'all' }; // แสดงทุกตัว/ทุกสถานะ
     }
 
     // ===================== ผังรายการ (ซ้าย) =====================
