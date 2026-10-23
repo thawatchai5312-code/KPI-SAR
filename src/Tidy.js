@@ -120,6 +120,75 @@ function tidyMoveDetails_(details, source, name) {
   return { details: sp.keep, source: src ? sp.move + "\n\n" + src : sp.move };
 }
 
+// ---------------------------------------------------------------- รวมตัวชี้วัดซ้ำ
+
+// [เก็บไว้, รวมเข้าแล้วลบ] — ตรวจแล้วว่าเป็นตัวเดียวกัน (ชื่อ/หน่วยเดียวกัน คนละรหัส) ทำซ้ำได้: ถ้าตัวที่จะลบไม่อยู่แล้วก็ข้าม
+//  ก. ตัว QA กับตัวปกติของหน่วยเดียวกัน (ไฟล์ NSO ใส่ซ้ำทั้งหัวข้อหน่วยและหัวข้อ QA) → เก็บตัวปกติ รวมระดับ QA เข้าไป
+//  ข. ER: หัวข้อ RM ซ้ำกับหัวข้อ Med Error → เก็บตัวที่มีผล
+//  ค. Part III: ตัวเดียวกันอยู่ทั้ง III-2/III-3 และ III-4/III-6 → เก็บตัวที่ผลครบกว่า (เท่ากัน = ผลดีกว่า ตามทิศทางเป้าหมาย เท่ากันอีก = ตัวแรก)
+var TIDY_N_ = "NURSE-KPI-0000000000";
+var TIDY_MERGE = [
+  [TIDY_N_ + "080", TIDY_N_ + "209"], [TIDY_N_ + "379", TIDY_N_ + "448"], [TIDY_N_ + "439", TIDY_N_ + "459"],
+  [TIDY_N_ + "429", TIDY_N_ + "464"], [TIDY_N_ + "410", TIDY_N_ + "468"], [TIDY_N_ + "411", TIDY_N_ + "482"],
+  [TIDY_N_ + "400", TIDY_N_ + "490"], [TIDY_N_ + "401", TIDY_N_ + "491"], [TIDY_N_ + "377", TIDY_N_ + "453"],
+  [TIDY_N_ + "339", TIDY_N_ + "498"], [TIDY_N_ + "378", TIDY_N_ + "449"], [TIDY_N_ + "391", TIDY_N_ + "492"],
+  ["NURSE-KPI-1788497613197", TIDY_N_ + "450"], [TIDY_N_ + "224", TIDY_N_ + "292"], [TIDY_N_ + "246", TIDY_N_ + "274"],
+  [TIDY_N_ + "149", TIDY_N_ + "108"], [TIDY_N_ + "150", TIDY_N_ + "109"],
+  ["KPI-0000000000185", "KPI-0000000000197"], ["KPI-0000000000252", "KPI-0000000000188"], ["KPI-0000000000190", "KPI-0000000000254"],
+  ["KPI-0000000000255", "KPI-0000000000191"], ["KPI-0000000000192", "KPI-0000000000256"]
+];
+
+function tidyBlank_(v) { return v === "" || v === null || v === undefined; }
+
+/** รวมแถวตัวซ้ำเข้าแถวที่เก็บไว้ (ฟังก์ชันล้วน): ช่องว่างเติมจากอีกตัว · ระดับ/ผู้รับผิดชอบ/หน่วยงาน/หมวดรวมกัน · ตัวแม่ตามตัวที่เก็บ */
+function tidyMergeRows_(keepRow, dropRow) {
+  var r = keepRow.slice(), i;
+  [5].concat([6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22], [23, 24, 27]).forEach(function(c) {
+    if (tidyBlank_(r[c]) && !tidyBlank_(dropRow[c])) r[c] = dropRow[c];
+  });
+  var levels = normalizeLevels_(r[LEVEL_COLUMN - 1]);
+  normalizeLevels_(dropRow[LEVEL_COLUMN - 1]).forEach(function(l) { if (levels.indexOf(l) === -1) levels.push(l); });
+  r[LEVEL_COLUMN - 1] = sortLevels_(levels).join(", ");
+  var owners = parseOwners_(r[25]).slice();
+  parseOwners_(dropRow[25]).forEach(function(n) { if (owners.indexOf(n) === -1) owners.push(n); });
+  r[25] = owners.join(" / ");
+  var depts = parseDepts_(r[26]).slice();
+  parseDepts_(dropRow[26]).forEach(function(d) { if (depts.indexOf(d) === -1) depts.push(d); });
+  r[26] = depts.join(" / ");
+  var mk = function(row) { return kpiCats_({ cats: [{ part: (row[2] || "ทั่วไป").toString().trim(), category: (row[3] || "ทั่วไป").toString().trim() }].concat(parseExtraCats_(row[EXTRA_CATS_COL - 1])) }); };
+  var cats = mk(keepRow), seen = {};
+  cats.forEach(function(c) { seen[catKey_(c)] = 1; });
+  mk(dropRow).forEach(function(c) { if (!seen[catKey_(c)]) { seen[catKey_(c)] = 1; cats.push(c); } });
+  r[2] = cats[0].part; r[3] = cats[0].category;
+  r[EXTRA_CATS_COL - 1] = formatExtraCats_(cats.slice(1));
+  if (tidyBlank_(r[GROUP_COL - 1]) && !tidyBlank_(dropRow[GROUP_COL - 1])) r[GROUP_COL - 1] = dropRow[GROUP_COL - 1];
+  return r;
+}
+
+/**
+ * หาคู่ที่ต้องรวมในชีตหนึ่ง: คืน { rows: แถวหลังรวม (ไม่มีตัวที่ลบ), merges: [{keepId, dropId, name, dropRow}], redirects: {dropId: keepId} }
+ * ตัวที่เคยเป็นตัวแม่ของตัวที่ลบ → ย้ายตัวย่อยไปอยู่ใต้ตัวที่เก็บ
+ */
+function tidyComputeMerges_(rows) {
+  var byId = {}, drop = {}, out = rows.map(function(r) { return r.slice(); }), merges = [];
+  out.forEach(function(r, i) { var id = (r[0] || "").toString().trim(); if (id) byId[id] = i; });
+  TIDY_MERGE.forEach(function(pair) {
+    var k = byId[pair[0]], d = byId[pair[1]];
+    if (k === undefined || d === undefined || drop[pair[1]] || drop[pair[0]]) return;
+    var dropRow = out[d].slice();
+    out[k] = tidyMergeRows_(out[k], dropRow);
+    drop[pair[1]] = pair[0];
+    merges.push({ keepId: pair[0], dropId: pair[1], name: tidyStripName_((dropRow[4] || "").toString().split("\n")[0]), dropRow: dropRow });
+  });
+  if (merges.length === 0) return { rows: rows, merges: [], redirects: {} };
+  out.forEach(function(r) {
+    var p = (r[PARENT_COL - 1] || "").toString().trim(), id = (r[0] || "").toString().trim();
+    if (p && drop[p]) r[PARENT_COL - 1] = drop[p] === id ? "" : drop[p];   // ตัวย่อยของตัวที่ลบ → ใต้ตัวที่เก็บ
+  });
+  var kept = out.filter(function(r) { return !drop[(r[0] || "").toString().trim()]; });
+  return { rows: kept, merges: merges, redirects: drop };
+}
+
 // ---------------------------------------------------------------- ผู้รับผิดชอบ
 
 /** ข้อความผู้รับผิดชอบ → แปลงชื่อเป็นมาตรฐาน (ไม่เปลี่ยนถ้าไม่มีอะไรต้องแปลง จึงไม่ปรับช่องว่าง/ตัวคั่นของข้อความเดิม) */
@@ -401,7 +470,8 @@ function tidyPlanAll_() {
   listFiscalYears_().forEach(function(fy) {
     var d = tidyReadFy_(fy);
     if (!d) return;
-    plan.fys.push({ fy: fy, sheet: d.sheet, rows: d.rows, comp: tidyComputeSheet_(d.rows, fy) });
+    var mg = tidyComputeMerges_(d.rows);
+    plan.fys.push({ fy: fy, sheet: d.sheet, rawRows: d.rows, rows: mg.rows, merges: mg.merges, redirects: mg.redirects, comp: tidyComputeSheet_(mg.rows, fy) });
   });
   var us = getUsersSpreadsheet_().getSheetByName(USERS_SHEET_NAME);
   if (us) {
@@ -414,7 +484,7 @@ function tidyPlanAll_() {
 }
 
 function tidyHasWork_(plan) {
-  var any = plan.fys.some(function(f) { return f.comp.rows.some(function(r) { return r.changed; }); });
+  var any = plan.fys.some(function(f) { return f.merges.length > 0 || f.comp.rows.some(function(r) { return r.changed; }); });
   return any || !!(plan.users && (plan.users.merges.length || plan.users.deletes.length));
 }
 
@@ -432,16 +502,34 @@ function tidyApply_(plan, opts) {
   plan.fys.forEach(function(f) {
     var changedRows = f.comp.rows.filter(function(r) { return r.changed; });
     var c0 = f.comp.counts;
-    out.fys[f.fy] = { rows: changedRows.length, names: c0.names, owners: c0.owners, parents: c0.parents, cats: c0.cats, groups: c0.groups, levels: c0.levels, details: c0.details, digits: c0.digits };
-    if (changedRows.length === 0) return;
+    out.fys[f.fy] = { merged: f.merges.length, rows: changedRows.length, names: c0.names, owners: c0.owners, parents: c0.parents, cats: c0.cats, groups: c0.groups, levels: c0.levels, details: c0.details, digits: c0.digits };
+    if (changedRows.length === 0 && f.merges.length === 0) return;
     if (opts.backup) {
       // สำรองแยกตามรอบ (รอบที่เพิ่มภายหลังสำรองอีกชุดก่อนเขียน): จัดระเบียบ → ย้ายรายละเอียด/ตัวเลข → จัดหมวด NSO
       var labels = [];
       if (c0.details > 0 || c0.digits > 0) labels.push("ย้ายรายละเอียด");
       if (c0.nso > 0) labels.push("จัดหมวด NSO");
+      if (f.merges.length > 0) labels.push("รวมตัวซ้ำ");
       if (labels.length === 0) labels.push("จัดระเบียบ");
       var missing = labels.map(function(l) { return "สำรองก่อน" + l + " " + fiscalSheetName_(f.fy); }).filter(function(n) { return !ss.getSheetByName(n); });
       if (missing.length) { var b = f.sheet.copyTo(ss); b.setName(missing[0]); b.hideSheet(); }
+    }
+    // รวมตัวชี้วัดซ้ำ: เขียนแถวที่เก็บ (และแถวตัวย่อยที่ย้ายตัวแม่) แล้วลบแถวตัวที่รวมเข้าไป (ลบจากล่างขึ้นบน)
+    if (f.merges.length > 0) {
+      var rawIdx = {}, keepIds = {}, dropRowNums = [];
+      f.rawRows.forEach(function(row, i) { rawIdx[(row[0] || "").toString().trim()] = i; });
+      f.merges.forEach(function(m) { keepIds[m.keepId] = 1; dropRowNums.push(rawIdx[m.dropId] + 2); });
+      f.rows.forEach(function(row) {
+        var id = (row[0] || "").toString().trim(), i = rawIdx[id];
+        if (i === undefined || JSON.stringify(row) === JSON.stringify(f.rawRows[i])) return;
+        var w = row.slice();
+        if (keepIds[id]) { w[STAMP_EDIT_AT_COL - 1] = stamp; w[STAMP_EDIT_BY_COL - 1] = "จัดระเบียบ (รวมตัวซ้ำ)"; }
+        f.sheet.getRange(i + 2, 1, 1, KPI_COLS).setNumberFormat("@").setValues([w]);
+      });
+      dropRowNums.sort(function(a, b) { return b - a; }).forEach(function(n) { f.sheet.deleteRow(n); });
+      f.merges.forEach(function(m) {
+        logRows.push([stamp, f.fy, m.dropId, "merge-drop", JSON.stringify(m.dropRow).slice(0, 49000), "รวมเข้า " + m.keepId]);
+      });
     }
     var byIndex = {};
     f.comp.rows.forEach(function(r) { byIndex[r.index] = r; });
@@ -476,6 +564,21 @@ function tidyApply_(plan, opts) {
       if (!f.sheet.getRange(1, h[0]).getValue()) f.sheet.getRange(1, h[0]).setValue(h[1]).setFontWeight("bold").setBackground("#e0f2fe").setHorizontalAlignment("center");
     });
   });
+
+  // ตัวชี้วัด รพ. ที่รวมกัน: ต้นทาง NSO ที่ผูกกับตัวที่ลบ → ผูกกับตัวที่เก็บแทน (ตัว NURSE ที่ลบ ปล่อยเป็น "ลบแล้ว" ไม่นำกลับมา)
+  var redirect = {};
+  plan.fys.forEach(function(f) { Object.keys(f.redirects || {}).forEach(function(d) { if (d.indexOf("NURSE-") !== 0) redirect[d] = f.redirects[d]; }); });
+  var syncSheet = ss.getSheetByName(NSO_SYNC_SHEET);
+  if (syncSheet && Object.keys(redirect).length && syncSheet.getLastRow() >= 2) {
+    var ids = syncSheet.getRange(2, 2, syncSheet.getLastRow() - 1, 1).getValues(), taken = {}, moved = 0;
+    ids.forEach(function(r) { taken[(r[0] || "").toString()] = 1; });
+    var newIds = ids.map(function(r) {
+      var id = (r[0] || "").toString();
+      if (redirect[id] && !taken[redirect[id]]) { taken[redirect[id]] = 1; moved++; return [redirect[id]]; }
+      return [id];
+    });
+    if (moved > 0) syncSheet.getRange(2, 2, newIds.length, 1).setValues(newIds);
+  }
 
   // ชีต NSO_Sync: ให้สำเนาต้นทางใช้ชื่อผู้รับผิดชอบมาตรฐานเดียวกัน (กันรายการ "ขัดแย้ง" ตอนอัปเดตจาก NSO ครั้งถัดไป)
   var sync = ss.getSheetByName(NSO_SYNC_SHEET);
@@ -521,15 +624,16 @@ function tidyApply_(plan, opts) {
 
 /** สรุปแผนสำหรับแสดงในหน้าตั้งค่า (ตัดรายการยาวให้พอดี) */
 function tidySummary_(plan) {
-  var s = { fys: [], samples: { names: [], parents: [], owners: [], levels: [], cats: [], users: [], details: [] }, usersMerge: [], usersDelete: [], hasWork: tidyHasWork_(plan) };
+  var s = { fys: [], samples: { merges: [], names: [], parents: [], owners: [], levels: [], cats: [], users: [], details: [] }, usersMerge: [], usersDelete: [], hasWork: tidyHasWork_(plan) };
   var catMap = {};
   plan.fys.forEach(function(f) {
     var c = f.comp.counts;
-    s.fys.push({ fy: f.fy, total: f.comp.rows.length, rows: f.comp.rows.filter(function(r) { return r.changed; }).length, names: c.names, owners: c.owners, parents: c.parents, cats: c.cats, groups: c.groups, levels: c.levels, details: c.details, emptied: c.emptied, digits: c.digits, nso: c.nso });
+    s.fys.push({ fy: f.fy, merged: f.merges.length, total: f.comp.rows.length, rows: f.comp.rows.filter(function(r) { return r.changed; }).length, names: c.names, owners: c.owners, parents: c.parents, cats: c.cats, groups: c.groups, levels: c.levels, details: c.details, emptied: c.emptied, digits: c.digits, nso: c.nso });
     if (f.fy !== plan.fys[plan.fys.length - 1].fy && plan.fys.length > 1) { /* แสดงตัวอย่างจากปีล่าสุดเท่านั้น */ }
   });
   var last = plan.fys[plan.fys.length - 1];
   if (last) {
+    last.merges.forEach(function(m) { s.samples.merges.push({ name: m.name, keep: m.keepId, drop: m.dropId }); });
     var nameOf = {};
     last.comp.rows.forEach(function(r) { nameOf[r.id] = r.next.name; });
     last.comp.rows.forEach(function(r) {
