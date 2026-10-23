@@ -10,7 +10,6 @@
 
 var TIDY_LOG_SHEET = "Tidy_Log";
 var TIDY_BACKUP_FLAG = "TIDY_BACKUP_V1";
-var TIDY_NSO_OVERALL = "ภาพรวม NSO";
 var TIDY_DIMS = [
   "มิติที่ 1 ด้านประสิทธิผลตามพันธกิจ",
   "มิติที่ 2 ด้านคุณภาพการให้บริการ",
@@ -161,8 +160,12 @@ var TIDY_HEAD_RULES = [
   [5, /Stroke|STEMI|Sepsis|Head|CPR|(?<![A-Za-z])(?:ARV|COPD|DM|HT|NCD|TB|COC|IMC|PIH|LBW|PPH)(?![A-Za-z])|Asthma|Wafarin|Warfarin|Appendicitis|new born|Pretrm|asphyxia|Episiotomy|Discharge|โรค|คลินิก|หัตถการ|มารดา|fast track|ยาเสพติด|คัดกรอง/i]
 ];
 function tidyDimOfHeading_(h) {
+  return tidyDimOfText_(h) || 2;
+}
+// เหมือน tidyDimOfHeading_ แต่ไม่ตรงกฎข้อใด = 0
+function tidyDimOfText_(h) {
   for (var i = 0; i < TIDY_HEAD_RULES.length; i++) if (TIDY_HEAD_RULES[i][1].test(h)) return TIDY_HEAD_RULES[i][0];
-  return 2;
+  return 0;
 }
 
 // หมวด HA ของ Part I–IV → มิติ
@@ -193,34 +196,57 @@ function tidyNsoUnit_(cat) {
   return (cat || "").toString().replace(/\s*(?:TTM-)?QA\s*$/i, "").trim();
 }
 
+// ชื่อหน่วยในหมวดย่อยของ NSO ที่ไม่ตรงชื่อหมวดหน่วยงานจริง
+var TIDY_UNIT_ALIAS = { "แพทย์แผนไทย": "แผนไทย" };
+
+/** มิติตามบริบทของตัวชี้วัด: หัวข้อเดิมของหน่วย → หมวด HA ของ Part I–IV → มิติที่หน่วยอื่นใช้อยู่ → ชื่อตัวชี้วัด */
+function tidyContextDim_(cats, name) {
+  var core = cats.filter(function(c) { return isCorePart_(c.part); });
+  var heading = tidyHeadingOf_(cats);
+  if (heading) return tidyDimOfHeading_(heading);
+  if (core.length) return tidyDimOfCore_(core[0].category);
+  var d = 0;
+  cats.forEach(function(c) { if (!d && !isCorePart_(c.part) && c.part !== NURSING_UNIT_NAME) d = tidyDimOfName_(c.category); });
+  return d || tidyDimOfHeading_((name || "").toString());
+}
+
+/** หัวข้อเดิมของหมวดหน่วยงาน (ชื่อหมวดย่อยที่ไม่ใช่มิติ/ชื่อชั่วคราว) */
+function tidyHeadingOf_(cats) {
+  var heading = "";
+  cats.forEach(function(c) {
+    if (heading || isCorePart_(c.part) || c.part === NURSING_UNIT_NAME) return;
+    if (!tidyIsFiller_(c.category, c.part) && !tidyDimOfName_(c.category)) heading = c.category.trim();
+  });
+  return heading;
+}
+
 /**
  * หมวดที่ต้องการของแถวหนึ่ง (ฟังก์ชันล้วน)
+ *  - Part I–IV: คงเดิม · หมวดหน่วยงาน: หมวดย่อยเป็น 5 มิติ
+ *  - NSO เป็นสังกัดซ้อนของพยาบาลทุกหน่วย: "NSO › ER" ซ้ำกับหมวด ER อยู่แล้ว → ตัดออก
+ *    เหลือในหมวด NSO เฉพาะตัวชี้วัดของฝ่ายการพยาบาล (จัดเป็น 5 มิติเหมือนหน่วยอื่น)
  * คืน { cats: [{part, category}], group }
  */
-function tidyPlaceCats_(cats, oldGroup) {
+function tidyPlaceCats_(cats, oldGroup, name) {
   var core = cats.filter(function(c) { return isCorePart_(c.part); });
   var firstCore = core.length ? core[0].category : "";
-  var heading = "", nsoDim = "";
+  var heading = tidyHeadingOf_(cats), nsoDim = "", unitDim = 0, parts = {};
   cats.forEach(function(c) {
-    if (isCorePart_(c.part)) return;
-    if (c.part === NURSING_UNIT_NAME) {
-      var d0 = tidyDimOfName_(c.category);
-      if (d0 && !nsoDim) nsoDim = tidyDimLabel_(d0);
-      return;
-    }
-    if (!heading && !tidyIsFiller_(c.category, c.part) && !tidyDimOfName_(c.category)) heading = c.category.trim();
+    parts[c.part] = 1;
+    if (c.part === NURSING_UNIT_NAME) { var d0 = tidyDimOfName_(c.category); if (d0 && !nsoDim) nsoDim = tidyDimLabel_(d0); }
+    else if (!isCorePart_(c.part) && !unitDim) unitDim = tidyDimOfName_(c.category);
   });
-  var contextDim = heading ? tidyDimOfHeading_(heading) : (firstCore ? tidyDimOfCore_(firstCore) : 0);
-  if (!contextDim) {
-    cats.forEach(function(c) { if (!contextDim && !isCorePart_(c.part) && c.part !== NURSING_UNIT_NAME && tidyDimOfName_(c.category)) contextDim = tidyDimOfName_(c.category); });
-  }
-  if (!contextDim) contextDim = 2;
+  var contextDim = tidyContextDim_(cats, name);
   var out = [], seen = {};
   cats.forEach(function(c) {
     var part = c.part, cat = c.category, res;
     if (isCorePart_(part)) res = { part: part, category: cat };
     else if (part === NURSING_UNIT_NAME) {
-      res = { part: part, category: (tidyIsFiller_(cat, part) || tidyDimOfName_(cat)) ? TIDY_NSO_OVERALL : tidyNsoUnit_(cat) };
+      var unit = tidyNsoUnit_(cat);
+      unit = TIDY_UNIT_ALIAS[unit] || unit;
+      if (unit !== NURSING_UNIT_NAME && parts[unit]) return; // ซ้ำกับหมวดของหน่วยนั้น
+      // มิติ: ที่ตั้งไว้แล้ว → มิติเดิมจากไฟล์ NSO (หัวข้อกลุ่ม) → จากชื่อตัวชี้วัด → มิติที่หน่วยอื่นใช้ → บริบท
+      res = { part: part, category: tidyDimLabel_(tidyDimOfName_(cat) || tidyDimOfName_(oldGroup) || tidyDimOfText_((name || "").toString()) || unitDim || contextDim) };
     } else {
       var d = tidyDimOfName_(cat);
       if (!d) d = tidyIsFiller_(cat, part) ? contextDim : tidyDimOfHeading_(cat);
@@ -229,7 +255,20 @@ function tidyPlaceCats_(cats, oldGroup) {
     var k = catKey_(res);
     if (!seen[k]) { seen[k] = 1; out.push(res); }
   });
+  if (out.length === 0) out = cats.slice(0, 1); // กันไม่ให้ไม่เหลือหมวดเลย
   return { cats: out, group: (oldGroup || "").toString().trim() || heading || firstCore || nsoDim || "" };
+}
+
+/** หมวดหน่วยงานที่ระบบเพิ่มให้ตามช่องหน่วยงาน ("รอจัดหมวดย่อย") → ใส่มิติให้ทันที (หมวดอื่นที่ผู้ใช้เลือกเองไม่แตะ) */
+function tidyFillPlaceholders_(cats, name) {
+  if (!cats.some(function(c) { return c.category === UNIT_CATS_PLACEHOLDER && !isCorePart_(c.part); })) return cats;
+  var dim = tidyDimLabel_(tidyContextDim_(cats, name)), out = [], seen = {};
+  cats.forEach(function(c) {
+    var res = c.category === UNIT_CATS_PLACEHOLDER && !isCorePart_(c.part) ? { part: c.part, category: dim } : c;
+    var k = catKey_(res);
+    if (!seen[k]) { seen[k] = 1; out.push(res); }
+  });
+  return out;
 }
 
 // ---------------------------------------------------------------- ตัวชี้วัดแม่ (จากเลขข้อ)
@@ -266,7 +305,7 @@ function tidyFindParents_(rows) {
  */
 function tidyComputeSheet_(rows, fy) {
   var parentOf = tidyFindParents_(rows);
-  var res = [], counts = { names: 0, owners: 0, parents: 0, cats: 0, groups: 0, levels: 0, details: 0, emptied: 0, digits: 0 };
+  var res = [], counts = { names: 0, owners: 0, parents: 0, cats: 0, groups: 0, levels: 0, details: 0, emptied: 0, digits: 0, nso: 0 };
   rows.forEach(function(row, index) {
     var id = (row[0] || "").toString().trim();
     if (!id) return;
@@ -283,7 +322,7 @@ function tidyComputeSheet_(rows, fy) {
     var oldSource = (row[24] === null || row[24] === undefined ? "" : row[24]).toString();
     var moved = tidyMoveDetails_(tidyAscii_(oldDetails), tidyAscii_(oldSource), newName);
     var newOwner = tidyOwnerText_(oldOwner);
-    var placed = tidyPlaceCats_(oldCats, oldGroup);
+    var placed = tidyPlaceCats_(oldCats, oldGroup, newName);
     var newParent = oldParent || parentOf[id] || "";
     var newLevels = oldLevels;
     if ((TIDY_QA_REMOVE[fy] || []).indexOf(id) !== -1) {
@@ -295,6 +334,7 @@ function tidyComputeSheet_(rows, fy) {
     if (newOwner !== oldOwner) { changes.owner = [oldOwner, newOwner]; counts.owners++; }
     if (placed.cats.map(catKey_).join("\n") !== oldCats.map(catKey_).join("\n")) {
       changes.cats = [oldCats, placed.cats]; counts.cats++;
+      if (oldCats.some(function(c) { return c.part === NURSING_UNIT_NAME; })) counts.nso++;
     }
     if (newParent !== oldParent) { changes.parent = [oldParent, newParent]; counts.parents++; }
     if (placed.group !== oldGroup) { changes.group = [oldGroup, placed.group]; counts.groups++; }
@@ -395,10 +435,13 @@ function tidyApply_(plan, opts) {
     out.fys[f.fy] = { rows: changedRows.length, names: c0.names, owners: c0.owners, parents: c0.parents, cats: c0.cats, groups: c0.groups, levels: c0.levels, details: c0.details, digits: c0.digits };
     if (changedRows.length === 0) return;
     if (opts.backup) {
-      // สำรองแยกตามรอบ: รอบแรก "จัดระเบียบ" · รอบย้ายรายละเอียด/ตัวเลข (เพิ่มภายหลัง) สำรองอีกชุดก่อนเขียน
-      var textRound = c0.details > 0 || c0.digits > 0;
-      var bname = "สำรองก่อน" + (textRound ? "ย้ายรายละเอียด " : "จัดระเบียบ ") + fiscalSheetName_(f.fy);
-      if (!ss.getSheetByName(bname)) { var b = f.sheet.copyTo(ss); b.setName(bname); b.hideSheet(); }
+      // สำรองแยกตามรอบ (รอบที่เพิ่มภายหลังสำรองอีกชุดก่อนเขียน): จัดระเบียบ → ย้ายรายละเอียด/ตัวเลข → จัดหมวด NSO
+      var labels = [];
+      if (c0.details > 0 || c0.digits > 0) labels.push("ย้ายรายละเอียด");
+      if (c0.nso > 0) labels.push("จัดหมวด NSO");
+      if (labels.length === 0) labels.push("จัดระเบียบ");
+      var missing = labels.map(function(l) { return "สำรองก่อน" + l + " " + fiscalSheetName_(f.fy); }).filter(function(n) { return !ss.getSheetByName(n); });
+      if (missing.length) { var b = f.sheet.copyTo(ss); b.setName(missing[0]); b.hideSheet(); }
     }
     var byIndex = {};
     f.comp.rows.forEach(function(r) { byIndex[r.index] = r; });
@@ -482,7 +525,7 @@ function tidySummary_(plan) {
   var catMap = {};
   plan.fys.forEach(function(f) {
     var c = f.comp.counts;
-    s.fys.push({ fy: f.fy, total: f.comp.rows.length, rows: f.comp.rows.filter(function(r) { return r.changed; }).length, names: c.names, owners: c.owners, parents: c.parents, cats: c.cats, groups: c.groups, levels: c.levels, details: c.details, emptied: c.emptied, digits: c.digits });
+    s.fys.push({ fy: f.fy, total: f.comp.rows.length, rows: f.comp.rows.filter(function(r) { return r.changed; }).length, names: c.names, owners: c.owners, parents: c.parents, cats: c.cats, groups: c.groups, levels: c.levels, details: c.details, emptied: c.emptied, digits: c.digits, nso: c.nso });
     if (f.fy !== plan.fys[plan.fys.length - 1].fy && plan.fys.length > 1) { /* แสดงตัวอย่างจากปีล่าสุดเท่านั้น */ }
   });
   var last = plan.fys[plan.fys.length - 1];
@@ -498,10 +541,12 @@ function tidySummary_(plan) {
       if (mvText) s.samples.details.push({ name: r.next.name, moved: mvText.slice(0, 160), keep: r.next.details.slice(0, 120) });
       if (ch.levels && s.samples.levels.length < 10) s.samples.levels.push({ id: r.id, name: r.next.name, from: ch.levels[0], to: ch.levels[1] });
       if (ch.cats) {
-        ch.cats[0].forEach(function(o, i) {
-          var n = ch.cats[1][i];
-          if (!n || (o.part === n.part && o.category === n.category)) return;
-          var k = o.part + " › " + o.category + "  →  " + n.part + " › " + n.category;
+        var newKeys = ch.cats[1].map(catKey_), oldKeys = ch.cats[0].map(catKey_);
+        ch.cats[0].forEach(function(o) {
+          if (newKeys.indexOf(catKey_(o)) !== -1) return;
+          var n = ch.cats[1].filter(function(x) { return x.part === o.part && oldKeys.indexOf(catKey_(x)) === -1; })[0];
+          var k = n ? o.part + " › " + o.category + "  →  " + n.part + " › " + n.category
+                    : o.part + " › " + o.category + "  →  ตัดออก (ซ้ำกับหมวดของหน่วยนั้น)";
           catMap[k] = (catMap[k] || 0) + 1;
         });
       }

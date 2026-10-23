@@ -140,11 +140,14 @@ function cleanCatList_(list) {
 /**
  * จัดหมวดหน่วยงานอัตโนมัติ: หน่วยงานที่เพิ่มเข้ามา → เพิ่มหมวดชื่อหน่วยนั้น (หมวดย่อยชั่วคราว) · หน่วยงานที่เอาออก → เอาหมวดหน่วยนั้นออก
  * (เหลืออย่างน้อย 1 หมวดเสมอ) ไม่แตะหมวดอื่น
+ * NSO เป็นสังกัดซ้อนของพยาบาลทุกหน่วย: "ER / NSO" ได้หมวด ER อย่างเดียว · ได้หมวด NSO เมื่อเป็นตัวชี้วัดของฝ่ายการพยาบาล (หน่วยงาน NSO อย่างเดียว)
  */
 function syncUnitCats_(cats, oldDepts, newDepts) {
   var out = cats.filter(function(c) { return !(oldDepts.indexOf(c.part) !== -1 && newDepts.indexOf(c.part) === -1); });
   if (out.length === 0) out = cats.slice();
+  var nsoNested = newDepts.some(function(d) { return d !== NURSING_UNIT_NAME; });
   newDepts.forEach(function(d) {
+    if (d === NURSING_UNIT_NAME && nsoNested) return;
     if (oldDepts.indexOf(d) === -1 && !out.some(function(c) { return c.part === d; })) {
       out.push({ part: d, category: UNIT_CATS_PLACEHOLDER });
     }
@@ -300,7 +303,7 @@ function saveKpi(token, fy, item) {
     if (perm.editDetails && !deptAfter && ownerAfter) deptAfter = deptsOfOwners_(ownerAfter).join(" / ");
     if (deptAfter !== old.department) {
       var baseCats = newCats || old.cats;
-      var syncedCats = syncUnitCats_(baseCats, parseDepts_(old.department), parseDepts_(deptAfter));
+      var syncedCats = tidyFillPlaceholders_(syncUnitCats_(baseCats, parseDepts_(old.department), parseDepts_(deptAfter)), item.name || old.name);
       if (syncedCats.map(catKey_).join("\n") !== baseCats.map(catKey_).join("\n")) newCats = syncedCats;
     }
     var coreAfter = (newCats || old.cats).some(function(c) { return isCorePart_(c.part); });
@@ -545,8 +548,10 @@ function addIndicator(token, fy, newItem) {
     if (!privileged && !(newItem.department || "").toString().trim()) newItem.department = user.depts.join(" / ");
     // ช่องหน่วยงานยังว่าง แต่ระบุผู้รับผิดชอบ → ใช้หน่วยงานของผู้รับผิดชอบ
     if (!(newItem.department || "").toString().trim() && newItem.owner) newItem.department = deptsOfOwners_(newItem.owner).join(" / ");
-    // จัดหมวดหน่วยงานให้อัตโนมัติตามหน่วยงานของตัวชี้วัด (หมวดย่อยชั่วคราว "รอจัดหมวดย่อย")
-    cats = syncUnitCats_(cats, [], parseDepts_(newItem.department));
+    // จัดหมวดหน่วยงานให้อัตโนมัติตามหน่วยงานของตัวชี้วัด แล้วเลือกมิติ (1–5) ให้ตามหมวด HA/ชื่อตัวชี้วัด
+    cats = tidyFillPlaceholders_(syncUnitCats_(cats, [], parseDepts_(newItem.department)), newItem.name);
+    newItem.part = cats[0].part;
+    newItem.category = cats[0].category;
     // ผู้เพิ่มต้องเห็นตัวชี้วัดที่ตัวเองเพิ่ม (เช่น ผอ. เพิ่มได้เฉพาะ Part I–IV ระดับ SAR/QA)
     var probe = { part: newItem.part, category: newItem.category, cats: cats, owner: newItem.owner || "", department: newItem.department || "", levels: newLevels };
     if (!getKpiPermission_(user, probe, fy).view) {

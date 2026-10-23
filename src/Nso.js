@@ -92,7 +92,7 @@ function nsoMapRow_(row) {
   levels = sortLevels_(levels);
   var category = nsoStr_(row[3]) || partLabel || "ทั่วไป";
   var cats = [{ part: up.unit, category: category }];
-  if (up.unit !== NSO_UNIT) cats.push({ part: NSO_UNIT, category: partLabel || "ทั่วไป" });
+  // NSO เป็นสังกัดซ้อน: ตัวชี้วัดของหอผู้ป่วยอยู่ในหมวดของหอนั้น ไม่ต้องมีหมวด NSO ซ้ำ (เหลือหมวด NSO เฉพาะตัวของฝ่าย)
   depts.forEach(function(d) { if (d !== up.unit && d !== NSO_UNIT) cats.push({ part: d, category: UNIT_CATS_PLACEHOLDER }); });
   var years = [], months = [];
   for (var i = 0; i < 5; i++) years.push(cleanValue_(row[6 + i]));

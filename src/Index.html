@@ -2517,7 +2517,8 @@
         ${sec('ตัวอย่างการย้ายรายละเอียด → ที่มา/สูตร', (rep.samples.details || []).length, ul(rep.samples.details || [], x => '<b>' + short(x.name, 50) + '</b><br><span style="color:#0369a1;">ย้าย: ' + short(x.moved, 140) + '</span>' + (x.keep ? '<br><span style="color:#15803d;">คงไว้ (การวิเคราะห์): ' + short(x.keep, 100) + '</span>' : '')))}
         ${sec('ตัวอย่างชื่อที่ตัดเลข', rep.samples.names.length, ul(rep.samples.names, x => '<span style="color:#64748b;">' + short(x.from) + '</span> → <b>' + short(x.to) + '</b>'))}
         ${sec('ตัวย่อย → ตัวแม่ (ตัวอย่าง)', rep.samples.parents.length, ul(rep.samples.parents, x => '↳ ' + short(x.child, 45) + ' <span style="color:#64748b;">ของ</span> ' + short(x.parent, 45)))}
-        ${sec('การย้ายหมวดย่อยที่พบบ่อย (หน่วยงาน › หมวดเดิม → มิติ)', rep.samples.cats.length, ul(rep.samples.cats, x => esc(x.map) + ' · ' + x.n + ' ตำแหน่ง'))}
+        ${sum('nso') ? `<div class="hint" style="margin:6px 0 0;">หมวด NSO: ตัด "NSO › หน่วย" ที่ซ้ำกับหมวดของหน่วยนั้นออก เหลือเฉพาะตัวชี้วัดของฝ่ายการพยาบาล จัดเป็น 5 มิติ (${sum('nso')} ตำแหน่ง ทุกปีงบ)</div>` : ''}
+        ${sec('การปรับหมวดที่พบบ่อย (หน่วยงาน › หมวดเดิม → ใหม่)', rep.samples.cats.length, ul(rep.samples.cats, x => esc(x.map) + ' · ' + x.n + ' ตำแหน่ง'))}
         ${sec('ผู้รับผิดชอบที่แปลงชื่อ', rep.samples.owners.length, ul(rep.samples.owners, x => esc(x.id) + ': ' + esc(x.from) + ' → <b>' + esc(x.to) + '</b>'))}
         ${sec('เอาระดับ QA ออก (ปีงบปัจจุบัน — ติ๊กเกินโดยไม่ตั้งใจ)', rep.samples.levels.length, ul(rep.samples.levels, x => short(x.name) + ': ' + esc(x.from) + ' → <b>' + esc(x.to) + '</b>'))}
         ${sec('บัญชีผู้ใช้', rep.usersMerge.length + rep.usersDelete.length, ul(rep.usersMerge.map(m => ({ t: '🔀 รวม ' + esc(m.from) + ' → <b>' + esc(m.to) + '</b> (หน่วยงาน ' + esc(m.depts) + ')' })).concat(rep.usersDelete.map(d => ({ t: '🗑️ ลบบัญชี ' + esc(d) }))), x => x.t))}`;
