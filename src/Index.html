@@ -281,6 +281,7 @@
     table.pr-table th { background: #dcfce7; color: #14532d; border: 1px solid #94a3b8; padding: 2px 3px; font-size: inherit; white-space: normal; position: static; }
     table.pr-table td { border: 1px solid #cbd5e1; padding: 2px 2px; font-size: inherit; text-align: center; white-space: nowrap; }
     table.pr-table td.pr-left { text-align: left; white-space: normal; word-break: break-word; }
+    table.pr-table td.pr-subkpi { padding-left: 14px; }
     table.pr-table td.pr-target { background: #fef3c7; font-weight: 700; }
     table.pr-table tr { break-inside: avoid; }
     .pr-block { break-inside: avoid; border: 1px solid #94a3b8; border-left: 5px solid #166534; border-radius: 4px; padding: 6px 10px; margin: 8px 0; }
@@ -911,9 +912,70 @@
       return list.filter(x => !seen.has(x.id) && seen.add(x.id));
     }
 
+    // ลำดับที่ในหมวด: ตัวหลักรันเลข 1, 2, 3 … ตัวย่อยได้เลขย่อยต่อจากตัวแม่ (4.1, 4.2, 4.1.1)
+    // คิดจากตัวชี้วัดทั้งหมดของหมวด (ไม่ขึ้นกับตัวกรอง) เลขจึงคงที่ · คำนวณใหม่เมื่อข้อมูลเปลี่ยน (dbVersion)
+    let dbVersion = 0, kpiNoCache = null, kpiNoDb = null, kpiNoVer = -1;
     function kpiNumber(kpi) {
-      const same = globalDatabase.filter(k => kpiCats(k).some(c => c.part === kpi.part && c.category === kpi.category));
-      return same.findIndex(k => k.id === kpi.id) + 1;
+      if (kpiNoDb !== globalDatabase || kpiNoVer !== dbVersion) {
+        kpiNoCache = new Map(); kpiNoDb = globalDatabase; kpiNoVer = dbVersion;
+        const blocks = {};
+        globalDatabase.forEach(k => placementsOf(k).forEach(p => { const c = p.part + '||' + p.category; (blocks[c] = blocks[c] || []).push(p); }));
+        Object.keys(blocks).forEach(c => {
+          const nums = new Map(), kidCount = new Map();
+          let root = 0;
+          arrangeBlock(blocks[c]).forEach(p => {
+            const pno = p.depth ? nums.get(p.parentId) : '';
+            let no;
+            if (pno) { const n = (kidCount.get(p.parentId) || 0) + 1; kidCount.set(p.parentId, n); no = pno + '.' + n; }
+            else no = String(++root);
+            nums.set(p.id, no);
+            kpiNoCache.set(c + '||' + p.id, no);
+          });
+        });
+      }
+      return kpiNoCache.get(kpi.part + '||' + kpi.category + '||' + kpi.id) || '';
+    }
+    // เลขหน้าชื่อ: ตัวหลัก "4." · ตัวย่อย "4.1"
+    function kpiNoLabel(kpi) {
+      const no = kpiNumber(kpi);
+      return !no || no.indexOf('.') !== -1 ? no : no + '.';
+    }
+    // "ข้อ 4. ชื่อตัวแม่" (ตัวแม่อยู่หมวดอื่น = ไม่มีเลข)
+    function parentLabel(k) {
+      const p = globalDatabase.find(x => x.id === k.parentId);
+      if (!p) return '';
+      const no = kpiNoLabel({ part: k.part, category: k.category, id: p.id });
+      return (no ? 'ข้อ ' + no + ' ' : '') + p.name;
+    }
+    // ตัวที่เลือกเป็นตัวชี้วัดแม่ได้: อยู่หมวดเดียวกัน ไม่ใช่ตัวเอง/ตัวย่อยของตัวเอง และซ้อนรวมแล้วไม่เกิน 2 ชั้น
+    function parentChoices(kpi) {
+      const byId = new Map(globalDatabase.map(k => [k.id, k]));
+      const kids = {};
+      globalDatabase.forEach(k => { if (k.parentId && byId.has(k.parentId)) (kids[k.parentId] = kids[k.parentId] || []).push(k.id); });
+      const below = (id, d) => d > 5 ? d : (kids[id] || []).reduce((m, c) => Math.max(m, 1 + below(c, d + 1)), 0);
+      const banned = new Set([kpi.id]);
+      const ban = id => (kids[id] || []).forEach(c => { if (!banned.has(c)) { banned.add(c); ban(c); } });
+      ban(kpi.id);
+      const levelOf = id => { let l = 0, cur = byId.get(id), g = 0; while (cur && cur.parentId && byId.has(cur.parentId) && g++ < 50) { l++; cur = byId.get(cur.parentId); } return l; };
+      const room = 2 - 1 - below(kpi.id, 0); // ชั้นสูงสุดของตัวแม่ที่ยังใส่ได้
+      const groups = [];
+      kpiCats(kpi).forEach(c => {
+        const opts = globalDatabase
+          .filter(k => !banned.has(k.id) && kpiCats(k).some(x => x.part === c.part && x.category === c.category) && levelOf(k.id) <= room)
+          .map(k => ({ id: k.id, name: k.name, no: kpiNumber({ part: c.part, category: c.category, id: k.id }) }))
+          .sort((a, b) => { const x = a.no.split('.').map(Number), y = b.no.split('.').map(Number); for (let i = 0; i < Math.max(x.length, y.length); i++) { const d = (x[i] || 0) - (y[i] || 0); if (d) return d; } return 0; });
+        if (opts.length) groups.push({ label: c.part + ' › ' + c.category, opts: opts });
+      });
+      return groups;
+    }
+    function parentSelectHtml(kpi) {
+      const seen = new Set();
+      const groups = parentChoices(kpi).map(g => {
+        const opts = g.opts.filter(o => !seen.has(o.id) && seen.add(o.id));
+        return opts.length ? `<optgroup label="${esc(g.label)}">${opts.map(o => `<option value="${esc(o.id)}" ${o.id === kpi.parentId ? 'selected' : ''}>${esc(o.no)}${o.no.indexOf('.') === -1 ? '.' : ''} ${esc(prShort(o.name, 70))}</option>`).join('')}</optgroup>` : '';
+      }).join('');
+      const missing = kpi.parentId && !seen.has(kpi.parentId) ? `<option value="${esc(kpi.parentId)}" selected>(ตัวแม่เดิม ${esc(kpi.parentId)})</option>` : '';
+      return `<select id="ed-parent" class="editable-input"><option value="">— ไม่ใช่ตัวย่อย (ตัวชี้วัดหลัก รันเลขต่อกัน) —</option>${missing}${groups}</select>`;
     }
 
     // เหตุผลที่ช่องนั้นแก้ไม่ได้ (แสดงเมื่อเอาเมาส์ไปชี้ช่องที่ล็อก)
@@ -1687,7 +1749,7 @@
             item.dataset.key = kpi.key;
             item.title = kpi.name + (kpiCats(kpi).length > 1 ? '\n(ตัวชี้วัดเดียวกันอยู่ใน ' + kpiCats(kpi).length + ' หมวด)' : '');
             const stt = kpiStatus(kpi);
-            item.innerHTML = `<span class="st-dot ${stt.level}" title="${esc(stt.label + (stt.reasons.length ? ': ' + stt.reasons.join(' · ') : ''))}"></span><span class="kpi-link-text"><b class="kn">${kpi.depth ? '↳' : kpiNumber(kpi) + '.'}</b> ${esc(kpi.name)}</span>${kpiCats(kpi).length > 1 ? '<span class="multi-cat" title="ตัวชี้วัดเดียวกัน อยู่หลายหมวด">🔗</span>' : ''}`;
+            item.innerHTML = `<span class="st-dot ${stt.level}" title="${esc(stt.label + (stt.reasons.length ? ': ' + stt.reasons.join(' · ') : ''))}"></span><span class="kpi-link-text"><b class="kn">${kpiNoLabel(kpi)}</b> ${esc(kpi.name)}</span>${kpiCats(kpi).length > 1 ? '<span class="multi-cat" title="ตัวชี้วัดเดียวกัน อยู่หลายหมวด">🔗</span>' : ''}`;
             item.onclick = (e) => { e.stopPropagation(); selectKpi(kpi.id, kpi.key); };
             catContent.appendChild(item);
           });
@@ -1911,7 +1973,7 @@
 
       const nameHtml = canDet
         ? `<textarea id="ed-name" class="editable-input" rows="2" style="font-weight:700; font-size:15px;">${esc(kpi.name)}</textarea>`
-        : `${kpiNumber(kpi)}. ${esc(kpi.name)}`;
+        : `${kpiNoLabel(kpi)} ${esc(kpi.name)}`;
       const targetHtml = canDet
         ? `🎯 ค่าเป้าหมาย: <input type="text" id="ed-target" class="editable-input" value="${esc(kpi.target)}" style="width: 160px; display: inline-block;">`
         : `🎯 ค่าเป้าหมาย: ${esc(kpi.target) || '-'}`;
@@ -1950,6 +2012,9 @@
              <button type="button" class="btn btn-secondary btn-sm" style="margin-top:4px;" onclick="addCatRow('ed-cats')">➕ เพิ่มหมวด</button>
              ${priv ? '' : '<div class="hint">เพิ่มได้เฉพาะหมวดที่ตั้งชื่อเอง · หมวด Part I–IV ให้ admin / ผอ. / QMR เป็นผู้ดูแล</div>'}
            </div>
+           <div class="form-group" style="${priv ? '' : 'margin-bottom:0;'}"><label>เป็นตัวชี้วัดย่อยของ <span class="hint" style="margin:0;">(ได้ลำดับย่อยต่อจากตัวแม่ เช่น 4.1, 4.2 · เลือกได้เฉพาะตัวในหมวดเดียวกัน)</span></label>
+             ${parentSelectHtml(kpi)}
+           </div>
            ${priv ? `<div class="form-group" style="margin-bottom:0;"><label>ระดับตัวชี้วัด (เลือกได้หลายระดับ — แสดงระดับสูงสุด)</label><div class="level-checks">${levelCheckboxesHtml('ed-level-cb', kpi.levels || [kpi.level])}</div></div>` : ''}`
         : `<p style="font-weight:700; color:#1e293b;">${esc(kpi.owner) || '-'} (${esc(kpi.department) || '-'})</p>`;
 
@@ -1964,7 +2029,7 @@
               <span class="st-badge ${stt.level}">${stt.icon} ${stt.label}</span>
               <span class="meta-badge">หมวดหมู่: ${esc(kpi.category)}</span>
               ${kpi.group ? `<span class="meta-badge group-badge" title="หัวข้อกลุ่มในหมวด">📂 ${esc(kpi.group)}</span>` : ''}
-              ${kpi.parentId && globalDatabase.some(x => x.id === kpi.parentId) ? `<span class="meta-badge parent-badge" data-pid="${esc(kpi.parentId)}" onclick="goToParent(this)" title="กดเพื่อไปที่ตัวชี้วัดแม่">↳ ตัวย่อยของ: ${esc(globalDatabase.find(x => x.id === kpi.parentId).name)}</span>` : ''}
+              ${kpi.parentId && globalDatabase.some(x => x.id === kpi.parentId) ? `<span class="meta-badge parent-badge" data-pid="${esc(kpi.parentId)}" onclick="goToParent(this)" title="กดเพื่อไปที่ตัวชี้วัดแม่">↳ ตัวย่อยของ ${esc(parentLabel(kpi))}</span>` : ''}
               ${kpiCats(kpi).length > 1 ? `<span class="meta-badge multi-badge" title="ตัวชี้วัดเดียวกัน แก้ที่หมวดไหนก็เปลี่ยนทุกหมวด">🔗 อยู่ใน ${kpiCats(kpi).length} หมวด: ${esc(kpiCats(kpi).map(c => c.part + ' › ' + c.category).join(' · '))}</span>` : ''}
               <span class="meta-badge" title="ทุกระดับ: ${esc((kpi.levels || [kpi.level]).join(', '))}">ระดับ: ${esc(kpi.level)}${(kpi.levels || []).length > 1 ? ' (+' + (kpi.levels.length - 1) + ')' : ''}</span>
               <span class="meta-badge">ปีงบ: ${selectedFy}${selectedFy === currentFy ? ' (ปัจจุบัน)' : ''}</span>
@@ -1993,12 +2058,12 @@
             <div class="card-right"><div class="card-right-inner">
               <div class="info-card clip-box">
                 <div class="info-card-title">📝 รายละเอียด/การวิเคราะห์ตัวชี้วัด</div>
-                ${ed ? (canDet ? `<textarea id="ed-details" class="editable-input" rows="8">${esc(kpi.templateDetails)}</textarea>` : lockWrap(`<textarea id="ed-details" class="editable-input" rows="8" readonly>${esc(kpi.templateDetails)}</textarea>`, whyNoDetails()))
+                ${ed ? (canDet ? `<textarea id="ed-details" class="editable-input" rows="8" placeholder="ผลการวิเคราะห์: แนวโน้มของผล สาเหตุ ปัญหา/อุปสรรค แนวทางพัฒนา (นิยาม สูตร แหล่งข้อมูล ให้ใส่ช่อง &quot;ที่มาแหล่งข้อมูล / สูตรคำนวณ&quot;)">${esc(kpi.templateDetails)}</textarea>` : lockWrap(`<textarea id="ed-details" class="editable-input" rows="8" readonly>${esc(kpi.templateDetails)}</textarea>`, whyNoDetails()))
                      : `<p>${esc(kpi.templateDetails) || 'ไม่มีข้อมูลรายละเอียดเพิ่มเติม'}</p>`}
               </div>
               <div class="info-card clip-box">
                 <div class="info-card-title">🔗 ที่มาแหล่งข้อมูล / สูตรคำนวณ</div>
-                ${ed ? (canDet ? `<textarea id="ed-source" class="editable-input" rows="6">${esc(kpi.dataSource)}</textarea>` : lockWrap(`<textarea id="ed-source" class="editable-input" rows="6" readonly>${esc(kpi.dataSource)}</textarea>`, whyNoDetails()))
+                ${ed ? (canDet ? `<textarea id="ed-source" class="editable-input" rows="6" placeholder="นิยาม · ตัวตั้ง (A) / ตัวหาร (B) · สูตรคำนวณ · แหล่งข้อมูล / วิธีเก็บข้อมูล">${esc(kpi.dataSource)}</textarea>` : lockWrap(`<textarea id="ed-source" class="editable-input" rows="6" readonly>${esc(kpi.dataSource)}</textarea>`, whyNoDetails()))
                      : `<p>${esc(kpi.dataSource) || 'ไม่ระบุที่มาข้อมูล'}</p>`}
                 ${ed && !canDet ? `<div class="hint">${esc(whyNoDetails())}</div>` : ''}
               </div>
@@ -2199,6 +2264,7 @@
         p.owner = getVal('ed-owner');
         p.department = getVal('ed-dept');
         if (document.getElementById('ed-cats')) p.cats = readCatRows('ed-cats');
+        if (document.getElementById('ed-parent')) p.parentId = getVal('ed-parent');
       }
       if (isPrivilegedUser()) {
         if (document.querySelector('.ed-level-cb')) p.levels = checkedLevels('ed-level-cb');
@@ -2298,12 +2364,14 @@
           if (selectedFy !== reqFy) { showToast('✅ ' + res.message); return; } // เปลี่ยนปีงบระหว่างรอ: ไม่เอาข้อมูลปีเก่ามาใส่ปีใหม่
           const idx = globalDatabase.findIndex(k => k.id === res.kpi.id);
           const oldCatKeys = idx !== -1 ? kpiCats(globalDatabase[idx]).map(c => c.part + '||' + c.category).join('\n') : '';
+          const parentMoved = idx !== -1 && (globalDatabase[idx].parentId || '') !== (res.kpi.parentId || '');
           if (idx !== -1) globalDatabase[idx] = res.kpi;
+          dbVersion++; // เลขลำดับ (4.1 ฯลฯ) ต้องคำนวณใหม่
           // ล้างสถานะแก้ไขเฉพาะเมื่อยังแก้ตัวเดิมอยู่ (ถ้าไปแก้ตัวอื่นระหว่างรอ ไม่แตะ)
           if (editingId === reqId) { editingId = null; editingKey = null; editSnapshot = null; }
           updateDatalists();
           // หมวดเปลี่ยน → ตัวชี้วัดย้าย/เพิ่ม/หายจากบางหมวด ต้องวาดรายการใหม่ทั้งหมด
-          if (kpiCats(res.kpi).map(c => c.part + '||' + c.category).join('\n') !== oldCatKeys) renderList(); else rerenderCard(res.kpi.id);
+          if (parentMoved || kpiCats(res.kpi).map(c => c.part + '||' + c.category).join('\n') !== oldCatKeys) renderList(); else rerenderCard(res.kpi.id);
           renderTree();
           if (currentTab === 'progress') loadProgressSummary();
           showToast(res.changed ? '✅ ' + res.message : 'ℹ️ ' + res.message);
@@ -2442,8 +2510,10 @@
         <div style="font-weight:700; margin-bottom:6px;">${done ? '✅ ผลการจัดระเบียบ' : '🔍 ตัวอย่างก่อนจัดระเบียบ (ยังไม่เขียนข้อมูล)'} · ${fyLine}</div>
         ${rep.hasWork ? '' : '<div class="note" style="margin-bottom:8px;">ข้อมูลเป็นระเบียบอยู่แล้ว ไม่มีอะไรต้องแก้</div>'}
         <div style="display:flex; gap:8px; flex-wrap:wrap;">
-          ${box(sum('names'), 'ชื่อที่ตัดเลข (ทุกปีงบ)', '#16a34a')}${box(sum('parents'), 'ตัวย่อยที่ผูกกับตัวแม่', '#0e7490')}${box(sum('cats'), 'ตัวที่ปรับหมวด', '#7c3aed')}${box(sum('owners'), 'ผู้รับผิดชอบที่แปลงชื่อ', '#ca8a04')}${box(rep.usersMerge.length + rep.usersDelete.length, 'บัญชีผู้ใช้ที่รวม/ลบ', '#dc2626')}
+          ${box(sum('names'), 'ชื่อที่ตัดเลข (ทุกปีงบ)', '#16a34a')}${box(sum('parents'), 'ตัวย่อยที่ผูกกับตัวแม่', '#0e7490')}${box(sum('cats'), 'ตัวที่ปรับหมวด', '#7c3aed')}${box(sum('owners'), 'ผู้รับผิดชอบที่แปลงชื่อ', '#ca8a04')}${box(rep.usersMerge.length + rep.usersDelete.length, 'บัญชีผู้ใช้ที่รวม/ลบ', '#dc2626')}${box(sum('details'), 'รายละเอียดที่ย้ายนิยาม/สูตรไปช่องที่มา', '#0284c7')}${box(sum('digits'), 'ตัวที่แปลงเลขไทยเป็นเลขอารบิก', '#64748b')}
         </div>
+        ${sum('emptied') ? `<div class="hint" style="margin:6px 0 0;">หลังย้าย มี ${sum('emptied')} ตำแหน่ง (ทุกปีงบ) ที่ช่อง "รายละเอียด/การวิเคราะห์" ว่าง — ผู้รับผิดชอบต้องเขียนผลการวิเคราะห์ (สถานะจะแจ้ง "ยังไม่มีรายละเอียด/การวิเคราะห์")</div>` : ''}
+        ${sec('ตัวอย่างการย้ายรายละเอียด → ที่มา/สูตร', (rep.samples.details || []).length, ul(rep.samples.details || [], x => '<b>' + short(x.name, 50) + '</b><br><span style="color:#0369a1;">ย้าย: ' + short(x.moved, 140) + '</span>' + (x.keep ? '<br><span style="color:#15803d;">คงไว้ (การวิเคราะห์): ' + short(x.keep, 100) + '</span>' : '')))}
         ${sec('ตัวอย่างชื่อที่ตัดเลข', rep.samples.names.length, ul(rep.samples.names, x => '<span style="color:#64748b;">' + short(x.from) + '</span> → <b>' + short(x.to) + '</b>'))}
         ${sec('ตัวย่อย → ตัวแม่ (ตัวอย่าง)', rep.samples.parents.length, ul(rep.samples.parents, x => '↳ ' + short(x.child, 45) + ' <span style="color:#64748b;">ของ</span> ' + short(x.parent, 45)))}
         ${sec('การย้ายหมวดย่อยที่พบบ่อย (หน่วยงาน › หมวดเดิม → มิติ)', rep.samples.cats.length, ul(rep.samples.cats, x => esc(x.map) + ' · ' + x.n + ' ตำแหน่ง'))}
@@ -3077,16 +3147,17 @@
         <thead><tr><th>ที่</th><th>ตัวชี้วัด</th>${thMonthsNames.map(m => `<th>${m}</th>`).join('')}<th>สรุป</th></tr></thead><tbody>`;
       kpis.forEach(k => {
         const no = kpiNumber(k);
-        a += `<tr><td>${no}</td><td class="pr-left">${k.parentId ? '↳ ' : ''}${esc(k.name)}</td><td class="pr-target">${esc(k.target) || '-'}</td>${k.years.map(v => `<td>${prNum(v)}</td>`).join('')}</tr>`;
-        b += `<tr><td>${no}</td><td class="pr-left">${k.parentId ? '↳ ' : ''}${esc(prShort(k.name, landscape ? 40 : 18))}</td>${k.months.map(v => `<td>${prNum(v)}</td>`).join('')}<td>${calculateMonthlySummary(k.months, k.summaryMethod)}<br><span class="pr-method">${esc(k.summaryMethod || 'เฉลี่ย')}</span></td></tr>`;
+        const sub = no.indexOf('.') !== -1 ? ' pr-subkpi' : '';
+        a += `<tr><td>${no}</td><td class="pr-left${sub}">${esc(k.name)}</td><td class="pr-target">${esc(k.target) || '-'}</td>${k.years.map(v => `<td>${prNum(v)}</td>`).join('')}</tr>`;
+        b += `<tr><td>${no}</td><td class="pr-left${sub}">${esc(prShort(k.name, landscape ? 40 : 18))}</td>${k.months.map(v => `<td>${prNum(v)}</td>`).join('')}<td>${calculateMonthlySummary(k.months, k.summaryMethod)}<br><span class="pr-method">${esc(k.summaryMethod || 'เฉลี่ย')}</span></td></tr>`;
       });
       return a + '</tbody></table>' + b + '</tbody></table>';
     }
 
     function prBlock(k, opts, landscape) {
       const yl = [selectedFy - 4, selectedFy - 3, selectedFy - 2, selectedFy - 1, selectedFy];
-      let h = `<div class="pr-block"><div class="pr-kpi-title">${kpiNumber(k)}. ${esc(k.name)}</div>
-        <div class="pr-meta">หมวด: ${esc(k.category)}${k.group ? ' · หัวข้อ: ' + esc(k.group) : ''}${k.parentId && globalDatabase.some(x => x.id === k.parentId) ? ' · ตัวย่อยของ: ' + esc(globalDatabase.find(x => x.id === k.parentId).name) : ''} · ระดับ: ${esc(k.level)} · เป้าหมาย: <b>${esc(k.target) || '-'}</b> · ปีงบประมาณ ${selectedFy}</div>`;
+      let h = `<div class="pr-block"><div class="pr-kpi-title">${kpiNoLabel(k)} ${esc(k.name)}</div>
+        <div class="pr-meta">หมวด: ${esc(k.category)}${k.group ? ' · หัวข้อ: ' + esc(k.group) : ''}${k.parentId && globalDatabase.some(x => x.id === k.parentId) ? ' · ตัวย่อยของ ' + esc(parentLabel(k)) : ''} · ระดับ: ${esc(k.level)} · เป้าหมาย: <b>${esc(k.target) || '-'}</b> · ปีงบประมาณ ${selectedFy}</div>`;
       if (opts.chart) {
         h += `<div class="pr-chart">${generateSvgLineChart(k.years, k.target, yl)}</div>
           <table class="pr-table" style="font-size:${landscape ? '12pt' : '9.5pt'};"><thead><tr>${thMonthsNames.map(m => `<th>${m}</th>`).join('')}<th>สรุป</th></tr></thead>
@@ -3098,7 +3169,16 @@
       return h + '</div>';
     }
 
+    // เอกสารสรุปรายงาน (ตัวอย่างบนจอ + ตอนพิมพ์) ใช้เลขไทยทั้งฉบับ: แปลงเฉพาะตัวอักษรที่แสดง ไม่แตะแท็ก/แอตทริบิวต์/รหัสอักขระ (&#39;)
+    const TH_DIGITS = '๐๑๒๓๔๕๖๗๘๙';
+    function thaiDigitsHtml(html) {
+      return html.replace(/(<[^>]*>|&#?\w+;)|[0-9]/g, (m, keep) => keep || TH_DIGITS[m]);
+    }
+
     function buildPrintHtml(opts, landscape, limit) {
+      return thaiDigitsHtml(buildPrintHtmlRaw(opts, landscape, limit));
+    }
+    function buildPrintHtmlRaw(opts, landscape, limit) {
       const chosenAll = rptChosen();
       const chosen = uniqueById(chosenAll);
       const tree = {};

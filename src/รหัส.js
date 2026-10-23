@@ -196,6 +196,48 @@ function mergeCats_(user, perm, old, requested, levels) {
   return { cats: result, changed: changed };
 }
 
+/** เลขไทย → เลขอารบิก (ข้อมูลที่เก็บและแสดงบนเว็บใช้เลขอารบิก) */
+function arabicDigits_(s) {
+  return (s === null || s === undefined ? "" : s.toString()).replace(/[๐-๙]/g, function(c) { return String(c.charCodeAt(0) - 0x0E50); });
+}
+
+/**
+ * ตรวจการตั้งตัวชี้วัดแม่: ต้องอยู่ในชีตเดียวกัน ไม่ใช่ตัวเอง ไม่วนกัน อยู่หมวดเดียวกันอย่างน้อย 1 หมวด
+ * และซ้อนได้ไม่เกิน 2 ชั้น (4.1.1) — คืนข้อความผิดพลาด หรือ "" ถ้าใช้ได้
+ */
+function parentError_(data, id, parentId, cats) {
+  if (parentId === id) return "ตั้งตัวเองเป็นตัวชี้วัดแม่ไม่ได้";
+  var byId = {}, kids = {};
+  for (var i = 1; i < data.length; i++) {
+    var rid = data[i][0] ? data[i][0].toString().trim() : "";
+    if (!rid) continue;
+    byId[rid] = data[i];
+    var pid = data[i][PARENT_COL - 1] ? data[i][PARENT_COL - 1].toString().trim() : "";
+    if (pid) (kids[pid] = kids[pid] || []).push(rid);
+  }
+  if (!byId[parentId]) return "ไม่พบตัวชี้วัดแม่ในปีงบนี้";
+  var parent = rowToKpi_(byId[parentId]);
+  var mine = {};
+  cats.forEach(function(c) { mine[catKey_(c)] = 1; });
+  if (!parent.cats.some(function(c) { return mine[catKey_(c)]; })) return "ตัวชี้วัดแม่ต้องอยู่ในหมวดเดียวกันอย่างน้อย 1 หมวด";
+  // ชั้นของตัวแม่ (นับขึ้นไปจนถึงตัวหลัก) — ถ้าเจอตัวเองระหว่างทาง = วนกัน
+  var level = 0, cur = parentId, guard = 0;
+  while (guard++ < 50) {
+    var up = byId[cur] && byId[cur][PARENT_COL - 1] ? byId[cur][PARENT_COL - 1].toString().trim() : "";
+    if (!up || !byId[up]) break;
+    if (up === id) return "เลือกไม่ได้: ตัวที่เลือกเป็นตัวย่อยของตัวชี้วัดนี้อยู่แล้ว";
+    level++;
+    cur = up;
+  }
+  // ความลึกของตัวย่อยใต้ตัวนี้ (มีตัวย่อย = 1, มีตัวย่อยของตัวย่อย = 2)
+  var depthBelow = function(x, d) {
+    if (d > 5) return d;
+    return (kids[x] || []).reduce(function(m, k) { return Math.max(m, 1 + depthBelow(k, d + 1)); }, 0);
+  };
+  if (level + 1 + depthBelow(id, 0) > 2) return "ตัวชี้วัดย่อยซ้อนได้ไม่เกิน 2 ชั้น (เช่น 4.1 และ 4.1.1)";
+  return "";
+}
+
 /**
  * บันทึกตัวชี้วัดทีละตัวในปีงบที่เลือก (ผลลัพธ์ + รายละเอียดในครั้งเดียว) ส่วนที่ไม่ได้ส่งมา (undefined) จะไม่แตะ
  *  - years/months (ผลทั้งปี/รายเดือน): ต้องมีสิทธิ์กรอกผล; ช่องผลย้อนหลังที่มีชีตต้นทางล็อกไว้ให้ admin/ผอ./QMR
@@ -231,9 +273,15 @@ function saveKpi(token, fy, item) {
     var hasDetails = item.templateDetails !== undefined || item.dataSource !== undefined;
     if (hasResults && !perm.editResults) return { success: false, message: "ไม่มีสิทธิ์แก้ไขผลตัวชี้วัดนี้ในปีงบ " + fy };
     if (hasDetails && !perm.editDetails) return { success: false, message: "ไม่มีสิทธิ์แก้ไขรายละเอียดตัวชี้วัดนี้ในปีงบ " + fy };
-    var metaDiffers = ["name", "target", "owner", "department"].some(function(f) {
-      return item[f] !== undefined && item[f].toString().trim() !== (old[f] || "").toString().trim();
+    // ข้อความที่บันทึกใช้เลขอารบิกเสมอ (เลขไทยใช้เฉพาะตอนพิมพ์รายงาน) — เทียบหลังแปลงเลข จะได้ไม่นับว่าแก้ เมื่อต่างกันแค่ชนิดตัวเลข
+    ["name", "target", "templateDetails", "dataSource"].forEach(function(f) {
+      if (item[f] !== undefined && item[f] !== null) item[f] = arabicDigits_(item[f].toString());
     });
+    var metaDiffers = ["name", "target", "owner", "department"].some(function(f) {
+      return item[f] !== undefined && item[f].toString().trim() !== arabicDigits_((old[f] || "").toString().trim());
+    });
+    var parentChange = item.parentId !== undefined && (item.parentId || "").toString().trim() !== old.parentId;
+    if (parentChange && !perm.editDetails) return { success: false, message: "ไม่มีสิทธิ์กำหนดตัวชี้วัดแม่ของตัวชี้วัดนี้ในปีงบ " + fy };
     if (metaDiffers && !perm.editDetails) return { success: false, message: "ไม่มีสิทธิ์แก้ไขข้อมูลตัวชี้วัดนี้ในปีงบ " + fy };
     // ตรวจระดับก่อนเขียนข้อมูลใดๆ (หมวด Part I–IV ต้องมีระดับ SAR หรือ QA-หน่วยงาน)
     var levelList = item.levels !== undefined ? item.levels : (item.level !== undefined ? [item.level] : undefined);
@@ -258,6 +306,12 @@ function saveKpi(token, fy, item) {
     var coreAfter = (newCats || old.cats).some(function(c) { return isCorePart_(c.part); });
     if (newLevels.length > 0 && coreAfter && !hasHospitalLevel_(newLevels)) {
       return { success: false, message: "ตัวชี้วัดที่อยู่ในหมวด Part I–IV ต้องมีระดับ SAR หรือ QA-หน่วยงาน อย่างน้อย 1 ระดับ" };
+    }
+
+    var newParent = parentChange ? (item.parentId || "").toString().trim() : old.parentId;
+    if (parentChange && newParent) {
+      var perr = parentError_(data, old.id, newParent, newCats || old.cats);
+      if (perr) return { success: false, message: perr };
     }
 
     var row = rowIndex + 1;
@@ -287,7 +341,7 @@ function saveKpi(token, fy, item) {
     if (hasDetails) {
       var tpl = item.templateDetails !== undefined ? item.templateDetails : old.templateDetails;
       var src = item.dataSource !== undefined ? item.dataSource : old.dataSource;
-      var detailsChanged = (tpl || "").trim() !== old.templateDetails || (src || "").trim() !== old.dataSource;
+      var detailsChanged = (tpl || "").trim() !== arabicDigits_(old.templateDetails) || (src || "").trim() !== arabicDigits_(old.dataSource);
       if (detailsChanged) {
         changed = true;
         // บันทึกเวลาอัปเดตการวิเคราะห์ (ใช้ดูว่าปีงบนี้ได้ทบทวนรายละเอียดแล้วหรือยัง)
@@ -302,11 +356,11 @@ function saveKpi(token, fy, item) {
 
     // ชื่อ/เป้าหมาย/ผู้รับผิดชอบ/หน่วยงาน: ผู้ที่แก้รายละเอียดได้ (ผู้รับผิดชอบ/หัวหน้าหน่วยในปีงบปัจจุบัน หรือ admin/ผอ./QMR)
     if (perm.editDetails) {
-      if (item.name !== undefined && item.name.toString().trim() !== "" && item.name.toString().trim() !== old.name) {
+      if (item.name !== undefined && item.name.toString().trim() !== "" && item.name.toString().trim() !== arabicDigits_(old.name)) {
         sheet.getRange(row, 5).setValue(item.name.toString().trim());
         changed = true;
       }
-      if (item.target !== undefined && item.target.toString().trim() !== old.target) {
+      if (item.target !== undefined && item.target.toString().trim() !== arabicDigits_(old.target)) {
         sheet.getRange(row, 6).setValue(item.target.toString().trim());
         changed = true;
       }
@@ -318,6 +372,15 @@ function saveKpi(token, fy, item) {
         sheet.getRange(row, 27).setValue(deptAfter);
         changed = true;
       }
+    }
+
+    // ตัวชี้วัดแม่ (ตัวย่อยได้ลำดับย่อยต่อจากตัวแม่ เช่น 4.1)
+    if (parentChange) {
+      sheet.getRange(row, PARENT_COL).setNumberFormat("@").setValue(newParent);
+      if (!sheet.getRange(1, PARENT_COL).getValue()) {
+        sheet.getRange(1, PARENT_COL).setValue(PARENT_HEADER).setFontWeight("bold").setBackground("#e0f2fe").setHorizontalAlignment("center");
+      }
+      changed = true;
     }
 
     if (newCats) {
@@ -455,7 +518,10 @@ function addIndicator(token, fy, newItem) {
     }
     // หมวด: ส่งมาเป็นรายการ cats (หมวดแรก = หมวดหลัก) หรือ part/category เดี่ยวๆ แบบเดิม
     var cats = cleanCatList_(newItem.cats && newItem.cats.length ? newItem.cats : [{ part: newItem.part, category: newItem.category }]);
-    newItem.name = (newItem.name || "").toString().trim();
+    newItem.name = arabicDigits_((newItem.name || "").toString().trim());
+    ["target", "templateDetails", "dataSource"].forEach(function(f) {
+      if (newItem[f] !== undefined && newItem[f] !== null) newItem[f] = arabicDigits_(newItem[f].toString());
+    });
     if (cats.length === 0 || !newItem.name) {
       return { success: false, message: "กรุณาระบุ หมวดหลัก หมวดหมู่ย่อย และชื่อตัวชี้วัด" };
     }

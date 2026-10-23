@@ -63,6 +63,64 @@ function tidyNumOf_(name) {
   return num.replace(/^\.+|\.+$/g, "");
 }
 
+// ---------------------------------------------------------------- รายละเอียด → ที่มา/สูตร
+
+// ช่อง "รายละเอียด/การวิเคราะห์" เก็บเฉพาะผลการวิเคราะห์ · นิยาม/วัตถุประสงค์/เกณฑ์/ตัวตั้ง-ตัวหาร/สูตร/แหล่งข้อมูล ย้ายไปช่อง "ที่มาแหล่งข้อมูล/สูตรคำนวณ"
+// แยกทีละบรรทัด: บรรทัดหัวข้อเปลี่ยนโหมด บรรทัดที่ไม่มีหัวข้อใช้โหมดเดียวกับบรรทัดก่อนหน้า (เริ่มต้น = ย้าย)
+var TIDY_NOTE_LINE = /^ตัวย่อยของตัวชี้วัด รพ\. \(SAR\)/; // หมายเหตุที่ระบบใส่ตอนนำเข้า NSO — คงไว้
+var TIDY_DEF_LINE = /หมายถึง|^(?:คำนิยาม|คํานิยาม|นิยาม|คำจำกัดความ)/;
+var TIDY_ANALYSIS_HEAD = /^(?:ผลการวิเคราะห์|การวิเคราะห์|วิเคราะห์(?:ผล|ข้อมูล|ปัญหา|สาเหตุ|ถึง)?|ผลการดำเนินงาน|ผลการดำเนินการ|ผลการปฏิบัติงาน|สรุปผล|ปัญหา(?:และ)?(?:อุปสรรค)?|สาเหตุ|โอกาส(?:ใน(?:การ)?)?พัฒนา|แนวทาง(?:การ)?(?:แก้ไข|พัฒนา|ปรับปรุง)|ข้อเสนอแนะ|บทเรียน|จาก(?:การ)?(?:ทบทวน|วิเคราะห์|ดำเนินงาน|ติดตาม|สถิติ|ปัญหา))/;
+var TIDY_ANALYSIS_LINE = /^(?:จาก.{0,80})?พบว่า|^วันที่\s*[0-9]|คิดเป็น(?:ร้อยละ)?\s*[0-9]|ทั้งหมด\s*[0-9]+\s*(?:ครั้ง|ราย|คน)/;
+var TIDY_ANALYSIS_KPI = /^(?:แนวทาง(?:การ)?แก้ไข|โอกาส(?:ใน(?:การ)?)?พัฒนา)/; // ตัวชี้วัดที่ตัวมันเองคือแผนแก้ไข → รายละเอียดทั้งหมดเป็นการวิเคราะห์
+var TIDY_SPEC_HEAD = /^(?:วัตถุประสงค์|เป้าหมาย|เกณฑ์|กลุ่มเป้าหมาย|ประชากร|ตัวตั้ง|ตัวหาร|สูตร|วิธี(?:การ)?คำนวณ|การคำนวณ|แหล่ง(?:ข้อมูล|ที่มา)|ที่มา|วิธีการ(?:จัด)?เก็บ|การ(?:จัด)?เก็บข้อมูล|รายการข้อมูล|ระยะเวลา|ความถี่|หมายเหตุ|ตัวชี้วัด|[AB][0-9]?\s*[:=：])/;
+
+function tidyLineKey_(line) {
+  return line.replace(/^[\s"“”'*•·\-–>]+/, "").replace(/^\(?[0-9]{1,2}(?:\.[0-9]{1,2})*[.)]\s*/, "").trim();
+}
+
+// ข้อความที่ทั้งก้อนอยู่ในเครื่องหมายคำพูด (คัดลอกมาจาก Excel) → เอาเครื่องหมายคำพูดออก
+function tidyUnquote_(s) {
+  var t = s.trim();
+  if (t.length > 1 && t.charAt(0) === '"' && t.charAt(t.length - 1) === '"' && t.slice(1, -1).indexOf('"') === -1) return t.slice(1, -1).trim();
+  return t;
+}
+
+function tidyTidyText_(lines) {
+  return lines.join("\n").replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
+}
+
+function tidySquash_(s) { return s.replace(/\s+/g, ""); }
+
+/** แยกรายละเอียดเป็น { keep: ส่วนที่เป็นการวิเคราะห์ (คงไว้), move: ส่วนที่ต้องย้ายไปช่องที่มา/สูตร } */
+function tidySplitDetails_(details) {
+  var text = tidyUnquote_((details || "").toString());
+  var keep = [], move = [], mode = "move", lines = text.split("\n");
+  // รายงานผลการดำเนินงานทั้งฉบับ (มีหัวข้อผล/วิเคราะห์หลายจุด) → คงไว้ทั้งหมด ไม่ตัดแยกให้เสียเนื้อความ
+  var cues = lines.filter(function(l) { var k = tidyLineKey_(l); return k && (TIDY_ANALYSIS_HEAD.test(k) || TIDY_ANALYSIS_LINE.test(k)); }).length;
+  if (cues >= 5) return { keep: text, move: "" };
+  lines.forEach(function(line) {
+    var k = tidyLineKey_(line);
+    if (!k) { (mode === "keep" ? keep : move).push(""); return; }
+    if (TIDY_NOTE_LINE.test(k)) { keep.push(line); return; }
+    if (TIDY_DEF_LINE.test(k)) mode = "move";
+    else if (TIDY_ANALYSIS_HEAD.test(k) || TIDY_ANALYSIS_LINE.test(k)) mode = "keep";
+    else if (TIDY_SPEC_HEAD.test(k)) mode = "move";
+    (mode === "keep" ? keep : move).push(line);
+  });
+  return { keep: tidyTidyText_(keep), move: tidyTidyText_(move) };
+}
+
+/** รายละเอียด/ที่มาใหม่ (ไม่มีอะไรต้องย้าย = คืนค่าเดิม) · ส่วนที่มีอยู่ในช่องที่มาแล้วไม่ใส่ซ้ำ */
+function tidyMoveDetails_(details, source, name) {
+  var d = (details || "").toString(), s = (source || "").toString();
+  if (TIDY_ANALYSIS_KPI.test((name || "").toString().trim())) return { details: d, source: s };
+  var sp = tidySplitDetails_(d);
+  if (!sp.move) return { details: d, source: s };
+  var src = tidyUnquote_(s);
+  if (src && tidySquash_(src).indexOf(tidySquash_(sp.move)) !== -1) return { details: sp.keep, source: src };
+  return { details: sp.keep, source: src ? sp.move + "\n\n" + src : sp.move };
+}
+
 // ---------------------------------------------------------------- ผู้รับผิดชอบ
 
 /** ข้อความผู้รับผิดชอบ → แปลงชื่อเป็นมาตรฐาน (ไม่เปลี่ยนถ้าไม่มีอะไรต้องแปลง จึงไม่ปรับช่องว่าง/ตัวคั่นของข้อความเดิม) */
@@ -208,7 +266,7 @@ function tidyFindParents_(rows) {
  */
 function tidyComputeSheet_(rows, fy) {
   var parentOf = tidyFindParents_(rows);
-  var res = [], counts = { names: 0, owners: 0, parents: 0, cats: 0, groups: 0, levels: 0 };
+  var res = [], counts = { names: 0, owners: 0, parents: 0, cats: 0, groups: 0, levels: 0, details: 0, emptied: 0, digits: 0 };
   rows.forEach(function(row, index) {
     var id = (row[0] || "").toString().trim();
     if (!id) return;
@@ -219,6 +277,11 @@ function tidyComputeSheet_(rows, fy) {
 
     var newName = tidyStripName_(oldName.split("\n")[0]);
     if (oldName.indexOf("\n") !== -1) newName = newName + oldName.slice(oldName.indexOf("\n"));
+    newName = tidyAscii_(newName); // ตัวเลขบนเว็บใช้เลขอารบิก (เลขไทยใช้เฉพาะตอนพิมพ์รายงาน)
+    var oldTarget = row[5], newTarget = typeof oldTarget === "string" ? tidyAscii_(oldTarget) : oldTarget;
+    var oldDetails = (row[23] === null || row[23] === undefined ? "" : row[23]).toString();
+    var oldSource = (row[24] === null || row[24] === undefined ? "" : row[24]).toString();
+    var moved = tidyMoveDetails_(tidyAscii_(oldDetails), tidyAscii_(oldSource), newName);
     var newOwner = tidyOwnerText_(oldOwner);
     var placed = tidyPlaceCats_(oldCats, oldGroup);
     var newParent = oldParent || parentOf[id] || "";
@@ -236,8 +299,17 @@ function tidyComputeSheet_(rows, fy) {
     if (newParent !== oldParent) { changes.parent = [oldParent, newParent]; counts.parents++; }
     if (placed.group !== oldGroup) { changes.group = [oldGroup, placed.group]; counts.groups++; }
     if (newLevels !== oldLevels) { changes.levels = [oldLevels, newLevels]; counts.levels++; }
+    if (newTarget !== oldTarget) changes.target = [oldTarget, newTarget];
+    if (moved.details !== oldDetails) changes.details = [oldDetails, moved.details];
+    if (moved.source !== oldSource) changes.source = [oldSource, moved.source];
+    if (tidyAscii_(oldDetails) !== moved.details || tidyAscii_(oldSource) !== moved.source) {
+      counts.details++;
+      if (!moved.details.trim()) counts.emptied++;
+    }
+    if (/[๐-๙]/.test(oldName + oldDetails + oldSource + (typeof oldTarget === "string" ? oldTarget : ""))) counts.digits++;
     res.push({ index: index, id: id, changes: changes, changed: Object.keys(changes).length > 0,
-      next: { name: newName, owner: newOwner, cats: placed.cats, parent: newParent, group: placed.group, levels: newLevels } });
+      next: { name: newName, owner: newOwner, cats: placed.cats, parent: newParent, group: placed.group, levels: newLevels,
+        target: newTarget, details: moved.details, source: moved.source } });
   });
   return { rows: res, counts: counts };
 }
@@ -306,6 +378,9 @@ function tidyHasWork_(plan) {
   return any || !!(plan.users && (plan.users.merges.length || plan.users.deletes.length));
 }
 
+// ข้อความที่ขึ้นต้นด้วย = หรือ + ชีตจะตีเป็นสูตร → ใส่ ' นำหน้าให้เก็บเป็นข้อความ
+function tidyLiteral_(v) { return typeof v === "string" && /^[=+]/.test(v) ? "'" + v : v; }
+
 function tidyCatsText_(cats) { return cats.map(function(c) { return c.part + " | " + c.category; }).join("\n"); }
 
 /** เขียนผลที่วางแผนไว้ (เรียกในล็อกของผู้เรียก) opts.backup: สำรองชีตก่อน (ถ้ายังไม่มี) · opts.users: ปรับบัญชีผู้ใช้ด้วย */
@@ -316,19 +391,24 @@ function tidyApply_(plan, opts) {
   var logRows = [];
   plan.fys.forEach(function(f) {
     var changedRows = f.comp.rows.filter(function(r) { return r.changed; });
-    out.fys[f.fy] = { rows: changedRows.length, names: f.comp.counts.names, owners: f.comp.counts.owners, parents: f.comp.counts.parents, cats: f.comp.counts.cats, groups: f.comp.counts.groups, levels: f.comp.counts.levels };
+    var c0 = f.comp.counts;
+    out.fys[f.fy] = { rows: changedRows.length, names: c0.names, owners: c0.owners, parents: c0.parents, cats: c0.cats, groups: c0.groups, levels: c0.levels, details: c0.details, digits: c0.digits };
     if (changedRows.length === 0) return;
     if (opts.backup) {
-      var bname = "สำรองก่อนจัดระเบียบ " + fiscalSheetName_(f.fy);
+      // สำรองแยกตามรอบ: รอบแรก "จัดระเบียบ" · รอบย้ายรายละเอียด/ตัวเลข (เพิ่มภายหลัง) สำรองอีกชุดก่อนเขียน
+      var textRound = c0.details > 0 || c0.digits > 0;
+      var bname = "สำรองก่อน" + (textRound ? "ย้ายรายละเอียด " : "จัดระเบียบ ") + fiscalSheetName_(f.fy);
       if (!ss.getSheetByName(bname)) { var b = f.sheet.copyTo(ss); b.setName(bname); b.hideSheet(); }
     }
     var byIndex = {};
     f.comp.rows.forEach(function(r) { byIndex[r.index] = r; });
-    var colName = [], colOwner = [], colCD = [], colLevels = [], colExtra = [];
+    var colName = [], colOwner = [], colCD = [], colLevels = [], colExtra = [], colTarget = [], colText = [];
     f.rows.forEach(function(row, i) {
       var r = byIndex[i];
       var nx = r ? r.next : null;
       colName.push([nx ? nx.name : row[4]]);
+      colTarget.push([nx ? nx.target : row[5]]);
+      colText.push(nx ? [tidyLiteral_(nx.details), tidyLiteral_(nx.source)] : [row[23], row[24]]);
       colOwner.push([nx ? nx.owner : row[25]]);
       colCD.push(nx ? [nx.cats[0].part, nx.cats[0].category] : [row[2], row[3]]);
       colLevels.push([nx ? nx.levels : row[LEVEL_COLUMN - 1]]);
@@ -337,12 +417,14 @@ function tidyApply_(plan, opts) {
         Object.keys(r.changes).forEach(function(k) {
           var ch = r.changes[k];
           var o = k === "cats" ? tidyCatsText_(ch[0]) : ch[0], n = k === "cats" ? tidyCatsText_(ch[1]) : ch[1];
-          logRows.push([stamp, f.fy, r.id, k, o, n]);
+          logRows.push([stamp, f.fy, r.id, k, String(o).slice(0, 49000), String(n).slice(0, 49000)]);
         });
       }
     });
     var n = f.rows.length;
     f.sheet.getRange(2, 5, n, 1).setValues(colName);
+    f.sheet.getRange(2, 6, n, 1).setValues(colTarget);
+    f.sheet.getRange(2, 24, n, 2).setValues(colText);
     f.sheet.getRange(2, 26, n, 1).setValues(colOwner);
     f.sheet.getRange(2, 3, n, 2).setValues(colCD);
     f.sheet.getRange(2, LEVEL_COLUMN, n, 1).setValues(colLevels);
@@ -396,11 +478,11 @@ function tidyApply_(plan, opts) {
 
 /** สรุปแผนสำหรับแสดงในหน้าตั้งค่า (ตัดรายการยาวให้พอดี) */
 function tidySummary_(plan) {
-  var s = { fys: [], samples: { names: [], parents: [], owners: [], levels: [], cats: [], users: [] }, usersMerge: [], usersDelete: [], hasWork: tidyHasWork_(plan) };
+  var s = { fys: [], samples: { names: [], parents: [], owners: [], levels: [], cats: [], users: [], details: [] }, usersMerge: [], usersDelete: [], hasWork: tidyHasWork_(plan) };
   var catMap = {};
   plan.fys.forEach(function(f) {
     var c = f.comp.counts;
-    s.fys.push({ fy: f.fy, total: f.comp.rows.length, rows: f.comp.rows.filter(function(r) { return r.changed; }).length, names: c.names, owners: c.owners, parents: c.parents, cats: c.cats, groups: c.groups, levels: c.levels });
+    s.fys.push({ fy: f.fy, total: f.comp.rows.length, rows: f.comp.rows.filter(function(r) { return r.changed; }).length, names: c.names, owners: c.owners, parents: c.parents, cats: c.cats, groups: c.groups, levels: c.levels, details: c.details, emptied: c.emptied, digits: c.digits });
     if (f.fy !== plan.fys[plan.fys.length - 1].fy && plan.fys.length > 1) { /* แสดงตัวอย่างจากปีล่าสุดเท่านั้น */ }
   });
   var last = plan.fys[plan.fys.length - 1];
@@ -412,6 +494,8 @@ function tidySummary_(plan) {
       if (ch.name && s.samples.names.length < 14) s.samples.names.push({ id: r.id, from: ch.name[0], to: ch.name[1] });
       if (ch.parent && s.samples.parents.length < 14) s.samples.parents.push({ child: r.next.name, parent: nameOf[r.next.parent] || r.next.parent });
       if (ch.owner && s.samples.owners.length < 30) s.samples.owners.push({ id: r.id, from: ch.owner[0], to: ch.owner[1] });
+      var mvText = ch.details && s.samples.details.length < 12 ? tidySplitDetails_(tidyAscii_(ch.details[0])).move : "";
+      if (mvText) s.samples.details.push({ name: r.next.name, moved: mvText.slice(0, 160), keep: r.next.details.slice(0, 120) });
       if (ch.levels && s.samples.levels.length < 10) s.samples.levels.push({ id: r.id, name: r.next.name, from: ch.levels[0], to: ch.levels[1] });
       if (ch.cats) {
         ch.cats[0].forEach(function(o, i) {
