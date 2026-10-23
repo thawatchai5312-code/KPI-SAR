@@ -101,7 +101,8 @@ function getAllData(token, requestedFy) {
       if (!getKpiPermission_(user, kpi, fy).view) continue;
       allData.push(decorateKpi_(user, fy, kpi, sources));
     }
-    return { success: true, data: allData, fy: fy, currentFy: currentFy, years: years };
+    // ลำดับหมวดย่อยในมุมมองหน่วยงาน: หัวข้อของหน่วยตามลำดับในไฟล์ NSO
+    return { success: true, data: allData, fy: fy, currentFy: currentFy, years: years, headings: viewHeadings_() };
   } catch(e) {
     return { success: false, message: e.toString() };
   }
@@ -121,6 +122,7 @@ function decorateKpi_(user, fy, kpi, sources) {
   kpi.category = kpi.cats[0].category;
   // ผลทั้งปีของปีที่มีชีตต้นทางอยู่ (และมีตัวชี้วัดนี้) แก้ได้เฉพาะ admin, ผอ., QMR
   kpi.lockedYears = sources.map(function(m) { return !!(m && m[kpi.id]); });
+  kpi.pctOrder = viewPctOrder_(kpi.id); // ลำดับตามไฟล์ PCT (เรียงการ์ดในหมวด PCT) — ไม่ใช่ตัว PCT = null
   return kpi;
 }
 
@@ -138,21 +140,18 @@ function cleanCatList_(list) {
 }
 
 /**
- * จัดหมวดหน่วยงานอัตโนมัติ: หน่วยงานที่เพิ่มเข้ามา → เพิ่มหมวดชื่อหน่วยนั้น (หมวดย่อยชั่วคราว) · หน่วยงานที่เอาออก → เอาหมวดหน่วยนั้นออก
- * (เหลืออย่างน้อย 1 หมวดเสมอ) ไม่แตะหมวดอื่น
- * NSO เป็นสังกัดซ้อนของพยาบาลทุกหน่วย: "ER / NSO" ได้หมวด ER อย่างเดียว · ได้หมวด NSO เมื่อเป็นตัวชี้วัดของฝ่ายการพยาบาล (หน่วยงาน NSO อย่างเดียว)
+ * จัดหมวดหน่วยงานอัตโนมัติ: หน่วยงานที่เพิ่มเข้ามา → เพิ่มหมวดของหน่วยนั้น (หมวดย่อยชั่วคราว "รอจัดหมวดย่อย")
+ *   want.unit = หมวดหน่วยงาน ("ER") · want.qa = หมวด QA ("ER QA") — ไม่ส่ง want = หมวดหน่วยงาน
+ * หน่วยงานที่เอาออก → เอาหมวดของหน่วยนั้นออก (เหลืออย่างน้อย 1 หมวดเสมอ) ไม่แตะหมวดอื่น
+ * NSO เป็นสังกัดซ้อนของพยาบาลทุกหน่วย: "ER / NSO" ใช้หน่วย ER อย่างเดียว · ไม่มีหมวด NSO ในมุมมองหน่วยงาน
  */
-function syncUnitCats_(cats, oldDepts, newDepts) {
-  var out = cats.filter(function(c) { return !(oldDepts.indexOf(c.part) !== -1 && newDepts.indexOf(c.part) === -1); });
+function syncUnitCats_(cats, oldDepts, newDepts, want) {
+  // หน่วยที่ถูกเอาออก: เอาหมวดของหน่วยนั้นออกทั้งหมวดหน่วยงานและหมวด QA ("ER" และ "ER QA")
+  var gone = function(part) { var d = viewDeptOfPart_(part); return oldDepts.indexOf(d) !== -1 && newDepts.indexOf(d) === -1; };
+  var out = cats.filter(function(c) { return !gone(c.part); });
   if (out.length === 0) out = cats.slice();
-  var nsoNested = newDepts.some(function(d) { return d !== NURSING_UNIT_NAME; });
-  newDepts.forEach(function(d) {
-    if (d === NURSING_UNIT_NAME && nsoNested) return;
-    if (oldDepts.indexOf(d) === -1 && !out.some(function(c) { return c.part === d; })) {
-      out.push({ part: d, category: UNIT_CATS_PLACEHOLDER });
-    }
-  });
-  return out;
+  var added = viewUnitsOf_(newDepts).filter(function(d) { return oldDepts.indexOf(d) === -1; });
+  return viewBindCats_(out, added, want || { unit: true });
 }
 
 /** ผู้รับผิดชอบ (ชื่อผู้ใช้) → หน่วยงานที่สังกัดของคนเหล่านั้น (ไม่รวมผู้บริหาร) ใช้เติมช่องหน่วยงานที่ว่างอยู่ */
@@ -301,14 +300,31 @@ function saveKpi(token, fy, item) {
     var ownerAfter = perm.editDetails && item.owner !== undefined ? item.owner.toString().trim() : old.owner;
     var deptAfter = perm.editDetails && item.department !== undefined ? item.department.toString().trim() : old.department;
     if (perm.editDetails && !deptAfter && ownerAfter) deptAfter = deptsOfOwners_(ownerAfter).join(" / ");
-    if (deptAfter !== old.department) {
+    // หมวดผูกกับระดับและหน่วยงาน (Views.js): หน่วยที่เพิ่มได้หมวดชนิดเดียวกับที่มีอยู่ · ติ๊ก QA เพิ่ม = มีหมวด "<หน่วย> QA"
+    //   · เอา QA ออก = เอาหมวด QA ออก · ติ๊กหน่วยงาน/รายบุคคลเพิ่ม = มีหมวดของหน่วย
+    var levelsChanged = newLevels.length > 0 && newLevels.join(", ") !== old.levels.join(", ");
+    if (deptAfter !== old.department || levelsChanged) {
       var baseCats = newCats || old.cats;
-      var syncedCats = tidyFillPlaceholders_(syncUnitCats_(baseCats, parseDepts_(old.department), parseDepts_(deptAfter)), item.name || old.name);
-      if (syncedCats.map(catKey_).join("\n") !== baseCats.map(catKey_).join("\n")) newCats = syncedCats;
+      var kNew = viewLevelKinds_(newLevels.length > 0 ? newLevels : old.levels), kOld = viewLevelKinds_(old.levels);
+      var qaPl = baseCats.some(function(c) { return viewIsQaPart_(c.part); });
+      var unitPl = baseCats.some(function(c) { return !isCorePart_(c.part) && !viewIsQaPart_(c.part); });
+      var deptsAfter = parseDepts_(deptAfter);
+      var bound = syncUnitCats_(baseCats, parseDepts_(old.department), deptsAfter, { qa: kNew.qa && (qaPl || !unitPl), unit: unitPl || (kNew.unit && !qaPl) });
+      if (levelsChanged) {
+        if (kNew.qa && !kOld.qa) bound = viewBindCats_(bound, deptsAfter, { qa: true });
+        if (kNew.unit && (!kOld.unit || (kOld.qa && !kNew.qa))) bound = viewBindCats_(bound, deptsAfter, { unit: true });
+        if (kOld.qa && !kNew.qa) bound = viewBindCats_(bound, deptsAfter, { qa: false });
+      }
+      bound = viewFillPlaceholders_(bound, item.name || old.name);
+      if (bound.map(catKey_).join("\n") !== baseCats.map(catKey_).join("\n")) newCats = bound;
     }
-    var coreAfter = (newCats || old.cats).some(function(c) { return isCorePart_(c.part); });
+    var catsAfter = newCats || old.cats;
+    var coreAfter = catsAfter.some(function(c) { return isCorePart_(c.part); });
     if (newLevels.length > 0 && coreAfter && !hasHospitalLevel_(newLevels)) {
       return { success: false, message: "ตัวชี้วัดที่อยู่ในหมวด Part I–IV ต้องมีระดับ SAR หรือ QA-หน่วยงาน อย่างน้อย 1 ระดับ" };
+    }
+    if ((levelsChanged || newCats) && viewLevelKinds_(newLevels.length > 0 ? newLevels : old.levels).sar && !coreAfter) {
+      return { success: false, message: "ตัวชี้วัดระดับ SAR ต้องอยู่ในหมวด Part I–IV อย่างน้อย 1 หมวด (เลือกหมวด รพ.)" };
     }
 
     var newParent = parentChange ? (item.parentId || "").toString().trim() : old.parentId;
@@ -548,8 +564,12 @@ function addIndicator(token, fy, newItem) {
     if (!privileged && !(newItem.department || "").toString().trim()) newItem.department = user.depts.join(" / ");
     // ช่องหน่วยงานยังว่าง แต่ระบุผู้รับผิดชอบ → ใช้หน่วยงานของผู้รับผิดชอบ
     if (!(newItem.department || "").toString().trim() && newItem.owner) newItem.department = deptsOfOwners_(newItem.owner).join(" / ");
-    // จัดหมวดหน่วยงานให้อัตโนมัติตามหน่วยงานของตัวชี้วัด แล้วเลือกมิติ (1–5) ให้ตามหมวด HA/ชื่อตัวชี้วัด
-    cats = tidyFillPlaceholders_(syncUnitCats_(cats, [], parseDepts_(newItem.department)), newItem.name);
+    // หมวดผูกกับระดับ: QA-หน่วยงาน → "<หน่วย> QA › มิติ" · หน่วยงาน/รายบุคคล → "<หน่วย> › หัวข้อ/ขั้นตอน" (ที่ยังไม่ได้เลือกเอง ระบบจัดให้)
+    var kinds = viewLevelKinds_(newLevels);
+    cats = viewFillPlaceholders_(viewBindCats_(cats, parseDepts_(newItem.department), { qa: kinds.qa, unit: kinds.unit }), newItem.name);
+    if (kinds.sar && !cats.some(function(c) { return isCorePart_(c.part); })) {
+      return { success: false, message: "ตัวชี้วัดระดับ SAR ต้องเลือกหมวด รพ. (Part I–IV) อย่างน้อย 1 หมวด" };
+    }
     newItem.part = cats[0].part;
     newItem.category = cats[0].category;
     // ผู้เพิ่มต้องเห็นตัวชี้วัดที่ตัวเองเพิ่ม (เช่น ผอ. เพิ่มได้เฉพาะ Part I–IV ระดับ SAR/QA)

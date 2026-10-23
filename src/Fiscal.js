@@ -259,7 +259,8 @@ var NURSING_UNIT_NAME = "NSO";
 
 // เขียนชื่อฝ่ายการพยาบาลในข้อความหน่วยงานให้เป็น NSO ("ฝ่ายการพยาบาล" / "ฝ่ายการ")
 function renameNursingUnitText_(text) {
-  return (text || "").toString().replace(/ฝ่ายการพยาบาล/g, NURSING_UNIT_NAME).replace(/ฝ่ายการ(?!พยาบาล)/g, NURSING_UNIT_NAME);
+  // "ภาพรวมฝ่ายการพยาบาล QA" เป็นชื่อหมวดของมุมมอง QA ไม่ใช่ชื่อหน่วยงาน — ไม่เปลี่ยน
+  return (text || "").toString().replace(/(?<!ภาพรวม)ฝ่ายการพยาบาล/g, NURSING_UNIT_NAME).replace(/(?<!ภาพรวม)ฝ่ายการ(?!พยาบาล)/g, NURSING_UNIT_NAME);
 }
 
 /**

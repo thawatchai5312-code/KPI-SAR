@@ -481,6 +481,15 @@
     .cat-row .lock-wrap { display: flex; gap: 6px; align-items: center; width: 100%; }
     .cat-row .editable-input { margin: 0; flex: 1 1 0; min-width: 0; }
     .cat-row .cat-del { flex: none; padding: 5px 10px; }
+    .cat-row .cat-kind:empty { display: none; }
+    .lvc-row { display: flex; gap: 6px; align-items: center; margin-bottom: 6px; flex-wrap: wrap; }
+    .lvc-row .editable-input { margin: 0; flex: 1 1 140px; min-width: 0; }
+    .lvc-row select.lvc-part { flex: 0 0 auto; width: auto; }
+    .lvc-unit { font-weight: 700; font-size: 13px; color: #334155; min-width: 48px; }
+    .lvc-tag { flex: none; font-size: 11.5px; font-weight: 700; border-radius: 999px; padding: 2px 8px; white-space: nowrap; }
+    .lvc-tag.hosp { background: #e8f7ee; color: #166534; }
+    .lvc-tag.qa { background: #e0f4f8; color: #0e5a70; }
+    .lvc-tag.unit { background: #efe9ff; color: #5b21b6; }
 
     /* แยกสีหมวด: Part I–IV (ตัวชี้วัดโรงพยาบาล) = เขียว · หมวดอื่น (หน่วยงาน/ส่วนตัว) = ม่วง */
     .tree-section { display: flex; align-items: center; gap: 8px; font-size: 11.5px; font-weight: 800; letter-spacing: 0.2px; margin: 12px 2px 6px; }
@@ -522,11 +531,9 @@
     .view-tab[data-view="qa"].active .vt-count { color: #155e75; }
     .view-tab[data-view="unit"].active .vt-count { color: #5b21b6; }
     /* หัวข้อกลุ่มและตัวย่อยในแถบซ้าย */
-    .tree-group { font-size: 11.5px; font-weight: 800; color: #64748b; margin: 8px 0 2px; padding: 0 4px; }
     .kpi-link-item.child { padding-top: 5px; padding-bottom: 5px; font-size: 12.5px; }
     .kpi-link-item.child .kn { color: #94a3b8; }
     .meta-badge.parent-badge { background: #fef3c7; color: #92400e; cursor: pointer; }
-    .meta-badge.group-badge { background: #f1f5f9; color: #475569; }
     /* มุมมอง QA / การพยาบาล = โทนฟ้าอมเขียว */
     .tree-section.qa { color: #0e7490; }
     .accordion-part.qa > .accordion-header { background: #eaf7f9; border-color: #c4e6ec; color: #155e75; }
@@ -725,25 +732,10 @@
     <div class="modal-card" style="max-width: 500px;">
       <div class="modal-header">➕ เพิ่มตัวชี้วัดคุณภาพใหม่ (เพิ่มในปีงบที่เลือก ปีถัดไปจะตามมาเอง)</div>
       <div class="modal-body" style="max-height: 65vh; overflow-y: auto;">
-        <div class="form-group">
-          <label>หมวดหลัก (Part) *</label>
-          <input type="text" id="add-kpi-part" list="part-options" class="editable-input" placeholder="พิมพ์ชื่อหมวดใหม่ หรือเลือกจากรายการ">
-          <datalist id="part-options"></datalist>
-          <div class="hint">Part I–IV ใช้กับตัวชี้วัดระดับ SAR / QA เท่านั้น · ถ้าเป็นตัวชี้วัดของหน่วยงาน/รายบุคคล ให้ตั้งชื่อหมวดเอง (หมวดใหม่จะแสดงต่อท้าย Part I–IV)</div>
-        </div>
-        <div class="form-group">
-          <label>หมวดหมู่ย่อย (Category) *</label>
-          <input type="text" id="add-kpi-category" list="category-options" class="editable-input" placeholder="พิมพ์ชื่อหมวดหมู่ย่อยใหม่ หรือเลือกจากรายการ">
-          <datalist id="category-options"></datalist>
-        </div>
-        <div class="form-group">
-          <label>แสดงในหมวดอื่นด้วย (ไม่บังคับ — ตัวชี้วัดเดียวกัน แสดงได้หลายหมวด)</label>
-          <div id="add-kpi-extra-cats"></div>
-          <button type="button" class="btn btn-secondary btn-sm" onclick="addCatRow('add-kpi-extra-cats')">➕ เพิ่มอีกหมวด</button>
-        </div>
+        <datalist id="part-options"></datalist><datalist id="category-options"></datalist><datalist id="cat-options-dyn"></datalist>
         <div class="form-group">
           <label>ชื่อตัวชี้วัด (KPI Name) *</label>
-          <input type="text" id="add-kpi-name" class="editable-input" placeholder="กรอกชื่อตัวชี้วัด">
+          <input type="text" id="add-kpi-name" class="editable-input" placeholder="กรอกชื่อตัวชี้วัด" oninput="renderAddLevelCats()">
         </div>
         <div class="form-group">
           <label>ค่าเป้าหมาย (Target)</label>
@@ -758,12 +750,22 @@
           <input type="text" id="add-kpi-owner" class="editable-input">
         </div>
         <div class="form-group">
-          <label>หน่วยงาน</label>
-          <input type="text" id="add-kpi-dept" class="editable-input">
+          <label>หน่วยงาน (คั่นด้วย / เช่น ER / IPD)</label>
+          <input type="text" id="add-kpi-dept" class="editable-input" oninput="renderAddLevelCats()">
         </div>
         <div class="form-group">
-          <label>ระดับตัวชี้วัด (เลือกได้หลายระดับ — แสดงระดับสูงสุด)</label>
-          <div id="add-kpi-levels" class="level-checks"></div>
+          <label>ระดับตัวชี้วัด * (เลือกได้หลายระดับ — หมวดผูกกับระดับที่เลือก)</label>
+          <div id="add-kpi-levels" class="level-checks" onchange="renderAddLevelCats()"></div>
+        </div>
+        <div class="form-group">
+          <label>หมวดตามระดับ</label>
+          <div id="add-kpi-level-cats" class="level-cats"></div>
+          <div class="hint">🏥 SAR → หมวด รพ. Part I–IV › หมวด HA · 🩺 QA-หน่วยงาน → QA ของหน่วย › มิติที่ 1–5 · 🏷️ หน่วยงาน/รายบุคคล → หน่วยงาน › หัวข้อของหน่วย — ช่องที่เว้นว่าง ระบบเลือกหมวดย่อยให้ตามชื่อตัวชี้วัด</div>
+        </div>
+        <div class="form-group">
+          <label>แสดงในหมวดอื่นด้วย (ไม่บังคับ — เช่น PCT › กลุ่มโรค หรือหมวดที่ตั้งเอง)</label>
+          <div id="add-kpi-extra-cats"></div>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="addCatRow('add-kpi-extra-cats')">➕ เพิ่มอีกหมวด</button>
         </div>
         <div class="form-group">
           <label>ความถี่การเก็บข้อมูล</label>
@@ -843,8 +845,6 @@
     let globalDatabase = [];
     let currentTab = 'home';
     let selectedKpiId = null;
-    let selectedPartName = null;
-    let selectedCategoryName = null;
 
     let isAppUnlocked = false;
     let sessionToken = null;
@@ -1125,7 +1125,7 @@
       expandedCards.clear();
       currentPage = 1;
       globalDatabase = [];
-      selectedKpiId = null; selectedCategoryName = null; selectedPartName = null;
+      selectedKpiId = null;
       editingKey = null; selectedKey = null; pendingSelectAfterLoad = null; selectedFy = null;
       openParts.clear(); openCats.clear(); lastInViewKey = null;
       globalProgressData = [];
@@ -1223,6 +1223,7 @@
           }
           if (res.fy !== selectedFy) currentPage = 1;
           globalDatabase = res.data;
+          unitHeadings = res.headings || {};
           selectedFy = res.fy;
           currentFy = res.currentFy;
           fiscalYears = res.years;
@@ -1527,13 +1528,49 @@
     }
     function isCorePart(part) { return corePartRank(part) > 0; }
     function hasHospitalLevel(levels) { return (levels || []).some(l => l === 'SAR' || l === 'QA-หน่วยงาน'); }
+    // หมวดของมุมมอง QA เก็บเป็น "<หน่วย> QA" (แยกจากหมวดของหน่วยในมุมมองหน่วยงาน) — แสดงผลตัดคำว่า QA ออก
+    const QA_PART_RE = / QA$/;
+    const NSO_OVERALL = 'ภาพรวมฝ่ายการพยาบาล';
+    function isQaPart(part) { return QA_PART_RE.test(String(part || '')); }
+    function partLabel(part) { return String(part || '').replace(QA_PART_RE, ''); }
     function comparePartNames(a, b) {
       const ra = corePartRank(a), rb = corePartRank(b);
       if (ra && rb) return ra - rb || String(a).localeCompare(String(b), 'th');
       if (ra) return -1;
       if (rb) return 1;
+      const oa = partLabel(a) === NSO_OVERALL, ob = partLabel(b) === NSO_OVERALL; // ภาพรวมฝ่ายการพยาบาล ขึ้นก่อนหน่วยอื่นในมุมมอง QA
+      if (oa !== ob) return oa ? -1 : 1;
       return String(a).localeCompare(String(b), 'th');
     }
+
+    // ลำดับหมวดย่อย: PCT = กลุ่มโรคตามไฟล์ · QA = มิติที่ 1–5 · หน่วยงาน = หัวข้อของหน่วยตามไฟล์ NSO → ขั้นตอนการดูแล 13 หมวด → อื่นๆ ตามตัวอักษร
+    // (รายการเดียวกับ Views.js ฝั่งเซิร์ฟเวอร์)
+    const CARE_STAGES = ['การเข้าถึงบริการ', 'การคัดกรองและคัดแยก', 'การประเมินและวินิจฉัย', 'การวางแผนการดูแล', 'การดูแลรักษา',
+      'ความปลอดภัยและความเสี่ยง', 'การให้ข้อมูลและเสริมพลัง', 'การฟื้นฟูสภาพ', 'การดูแลต่อเนื่อง',
+      'การส่งเสริมสุขภาพและป้องกันโรค', 'ความพึงพอใจและข้อร้องเรียน', 'บุคลากรและการพัฒนา', 'การบริหารจัดการและประสิทธิภาพ'];
+    const PCT_GROUPS = ['STEMI', 'Stroke', 'การดูแลระยะกลาง (IMC)', 'Sepsis', 'DM', 'HT', 'CKD', 'TB', 'PPH',
+      'จิตเวช ซึมเศร้า/ฆ่าตัวตาย', 'จิตเวช SMIV', 'Head injury', 'Palliative care', 'วินิจฉัยคลาดเคลื่อน (9 มาตรฐาน)',
+      'การคัดแยกผู้ป่วย (9 มาตรฐาน)', 'ทบทวนผู้ป่วยอาการทรุดลง', 'การเสียชีวิตโดยไม่คาดคิด', 'ทบทวนผู้ป่วย Revisit / Re-admit',
+      'พลัดตกหกล้ม', 'ระบุตัวผู้ป่วยผิดพลาด', 'ให้เลือดผิดคนผิดหมู่', 'Med error', 'จริยธรรมและสิทธิผู้ป่วย'];
+    const QA_DIMS = ['มิติที่ 1 ด้านประสิทธิผลตามพันธกิจ', 'มิติที่ 2 ด้านคุณภาพการให้บริการ', 'มิติที่ 3 ด้านประสิทธิภาพของการปฏิบัติงาน',
+      'มิติที่ 4 ด้านการพัฒนาองค์กร', 'มิติที่ 5 ด้านการดูแลรายโรคและงานเฉพาะ'];
+    let unitHeadings = {};
+    function catRank(part, cat) {
+      if (isCorePart(part)) return 0;
+      if (part === 'PCT') { const g = PCT_GROUPS.indexOf(cat); if (g !== -1) return g; }
+      const d = /^มิติที่\s*([1-5])/.exec(cat);
+      if (d) return Number(d[1]);
+      const h = (unitHeadings[part] || []).indexOf(cat);
+      if (h !== -1) return 100 + h;
+      const st = CARE_STAGES.indexOf(cat);
+      if (st !== -1) return 1000 + st;
+      return 2000;
+    }
+    function compareCats(part, a, b) {
+      if (isCorePart(part)) return a < b ? -1 : a > b ? 1 : 0;
+      return catRank(part, a) - catRank(part, b) || String(a).localeCompare(String(b), 'th');
+    }
+    const catOrderOf = part => (a, b) => compareCats(part, a, b);
 
     // ---------- มุมมองแถบซ้าย: รพ. Part I–IV / QA-การพยาบาล / หน่วยงาน-ของฉัน ----------
     // แต่ละมุมมองแสดงตัวชี้วัดตัวละการ์ดใบเดียว (ไม่ซ้ำ) เริ่มต้น: staff/หัวหน้า = หน่วยงาน-ของฉัน · ผู้บริหาร/admin = รพ.
@@ -1546,14 +1583,12 @@
     let treeView = 'hosp';
 
     // หมวด (placement) ของตัวชี้วัดที่ขึ้นในมุมมองนั้น
+    // รพ. = หมวด Part I–IV · QA = หมวด "<หน่วย> QA" · หน่วยงาน = หมวดของหน่วย/PCT/หมวดที่ตั้งเอง
     function viewPlacements(k, view) {
       const ps = placementsOf(k);
       if (view === 'hosp') return ps.filter(p => isCorePart(p.part));
-      if (view === 'unit') return ps.filter(p => !isCorePart(p.part));
-      // qa: ตัวที่มีระดับ QA-หน่วยงาน — แยกตามหมวดหน่วยงาน (ไม่มีหมวดหน่วยงานให้ใช้หมวดแรกแทน ไม่ให้ตกหล่น)
-      if (!(k.levels || [k.level]).some(l => l === 'QA-หน่วยงาน')) return [];
-      const non = ps.filter(p => !isCorePart(p.part));
-      return non.length ? non : ps.slice(0, 1);
+      if (view === 'qa') return ps.filter(p => isQaPart(p.part));
+      return ps.filter(p => !isCorePart(p.part) && !isQaPart(p.part));
     }
 
     // ตัวชี้วัดที่ผ่านตัวกรอง เรียงแบบเดียวกับผังรายการ: หมวดหลัก → หมวดย่อย → ลำดับในชีต
@@ -1565,14 +1600,13 @@
         return f.levels.some(l => kpiHasLevel(k, l));
       });
       const order = new Map(globalDatabase.map((k, i) => [k.id, i]));
-      const cmp = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
       // ตัวชี้วัดที่อยู่หลายหมวดจะขึ้นในทุกหมวด (เป็นตัวเดียวกัน)
       const placements = [];
       list.forEach(k => viewPlacements(k, view).forEach(p => placements.push(p)));
-      return arrangeBlocks(placements.sort((a, b) => comparePartNames(a.part, b.part) || cmp(a.category, b.category) || order.get(a.id) - order.get(b.id)));
+      return arrangeBlocks(placements.sort((a, b) => comparePartNames(a.part, b.part) || compareCats(a.part, a.category, b.category) || order.get(a.id) - order.get(b.id)));
     }
 
-    // จัดลำดับในหมวดเดียวกัน: ตัวที่ไม่มีหัวข้อกลุ่มขึ้นก่อน ตามด้วยแต่ละหัวข้อกลุ่ม (ตามลำดับที่เจอ) และตัวย่อยอยู่ใต้ตัวแม่ (depth = ระดับการซ้อน)
+    // จัดลำดับในหมวดเดียวกัน: ตามลำดับในชีต (หมวด PCT เรียงตามแถวในไฟล์ PCT) และตัวย่อยอยู่ใต้ตัวแม่ (depth = ระดับการซ้อน)
     function arrangeBlocks(sorted) {
       const out = [];
       let i = 0;
@@ -1591,9 +1625,8 @@
         if (p.parentId && p.parentId !== p.id && ids.has(p.parentId)) (kids[p.parentId] = kids[p.parentId] || []).push(p);
         else roots.push(p);
       });
-      const rank = new Map([['', -1]]);
-      roots.forEach(p => { const g = p.group || ''; if (!rank.has(g)) rank.set(g, rank.size - 1); });
-      const sortedRoots = roots.map((p, i) => [p, i]).sort((a, b) => rank.get(a[0].group || '') - rank.get(b[0].group || '') || a[1] - b[1]).map(x => x[0]);
+      const pctKey = p => (p.part === 'PCT' && p.pctOrder !== null && p.pctOrder !== undefined ? p.pctOrder : Infinity);
+      const sortedRoots = roots.map((p, i) => [p, i]).sort((a, b) => (pctKey(a[0]) - pctKey(b[0]) || 0) || a[1] - b[1]).map(x => x[0]);
       const out = [], seen = new Set();
       const walk = (p, d) => {
         if (seen.has(p.key)) return;
@@ -1717,7 +1750,7 @@
 
         const header = document.createElement('div');
         header.className = 'accordion-header';
-        header.innerHTML = `<span>${esc(partName)}</span><span class="part-count">${new Set([].concat(...Object.values(tree[partName])).map(k => k.id)).size}</span>`;
+        header.innerHTML = `<span>${esc(partLabel(partName))}</span><span class="part-count">${new Set([].concat(...Object.values(tree[partName])).map(k => k.id)).size}</span>`;
         // กดหัว Part = เปิด/ปิดดูเองได้หลายอันระหว่างหา (ยังไม่ย่ออันอื่น จนกว่าจะเลือกตัวชี้วัด)
         header.onclick = () => {
           markTreeBrowsing();
@@ -1729,7 +1762,7 @@
         const content = document.createElement('div');
         content.className = 'accordion-content';
 
-        Object.keys(tree[partName]).sort().forEach(catName => {
+        Object.keys(tree[partName]).sort(catOrderOf(partName)).forEach(catName => {
           const catKey = partName + '||' + catName;
           const catBlock = document.createElement('div');
           catBlock.className = 'category-block';
@@ -1750,15 +1783,7 @@
 
           const catContent = document.createElement('div');
           catContent.className = 'category-content';
-          let lastGroup = '';
           tree[partName][catName].forEach(kpi => {
-            if (kpi.group && kpi.group !== lastGroup && !kpi.depth) {
-              const gh = document.createElement('div');
-              gh.className = 'tree-group';
-              gh.textContent = kpi.group;
-              catContent.appendChild(gh);
-            }
-            if (!kpi.depth) lastGroup = kpi.group || '';
             const item = document.createElement('div');
             item.className = 'kpi-link-item' + (selectedKpiId === kpi.id ? ' selected' : '') + (kpi.depth ? ' child' : '');
             if (kpi.depth) item.style.marginLeft = (kpi.depth * 12) + 'px';
@@ -1901,7 +1926,7 @@
       let lastPart = null, lastCat = null;
       pageItems.forEach(kpi => {
         if (kpi.part !== lastPart || kpi.category !== lastCat) {
-          html += `<div class="list-section"><span class="list-section-part">${esc(kpi.part)}</span> › ${esc(kpi.category)}</div>`;
+          html += `<div class="list-section"><span class="list-section-part">${esc(partLabel(kpi.part))}</span> › ${esc(kpi.category)}</div>`;
           lastPart = kpi.part; lastCat = kpi.category;
         }
         html += cardHtml(kpi);
@@ -1937,8 +1962,8 @@
 
     function catRowHtml(c, locked) {
       const dis = locked ? 'disabled' : '';
-      const part = `<input type="text" class="editable-input cat-part" list="part-options" placeholder="หมวดหลัก (Part)" value="${esc(c.part)}" ${dis}>`;
-      const cat = `<input type="text" class="editable-input cat-cat" list="category-options" placeholder="หมวดย่อย" value="${esc(c.category)}" ${dis}>`;
+      const part = `<span class="cat-kind">${catKindTag(c.part)}</span><input type="text" class="editable-input cat-part" list="part-options" placeholder="หมวดหลัก (Part)" value="${esc(c.part)}" oninput="this.parentElement.querySelector('.cat-kind').innerHTML = catKindTag(this.value.trim())" ${dis}>`;
+      const cat = `<input type="text" class="editable-input cat-cat" list="cat-options-dyn" onfocus="fillCatOptions(this)" placeholder="หมวดย่อย" value="${esc(c.category)}" ${dis}>`;
       const del = `<button type="button" class="btn btn-secondary btn-sm cat-del" onclick="removeCatRow(this)" ${dis}>✕</button>`;
       const why = 'ล็อกไว้: หมวด Part I–IV เป็นของตัวชี้วัดระดับ SAR/QA เพิ่มหรือเอาออกได้เฉพาะ admin / ผอ. / QMR';
       return `<div class="cat-row" data-locked="${locked ? 1 : 0}">${locked ? lockWrap(part + cat + del, why) : part + cat + del}</div>`;
@@ -1977,6 +2002,9 @@
       }
       if (filled.some(c => isCorePart(c.part)) && !hasHospitalLevel(levels)) {
         return 'ตัวชี้วัดที่อยู่ใน Part I–IV ต้องมีระดับ SAR หรือ QA-หน่วยงาน อย่างน้อย 1 ระดับ';
+      }
+      if ((levels || []).indexOf('SAR') !== -1 && !filled.some(c => isCorePart(c.part))) {
+        return 'ตัวชี้วัดระดับ SAR ต้องอยู่ในหมวด รพ. (Part I–IV) อย่างน้อย 1 หมวด';
       }
       return '';
     }
@@ -2045,7 +2073,6 @@
             <div class="kpi-card-badges">
               <span class="st-badge ${stt.level}">${stt.icon} ${stt.label}</span>
               <span class="meta-badge">หมวดหมู่: ${esc(kpi.category)}</span>
-              ${kpi.group ? `<span class="meta-badge group-badge" title="หัวข้อกลุ่มในหมวด">📂 ${esc(kpi.group)}</span>` : ''}
               ${kpi.parentId && globalDatabase.some(x => x.id === kpi.parentId) ? `<span class="meta-badge parent-badge" data-pid="${esc(kpi.parentId)}" onclick="goToParent(this)" title="กดเพื่อไปที่ตัวชี้วัดแม่">↳ ตัวย่อยของ ${esc(parentLabel(kpi))}</span>` : ''}
               ${kpiCats(kpi).length > 1 ? `<span class="meta-badge multi-badge" title="ตัวชี้วัดเดียวกัน แก้ที่หมวดไหนก็เปลี่ยนทุกหมวด">🔗 อยู่ใน ${kpiCats(kpi).length} หมวด: ${esc(kpiCats(kpi).map(c => c.part + ' › ' + c.category).join(' · '))}</span>` : ''}
               <span class="meta-badge" title="ทุกระดับ: ${esc((kpi.levels || [kpi.level]).join(', '))}">ระดับ: ${esc(kpi.level)}${(kpi.levels || []).length > 1 ? ' (+' + (kpi.levels.length - 1) + ')' : ''}</span>
@@ -2428,8 +2455,6 @@
         return;
       }
       document.getElementById('modal-add-kpi').style.display = 'flex';
-      if (selectedPartName) document.getElementById('add-kpi-part').value = selectedPartName;
-      if (selectedCategoryName) document.getElementById('add-kpi-category').value = selectedCategoryName;
       ['add-kpi-name', 'add-kpi-target', 'add-kpi-source', 'add-kpi-owner', 'add-kpi-dept'].forEach(id => { document.getElementById(id).value = ''; });
       if (!isPrivilegedUser()) {
         // staff / หัวหน้าหน่วย: ใส่ตัวเองเป็นผู้รับผิดชอบ และหน่วยงานของตัวเองให้ก่อน (แก้ได้)
@@ -2437,21 +2462,82 @@
         document.getElementById('add-kpi-dept').value = (currentUser.depts || []).join(' / ');
       }
       document.getElementById('add-kpi-extra-cats').innerHTML = '';
-      document.getElementById('add-kpi-levels').innerHTML = levelCheckboxesHtml('add-level-cb', ['SAR']);
+      document.getElementById('add-kpi-levels').innerHTML = levelCheckboxesHtml('add-level-cb', isPrivilegedUser() ? ['SAR'] : ['หน่วยงาน']);
+      document.getElementById('add-kpi-level-cats').innerHTML = '';
       document.getElementById('add-kpi-summary').value = 'เฉลี่ย';
       document.getElementById('add-kpi-frequency').value = 'รายเดือน';
+      renderAddLevelCats();
+    }
+
+    // หน่วยงานที่ใช้ตั้งหมวด (NSO เป็นสังกัดซ้อน: มีหน่วยอื่นอยู่แล้วไม่ใช้ NSO) — เหมือน viewUnitsOf_ ฝั่งเซิร์ฟเวอร์
+    function addFormUnits() {
+      const depts = [...new Set(pdfKpiDepts({ department: document.getElementById('add-kpi-dept').value }))];
+      const nested = depts.some(d => d !== 'NSO');
+      return depts.filter(d => !(nested && d === 'NSO'));
+    }
+    const qaPartOf = d => (d === 'NSO' ? NSO_OVERALL : d) + ' QA';
+
+    // แถวหมวดตามระดับที่ติ๊ก: SAR → Part I–IV · QA → "<หน่วย> QA" › มิติ · หน่วยงาน/รายบุคคล → หน่วย › หัวข้อ (ค่าที่กรอกไว้แล้วคงไว้ตอนวาดใหม่)
+    function renderAddLevelCats() {
+      const box = document.getElementById('add-kpi-level-cats');
+      if (!box) return;
+      const keep = {};
+      box.querySelectorAll('[data-key]').forEach(el => { keep[el.dataset.key] = el.value; });
+      const lv = checkedLevels('add-level-cb'), units = addFormUnits();
+      const hasLv = l => lv.indexOf(l) !== -1;
+      const val = (k, d) => (keep[k] !== undefined ? keep[k] : d);
+      let html = '';
+      if (hasLv('SAR')) {
+        const coreParts = [...new Set(globalDatabase.flatMap(k => kpiCats(k).map(c => c.part)).filter(isCorePart))].sort(comparePartNames);
+        const part = val('sar-part', coreParts[0] || 'Part I');
+        html += `<div class="lvc-row"><span class="lvc-tag hosp">🏥 รพ.</span>
+          <select class="editable-input lvc-part" data-key="sar-part" onchange="renderAddLevelCats()">${coreParts.map(p => `<option${p === part ? ' selected' : ''}>${esc(p)}</option>`).join('')}</select>
+          <input type="text" class="editable-input lvc-cat" data-key="sar-cat" data-part="${esc(part)}" list="cat-options-dyn" onfocus="fillCatOptions(this)" placeholder="หมวด HA เช่น III-4 การดูแลผู้ป่วย *" value="${esc(val('sar-cat', ''))}"></div>`;
+      }
+      const need = hasLv('QA-หน่วยงาน') || hasLv('หน่วยงาน') || hasLv('รายบุคคล');
+      if (need && units.length === 0) html += '<div class="hint" style="color:#b45309;">⚠️ ระบุหน่วยงานก่อน — หมวด QA / หน่วยงาน ตั้งตามหน่วยงานของตัวชี้วัด</div>';
+      if (hasLv('QA-หน่วยงาน')) units.forEach(u => {
+        const k = 'qa-' + u, cur = val(k, '');
+        html += `<div class="lvc-row"><span class="lvc-tag qa">🩺 QA</span><span class="lvc-unit">${esc(partLabel(qaPartOf(u)))}</span>
+          <select class="editable-input lvc-cat" data-key="${esc(k)}" data-part="${esc(qaPartOf(u))}"><option value="">(ให้ระบบเลือกมิติ)</option>${QA_DIMS.map(d => `<option${d === cur ? ' selected' : ''}>${esc(d)}</option>`).join('')}</select></div>`;
+      });
+      if (hasLv('หน่วยงาน') || hasLv('รายบุคคล')) units.filter(u => u !== 'NSO').forEach(u => {
+        const k = 'unit-' + u;
+        html += `<div class="lvc-row"><span class="lvc-tag unit">🏷️ หน่วยงาน</span><span class="lvc-unit">${esc(u)}</span>
+          <input type="text" class="editable-input lvc-cat" data-key="${esc(k)}" data-part="${esc(u)}" list="cat-options-dyn" onfocus="fillCatOptions(this)" placeholder="(เว้นว่าง = ระบบเลือกหัวข้อ/ขั้นตอนให้)" value="${esc(val(k, ''))}"></div>`;
+      });
+      box.innerHTML = html || '<div class="hint" style="margin:0;">เลือกระดับตัวชี้วัดก่อน</div>';
+    }
+
+    // ตัวเลือกหมวดย่อยตามหมวดหลักของแถว: Part I–IV = หมวด HA ที่มีอยู่ · QA = มิติ 1–5 · PCT = กลุ่มโรค · หน่วยงาน = หัวข้อของหน่วย + ขั้นตอนการดูแล + ที่มีอยู่
+    function fillCatOptions(input) {
+      const part = input.dataset.part !== undefined ? input.dataset.part : ((input.closest('.cat-row') || document).querySelector('.cat-part') || {}).value || '';
+      const used = [...new Set(globalDatabase.flatMap(k => kpiCats(k).filter(c => c.part === part).map(c => c.category)))];
+      let opts;
+      if (isCorePart(part)) opts = used;
+      else if (isQaPart(part)) opts = QA_DIMS;
+      else if (part === 'PCT') opts = PCT_GROUPS.concat(used);
+      else opts = (unitHeadings[part] || []).concat(CARE_STAGES, used);
+      opts = [...new Set(opts.filter(Boolean))].sort(catOrderOf(part));
+      document.getElementById('cat-options-dyn').innerHTML = opts.map(c => `<option value="${esc(c)}"></option>`).join('');
+    }
+
+    // ชนิดของหมวด (แสดงหน้าแถวในตัวแก้หมวด)
+    function catKindTag(part) {
+      if (!part) return '';
+      if (isCorePart(part)) return '<span class="lvc-tag hosp">🏥 รพ.</span>';
+      if (isQaPart(part)) return '<span class="lvc-tag qa">🩺 QA</span>';
+      return '<span class="lvc-tag unit">🏷️ หน่วยงาน</span>';
     }
 
     function submitAddKpi() {
-      const part = document.getElementById('add-kpi-part').value.trim();
-      const cat = document.getElementById('add-kpi-category').value.trim();
       const name = document.getElementById('add-kpi-name').value.trim();
-      if (!part || !cat || !name) {
-        showAlert('ข้อมูลไม่ครบ', '⚠️', 'กรุณาระบุ หมวดหลัก หมวดหมู่ย่อย และ ชื่อตัวชี้วัด');
+      if (!name) {
+        showAlert('ข้อมูลไม่ครบ', '⚠️', 'กรุณาระบุชื่อตัวชี้วัด');
         return;
       }
       const newItem = {
-        part: part, category: cat, name: name,
+        name: name,
         target: document.getElementById('add-kpi-target').value.trim(),
         years: [null, null, null, null, null],
         months: [null, null, null, null, null, null, null, null, null, null, null, null],
@@ -2467,15 +2553,30 @@
         showAlert('ข้อมูลไม่ครบ', '⚠️', 'กรุณาเลือกระดับตัวชี้วัดอย่างน้อย 1 ระดับ');
         return;
       }
-      const extra = readCatRows('add-kpi-extra-cats').filter(c => c.part || c.category);
-      const cats = [{ part: part, category: cat }].concat(extra);
-      const catErr = catListError(cats, newItem.levels, [], true);
-      if (catErr) { showAlert('หมวดไม่ถูกต้อง', '⚠️', catErr); return; }
-      if (cats.some(c => isCorePart(c.part)) && !hasHospitalLevel(newItem.levels)) {
-        showAlert('ระดับไม่ถูกต้อง', '⚠️', 'ตัวชี้วัดในหมวด Part I–IV ต้องเป็นระดับ SAR หรือ QA-หน่วยงาน อย่างน้อย 1 ระดับ\nถ้าเป็นระดับรายบุคคล/หน่วยงาน ให้ตั้งชื่อหมวดอื่นเอง (เช่น ชื่อหมวดของคุณ)');
+      // หมวดตามระดับ (ช่องว่าง = "รอจัดหมวดย่อย" ให้ระบบเลือก) + หมวดอื่นที่เพิ่มเอง
+      const cats = [];
+      document.querySelectorAll('#add-kpi-level-cats .lvc-cat').forEach(el => {
+        const part = el.dataset.key === 'sar-cat' ? document.querySelector('#add-kpi-level-cats .lvc-part').value : el.dataset.part;
+        const cat = el.value.trim();
+        if (el.dataset.key === 'sar-cat' && !cat) return;
+        cats.push({ part: part, category: cat || 'รอจัดหมวดย่อย' });
+      });
+      const lv = newItem.levels;
+      if (lv.indexOf('SAR') !== -1 && !cats.some(c => isCorePart(c.part))) {
+        showAlert('หมวดไม่ครบ', '⚠️', 'ตัวชี้วัดระดับ SAR ต้องเลือกหมวด รพ. (Part I–IV) และกรอกหมวด HA');
         return;
       }
-      newItem.cats = cats;
+      if (lv.some(l => l === 'QA-หน่วยงาน' || l === 'หน่วยงาน' || l === 'รายบุคคล') && addFormUnits().length === 0) {
+        showAlert('ข้อมูลไม่ครบ', '⚠️', 'ระดับ QA-หน่วยงาน / หน่วยงาน / รายบุคคล ต้องระบุหน่วยงานของตัวชี้วัด');
+        return;
+      }
+      const extra = readCatRows('add-kpi-extra-cats').filter(c => c.part || c.category);
+      const all = cats.concat(extra);
+      const catErr = catListError(all, lv, [], true);
+      if (catErr) { showAlert('หมวดไม่ถูกต้อง', '⚠️', catErr); return; }
+      newItem.cats = all;
+      newItem.part = all[0].part;
+      newItem.category = all[0].category;
       document.getElementById('modal-add-kpi').style.display = 'none';
       google.script.run
         .withSuccessHandler((res) => {
@@ -3086,9 +3187,9 @@
       const groups = rptGroups();
       let html = '';
       Object.keys(groups).sort(comparePartNames).forEach(part => {
-        const cats = Object.keys(groups[part]).sort();
+        const cats = Object.keys(groups[part]).sort(catOrderOf(part));
         const on = cats.filter(c => !rpt.unchecked.has(part + '||' + c)).length;
-        html += `<label class="check-row" style="font-weight:700; color:#015c8b;"><input type="checkbox" class="${p}-part" data-part="${esc(part)}" data-on="${on}" data-n="${cats.length}"${on === cats.length ? ' checked' : ''} onchange="rptTogglePart('${p}', this)"> ${esc(part)}</label>`;
+        html += `<label class="check-row" style="font-weight:700; color:#015c8b;"><input type="checkbox" class="${p}-part" data-part="${esc(part)}" data-on="${on}" data-n="${cats.length}"${on === cats.length ? ' checked' : ''} onchange="rptTogglePart('${p}', this)"> ${esc(partLabel(part))}</label>`;
         cats.forEach(cat => {
           html += `<label class="check-row" style="margin-left:22px;"><input type="checkbox" class="${p}-cat" data-part="${esc(part)}" data-cat="${esc(cat)}"${rpt.unchecked.has(part + '||' + cat) ? '' : ' checked'} onchange="rptToggleCat('${p}', this)"> ${esc(cat)} (${groups[part][cat]})</label>`;
         });
@@ -3229,7 +3330,7 @@
     function prBlock(k, opts, landscape) {
       const yl = [selectedFy - 4, selectedFy - 3, selectedFy - 2, selectedFy - 1, selectedFy];
       let h = `<div class="pr-block"><div class="pr-kpi-title">${kpiNoLabel(k)} ${esc(k.name)}</div>
-        <div class="pr-meta">หมวด: ${esc(k.category)}${k.group ? ' · หัวข้อ: ' + esc(k.group) : ''}${k.parentId && globalDatabase.some(x => x.id === k.parentId) ? ' · ตัวย่อยของ ' + esc(parentLabel(k)) : ''} · ระดับ: ${esc(k.level)} · เป้าหมาย: <b>${esc(k.target) || '-'}</b> · ปีงบประมาณ ${selectedFy}</div>`;
+        <div class="pr-meta">หมวด: ${esc(k.category)}${k.parentId && globalDatabase.some(x => x.id === k.parentId) ? ' · ตัวย่อยของ ' + esc(parentLabel(k)) : ''} · ระดับ: ${esc(k.level)} · เป้าหมาย: <b>${esc(k.target) || '-'}</b> · ปีงบประมาณ ${selectedFy}</div>`;
       if (opts.chart) {
         h += `<div class="pr-chart">${generateSvgLineChart(k.years, k.target, yl)}</div>
           <table class="pr-table" style="font-size:${landscape ? '12pt' : '9.5pt'};"><thead><tr>${thMonthsNames.map(m => `<th>${m}</th>`).join('')}<th>สรุป</th></tr></thead>
@@ -3262,7 +3363,7 @@
       // ตัวที่อยู่หลายหมวดพิมพ์ครั้งเดียว: เก็บไว้ในหมวดแรก (ตามลำดับหมวดหลัก → หมวดย่อย) ตัดออกจากหมวดถัดไป
       const printed = new Set();
       Object.keys(tree).sort(comparePartNames).forEach(part => {
-        Object.keys(tree[part]).sort().forEach(cat => {
+        Object.keys(tree[part]).sort(catOrderOf(part)).forEach(cat => {
           tree[part][cat] = tree[part][cat].filter(k => !printed.has(k.id) && printed.add(k.id));
           if (tree[part][cat].length === 0) delete tree[part][cat];
         });
@@ -3271,7 +3372,7 @@
       if (limit) { // ตัวอย่างบนจอ: ตัดให้เหลือ limit ตัวแรก
         let left = limit;
         Object.keys(tree).sort(comparePartNames).forEach(part => {
-          Object.keys(tree[part]).sort().forEach(cat => {
+          Object.keys(tree[part]).sort(catOrderOf(part)).forEach(cat => {
             tree[part][cat] = tree[part][cat].slice(0, Math.max(left, 0));
             left -= tree[part][cat].length;
             if (tree[part][cat].length === 0) delete tree[part][cat];
@@ -3285,8 +3386,8 @@
         <div class="pr-info">พิมพ์เมื่อ ${esc(printedAt)} · โดย ${esc(currentUser.username)} · จำนวน ${chosen.length} ตัวชี้วัด</div></div>`;
       const perKpi = opts.chart || opts.detail || opts.source || opts.owner;
       Object.keys(tree).sort(comparePartNames).forEach(part => {
-        html += `<div class="pr-part">${esc(part)}</div>`;
-        Object.keys(tree[part]).sort().forEach(cat => {
+        html += `<div class="pr-part">${esc(partLabel(part))}</div>`;
+        Object.keys(tree[part]).sort(catOrderOf(part)).forEach(cat => {
           const kpis = tree[part][cat];
           html += `<div class="pr-cat">${esc(cat)}</div>`;
           if (opts.table) html += prMainTables(kpis, landscape);

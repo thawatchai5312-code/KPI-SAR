@@ -2,7 +2,7 @@
  * จัดระเบียบข้อมูลตัวชี้วัด (admin กดครั้งเดียว และรันซ้ำได้ — ผลเหมือนเดิมเสมอ)
  *  1) ผู้รับผิดชอบ: แปลงชื่อที่เป็นคนเดียวกัน / ตำแหน่ง → ชื่อมาตรฐาน ("หัวหน้าตึก" = head ขึ้นไปที่สังกัด NSO)
  *  2) ชื่อตัวชี้วัด: ตัดเลขข้อหน้าชื่อ (๒.๑.๑ / 4.7 / - / ตัวชี้วัดที่ ๑๙) แต่จำความเป็นตัวย่อยไว้ที่คอลัมน์ "ตัวชี้วัดแม่"
- *  3) หมวดย่อยในมุมมองหน่วยงาน: มาตรฐาน 5 มิติ + "หัวข้อกลุ่ม" (เก็บชื่อหัวข้อเดิม/หมวด HA ไว้เป็นกลุ่ม)
+ *  3) หมวดของ 3 มุมมอง (รพ. / QA / หน่วยงาน) ตามกติกาใน Views.js
  *  4) บัญชีผู้ใช้: รวมชื่อซ้ำ ลบบัญชีที่ไม่ใช่คน
  *  ก่อนเขียนจริงสำรองชีตไว้ (ครั้งแรก) และบันทึกค่าเดิมทุกจุดที่เปลี่ยนไว้ในชีต Tidy_Log
  * ตัวคำนวณ (tidyComputeSheet_ / tidyComputeUsers_) เป็นฟังก์ชันล้วนไม่แตะชีต ใช้ทดสอบกับข้อมูลจริงได้
@@ -207,7 +207,7 @@ function tidyOwnerText_(text) {
   return uniq.join(" / ");
 }
 
-// ---------------------------------------------------------------- หมวดย่อย: 5 มิติ + หัวข้อกลุ่ม
+// ---------------------------------------------------------------- มิติคุณภาพ 1–5 (หมวดย่อยของมุมมอง QA — ใช้ใน Views.js)
 
 /** ชื่อหมวดที่เป็นมิติอยู่แล้ว → เลข 1–5 (ไม่ใช่ = 0) */
 function tidyDimOfName_(cat) {
@@ -228,10 +228,7 @@ var TIDY_HEAD_RULES = [
   [3, /รายงาน|EMS|Ambulance|Productivity|ผลิตภาพ|จ่ายกลาง|ซักฟอก|ขยะ|คลัง|เครื่องมือ|SRRT|อันดับโรค|Mapping|นัด|คลินิกพิเศษ|เศรษฐกิจ/i],
   [5, /Stroke|STEMI|Sepsis|Head|CPR|(?<![A-Za-z])(?:ARV|COPD|DM|HT|NCD|TB|COC|IMC|PIH|LBW|PPH)(?![A-Za-z])|Asthma|Wafarin|Warfarin|Appendicitis|new born|Pretrm|asphyxia|Episiotomy|Discharge|โรค|คลินิก|หัตถการ|มารดา|fast track|ยาเสพติด|คัดกรอง/i]
 ];
-function tidyDimOfHeading_(h) {
-  return tidyDimOfText_(h) || 2;
-}
-// เหมือน tidyDimOfHeading_ แต่ไม่ตรงกฎข้อใด = 0
+// หัวข้อ/ชื่อ → มิติ (ไม่ตรงกฎข้อใด = 0)
 function tidyDimOfText_(h) {
   for (var i = 0; i < TIDY_HEAD_RULES.length; i++) if (TIDY_HEAD_RULES[i][1].test(h)) return TIDY_HEAD_RULES[i][0];
   return 0;
@@ -254,91 +251,8 @@ function tidyDimOfCore_(cat) {
 
 function tidyDimLabel_(n) { return TIDY_DIMS[n - 1]; }
 
-/** หมวดที่ไม่ใช่ "หัวข้อ" จริง: ว่าง / รอจัดหมวดย่อย / เป็นตัวเลขล้วน / ซ้ำชื่อหน่วย */
-function tidyIsFiller_(cat, unit) {
-  var c = (cat || "").toString().trim();
-  return c === "" || c === UNIT_CATS_PLACEHOLDER || /^[0-9.\s]+$/.test(c) || c === unit;
-}
-
-/** NSO: หมวดย่อยต้นทางเป็นชื่อหน่วย (ตัด QA ออก รวมกับหน่วยเดียวกัน) */
-function tidyNsoUnit_(cat) {
-  return (cat || "").toString().replace(/\s*(?:TTM-)?QA\s*$/i, "").trim();
-}
-
 // ชื่อหน่วยในหมวดย่อยของ NSO ที่ไม่ตรงชื่อหมวดหน่วยงานจริง
 var TIDY_UNIT_ALIAS = { "แพทย์แผนไทย": "แผนไทย" };
-
-/** มิติตามบริบทของตัวชี้วัด: หัวข้อเดิมของหน่วย → หมวด HA ของ Part I–IV → มิติที่หน่วยอื่นใช้อยู่ → ชื่อตัวชี้วัด */
-function tidyContextDim_(cats, name) {
-  var core = cats.filter(function(c) { return isCorePart_(c.part); });
-  var heading = tidyHeadingOf_(cats);
-  if (heading) return tidyDimOfHeading_(heading);
-  if (core.length) return tidyDimOfCore_(core[0].category);
-  var d = 0;
-  cats.forEach(function(c) { if (!d && !isCorePart_(c.part) && c.part !== NURSING_UNIT_NAME) d = tidyDimOfName_(c.category); });
-  return d || tidyDimOfHeading_((name || "").toString());
-}
-
-/** หัวข้อเดิมของหมวดหน่วยงาน (ชื่อหมวดย่อยที่ไม่ใช่มิติ/ชื่อชั่วคราว) */
-function tidyHeadingOf_(cats) {
-  var heading = "";
-  cats.forEach(function(c) {
-    if (heading || isCorePart_(c.part) || c.part === NURSING_UNIT_NAME) return;
-    if (!tidyIsFiller_(c.category, c.part) && !tidyDimOfName_(c.category)) heading = c.category.trim();
-  });
-  return heading;
-}
-
-/**
- * หมวดที่ต้องการของแถวหนึ่ง (ฟังก์ชันล้วน)
- *  - Part I–IV: คงเดิม · หมวดหน่วยงาน: หมวดย่อยเป็น 5 มิติ
- *  - NSO เป็นสังกัดซ้อนของพยาบาลทุกหน่วย: "NSO › ER" ซ้ำกับหมวด ER อยู่แล้ว → ตัดออก
- *    เหลือในหมวด NSO เฉพาะตัวชี้วัดของฝ่ายการพยาบาล (จัดเป็น 5 มิติเหมือนหน่วยอื่น)
- * คืน { cats: [{part, category}], group }
- */
-function tidyPlaceCats_(cats, oldGroup, name) {
-  var core = cats.filter(function(c) { return isCorePart_(c.part); });
-  var firstCore = core.length ? core[0].category : "";
-  var heading = tidyHeadingOf_(cats), nsoDim = "", unitDim = 0, parts = {};
-  cats.forEach(function(c) {
-    parts[c.part] = 1;
-    if (c.part === NURSING_UNIT_NAME) { var d0 = tidyDimOfName_(c.category); if (d0 && !nsoDim) nsoDim = tidyDimLabel_(d0); }
-    else if (!isCorePart_(c.part) && !unitDim) unitDim = tidyDimOfName_(c.category);
-  });
-  var contextDim = tidyContextDim_(cats, name);
-  var out = [], seen = {};
-  cats.forEach(function(c) {
-    var part = c.part, cat = c.category, res;
-    if (isCorePart_(part)) res = { part: part, category: cat };
-    else if (part === NURSING_UNIT_NAME) {
-      var unit = tidyNsoUnit_(cat);
-      unit = TIDY_UNIT_ALIAS[unit] || unit;
-      if (unit !== NURSING_UNIT_NAME && parts[unit]) return; // ซ้ำกับหมวดของหน่วยนั้น
-      // มิติ: ที่ตั้งไว้แล้ว → มิติเดิมจากไฟล์ NSO (หัวข้อกลุ่ม) → จากชื่อตัวชี้วัด → มิติที่หน่วยอื่นใช้ → บริบท
-      res = { part: part, category: tidyDimLabel_(tidyDimOfName_(cat) || tidyDimOfName_(oldGroup) || tidyDimOfText_((name || "").toString()) || unitDim || contextDim) };
-    } else {
-      var d = tidyDimOfName_(cat);
-      if (!d) d = tidyIsFiller_(cat, part) ? contextDim : tidyDimOfHeading_(cat);
-      res = { part: part, category: tidyDimLabel_(d) };
-    }
-    var k = catKey_(res);
-    if (!seen[k]) { seen[k] = 1; out.push(res); }
-  });
-  if (out.length === 0) out = cats.slice(0, 1); // กันไม่ให้ไม่เหลือหมวดเลย
-  return { cats: out, group: (oldGroup || "").toString().trim() || heading || firstCore || nsoDim || "" };
-}
-
-/** หมวดหน่วยงานที่ระบบเพิ่มให้ตามช่องหน่วยงาน ("รอจัดหมวดย่อย") → ใส่มิติให้ทันที (หมวดอื่นที่ผู้ใช้เลือกเองไม่แตะ) */
-function tidyFillPlaceholders_(cats, name) {
-  if (!cats.some(function(c) { return c.category === UNIT_CATS_PLACEHOLDER && !isCorePart_(c.part); })) return cats;
-  var dim = tidyDimLabel_(tidyContextDim_(cats, name)), out = [], seen = {};
-  cats.forEach(function(c) {
-    var res = c.category === UNIT_CATS_PLACEHOLDER && !isCorePart_(c.part) ? { part: c.part, category: dim } : c;
-    var k = catKey_(res);
-    if (!seen[k]) { seen[k] = 1; out.push(res); }
-  });
-  return out;
-}
 
 // ---------------------------------------------------------------- ตัวชี้วัดแม่ (จากเลขข้อ)
 
@@ -372,9 +286,9 @@ function tidyFindParents_(rows) {
  * rows: แถวข้อมูลตัวชี้วัด (ไม่รวมหัวตาราง) ยาว ≥ KPI_COLS ต่อแถว · fy: ปีงบ
  * คืน { rows: [{ index, id, changes: {...}, next: {...} }], counts }
  */
-function tidyComputeSheet_(rows, fy) {
+function tidyComputeSheet_(rows, fy, ctx) {
   var parentOf = tidyFindParents_(rows);
-  var res = [], counts = { names: 0, owners: 0, parents: 0, cats: 0, groups: 0, levels: 0, details: 0, emptied: 0, digits: 0, nso: 0 };
+  var res = [], counts = { names: 0, owners: 0, parents: 0, cats: 0, groups: 0, levels: 0, details: 0, emptied: 0, digits: 0, nso: 0, views: 0 };
   rows.forEach(function(row, index) {
     var id = (row[0] || "").toString().trim();
     if (!id) return;
@@ -391,19 +305,22 @@ function tidyComputeSheet_(rows, fy) {
     var oldSource = (row[24] === null || row[24] === undefined ? "" : row[24]).toString();
     var moved = tidyMoveDetails_(tidyAscii_(oldDetails), tidyAscii_(oldSource), newName);
     var newOwner = tidyOwnerText_(oldOwner);
-    var placed = tidyPlaceCats_(oldCats, oldGroup, newName);
+    // หมวดของ 3 มุมมอง (Views.js) — หัวข้อกลุ่มเดิมไม่ใช้จัดหมวดแล้ว คงค่าไว้ตามเดิม
+    var placed = { cats: viewPlaceRow_(id, newName, oldCats, ctx).cats, group: oldGroup };
     var newParent = oldParent || parentOf[id] || "";
     var newLevels = oldLevels;
-    if ((TIDY_QA_REMOVE[fy] || []).indexOf(id) !== -1) {
-      var lv = normalizeLevels_(oldLevels).filter(function(l) { return l !== "QA-หน่วยงาน"; });
-      if (lv.length) newLevels = sortLevels_(lv).join(", ");
-    }
+    var lv = normalizeLevels_(oldLevels);
+    if ((TIDY_QA_REMOVE[fy] || []).indexOf(id) !== -1) lv = lv.filter(function(l) { return l !== "QA-หน่วยงาน"; });
+    // ระดับผูกกับหมวด: มีหมวด QA = ระดับ QA-หน่วยงาน
+    if (placed.cats.some(function(c) { return viewIsQaPart_(c.part); }) && lv.indexOf("QA-หน่วยงาน") === -1) lv.push("QA-หน่วยงาน");
+    if (lv.length && sortLevels_(lv).join(", ") !== normalizeLevels_(oldLevels).join(", ")) newLevels = sortLevels_(lv).join(", ");
     var changes = {};
     if (newName !== oldName) { changes.name = [oldName, newName]; counts.names++; }
     if (newOwner !== oldOwner) { changes.owner = [oldOwner, newOwner]; counts.owners++; }
     if (placed.cats.map(catKey_).join("\n") !== oldCats.map(catKey_).join("\n")) {
       changes.cats = [oldCats, placed.cats]; counts.cats++;
       if (oldCats.some(function(c) { return c.part === NURSING_UNIT_NAME; })) counts.nso++;
+      counts.views++;
     }
     if (newParent !== oldParent) { changes.parent = [oldParent, newParent]; counts.parents++; }
     if (placed.group !== oldGroup) { changes.group = [oldGroup, placed.group]; counts.groups++; }
@@ -467,11 +384,13 @@ function tidyReadFy_(fy) {
 /** วางแผนจัดระเบียบทุกชีตปีงบ + บัญชีผู้ใช้ (ยังไม่เขียนอะไร) */
 function tidyPlanAll_() {
   var plan = { fys: [], users: null, usersSheet: null };
+  var ctx = viewContext_();
+  viewSaveHeadings_(ctx.headings);
   listFiscalYears_().forEach(function(fy) {
     var d = tidyReadFy_(fy);
     if (!d) return;
     var mg = tidyComputeMerges_(d.rows);
-    plan.fys.push({ fy: fy, sheet: d.sheet, rawRows: d.rows, rows: mg.rows, merges: mg.merges, redirects: mg.redirects, comp: tidyComputeSheet_(mg.rows, fy) });
+    plan.fys.push({ fy: fy, sheet: d.sheet, rawRows: d.rows, rows: mg.rows, merges: mg.merges, redirects: mg.redirects, comp: tidyComputeSheet_(mg.rows, fy, ctx) });
   });
   var us = getUsersSpreadsheet_().getSheetByName(USERS_SHEET_NAME);
   if (us) {
@@ -508,7 +427,7 @@ function tidyApply_(plan, opts) {
       // สำรองแยกตามรอบ (รอบที่เพิ่มภายหลังสำรองอีกชุดก่อนเขียน): จัดระเบียบ → ย้ายรายละเอียด/ตัวเลข → จัดหมวด NSO
       var labels = [];
       if (c0.details > 0 || c0.digits > 0) labels.push("ย้ายรายละเอียด");
-      if (c0.nso > 0) labels.push("จัดหมวด NSO");
+      if (c0.views > 0) labels.push("จัดหมวดมุมมอง");
       if (f.merges.length > 0) labels.push("รวมตัวซ้ำ");
       if (labels.length === 0) labels.push("จัดระเบียบ");
       var missing = labels.map(function(l) { return "สำรองก่อน" + l + " " + fiscalSheetName_(f.fy); }).filter(function(n) { return !ss.getSheetByName(n); });
@@ -648,9 +567,9 @@ function tidySummary_(plan) {
         var newKeys = ch.cats[1].map(catKey_), oldKeys = ch.cats[0].map(catKey_);
         ch.cats[0].forEach(function(o) {
           if (newKeys.indexOf(catKey_(o)) !== -1) return;
-          var n = ch.cats[1].filter(function(x) { return x.part === o.part && oldKeys.indexOf(catKey_(x)) === -1; })[0];
+          var n = ch.cats[1].filter(function(x) { return viewDeptOfPart_(x.part) === viewDeptOfPart_(o.part) && oldKeys.indexOf(catKey_(x)) === -1; })[0];
           var k = n ? o.part + " › " + o.category + "  →  " + n.part + " › " + n.category
-                    : o.part + " › " + o.category + "  →  ตัดออก (ซ้ำกับหมวดของหน่วยนั้น)";
+                    : o.part + " › " + o.category + "  →  ตัดออก";
           catMap[k] = (catMap[k] || 0) + 1;
         });
       }

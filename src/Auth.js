@@ -510,7 +510,7 @@ function visibleCats_(user, kpi, perm) {
     out = cats.filter(function(c) { return isCorePart_(c.part); });
   } else if (user.tier !== "admin") {
     var depts = parseDepts_(kpi.department);
-    out = cats.filter(function(c) { return depts.indexOf(c.part) === -1 || user.depts.indexOf(c.part) !== -1; });
+    out = cats.filter(function(c) { var d = viewDeptOfPart_(c.part); return depts.indexOf(d) === -1 || user.depts.indexOf(d) !== -1; });
   }
   return out.length > 0 ? out : [cats[0]];
 }
