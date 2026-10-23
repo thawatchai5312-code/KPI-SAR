@@ -1398,10 +1398,11 @@
           yellow.push('รอบก่อนหน้ายังว่าง: ' + names);
         }
       }
+      // ช่วงผ่อนผัน ต.ค.–ธ.ค. ของปีงบปัจจุบัน: ยังไม่มีการวิเคราะห์ให้เป็นสีเหลืองก่อน (หลังจากนั้นเป็นสีแดง)
+      const inGrace = selectedFy === currentFy && ((new Date().getMonth() + 3) % 12) <= ANALYSIS_GRACE_LAST_IDX;
       if (!(kpi.templateDetails || '').trim()) {
-        red.push('ยังไม่มีรายละเอียด/การวิเคราะห์');
+        (inGrace ? yellow : red).push('ยังไม่มีรายละเอียด/การวิเคราะห์' + (inGrace ? ' (ภายใน ธ.ค.)' : ''));
       } else if (selectedFy === currentFy && !kpi.analysisUpdatedAt) {
-        const inGrace = ((new Date().getMonth() + 3) % 12) <= ANALYSIS_GRACE_LAST_IDX;
         (inGrace ? yellow : red).push('ยังไม่อัปเดตการวิเคราะห์ปีงบ ' + selectedFy + (inGrace ? ' (ภายใน ธ.ค.)' : ''));
       }
       if (!(kpi.dataSource || '').trim()) yellow.push('ยังไม่ระบุที่มาข้อมูล/สูตรคำนวณ');
