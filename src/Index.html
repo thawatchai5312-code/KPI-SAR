@@ -117,7 +117,7 @@
     @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
     /* ผังรายการตัวชี้วัด */
-    .tree-filters { position: sticky; top: -12px; background: #fff; padding: 12px 0 8px; margin-top: -12px; z-index: 5; border-bottom: 1px solid #e2e8f0; margin-bottom: 8px; }
+    .tree-filters { position: sticky; top: -12px; background: #fff; padding: 12px 0 8px; margin-top: -12px; z-index: 5; border-bottom: 1px solid #e2e8f0; margin-bottom: 8px; display: grid; gap: 8px; }
     .tree-count { font-size: 11px; color: #64748b; font-weight: 600; margin-top: 4px; }
     .accordion-part { margin-bottom: 6px; border: 1px solid #cbd5e1; border-radius: 8px; overflow: hidden; }
     .accordion-header {
@@ -245,9 +245,10 @@
       .report-grid { grid-template-columns: 1fr; }
       #rp-side { position: static; max-height: none; }
       .rp-toggle { display: block; }
-      #rp-side.collapsed #rp-controls, #rp-side.collapsed #rp-filterbar, #rp-side.collapsed #rp-view-tabs { display: none; }
+      #rp-side.collapsed #rp-controls, #rp-side.collapsed .nav-group { display: none; }
       .home-grid { grid-template-columns: 1fr; }
       #panel-tree { position: static; max-height: 320px; }
+      .tree-filters { position: static; }
       .nav-spacer { display: none; }
       .nav-bar { position: static; }
       .kpi-card-body { grid-template-columns: 1fr; min-height: 0; }
@@ -418,34 +419,46 @@
     .st-dot.red { background: #ef4444; }
     /* ================= ผังรายการตัวชี้วัด (ตัวอย่างสไตล์ใหม่) ================= */
     #panel-tree { padding: 14px 12px 12px; }
-    .tree-filters { padding: 12px 0 10px; border-bottom: 1px solid var(--line); margin-bottom: 10px; display: grid; gap: 8px; }
+    .tree-filters { padding: 12px 0 10px; border-bottom: 1px solid var(--line); margin-bottom: 10px; }
     .tree-count { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-top: 0; color: #64748b; font-size: 12px; font-weight: 600; }
     .tree-count .cnt { display: inline-flex; align-items: center; gap: 5px; padding: 2px 10px; border-radius: 999px; font-weight: 700; font-size: 12px; }
     .tree-count .cnt::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
-    /* ---------- ตัวกรองปุ่ม: ระดับตัวชี้วัด / สถานะ (ใช้ร่วมกันทั้งหน้าแรกและหน้าสรุปรายงาน) ---------- */
-    .filterbar { display: grid; gap: 8px; }
-    .fb-title { font-size: 11.5px; font-weight: 800; color: #475569; margin-bottom: 4px; }
+    /* ---------- แถบนำทางแถบซ้าย: มุมมอง (ปุ่มใหญ่) + ขอบเขต + สถานะ (ปุ่มเล็ก) อยู่ในกรอบเดียวกัน · สีตามมุมมองที่เลือก ---------- */
+    .nav-group { --vc: #16a34a; --vc-soft: #e7f6ec; --vc-ink: #14532d; display: grid; gap: 10px; padding: 6px 6px 10px; border-radius: 18px; background: linear-gradient(180deg, #f2f7f3 0%, #f7faf8 100%); border: 1px solid #dce8e0; }
+    .nav-group[data-view="qa"] { --vc: #0e7490; --vc-soft: #e0f4f8; --vc-ink: #0e5a70; background: linear-gradient(180deg, #eef7f9 0%, #f7fbfc 100%); border-color: #d3e8ee; }
+    .nav-group[data-view="unit"] { --vc: #7c3aed; --vc-soft: #efe9ff; --vc-ink: #5b21b6; background: linear-gradient(180deg, #f4f0fe 0%, #faf8ff 100%); border-color: #e3dafb; }
+    .filterbar { display: grid; gap: 7px; }
+    .nav-group .filterbar { padding: 8px 4px 0; border-top: 1px dashed rgba(100, 116, 139, 0.28); }
+    .fb-title { font-size: 10.5px; font-weight: 800; color: #64748b; margin: 0 0 3px 2px; letter-spacing: .2px; }
     .fb-row { display: flex; gap: 3px; }
-    .fb-btn { position: relative; display: flex; align-items: center; justify-content: center; gap: 2px; padding: 5px 3px; flex: 1 1 auto; min-width: 0; border: 1.5px solid #e2e8f0; border-radius: 10px; background: #f1f5f9; color: #94a3b8; font-family: inherit; cursor: pointer; line-height: 1.2; box-shadow: none; white-space: nowrap; }
-    .fb-btn:hover { background: #e9eef3; }
+    .fb-btn { position: relative; display: flex; align-items: center; justify-content: center; gap: 3px; padding: 4px 3px; flex: 1 1 auto; min-width: 0; border: 1.5px solid #e2e8f0; border-radius: 9px; background: #f1f5f9; color: #64748b; font-family: inherit; cursor: pointer; line-height: 1.2; box-shadow: none; white-space: nowrap; transition: background .15s, border-color .15s, color .15s; }
+    .nav-group .fb-btn { background: rgba(255, 255, 255, 0.75); border-color: rgba(148, 163, 184, 0.25); }
+    .fb-btn:hover, .nav-group .fb-btn:hover { background: #fff; border-color: #cbd5e1; }
     .fb-ico { font-size: 11px; line-height: 1; flex: none; }
-    .fb-lab { font-size: 10px; font-weight: 700; }
-    .fb-n { font-size: 10px; font-weight: 800; }
+    .fb-lab { font-size: 10.5px; font-weight: 700; }
+    .fb-n { font-size: 10px; font-weight: 800; background: rgba(100, 116, 139, 0.12); border-radius: 999px; padding: 0 5px; }
+    .fb-scope .fb-btn { padding: 5px 4px; }
+    .fb-scope .fb-lab { font-size: 11px; }
     .filterbar > div { min-width: 0; }
     /* ทุกปุ่มบรรทัดเดียว (ไอคอน ชื่อ ตัวเลข): จอคอมกว้างพอใส่ครบ แคบลงตัดไอคอน แคบมากให้เรียง 2 ปุ่มต่อแถว */
-    @media (min-width: 1340px) and (max-width: 1500px) { .fb-ico { display: none; } }
-    @media (min-width: 1001px) and (max-width: 1339px) { .fb-row { flex-wrap: wrap; } .fb-btn { flex: 1 1 calc(50% - 3px); } }
+    @media (min-width: 1001px) and (max-width: 1500px) { .filterbar .fb-scope .fb-ico { display: none; } }
+    @media (min-width: 1001px) and (max-width: 1339px) { .filterbar .fb-scope { flex-wrap: wrap; } .filterbar .fb-scope .fb-btn { flex: 1 1 calc(50% - 3px); } }
     .fb-dot { width: 7px; height: 7px; border-radius: 50%; flex: none; }
     .fb-btn.st-red .fb-dot { background: #ef4444; }
     .fb-btn.st-yellow .fb-dot { background: #facc15; }
     .fb-btn.st-green .fb-dot { background: #22c55e; }
-    .fb-tick { display: none; position: absolute; top: -6px; right: -5px; width: 16px; height: 16px; border-radius: 50%; background: #16a34a; color: #fff; font-size: 10px; line-height: 16px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.25); }
-    .fb-btn.on .fb-tick { display: block; }
-    .fb-btn.on { background: #e7f6ec; border-color: #16a34a; color: #14532d; }
+    /* ปุ่มที่เลือก: ขอบเขต = สีของมุมมอง · สถานะ = สีของสถานะ */
+    .fb-btn[data-scope].on, .nav-group .fb-btn[data-scope].on { background: #fff; border-color: var(--vc, #16a34a); color: var(--vc-ink, #14532d); box-shadow: 0 2px 6px rgba(15, 23, 42, 0.12); }
+    .fb-btn[data-scope].on .fb-n { background: var(--vc, #16a34a); color: #fff; }
     .fb-btn.st-all.on { background: #d1fae5; border-color: #047857; color: #064e3b; }
     .fb-btn.st-red.on { background: #fee2e2; border-color: #dc2626; color: #b91c1c; }
     .fb-btn.st-yellow.on { background: #fef9c3; border-color: #ca8a04; color: #854d0e; }
     .fb-btn.st-green.on { background: #dcfce7; border-color: #16a34a; color: #166534; }
+    .pg-scope { min-width: 300px; }
+    /* สถานะ 4 ปุ่มเรียง 2×2 ให้ชื่อและจำนวนอ่านง่ายในแถบซ้ายที่แคบ */
+    .filterbar .fb-row.fb-status { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+    .filterbar .fb-status .fb-btn { justify-content: flex-start; padding: 4px 8px; }
+    .filterbar .fb-status .fb-n { margin-left: auto; }
 
     .accordion-header { padding: 11px 14px; }
     .accordion-header .part-count { margin-left: auto; margin-right: 22px; background: #fff; border: 1px solid var(--line); border-radius: 999px; padding: 0 9px; font-size: 12px; color: #475569; font-weight: 700; }
@@ -513,20 +526,19 @@
     .tree-count .tree-collapse { margin-left: auto; border: 1px solid var(--line); background: #fff; color: #475569; border-radius: 999px; padding: 2px 10px; font-size: 11.5px; font-weight: 700; cursor: pointer; font-family: inherit; }
     .tree-count .tree-collapse:hover { background: #f1f5f9; }
 
-    /* ปุ่มเลือกมุมมองแถบซ้าย */
-    .view-tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin-bottom: 14px; } /* เว้นล่างให้พ้นแถบตัวกรองที่ดึงทับขึ้นมา 12px (ไม่ให้เส้นขอบล่างของปุ่มโดนบัง) */
-    .view-tab { display: flex; align-items: center; justify-content: center; gap: 3px; padding: 5px 3px; border: 1.5px solid var(--line); border-radius: 12px; background: #fff; color: #475569; font-family: inherit; cursor: pointer; line-height: 1.2; white-space: nowrap; }
-    .view-tab .vt-top { display: contents; } /* ไอคอน · ชื่อ · จำนวน เรียงบรรทัดเดียว */
-    .view-tab .vt-ico { font-size: 13px; order: 1; }
-    .view-tab .vt-label { font-size: 11.5px; font-weight: 700; text-align: center; order: 2; }
-    .view-tab .vt-count { font-size: 11px; font-weight: 800; background: #f1f5f9; border-radius: 999px; padding: 0 5px; min-width: 18px; text-align: center; order: 3; }
-    .view-tabs { background: #eaf1ec; padding: 4px; border-radius: 16px; }
-    .view-tab { border-color: transparent; background: #fff; box-shadow: 0 1px 2px rgba(16, 40, 24, 0.08); transition: background .15s, color .15s, box-shadow .15s; }
-    .view-tab:hover { background: #f8fafc; }
+    /* ปุ่มเลือกมุมมองแถบซ้าย: ปุ่มใหญ่ (ไอคอน + จำนวน / ชื่อ) เด่นกว่าปุ่มตัวกรอง */
+    .view-tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+    .view-tab { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; padding: 9px 4px 8px; min-height: 62px; border: 1.5px solid transparent; border-radius: 14px; background: #fff; color: #334155; font-family: inherit; cursor: pointer; line-height: 1.15; white-space: nowrap; box-shadow: 0 1px 3px rgba(16, 40, 24, 0.10); transition: background .15s, color .15s, box-shadow .15s, transform .15s; }
+    .view-tab .vt-top { display: flex; align-items: center; gap: 6px; }
+    .view-tab .vt-ico { font-size: 20px; line-height: 1; }
+    .view-tab .vt-label { font-size: 14px; font-weight: 800; text-align: center; }
+    .view-tab .vt-count { font-size: 11.5px; font-weight: 800; background: #f1f5f9; color: #475569; border-radius: 999px; padding: 1px 7px; min-width: 22px; text-align: center; }
+    .view-tab:hover { background: #f8fafc; transform: translateY(-1px); }
     /* ปุ่มที่เลือกอยู่: พื้นสีเข้มเต็มปุ่มตามมุมมอง ตัวอักษรขาว มีเงา ให้เห็นชัดว่าอยู่มุมมองไหน */
-    .view-tab[data-view="hosp"].active { background: #16a34a; border-color: #15803d; color: #fff; box-shadow: 0 4px 12px rgba(22, 163, 74, 0.38); }
-    .view-tab[data-view="qa"].active { background: #0e7490; border-color: #155e75; color: #fff; box-shadow: 0 4px 12px rgba(14, 116, 144, 0.38); }
-    .view-tab[data-view="unit"].active { background: #7c3aed; border-color: #6d28d9; color: #fff; box-shadow: 0 4px 12px rgba(124, 58, 237, 0.38); }
+    .view-tab[data-view="hosp"].active { background-color: #16a34a; background-image: linear-gradient(160deg, #22b35a, #15803d); border-color: #15803d; color: #fff; box-shadow: 0 6px 14px rgba(22, 163, 74, 0.35); }
+    .view-tab[data-view="qa"].active { background-color: #0e7490; background-image: linear-gradient(160deg, #1592ad, #0e6378); border-color: #155e75; color: #fff; box-shadow: 0 6px 14px rgba(14, 116, 144, 0.35); }
+    .view-tab[data-view="unit"].active { background-color: #7c3aed; background-image: linear-gradient(160deg, #8b5cf6, #6d28d9); border-color: #6d28d9; color: #fff; box-shadow: 0 6px 14px rgba(124, 58, 237, 0.35); }
+    .view-tab.active:hover { transform: none; }
     .view-tab.active .vt-count { background: #fff; color: #14532d; }
     .view-tab[data-view="qa"].active .vt-count { color: #155e75; }
     .view-tab[data-view="unit"].active .vt-count { color: #5b21b6; }
@@ -589,13 +601,15 @@
   <div id="page-home" class="page-view active">
     <div class="home-grid">
       <div class="panel" id="panel-tree">
+        <div class="tree-filters">
+        <div class="nav-group" data-view="hosp">
         <div class="view-tabs" id="view-tabs" role="tablist" aria-label="มุมมองตัวชี้วัด">
           <button type="button" class="view-tab" data-view="hosp" role="tab" title="ตัวชี้วัดโรงพยาบาล Part I–IV" onclick="setTreeView('hosp')"><span class="vt-top"><span class="vt-ico">🏥</span><span class="vt-count">0</span></span><span class="vt-label">รพ.</span></button>
           <button type="button" class="view-tab" data-view="qa" role="tab" title="ตัวชี้วัด QA ของแต่ละหน่วย (มิติที่ 1–5)" onclick="setTreeView('qa')"><span class="vt-top"><span class="vt-ico">🩺</span><span class="vt-count">0</span></span><span class="vt-label">QA</span></button>
           <button type="button" class="view-tab" data-view="unit" role="tab" title="หมวดของหน่วยงาน / ของฉัน" onclick="setTreeView('unit')"><span class="vt-top"><span class="vt-ico">🏷️</span><span class="vt-count">0</span></span><span class="vt-label">หน่วยงาน</span></button>
         </div>
-        <div class="tree-filters">
           <div class="filterbar" id="tree-filterbar"></div>
+        </div>
           <div class="tree-count" id="tree-count"></div>
         </div>
         <div id="accordion-tree-container"><div class="empty-state">กรุณาเข้าสู่ระบบ...</div></div>
@@ -610,8 +624,10 @@
     <div class="report-grid">
       <div class="panel" id="rp-side">
         <button type="button" class="btn btn-secondary btn-sm rp-toggle" onclick="document.getElementById('rp-side').classList.toggle('collapsed')">⚙️ ตัวกรองรายงาน (กดเพื่อเปิด/ปิด)</button>
-        <div class="view-tabs" id="rp-view-tabs" role="tablist" aria-label="มุมมองตัวชี้วัด"></div>
-        <div class="filterbar" id="rp-filterbar" style="margin-bottom: 10px;"></div>
+        <div class="nav-group" data-view="hosp" style="margin-bottom: 10px;">
+          <div class="view-tabs" id="rp-view-tabs" role="tablist" aria-label="มุมมองตัวชี้วัด"></div>
+          <div class="filterbar" id="rp-filterbar"></div>
+        </div>
         <div id="rp-controls"></div>
         <button type="button" class="btn btn-primary" style="width: 100%; margin-top: 6px;" onclick="generatePdf()">📄 Export PDF</button>
         <p class="hint" style="margin-top: 6px;">ตัวอย่างด้านขวาคือรายงานที่จะพิมพ์ กด Export แล้วเลือกปลายทาง "บันทึกเป็น PDF" · ระบบจำหมวดที่ติ๊ก เนื้อหา และแนวกระดาษของคุณไว้ให้</p>
@@ -632,7 +648,7 @@
       <div style="background: #f8fafc; padding: 10px; border-radius: 10px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #cbd5e1; flex-wrap: wrap; gap: 10px;">
         <div style="font-weight: 700; color: #015c8b; font-size: 14px;">📋 ติดตามความคืบหน้าการลงข้อมูล (Progress Tracker)</div>
         <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
-          <label class="check-row" style="margin: 0; white-space: nowrap;"><input type="checkbox" id="pg-mine" onchange="onMineToggle(this)"> เฉพาะของฉัน</label>
+          <div class="fb-row fb-scope pg-scope" id="pg-scope" aria-label="ขอบเขต"></div>
           <input type="text" id="progress-filter" class="editable-input" placeholder="🔍 ค้นหาหน่วยงาน, ผู้รับผิดชอบ..." style="width: 260px;" oninput="filterProgressTable()">
         </div>
       </div>
@@ -1130,8 +1146,7 @@
       openParts.clear(); openCats.clear(); lastInViewKey = null;
       globalProgressData = [];
       rptReset();
-      resetTreeFilters(); // ตัวกรองสถานะ/ระดับ กลับเป็นค่าเริ่มต้น ไม่ให้ติดไปยังผู้ใช้คนถัดไป
-      document.getElementById('pg-mine').checked = false;
+      resetTreeFilters(); // ตัวกรองสถานะ/ขอบเขต กลับเป็นค่าเริ่มต้น ไม่ให้ติดไปยังผู้ใช้คนถัดไป
       homeStale = false;
       document.getElementById('progress-filter').value = '';
       document.getElementById('user-bar').style.display = 'none';
@@ -1427,61 +1442,58 @@
       return { level: level, label: STATUS_META[level].label, icon: STATUS_META[level].icon, reasons: red.concat(yellow) };
     }
 
-    // ตัวกรองชุดเดียว ใช้ร่วมกันทั้งหน้าแรก / หน้าสรุปรายงาน / ตอนพิมพ์: มุมมอง (treeView) + ระดับตัวชี้วัด (levels, เลือกได้หลายปุ่ม) + สถานะ (mode)
-    let appliedFilters = { mode: 'all', levels: KPI_LEVELS.slice() };
-    const LEVEL_SHORT = { 'รายบุคคล': 'รายบุคคล', 'หน่วยงาน': 'หน่วยงาน', 'QA-หน่วยงาน': 'QA', 'SAR': 'SAR' };
-    const LEVEL_ICON = { 'รายบุคคล': '👤', 'หน่วยงาน': '🏢', 'QA-หน่วยงาน': '🩺', 'SAR': '🏥' };
-    const STATUS_BTNS = [['all', 'ทั้งหมด'], ['red', 'ต้องแก้ไข'], ['yellow', 'รอติดตาม'], ['green', 'ครบถ้วน']];
+    // ตัวกรองชุดเดียว ใช้ร่วมกันทั้งหน้าแรก / หน้าสรุปรายงาน / ตอนพิมพ์ / หน้าติดตามงาน: มุมมอง (treeView) + ขอบเขต (scope) + สถานะ (mode)
+    //  ขอบเขต: mine = ตัวที่ฉันเป็นผู้รับผิดชอบ · unit = ของหน่วยที่ฉันสังกัด (รวมของฉัน) · all = ทุกตัวที่บัญชีนี้เห็นได้
+    let appliedFilters = { mode: 'all', scope: 'all' };
+    const SCOPE_BTNS = [['mine', '👤', 'ของฉัน'], ['unit', '🏢', 'หน่วยของฉัน'], ['all', '🌐', 'ทั้งหมด']];
+    const STATUS_BTNS = [['all', 'ทุกสถานะ'], ['red', 'ต้องแก้ไข'], ['yellow', 'รอติดตาม'], ['green', 'ครบถ้วน']];
     let homeStale = false; // ตัวกรองถูกเปลี่ยนที่หน้าสรุปรายงาน → หน้าแรกต้องวาดใหม่ตอนกลับไป
 
-    // ตัวชี้วัดนี้ "อยู่ในระดับ lv" สำหรับผู้ใช้คนนี้ไหม (ความหมายของแต่ละระดับขึ้นกับผู้ใช้)
-    //  รายบุคคล = ของฉัน (staff: ที่ฉันรับผิดชอบ · หัวหน้า: ของฉัน + ของคนในหน่วย) · หน่วยงาน/QA = ของหน่วยที่ฉันสังกัด · SAR = ทุกคนเห็น · admin/ผู้บริหาร = ตามป้ายระดับของตัวชี้วัด
-    function kpiHasLevel(k, lv) {
-      const has = (k.levels || [k.level]).indexOf(lv) !== -1;
-      if (isPrivilegedUser() || lv === 'SAR') return has;
-      // รายบุคคล: ตัวที่ฉันรับผิดชอบ (ไม่ขึ้นกับป้ายระดับ) · หัวหน้าเห็นเพิ่มตัวระดับรายบุคคลของคนในหน่วย
-      if (lv === 'รายบุคคล') return !!k.isOwner || (has && !!k.mine);
-      return has && !!(k.inDept || k.mine);
+    function inScope(k, scope) {
+      if (scope === 'mine') return !!k.isOwner;
+      if (scope === 'unit') return !!(k.isOwner || k.inDept);
+      return true;
     }
 
-    function defaultLevels() {
-      if (isPrivilegedUser()) return KPI_LEVELS.slice();
-      return currentUser && currentUser.tier === 'head' ? ['รายบุคคล', 'หน่วยงาน', 'QA-หน่วยงาน'] : ['รายบุคคล'];
+    // ค่าตั้งต้นตามบทบาท: เจ้าหน้าที่ = ของฉัน · หัวหน้าหน่วย = หน่วยของฉัน · ผู้บริหาร/admin = ทั้งหมด
+    function defaultScope() {
+      if (isPrivilegedUser()) return 'all';
+      return currentUser && currentUser.tier === 'head' ? 'unit' : 'mine';
     }
 
-    // จำนวนตัวชี้วัดบนปุ่ม (นับเฉพาะตัวที่อยู่ในมุมมองปัจจุบัน): ปุ่มระดับ นับตามสถานะที่เลือก · ปุ่มสถานะ นับตามระดับที่เลือก
+    // จำนวนบนปุ่ม (นับเฉพาะตัวที่อยู่ในมุมมองปัจจุบัน): ปุ่มขอบเขต นับตามสถานะที่เลือก · ปุ่มสถานะ นับตามขอบเขตที่เลือก
     function filterCounts() {
-      const lv = {}, st = { all: 0, red: 0, yellow: 0, green: 0 };
-      KPI_LEVELS.forEach(l => { lv[l] = 0; });
+      const sc = { mine: 0, unit: 0, all: 0 }, st = { all: 0, red: 0, yellow: 0, green: 0 };
       globalDatabase.forEach(k => {
         if (viewPlacements(k, treeView).length === 0) return;
-        const has = KPI_LEVELS.filter(l => kpiHasLevel(k, l));
         const s = kpiStatus(k).level;
-        if (appliedFilters.mode === 'all' || appliedFilters.mode === s) has.forEach(l => { lv[l]++; });
-        if (has.some(l => appliedFilters.levels.indexOf(l) !== -1)) { st.all++; st[s]++; }
+        if (appliedFilters.mode === 'all' || appliedFilters.mode === s) SCOPE_BTNS.forEach(([v]) => { if (inScope(k, v)) sc[v]++; });
+        if (inScope(k, appliedFilters.scope)) { st.all++; st[s]++; }
       });
-      return { lv: lv, st: st };
+      return { sc: sc, st: st };
     }
 
-    function levelTip(l) {
-      const head = currentUser && currentUser.tier === 'head';
-      if (l === 'รายบุคคล') return isPrivilegedUser() ? 'ตัวชี้วัดระดับรายบุคคลทั้งหมด' : (head ? 'ตัวชี้วัดของคุณ และของคนในหน่วยที่คุณดูแล' : 'ตัวชี้วัดที่คุณรับผิดชอบ');
-      if (l === 'หน่วยงาน') return isPrivilegedUser() ? 'ตัวชี้วัดระดับหน่วยงานทุกหน่วย' : 'ตัวชี้วัดระดับหน่วยงานของหน่วยที่คุณสังกัด (รวมของคนอื่นในหน่วย)';
-      if (l === 'QA-หน่วยงาน') return isPrivilegedUser() ? 'ตัวชี้วัดระดับ QA ทุกหน่วย' : 'ตัวชี้วัดระดับ QA ของหน่วยที่คุณสังกัด';
-      return 'ตัวชี้วัดระดับ SAR ของโรงพยาบาล';
+    function scopeTip(v) {
+      if (v === 'mine') return 'ตัวชี้วัดที่คุณเป็นผู้รับผิดชอบ (ทุกระดับ)';
+      if (v === 'unit') return 'ตัวชี้วัดของหน่วยงานที่คุณสังกัด รวมของเพื่อนในหน่วย' + ((currentUser && currentUser.depts || []).length ? ' (' + currentUser.depts.join(', ') + ')' : '');
+      return 'ตัวชี้วัดทั้งหมดที่บัญชีของคุณเห็นได้';
+    }
+
+    function scopeBtnsHtml(counts) {
+      return SCOPE_BTNS.map(([v, ico, label]) => {
+        const on = appliedFilters.scope === v;
+        return `<button type="button" class="fb-btn sc-${v}${on ? ' on' : ''}" data-scope="${v}" aria-pressed="${on}" title="${esc(scopeTip(v))}" onclick="setScopeFilter('${v}')"><span class="fb-ico">${ico}</span><span class="fb-lab">${label}</span>${counts ? `<span class="fb-n">${counts[v]}</span>` : ''}</button>`;
+      }).join('');
     }
 
     function filterBarHtml() {
       const c = filterCounts();
-      const lvBtns = KPI_LEVELS.map(l => {
-        const on = appliedFilters.levels.indexOf(l) !== -1;
-        return `<button type="button" class="fb-btn${on ? ' on' : ''}" data-level="${l}" aria-pressed="${on}" title="${esc(levelTip(l))}" onclick="toggleLevel('${l}')"><span class="fb-ico">${LEVEL_ICON[l]}</span><span class="fb-lab">${LEVEL_SHORT[l]}</span><span class="fb-n">${c.lv[l]}</span><span class="fb-tick">✔</span></button>`;
-      }).join('');
       const stBtns = STATUS_BTNS.map(([v, label]) => {
         const on = appliedFilters.mode === v;
-        return `<button type="button" class="fb-btn st-${v}${on ? ' on' : ''}" data-status="${v}" aria-pressed="${on}" onclick="setStatusFilter('${v}')">${v === 'all' ? '<span class="fb-ico">📋</span>' : '<span class="fb-dot"></span>'}<span class="fb-lab">${label}</span><span class="fb-n">${c.st[v]}</span><span class="fb-tick">✔</span></button>`;
+        return `<button type="button" class="fb-btn st-${v}${on ? ' on' : ''}" data-status="${v}" aria-pressed="${on}" onclick="setStatusFilter('${v}')">${v === 'all' ? '<span class="fb-ico">📋</span>' : '<span class="fb-dot"></span>'}<span class="fb-lab">${label}</span><span class="fb-n">${c.st[v]}</span></button>`;
       }).join('');
-      return `<div><div class="fb-title">ระดับตัวชี้วัด</div><div class="fb-row">${lvBtns}</div></div><div><div class="fb-title">สถานะ</div><div class="fb-row">${stBtns}</div></div>`;
+      return `<div class="fb-group"><div class="fb-title">ขอบเขต</div><div class="fb-row fb-scope">${scopeBtnsHtml(c.sc)}</div></div>
+        <div class="fb-group"><div class="fb-title">สถานะ</div><div class="fb-row fb-status">${stBtns}</div></div>`;
     }
 
     // วาดปุ่มตัวกรองทั้งสองที่ (หน้าแรก / หน้าสรุปรายงาน) ให้ตรงกับค่าปัจจุบัน
@@ -1503,10 +1515,11 @@
       renderList();
     }
 
-    function toggleLevel(l) {
+    function setScopeFilter(v) {
+      if (appliedFilters.scope === v) return;
       guardUnsaved(() => {
-        const i = appliedFilters.levels.indexOf(l);
-        if (i === -1) appliedFilters.levels.push(l); else appliedFilters.levels.splice(i, 1);
+        appliedFilters.scope = v;
+        if (currentTab === 'progress') { homeStale = true; renderProgressScope(); loadProgressSummary(); return; }
         filtersChanged();
       });
     }
@@ -1596,8 +1609,7 @@
       const f = appliedFilters;
       const list = globalDatabase.filter(k => {
         if (!ignoreStatus && f.mode !== 'all' && kpiStatus(k).level !== f.mode) return false;
-        // หลายระดับ: แสดงถ้าตัวชี้วัดอยู่ในระดับใดระดับหนึ่งที่กดเลือกไว้ (ไม่เลือกเลย = ว่าง)
-        return f.levels.some(l => kpiHasLevel(k, l));
+        return inScope(k, f.scope);
       });
       const order = new Map(globalDatabase.map((k, i) => [k.id, i]));
       // ตัวชี้วัดที่อยู่หลายหมวดจะขึ้นในทุกหมวด (เป็นตัวเดียวกัน)
@@ -1640,8 +1652,7 @@
 
     // ค่าตั้งต้นตอนเข้าระบบ: staff เห็นเฉพาะที่ตัวเองรับผิดชอบ · หัวหน้าเห็นของหน่วยที่ดูแล · ผู้ดูแลและผู้บริหารเห็นทุกระดับ
     function applyDefaultFilters() {
-      appliedFilters = { mode: 'all', levels: defaultLevels() }; // staff = รายบุคคล (ของตัวเอง) · หัวหน้า = รายบุคคล+หน่วยงาน+QA · ผู้บริหาร/admin = ทุกระดับ
-      document.getElementById('pg-mine').checked = !isPrivilegedUser(); // หน้าติดตามงาน: "เฉพาะของฉัน"
+      appliedFilters = { mode: 'all', scope: defaultScope() };
       treeView = isPrivilegedUser() ? 'hosp' : 'unit'; // เจ้าหน้าที่/หัวหน้าเริ่มที่หมวดของหน่วยงาน · ผู้บริหาร/admin เริ่มที่ Part I–IV
       homeStale = false;
     }
@@ -1656,6 +1667,7 @@
     function updateViewTabs() {
       const counts = {};
       VIEWS.forEach(v => { counts[v] = uniqueById(getOrderedKpis(false, v)).length; });
+      document.querySelectorAll('.nav-group').forEach(g => { g.dataset.view = treeView; });
       document.querySelectorAll('.view-tabs .view-tab').forEach(btn => {
         const v = btn.dataset.view;
         btn.classList.toggle('active', v === treeView);
@@ -1682,31 +1694,20 @@
     }
 
     // ช่อง "เฉพาะของฉัน" (หน้าติดตามงาน): เอาติ๊กออก เตือนก่อนว่าตัวชี้วัดอื่นดูได้อย่างเดียว แก้ไขไม่ได้
-    function onMineToggle(cb) {
-      const apply = () => loadProgressSummary();
-      if (!cb.checked && !isPrivilegedUser()) {
-        showConfirm('ตัวชี้วัดที่ไม่ใช่ของคุณ ดูได้อย่างเดียว ไม่สามารถแก้ไขได้\nต้องการดูตัวชี้วัดทั้งหมดใช่หรือไม่?', apply, () => { cb.checked = true; });
-        return;
-      }
-      apply();
-    }
-
     function emptyListMessage() {
       const f = appliedFilters;
-      if (f.levels.length === 0) return 'ยังไม่ได้เลือกระดับตัวชี้วัด<br>กดปุ่มระดับด้านบนเพื่อเลือกดู';
-      const plain = f.mode === 'all';
-      if (plain && !isPrivilegedUser() && f.levels.length === 1 && f.levels[0] === 'รายบุคคล') {
-        return 'ยังไม่มีตัวชี้วัดที่คุณรับผิดชอบในมุมมองนี้<br>กดปุ่ม "หน่วยงาน" เพื่อดูตัวชี้วัดของหน่วยของคุณ';
+      if (f.mode === 'all' && f.scope === 'mine') {
+        return 'ยังไม่มีตัวชี้วัดที่คุณรับผิดชอบในมุมมองนี้<br>กดปุ่ม "หน่วยของฉัน" หรือ "ทั้งหมด" เพื่อดูตัวชี้วัดอื่น';
       }
-      if (plain && f.levels.length === KPI_LEVELS.length) {
-        if (treeView === 'qa') return 'ยังไม่มีตัวชี้วัดระดับ QA-หน่วยงาน<br>(ตัวชี้วัดที่ติ๊กระดับนี้จะแสดงที่นี่)';
+      if (f.mode === 'all' && f.scope === 'all') {
+        if (treeView === 'qa') return 'ยังไม่มีตัวชี้วัด QA<br>(ตัวชี้วัดที่มีหมวด QA ของหน่วยจะแสดงที่นี่)';
         if (treeView === 'unit') return 'ยังไม่มีหมวดของหน่วยงานหรือหมวดของคุณ';
       }
       return 'ไม่พบตัวชี้วัดในมุมมอง "' + VIEW_INFO[treeView].name + '" ตามตัวกรองที่เลือก';
     }
 
     function resetTreeFilters() {
-      appliedFilters = { mode: 'all', levels: KPI_LEVELS.slice() }; // แสดงทุกระดับ/ทุกสถานะ
+      appliedFilters = { mode: 'all', scope: 'all' }; // แสดงทุกตัว/ทุกสถานะ
     }
 
     // ===================== ผังรายการ (ซ้าย) =====================
@@ -2944,10 +2945,16 @@
     }
 
     // ===================== ติดตามงาน (Progress) =====================
+    function renderProgressScope() {
+      const el = document.getElementById('pg-scope');
+      if (el) el.innerHTML = scopeBtnsHtml(null);
+    }
+
     function loadProgressSummary() {
+      renderProgressScope();
       const summary = [];
       globalDatabase.forEach(kpi => {
-        if (document.getElementById('pg-mine').checked && !kpi.mine) return; // ค่าตั้งต้นตามผู้ใช้ (staff / หัวหน้า = เฉพาะของตัวเอง)
+        if (!inScope(kpi, appliedFilters.scope)) return; // ขอบเขตชุดเดียวกับหน้าแรก (ของฉัน / หน่วยของฉัน / ทั้งหมด)
         const stt = kpiStatus(kpi);
         summary.push({
           id: kpi.id, part: kpi.part, category: kpi.category, cats: kpiCats(kpi), name: kpi.name,
@@ -2965,7 +2972,7 @@
     function renderProgressTable(data) {
       const displayArea = document.getElementById('progress-content-area');
       if (data.length === 0) {
-        displayArea.innerHTML = '<div class="empty-state">' + (document.getElementById('pg-mine').checked && !isPrivilegedUser() ? 'ยังไม่มีตัวชี้วัดที่คุณรับผิดชอบ<br>ถ้าต้องการดูตัวชี้วัดอื่น (ดูอย่างเดียว) ให้เอาติ๊ก "เฉพาะของฉัน" ออก' : 'ไม่พบข้อมูลตัวชี้วัดในระบบ') + '</div>';
+        displayArea.innerHTML = '<div class="empty-state">' + (appliedFilters.scope === 'mine' ? 'ยังไม่มีตัวชี้วัดที่คุณรับผิดชอบ<br>กดปุ่ม "หน่วยของฉัน" หรือ "ทั้งหมด" เพื่อดูตัวชี้วัดอื่น (ตัวที่ไม่ใช่ของคุณดูได้อย่างเดียว)' : 'ไม่พบข้อมูลตัวชี้วัดในขอบเขตที่เลือก') + '</div>';
         return;
       }
       let html = `
