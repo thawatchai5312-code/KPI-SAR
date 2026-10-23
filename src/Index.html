@@ -282,6 +282,7 @@
     table.pr-table td { border: 1px solid #cbd5e1; padding: 2px 2px; font-size: inherit; text-align: center; white-space: nowrap; }
     table.pr-table td.pr-left { text-align: left; white-space: normal; word-break: break-word; }
     table.pr-table td.pr-subkpi { padding-left: 14px; }
+    table.pr-table td.pr-main { font-weight: 700; }
     table.pr-table td.pr-target { background: #fef3c7; font-weight: 700; }
     table.pr-table tr { break-inside: avoid; }
     .pr-block { break-inside: avoid; border: 1px solid #94a3b8; border-left: 5px solid #166534; border-radius: 4px; padding: 6px 10px; margin: 8px 0; }
@@ -3149,9 +3150,11 @@
         <thead><tr><th>ที่</th><th>ตัวชี้วัด</th>${thMonthsNames.map(m => `<th>${m}</th>`).join('')}<th>สรุป</th></tr></thead><tbody>`;
       kpis.forEach(k => {
         const no = kpiNumber(k);
-        const sub = no.indexOf('.') !== -1 ? ' pr-subkpi' : '';
-        a += `<tr><td>${no}</td><td class="pr-left${sub}">${esc(k.name)}</td><td class="pr-target">${esc(k.target) || '-'}</td>${k.years.map(v => `<td>${prNum(v)}</td>`).join('')}</tr>`;
-        b += `<tr><td>${no}</td><td class="pr-left${sub}">${esc(prShort(k.name, landscape ? 40 : 18))}</td>${k.months.map(v => `<td>${prNum(v)}</td>`).join('')}<td>${calculateMonthlySummary(k.months, k.summaryMethod)}<br><span class="pr-method">${esc(k.summaryMethod || 'เฉลี่ย')}</span></td></tr>`;
+        const isSub = no.indexOf('.') !== -1;
+        const sub = isSub ? ' pr-subkpi' : ' pr-main';   // ตัวชี้วัดหลัก: ลำดับ+ชื่อเป็นตัวหนา · ตัวย่อยปกติ
+        const noCls = isSub ? '' : ' class="pr-main"';
+        a += `<tr><td${noCls}>${no}</td><td class="pr-left${sub}">${esc(k.name)}</td><td class="pr-target">${esc(k.target) || '-'}</td>${k.years.map(v => `<td>${prNum(v)}</td>`).join('')}</tr>`;
+        b += `<tr><td${noCls}>${no}</td><td class="pr-left${sub}">${esc(prShort(k.name, landscape ? 40 : 18))}</td>${k.months.map(v => `<td>${prNum(v)}</td>`).join('')}<td>${calculateMonthlySummary(k.months, k.summaryMethod)}<br><span class="pr-method">${esc(k.summaryMethod || 'เฉลี่ย')}</span></td></tr>`;
       });
       return a + '</tbody></table>' + b + '</tbody></table>';
     }
