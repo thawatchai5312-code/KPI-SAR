@@ -504,16 +504,27 @@
 
     /* ปุ่มเลือกมุมมองแถบซ้าย */
     .view-tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin-bottom: 14px; } /* เว้นล่างให้พ้นแถบตัวกรองที่ดึงทับขึ้นมา 12px (ไม่ให้เส้นขอบล่างของปุ่มโดนบัง) */
-    .view-tab { display: flex; align-items: center; justify-content: center; gap: 4px; padding: 5px 4px; border: 1.5px solid var(--line); border-radius: 12px; background: #fff; color: #475569; font-family: inherit; cursor: pointer; line-height: 1.2; white-space: nowrap; }
+    .view-tab { display: flex; align-items: center; justify-content: center; gap: 3px; padding: 5px 3px; border: 1.5px solid var(--line); border-radius: 12px; background: #fff; color: #475569; font-family: inherit; cursor: pointer; line-height: 1.2; white-space: nowrap; }
     .view-tab .vt-top { display: contents; } /* ไอคอน · ชื่อ · จำนวน เรียงบรรทัดเดียว */
     .view-tab .vt-ico { font-size: 13px; order: 1; }
-    .view-tab .vt-label { font-size: 12px; font-weight: 700; text-align: center; order: 2; }
-    .view-tab .vt-count { font-size: 11px; font-weight: 800; background: #f1f5f9; border-radius: 999px; padding: 0 6px; min-width: 20px; text-align: center; order: 3; }
+    .view-tab .vt-label { font-size: 11.5px; font-weight: 700; text-align: center; order: 2; }
+    .view-tab .vt-count { font-size: 11px; font-weight: 800; background: #f1f5f9; border-radius: 999px; padding: 0 5px; min-width: 18px; text-align: center; order: 3; }
+    .view-tabs { background: #eaf1ec; padding: 4px; border-radius: 16px; }
+    .view-tab { border-color: transparent; background: #fff; box-shadow: 0 1px 2px rgba(16, 40, 24, 0.08); transition: background .15s, color .15s, box-shadow .15s; }
     .view-tab:hover { background: #f8fafc; }
-    .view-tab[data-view="hosp"].active { background: #e7f6ec; border-color: #16a34a; color: #14532d; }
-    .view-tab[data-view="qa"].active { background: #e0f4f6; border-color: #0e7490; color: #155e75; }
-    .view-tab[data-view="unit"].active { background: #ece4ff; border-color: #7c3aed; color: #5b21b6; }
-    .view-tab.active .vt-count { background: #fff; }
+    /* ปุ่มที่เลือกอยู่: พื้นสีเข้มเต็มปุ่มตามมุมมอง ตัวอักษรขาว มีเงา ให้เห็นชัดว่าอยู่มุมมองไหน */
+    .view-tab[data-view="hosp"].active { background: #16a34a; border-color: #15803d; color: #fff; box-shadow: 0 4px 12px rgba(22, 163, 74, 0.38); }
+    .view-tab[data-view="qa"].active { background: #0e7490; border-color: #155e75; color: #fff; box-shadow: 0 4px 12px rgba(14, 116, 144, 0.38); }
+    .view-tab[data-view="unit"].active { background: #7c3aed; border-color: #6d28d9; color: #fff; box-shadow: 0 4px 12px rgba(124, 58, 237, 0.38); }
+    .view-tab.active .vt-count { background: #fff; color: #14532d; }
+    .view-tab[data-view="qa"].active .vt-count { color: #155e75; }
+    .view-tab[data-view="unit"].active .vt-count { color: #5b21b6; }
+    /* หัวข้อกลุ่มและตัวย่อยในแถบซ้าย */
+    .tree-group { font-size: 11.5px; font-weight: 800; color: #64748b; margin: 8px 0 2px; padding: 0 4px; }
+    .kpi-link-item.child { padding-top: 5px; padding-bottom: 5px; font-size: 12.5px; }
+    .kpi-link-item.child .kn { color: #94a3b8; }
+    .meta-badge.parent-badge { background: #fef3c7; color: #92400e; cursor: pointer; }
+    .meta-badge.group-badge { background: #f1f5f9; color: #475569; }
     /* มุมมอง QA / การพยาบาล = โทนฟ้าอมเขียว */
     .tree-section.qa { color: #0e7490; }
     .accordion-part.qa > .accordion-header { background: #eaf7f9; border-color: #c4e6ec; color: #155e75; }
@@ -654,12 +665,27 @@
           <button class="btn btn-secondary" onclick="addUserRow()">+ เพิ่มผู้ใช้</button>
           <button class="btn btn-secondary" onclick="generateAccounts()">👥 สร้างบัญชีจากผู้รับผิดชอบที่ยังไม่มีบัญชี</button>
           <button class="btn btn-accent" onclick="openNsoImport()">📥 นำเข้า/อัปเดตตัวชี้วัดฝ่ายการพยาบาล (NSO)</button>
+          <button class="btn btn-accent" onclick="openTidy()">🧹 จัดระเบียบข้อมูล</button>
         </div>
         <div id="settings-users-list"></div>
       </div>
       <div class="modal-footer">
         <button class="btn btn-secondary" onclick="document.getElementById('modal-settings').style.display='none'">ยกเลิก</button>
         <button class="btn btn-primary" onclick="saveSettings()">💾 บันทึกการตั้งค่า</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modal-tidy" class="modal-overlay">
+    <div class="modal-card" style="max-width: 820px; width: 95%;">
+      <div class="modal-header">🧹 จัดระเบียบข้อมูลตัวชี้วัด (ทุกปีงบ)</div>
+      <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
+        <p class="hint" style="margin-bottom: 8px;">ตัดเลขข้อหน้าชื่อ (จำความเป็นตัวย่อย/ตัวแม่ไว้) · จัดหมวดย่อยของมุมมองหน่วยงานเป็น 5 มิติ + หัวข้อกลุ่ม · แปลงชื่อผู้รับผิดชอบ/ตำแหน่ง · รวมบัญชีผู้ใช้ที่ซ้ำกัน ก่อนเขียนจริงระบบสำรองชีตไว้ และบันทึกค่าเดิมทุกจุดที่เปลี่ยนไว้ในชีตซ่อน Tidy_Log (ขอคืนรายตัวได้) กดซ้ำได้ ผลเหมือนเดิม</p>
+        <div id="tidy-body"><div class="empty-state">กำลังตรวจสอบข้อมูล (ยังไม่เขียนข้อมูล)...</div></div>
+      </div>
+      <div class="modal-footer" style="display: flex; justify-content: space-between;">
+        <button class="btn btn-secondary" onclick="document.getElementById('modal-tidy').style.display='none'">ปิด</button>
+        <button class="btn btn-primary" id="tidy-commit-btn" onclick="confirmTidy()" disabled>🧹 เริ่มจัดระเบียบ</button>
       </div>
     </div>
   </div>
@@ -1464,7 +1490,40 @@
       // ตัวชี้วัดที่อยู่หลายหมวดจะขึ้นในทุกหมวด (เป็นตัวเดียวกัน)
       const placements = [];
       list.forEach(k => viewPlacements(k, view).forEach(p => placements.push(p)));
-      return placements.sort((a, b) => comparePartNames(a.part, b.part) || cmp(a.category, b.category) || order.get(a.id) - order.get(b.id));
+      return arrangeBlocks(placements.sort((a, b) => comparePartNames(a.part, b.part) || cmp(a.category, b.category) || order.get(a.id) - order.get(b.id)));
+    }
+
+    // จัดลำดับในหมวดเดียวกัน: ตัวที่ไม่มีหัวข้อกลุ่มขึ้นก่อน ตามด้วยแต่ละหัวข้อกลุ่ม (ตามลำดับที่เจอ) และตัวย่อยอยู่ใต้ตัวแม่ (depth = ระดับการซ้อน)
+    function arrangeBlocks(sorted) {
+      const out = [];
+      let i = 0;
+      while (i < sorted.length) {
+        let j = i;
+        while (j < sorted.length && sorted[j].part === sorted[i].part && sorted[j].category === sorted[i].category) j++;
+        arrangeBlock(sorted.slice(i, j)).forEach(p => out.push(p));
+        i = j;
+      }
+      return out;
+    }
+    function arrangeBlock(block) {
+      const ids = new Set(block.map(p => p.id));
+      const kids = {}, roots = [];
+      block.forEach(p => {
+        if (p.parentId && p.parentId !== p.id && ids.has(p.parentId)) (kids[p.parentId] = kids[p.parentId] || []).push(p);
+        else roots.push(p);
+      });
+      const rank = new Map([['', -1]]);
+      roots.forEach(p => { const g = p.group || ''; if (!rank.has(g)) rank.set(g, rank.size - 1); });
+      const sortedRoots = roots.map((p, i) => [p, i]).sort((a, b) => rank.get(a[0].group || '') - rank.get(b[0].group || '') || a[1] - b[1]).map(x => x[0]);
+      const out = [], seen = new Set();
+      const walk = (p, d) => {
+        if (seen.has(p.key)) return;
+        seen.add(p.key); p.depth = d; out.push(p);
+        (kids[p.id] || []).forEach(c => walk(c, Math.min(d + 1, 2)));
+      };
+      sortedRoots.forEach(p => walk(p, 0));
+      block.forEach(p => { if (!seen.has(p.key)) walk(p, 0); }); // กันกรณีอ้างอิงวนกัน
+      return out;
     }
 
     // ค่าตั้งต้นตอนเข้าระบบ: staff เห็นเฉพาะที่ตัวเองรับผิดชอบ · หัวหน้าเห็นของหน่วยที่ดูแล · ผู้ดูแลและผู้บริหารเห็นทุกระดับ
@@ -1612,14 +1671,23 @@
 
           const catContent = document.createElement('div');
           catContent.className = 'category-content';
+          let lastGroup = '';
           tree[partName][catName].forEach(kpi => {
+            if (kpi.group && kpi.group !== lastGroup && !kpi.depth) {
+              const gh = document.createElement('div');
+              gh.className = 'tree-group';
+              gh.textContent = kpi.group;
+              catContent.appendChild(gh);
+            }
+            if (!kpi.depth) lastGroup = kpi.group || '';
             const item = document.createElement('div');
-            item.className = 'kpi-link-item' + (selectedKpiId === kpi.id ? ' selected' : '');
+            item.className = 'kpi-link-item' + (selectedKpiId === kpi.id ? ' selected' : '') + (kpi.depth ? ' child' : '');
+            if (kpi.depth) item.style.marginLeft = (kpi.depth * 12) + 'px';
             item.dataset.id = kpi.id;
             item.dataset.key = kpi.key;
             item.title = kpi.name + (kpiCats(kpi).length > 1 ? '\n(ตัวชี้วัดเดียวกันอยู่ใน ' + kpiCats(kpi).length + ' หมวด)' : '');
             const stt = kpiStatus(kpi);
-            item.innerHTML = `<span class="st-dot ${stt.level}" title="${esc(stt.label + (stt.reasons.length ? ': ' + stt.reasons.join(' · ') : ''))}"></span><span class="kpi-link-text"><b class="kn">${kpiNumber(kpi)}.</b> ${esc(kpi.name)}</span>${kpiCats(kpi).length > 1 ? '<span class="multi-cat" title="ตัวชี้วัดเดียวกัน อยู่หลายหมวด">🔗</span>' : ''}`;
+            item.innerHTML = `<span class="st-dot ${stt.level}" title="${esc(stt.label + (stt.reasons.length ? ': ' + stt.reasons.join(' · ') : ''))}"></span><span class="kpi-link-text"><b class="kn">${kpi.depth ? '↳' : kpiNumber(kpi) + '.'}</b> ${esc(kpi.name)}</span>${kpiCats(kpi).length > 1 ? '<span class="multi-cat" title="ตัวชี้วัดเดียวกัน อยู่หลายหมวด">🔗</span>' : ''}`;
             item.onclick = (e) => { e.stopPropagation(); selectKpi(kpi.id, kpi.key); };
             catContent.appendChild(item);
           });
@@ -1632,6 +1700,9 @@
       });
       updateTreeInView();
     }
+
+    // กดป้าย "ตัวย่อยของ" บนการ์ด → ไปที่ตัวชี้วัดแม่
+    function goToParent(el) { selectKpi(el.dataset.pid); }
 
     // คลิกในผังรายการ → ไปหน้าที่มีตัวนั้น เลื่อนจอไปหา และไฮไลต์
     function selectKpi(id, key) {
@@ -1892,6 +1963,8 @@
             <div class="kpi-card-badges">
               <span class="st-badge ${stt.level}">${stt.icon} ${stt.label}</span>
               <span class="meta-badge">หมวดหมู่: ${esc(kpi.category)}</span>
+              ${kpi.group ? `<span class="meta-badge group-badge" title="หัวข้อกลุ่มในหมวด">📂 ${esc(kpi.group)}</span>` : ''}
+              ${kpi.parentId && globalDatabase.some(x => x.id === kpi.parentId) ? `<span class="meta-badge parent-badge" data-pid="${esc(kpi.parentId)}" onclick="goToParent(this)" title="กดเพื่อไปที่ตัวชี้วัดแม่">↳ ตัวย่อยของ: ${esc(globalDatabase.find(x => x.id === kpi.parentId).name)}</span>` : ''}
               ${kpiCats(kpi).length > 1 ? `<span class="meta-badge multi-badge" title="ตัวชี้วัดเดียวกัน แก้ที่หมวดไหนก็เปลี่ยนทุกหมวด">🔗 อยู่ใน ${kpiCats(kpi).length} หมวด: ${esc(kpiCats(kpi).map(c => c.part + ' › ' + c.category).join(' · '))}</span>` : ''}
               <span class="meta-badge" title="ทุกระดับ: ${esc((kpi.levels || [kpi.level]).join(', '))}">ระดับ: ${esc(kpi.level)}${(kpi.levels || []).length > 1 ? ' (+' + (kpi.levels.length - 1) + ')' : ''}</span>
               <span class="meta-badge">ปีงบ: ${selectedFy}${selectedFy === currentFy ? ' (ปัจจุบัน)' : ''}</span>
@@ -2355,6 +2428,63 @@
         ${sec('ขัดแย้ง: แก้ทั้งสองฝั่งในช่องเดียวกัน ใช้ของต้นทาง NSO', c.conflicts, nsoList(rep.conflicts, x => short(x.name)))}
         ${sec('ลบออกจากระบบนี้แล้ว (ไม่นำกลับ)', c.deletedLocally, nsoList(rep.deletedLocally, x => short(x)))}
         ${sec('ชื่อผู้รับผิดชอบที่ยังไม่มีบัญชี — กดปุ่ม "สร้างบัญชีจากผู้รับผิดชอบ" ได้หลังนำเข้า', rep.unknownOwners.length, '<div style="font-size:12.5px; margin-top:4px;">' + rep.unknownOwners.map(o => esc(o.name) + ' (' + o.count + ')').join(' · ') + '</div>')}`;
+    }
+
+    // ===================== จัดระเบียบข้อมูล — admin =====================
+    function renderTidyReport(rep, done) {
+      const box = (n, label, color) => `<div style="flex:1; min-width:100px; border:1px solid var(--line); border-top:4px solid ${color}; border-radius:12px; padding:8px 10px; background:#fff;"><div style="font-size:22px; font-weight:800;">${n}</div><div style="font-size:12px; color:#475569; font-weight:600;">${label}</div></div>`;
+      const short = (t, n = 60) => esc(String(t).length > n ? String(t).slice(0, n) + '…' : t);
+      const sec = (title, n, body) => n > 0 ? `<details style="margin-top:8px;"><summary style="cursor:pointer; font-weight:700;">${title} (${n})</summary>${body}</details>` : '';
+      const ul = (items, fn) => items.length === 0 ? '<div class="hint" style="margin:0;">-</div>' : '<ul style="margin:4px 0 0; padding-left:1.2em; font-size:12.5px;">' + items.map(it => '<li>' + fn(it) + '</li>').join('') + '</ul>';
+      const sum = k => rep.fys.reduce((a, f) => a + (f[k] || 0), 0);
+      const fyLine = rep.fys.map(f => `ปีงบ ${f.fy}: แก้ ${f.rows}/${f.total} ตัว`).join(' · ');
+      document.getElementById('tidy-body').innerHTML = `
+        <div style="font-weight:700; margin-bottom:6px;">${done ? '✅ ผลการจัดระเบียบ' : '🔍 ตัวอย่างก่อนจัดระเบียบ (ยังไม่เขียนข้อมูล)'} · ${fyLine}</div>
+        ${rep.hasWork ? '' : '<div class="note" style="margin-bottom:8px;">ข้อมูลเป็นระเบียบอยู่แล้ว ไม่มีอะไรต้องแก้</div>'}
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          ${box(sum('names'), 'ชื่อที่ตัดเลข (ทุกปีงบ)', '#16a34a')}${box(sum('parents'), 'ตัวย่อยที่ผูกกับตัวแม่', '#0e7490')}${box(sum('cats'), 'ตัวที่ปรับหมวด', '#7c3aed')}${box(sum('owners'), 'ผู้รับผิดชอบที่แปลงชื่อ', '#ca8a04')}${box(rep.usersMerge.length + rep.usersDelete.length, 'บัญชีผู้ใช้ที่รวม/ลบ', '#dc2626')}
+        </div>
+        ${sec('ตัวอย่างชื่อที่ตัดเลข', rep.samples.names.length, ul(rep.samples.names, x => '<span style="color:#64748b;">' + short(x.from) + '</span> → <b>' + short(x.to) + '</b>'))}
+        ${sec('ตัวย่อย → ตัวแม่ (ตัวอย่าง)', rep.samples.parents.length, ul(rep.samples.parents, x => '↳ ' + short(x.child, 45) + ' <span style="color:#64748b;">ของ</span> ' + short(x.parent, 45)))}
+        ${sec('การย้ายหมวดย่อยที่พบบ่อย (หน่วยงาน › หมวดเดิม → มิติ)', rep.samples.cats.length, ul(rep.samples.cats, x => esc(x.map) + ' · ' + x.n + ' ตำแหน่ง'))}
+        ${sec('ผู้รับผิดชอบที่แปลงชื่อ', rep.samples.owners.length, ul(rep.samples.owners, x => esc(x.id) + ': ' + esc(x.from) + ' → <b>' + esc(x.to) + '</b>'))}
+        ${sec('เอาระดับ QA ออก (ปีงบปัจจุบัน — ติ๊กเกินโดยไม่ตั้งใจ)', rep.samples.levels.length, ul(rep.samples.levels, x => short(x.name) + ': ' + esc(x.from) + ' → <b>' + esc(x.to) + '</b>'))}
+        ${sec('บัญชีผู้ใช้', rep.usersMerge.length + rep.usersDelete.length, ul(rep.usersMerge.map(m => ({ t: '🔀 รวม ' + esc(m.from) + ' → <b>' + esc(m.to) + '</b> (หน่วยงาน ' + esc(m.depts) + ')' })).concat(rep.usersDelete.map(d => ({ t: '🗑️ ลบบัญชี ' + esc(d) }))), x => x.t))}`;
+    }
+
+    function openTidy() {
+      if (!currentUser || currentUser.tier !== 'admin') return;
+      document.getElementById('modal-tidy').style.display = 'flex';
+      document.getElementById('tidy-commit-btn').disabled = true;
+      document.getElementById('tidy-body').innerHTML = '<div class="empty-state">กำลังตรวจสอบข้อมูลทุกปีงบ (อาจใช้เวลาครู่หนึ่ง)...</div>';
+      google.script.run
+        .withSuccessHandler((res) => {
+          if (!res.success) { document.getElementById('tidy-body').innerHTML = '<div class="empty-state">' + esc(res.message) + '</div>'; return; }
+          renderTidyReport(res.preview, false);
+          document.getElementById('tidy-commit-btn').disabled = !res.preview.hasWork;
+        })
+        .withFailureHandler((err) => { document.getElementById('tidy-body').innerHTML = '<div class="empty-state">' + esc(err.toString()) + '</div>'; })
+        .tidyPreview(sessionToken);
+    }
+
+    function confirmTidy() {
+      showConfirm('เริ่มจัดระเบียบข้อมูลทุกปีงบ?\nระบบสำรองชีตและบัญชีผู้ใช้ไว้ก่อน และบันทึกค่าเดิมไว้ในชีต Tidy_Log', () => {
+        const btn = document.getElementById('tidy-commit-btn');
+        btn.disabled = true;
+        document.getElementById('tidy-body').innerHTML = '<div class="empty-state">กำลังจัดระเบียบ กรุณารอ อย่าปิดหน้านี้...</div>';
+        google.script.run
+          .withSuccessHandler((res) => {
+            if (!res.success) { document.getElementById('tidy-body').innerHTML = '<div class="empty-state">' + esc(res.message) + '</div>'; btn.disabled = false; return; }
+            renderTidyReport(res.preview, true);
+            const w = res.wrote;
+            if (w) document.getElementById('tidy-body').insertAdjacentHTML('afterbegin', `<div class="hint" style="margin:0 0 6px;">บันทึกแล้ว: ${Object.keys(w.fys).map(fy => 'ปีงบ ' + fy + ' แก้ ' + w.fys[fy].rows + ' ตัว').join(' · ')} · บัญชีรวม ${w.users.merged} ลบ ${w.users.deleted} · ค่าเดิมใน Tidy_Log ${w.logRows} บรรทัด</div>`);
+            btn.disabled = true;
+            fetchAllDataFromServer(true);
+            loadSettingsUsers();
+          })
+          .withFailureHandler((err) => { document.getElementById('tidy-body').innerHTML = '<div class="empty-state">' + esc(err.toString()) + '</div>'; btn.disabled = false; })
+          .tidyCommit(sessionToken);
+      });
     }
 
     function openNsoImport() {
@@ -2947,8 +3077,8 @@
         <thead><tr><th>ที่</th><th>ตัวชี้วัด</th>${thMonthsNames.map(m => `<th>${m}</th>`).join('')}<th>สรุป</th></tr></thead><tbody>`;
       kpis.forEach(k => {
         const no = kpiNumber(k);
-        a += `<tr><td>${no}</td><td class="pr-left">${esc(k.name)}</td><td class="pr-target">${esc(k.target) || '-'}</td>${k.years.map(v => `<td>${prNum(v)}</td>`).join('')}</tr>`;
-        b += `<tr><td>${no}</td><td class="pr-left">${esc(prShort(k.name, landscape ? 40 : 18))}</td>${k.months.map(v => `<td>${prNum(v)}</td>`).join('')}<td>${calculateMonthlySummary(k.months, k.summaryMethod)}<br><span class="pr-method">${esc(k.summaryMethod || 'เฉลี่ย')}</span></td></tr>`;
+        a += `<tr><td>${no}</td><td class="pr-left">${k.parentId ? '↳ ' : ''}${esc(k.name)}</td><td class="pr-target">${esc(k.target) || '-'}</td>${k.years.map(v => `<td>${prNum(v)}</td>`).join('')}</tr>`;
+        b += `<tr><td>${no}</td><td class="pr-left">${k.parentId ? '↳ ' : ''}${esc(prShort(k.name, landscape ? 40 : 18))}</td>${k.months.map(v => `<td>${prNum(v)}</td>`).join('')}<td>${calculateMonthlySummary(k.months, k.summaryMethod)}<br><span class="pr-method">${esc(k.summaryMethod || 'เฉลี่ย')}</span></td></tr>`;
       });
       return a + '</tbody></table>' + b + '</tbody></table>';
     }
@@ -2956,7 +3086,7 @@
     function prBlock(k, opts, landscape) {
       const yl = [selectedFy - 4, selectedFy - 3, selectedFy - 2, selectedFy - 1, selectedFy];
       let h = `<div class="pr-block"><div class="pr-kpi-title">${kpiNumber(k)}. ${esc(k.name)}</div>
-        <div class="pr-meta">หมวด: ${esc(k.category)} · ระดับ: ${esc(k.level)} · เป้าหมาย: <b>${esc(k.target) || '-'}</b> · ปีงบประมาณ ${selectedFy}</div>`;
+        <div class="pr-meta">หมวด: ${esc(k.category)}${k.group ? ' · หัวข้อ: ' + esc(k.group) : ''}${k.parentId && globalDatabase.some(x => x.id === k.parentId) ? ' · ตัวย่อยของ: ' + esc(globalDatabase.find(x => x.id === k.parentId).name) : ''} · ระดับ: ${esc(k.level)} · เป้าหมาย: <b>${esc(k.target) || '-'}</b> · ปีงบประมาณ ${selectedFy}</div>`;
       if (opts.chart) {
         h += `<div class="pr-chart">${generateSvgLineChart(k.years, k.target, yl)}</div>
           <table class="pr-table" style="font-size:${landscape ? '12pt' : '9.5pt'};"><thead><tr>${thMonthsNames.map(m => `<th>${m}</th>`).join('')}<th>สรุป</th></tr></thead>

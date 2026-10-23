@@ -59,6 +59,8 @@ function rowToKpi_(row) {
     templateDetails: row[23] ? row[23].toString().trim() : "",
     dataSource: row[24] ? row[24].toString().trim() : "",
     owner: row[25] ? row[25].toString().trim() : "",
+    parentId: row[PARENT_COL - 1] ? row[PARENT_COL - 1].toString().trim() : "", // ตัวชี้วัดแม่ (ว่าง = ไม่ใช่ตัวย่อย)
+    group: row[GROUP_COL - 1] ? row[GROUP_COL - 1].toString().trim() : "",      // หัวข้อกลุ่มในหมวด
     department: row[26] ? row[26].toString().trim() : "",
     summaryMethod: normalizeSummaryMethod_(row[SUMMARY_COL - 1]),
     analysisUpdatedAt: formatStamp_(row[ANALYSIS_COL - 1]),
@@ -213,7 +215,7 @@ function saveKpi(token, fy, item) {
     fy = resolveFiscalYear_(fy);
     var sheet = getFiscalSheet_(fy);
     if (!sheet) return { success: false, message: "ไม่พบชีตปีงบประมาณ" };
-    ensureColumns_(sheet, EXTRA_CATS_COL);
+    ensureColumns_(sheet, KPI_COLS);
 
     var data = sheet.getDataRange().getValues();
     var rowIndex = -1;
@@ -355,7 +357,7 @@ function saveKpi(token, fy, item) {
       touchUser_(user, "edit");
     }
 
-    var fresh = rowToKpi_(sheet.getRange(row, 1, 1, EXTRA_CATS_COL).getValues()[0]);
+    var fresh = rowToKpi_(sheet.getRange(row, 1, 1, KPI_COLS).getValues()[0]);
     return {
       success: true,
       changed: changed,
@@ -447,7 +449,7 @@ function addIndicator(token, fy, newItem) {
     fy = resolveFiscalYear_(fy);
     var sheet = getFiscalSheet_(fy);
     if (!sheet) return { success: false, message: "ไม่พบชีตปีงบประมาณ" };
-    ensureColumns_(sheet, EXTRA_CATS_COL);
+    ensureColumns_(sheet, KPI_COLS);
     if (!privileged && fy !== getCurrentFiscalYear_()) {
       return { success: false, message: "เพิ่มตัวชี้วัดใหม่ได้เฉพาะปีงบปัจจุบัน (" + getCurrentFiscalYear_() + ")" };
     }

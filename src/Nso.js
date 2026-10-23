@@ -57,6 +57,7 @@ function nsoOwnerNames_(text) {
     var first = part.replace(/[\u200b\u200c\u200d]/g, "").trim().split(/\s+/)[0];
     if (!first || !/^[ก-๙]{2,}$/.test(first) || NSO_NOT_PERSON.test(first)) return; // เฉพาะชื่อไทยล้วน (ไม่รวมตัวเลข/อังกฤษ/วงเล็บ/ชื่อทีม)
     first = NSO_OWNER_FIX[first] || first;
+    if (first.indexOf(HEAD_WARD_TOKEN) === 0) { if (out.indexOf(HEAD_WARD_TOKEN) === -1) out.push(HEAD_WARD_TOKEN); return; } // "หัวหน้าตึก…" = head ขึ้นไปที่สังกัด NSO
     parseOwners_(first).forEach(function(n) { if (out.indexOf(n) === -1) out.push(n); });
   });
   return out;
@@ -225,7 +226,7 @@ function nsoPlan_() {
     added: [], merged: [], updated: [], conflicts: [], ambiguous: [], similar: [], unknownOwners: {}, deletedLocally: [] };
 
   src.mapped.forEach(function(m) {
-    m.owners.forEach(function(n) { if (!users[n]) plan.unknownOwners[n] = (plan.unknownOwners[n] || 0) + 1; });
+    m.owners.forEach(function(n) { if (!users[n] && !OWNER_SKIP.hasOwnProperty(n)) plan.unknownOwners[n] = (plan.unknownOwners[n] || 0) + 1; });
     var link = sync[m.sourceId];
     var rowIdx;
     if (link) rowIdx = idx.byId[link.ourId];
@@ -329,7 +330,8 @@ function nsoApplyUpdate_(row, op, report) {
   if (depts.length !== oldDepts.length) { row[26] = oldDepts.length ? nsoStr_(row[26]) + " / " + depts.slice(oldDepts.length).join(" / ") : deptText; changed = true; }
   var cats = kpiCats_({ cats: [{ part: nsoStr_(row[2]) || "ทั่วไป", category: nsoStr_(row[3]) || "ทั่วไป" }].concat(parseExtraCats_(row[EXTRA_CATS_COL - 1])) });
   var before = cats.map(catKey_).join("\n");
-  m.cats.forEach(function(c) { if (!cats.some(function(x) { return catKey_(x) === catKey_(c); })) cats.push(c); });
+  // ตัวที่เคยนำเข้าแล้ว (มีสำเนาต้นทาง) ไม่เติมหมวดต้นทางกลับ — หมวดถูกจัดระเบียบเป็น 5 มิติแล้ว (ดู Tidy.js)
+  if (!base) m.cats.forEach(function(c) { if (!cats.some(function(x) { return catKey_(x) === catKey_(c); })) cats.push(c); });
   if (cats.map(catKey_).join("\n") !== before) {
     // หมวดหน่วยงานที่มีหมวดย่อยจริงอยู่แล้ว ไม่ต้องมี "รอจัดหมวดย่อย" ซ้ำ
     cats = cats.filter(function(c) { return !(c.category === UNIT_CATS_PLACEHOLDER && cats.some(function(x) { return x.part === c.part && x.category !== UNIT_CATS_PLACEHOLDER; })); });
@@ -458,8 +460,10 @@ function nsoImportCommit(token) {
     });
     propagateAnnual_(annual);
     nsoWriteSync_(plan.sync);
+    SpreadsheetApp.flush();
+    var tidied = tidyApply_(tidyPlanAll_(), { backup: true, users: false }); // ตัวที่เพิ่ง/รวมเข้ามาใหม่: ตัดเลข จัดหมวด 5 มิติ หาตัวแม่ ฯลฯ ตามกติกาเดียวกับ "จัดระเบียบข้อมูล"
     touchUser_(admin, "edit");
-    return { success: true, message: "นำเข้า/อัปเดตเรียบร้อย", result: nsoSummary_(plan), wrote: { added: newRows.length, updated: updates.length, mirrored2570New: newRows70.length, mirrored2570Updated: updates70.length } };
+    return { success: true, message: "นำเข้า/อัปเดตเรียบร้อย", result: nsoSummary_(plan), wrote: { added: newRows.length, updated: updates.length, mirrored2570New: newRows70.length, mirrored2570Updated: updates70.length, tidied: tidied.logRows } };
   } catch (e) {
     return { success: false, message: "เกิดข้อผิดพลาด: " + e.toString() };
   } finally {
