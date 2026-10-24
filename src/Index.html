@@ -3474,7 +3474,7 @@
     function prMainTables(kpis, landscape) {
       const yl = [selectedFy - 4, selectedFy - 3, selectedFy - 2, selectedFy - 1, selectedFy];
       const fs = landscape ? '10.5pt' : '9.5pt';
-      const fsMonth = landscape ? '10.5pt' : '8pt'; // แนวตั้ง: 12 เดือนในหน้าเดียวต้องลดขนาดตาราง
+      const fsMonth = landscape ? '10.5pt' : '9pt'; // แนวตั้ง: 12 เดือนในหน้าเดียวต้องลดขนาดตาราง
       const wA = landscape ? [6, 40, 10, 8.8, 8.8, 8.8, 8.8, 8.8] : [7, 36, 12, 9, 9, 9, 9, 9];
       const wB = landscape ? [5, 21, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 7] : [5, 15, 5.8, 5.8, 5.8, 5.8, 5.8, 5.8, 5.8, 5.8, 5.8, 5.8, 5.8, 5.8, 8.4];
       const cols = (w) => '<colgroup>' + w.map(x => `<col style="width:${x}%">`).join('') + '</colgroup>';
@@ -3513,7 +3513,7 @@
         <div class="pr-meta">หมวด: ${esc(k.category)}${k.parentId && globalDatabase.some(x => x.id === k.parentId) ? ' · ตัวย่อยของ ' + esc(prParentLabel(k)) : ''} · ระดับ: ${esc(k.level)} · เป้าหมาย: <b>${esc(k.target) || '-'}</b> · ปีงบประมาณ ${selectedFy}</div>${pl && pl.length > 1 ? prPlacesNote(pl) : ''}`;
       if (opts.chart) {
         h += `<div class="pr-chart">${generateSvgLineChart(k.years, k.target, yl)}</div>
-          <table class="pr-table" style="font-size:${landscape ? '10.5pt' : '8pt'};"><thead><tr>${thMonthsNames.map(m => `<th>${m}</th>`).join('')}<th>สรุป</th></tr></thead>
+          <table class="pr-table" style="font-size:${landscape ? '10.5pt' : '9pt'};"><thead><tr>${thMonthsNames.map(m => `<th>${m}</th>`).join('')}<th>สรุป</th></tr></thead>
           <tbody><tr>${k.months.map(v => `<td>${prNum(v)}</td>`).join('')}<td>${calculateMonthlySummary(k.months, k.summaryMethod)}<br><span class="pr-method">${esc(k.summaryMethod || 'เฉลี่ย')}</span></td></tr></tbody></table>`;
       }
       if (opts.detail) h += `<div class="pr-label">รายละเอียด/การวิเคราะห์ตัวชี้วัด</div><div class="pr-text">${esc(k.templateDetails) || '-'}</div>`;
