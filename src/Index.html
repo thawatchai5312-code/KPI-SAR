@@ -225,11 +225,14 @@
 
     /* หน้าติดตามงาน: ซ้าย = กราฟความคืบหน้า, ขวา = ค้นหา + ตารางเดิม */
     .progress-grid { display: grid; grid-template-columns: 40fr 60fr; gap: 10px; align-items: start; }
-    /* ทั้งสองฝั่งสูงพอดีจอ (ความสูงตั้งด้วย setProgressHeight) ฝั่งขวาเลื่อนตารางอยู่ในกรอบ */
-    #progress-chart-panel { height: 100%; overflow-y: auto; }
-    #progress-table-panel { height: 100%; display: flex; flex-direction: column; overflow: hidden; }
-    #progress-table-panel #progress-content-area { flex: 1; min-height: 0; overflow-y: auto; }
-    #progress-table-panel .data-table-wrapper { max-height: none !important; box-shadow: none; }
+    /* ตารางกางเต็มความยาว เลื่อนทั้งหน้า (ไม่มีแถบเลื่อนในกรอบ) · กราฟซ้ายติดอยู่กับที่ เลื่อนในกรอบของตัวเอง · หัวตารางติดใต้แถบเมนู */
+    #progress-chart-panel { position: sticky; top: var(--tree-top, 70px); max-height: calc(100vh - var(--tree-top, 70px) - 10px); overflow-y: auto; }
+    #progress-table-panel { display: flex; flex-direction: column; }
+    #progress-table-panel .data-table-wrapper { max-height: none !important; overflow: visible !important; box-shadow: none; }
+    #progress-table-panel thead th { position: sticky; top: calc(var(--tree-top, 70px) - 14px); z-index: 2; }
+    /* จอแคบที่ตารางกว้างกว่ากรอบ: เลื่อนซ้าย-ขวาในกรอบเหมือนเดิม (หัวตารางไม่ติดด้านบน) — ตั้งด้วย fitProgressTable */
+    #progress-table-panel .data-table-wrapper.pg-scroll-x { overflow-x: auto !important; }
+    #progress-table-panel .data-table-wrapper.pg-scroll-x thead th { position: static; }
     .pg-title { font-weight: 700; color: #015c8b; font-size: 15px; margin-bottom: 2px; }
     .pg-sub { font-size: 12px; color: #64748b; font-weight: 600; margin-bottom: 8px; }
     .pg-donut-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 10px; }
@@ -273,6 +276,7 @@
       .progress-grid { grid-template-columns: 1fr; }
       .progress-grid { height: auto !important; }
       #progress-chart-panel, #progress-table-panel { height: auto; overflow: visible; }
+      #progress-chart-panel { position: static; max-height: none; }
       #progress-table-panel #progress-content-area { overflow: visible; }
     }
 
@@ -3141,6 +3145,7 @@
       });
       html += `</tbody></table></div>`;
       displayArea.innerHTML = html;
+      fitProgressTable();
     }
 
     function filterProgressTable() {
@@ -3643,12 +3648,18 @@
     window.addEventListener('resize', setStickyOffsets);
 
     // หน้าติดตามงาน: ให้สองฝั่งสูงจากตำแหน่งปัจจุบันถึงขอบล่างของจอพอดี ไม่มีช่องว่างด้านล่าง (จอเล็กปล่อยความสูงตามเนื้อหา)
+    // หน้าติดตามงานกางเต็มความยาวแล้วเลื่อนทั้งหน้า: ไม่ล็อกความสูงเท่าจอ
     function setProgressHeight() {
       const grid = document.querySelector('.progress-grid');
-      if (!grid || !document.getElementById('page-progress').classList.contains('active')) return;
-      if (window.innerWidth <= 1000) { grid.style.height = ''; return; }
-      const top = grid.getBoundingClientRect().top + window.scrollY;
-      grid.style.height = Math.max(320, window.innerHeight - top - 10) + 'px';
+      if (grid) grid.style.height = '';
+      fitProgressTable();
+    }
+    // ตารางกว้างกว่ากรอบ (จอแคบ/มือถือ) → เลื่อนซ้าย-ขวาในกรอบ · พอดีกรอบ → หัวตารางติดใต้แถบเมนูตอนเลื่อนหน้า
+    function fitProgressTable() {
+      const wrap = document.querySelector('#progress-table-panel .data-table-wrapper');
+      const table = wrap && wrap.querySelector('table');
+      if (!table || !wrap.clientWidth) return;
+      wrap.classList.toggle('pg-scroll-x', table.scrollWidth > wrap.clientWidth + 1);
     }
     window.addEventListener('resize', setProgressHeight);
 
