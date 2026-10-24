@@ -284,15 +284,15 @@
       #print-root { display: block !important; }
       * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     }
-    #print-root, #rp-paper { font-family: 'Google Sans', sans-serif !important; font-size: 14pt; color: #0f172a; line-height: 1.4; }
+    #print-root, #rp-paper { font-family: 'Google Sans', sans-serif !important; font-size: 12pt; color: #0f172a; line-height: 1.4; }
     #print-root *, #rp-paper * { font-family: 'Google Sans', sans-serif !important; }
     .pr-head { text-align: center; border-bottom: 3px solid #166534; padding-bottom: 6px; margin-bottom: 10px; }
-    .pr-head .pr-hosp { font-size: 16pt; font-weight: 700; color: #166534; }
-    .pr-head .pr-sub { font-size: 14pt; font-weight: 600; }
-    .pr-head .pr-info { font-size: 11pt; color: #475569; }
-    .pr-part { font-size: 16pt; font-weight: 700; color: #fff; background: #166534; padding: 3px 10px; margin: 12px 0 6px; break-after: avoid; }
-    .pr-cat { font-size: 16pt; font-weight: 700; color: #166534; border-bottom: 2px solid #86efac; margin: 10px 0 5px; break-after: avoid; }
-    .pr-sub-title { font-size: 12pt; font-weight: 700; color: #475569; margin: 6px 0 3px; break-after: avoid; }
+    .pr-head .pr-hosp { font-size: 14pt; font-weight: 700; color: #166534; }
+    .pr-head .pr-sub { font-size: 12pt; font-weight: 600; }
+    .pr-head .pr-info { font-size: 9.5pt; color: #475569; }
+    .pr-part { font-size: 14pt; font-weight: 700; color: #fff; background: #166534; padding: 3px 10px; margin: 12px 0 6px; break-after: avoid; }
+    .pr-cat { font-size: 14pt; font-weight: 700; color: #166534; border-bottom: 2px solid #86efac; margin: 10px 0 5px; break-after: avoid; }
+    .pr-sub-title { font-size: 10.5pt; font-weight: 700; color: #475569; margin: 6px 0 3px; break-after: avoid; }
     table.pr-table { width: 100%; border-collapse: collapse; margin-bottom: 8px; table-layout: fixed; }
     table.pr-table th { background: #dcfce7; color: #14532d; border: 1px solid #94a3b8; padding: 2px 3px; font-size: inherit; white-space: normal; position: static; }
     table.pr-table td { border: 1px solid #cbd5e1; padding: 2px 2px; font-size: inherit; text-align: center; white-space: nowrap; }
@@ -302,13 +302,13 @@
     table.pr-table td.pr-target { background: #fef3c7; font-weight: 700; }
     table.pr-table tr { break-inside: avoid; }
     .pr-block { break-inside: avoid; border: 1px solid #94a3b8; border-left: 5px solid #166534; border-radius: 4px; padding: 6px 10px; margin: 8px 0; }
-    .pr-kpi-title { font-size: 16pt; font-weight: 700; color: #14532d; }
-    .pr-meta { font-size: 12pt; color: #475569; margin-bottom: 4px; }
+    .pr-kpi-title { font-size: 14pt; font-weight: 700; color: #14532d; }
+    .pr-meta { font-size: 10.5pt; color: #475569; margin-bottom: 4px; }
     .pr-chart svg { width: 100%; height: auto; max-height: 70mm; }
-    .pr-method { font-size: 7.5pt; font-weight: 400; color: #475569; }
-    .pr-label { font-size: 14pt; font-weight: 700; color: #166534; margin-top: 4px; }
-    .pr-text { font-size: 14pt; white-space: pre-line; }
-    .pr-note { font-size: 12pt; color: #1e3a8a; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 4px; padding: 3px 8px; margin: 4px 0; }
+    .pr-method { font-size: 6.5pt; font-weight: 400; color: #475569; }
+    .pr-label { font-size: 12pt; font-weight: 700; color: #166534; margin-top: 4px; }
+    .pr-text { font-size: 12pt; white-space: pre-line; }
+    .pr-note { font-size: 10.5pt; color: #1e3a8a; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 4px; padding: 3px 8px; margin: 4px 0; }
     .pr-block.pr-ref { border-left-color: #3b82f6; }
     /* ================= สไตล์ใหม่ (ตัวอย่าง): Google Sans, การ์ดโค้งมน, สีสดขึ้น ================= */
     :root {
@@ -3473,8 +3473,8 @@
 
     function prMainTables(kpis, landscape) {
       const yl = [selectedFy - 4, selectedFy - 3, selectedFy - 2, selectedFy - 1, selectedFy];
-      const fs = landscape ? '12pt' : '11pt';
-      const fsMonth = landscape ? '12pt' : '9pt'; // แนวตั้ง: 12 เดือนในหน้าเดียวต้องลดขนาดตาราง
+      const fs = landscape ? '10.5pt' : '9.5pt';
+      const fsMonth = landscape ? '10.5pt' : '8pt'; // แนวตั้ง: 12 เดือนในหน้าเดียวต้องลดขนาดตาราง
       const wA = landscape ? [6, 40, 10, 8.8, 8.8, 8.8, 8.8, 8.8] : [7, 36, 12, 9, 9, 9, 9, 9];
       const wB = landscape ? [5, 21, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 7] : [5, 15, 5.8, 5.8, 5.8, 5.8, 5.8, 5.8, 5.8, 5.8, 5.8, 5.8, 5.8, 5.8, 8.4];
       const cols = (w) => '<colgroup>' + w.map(x => `<col style="width:${x}%">`).join('') + '</colgroup>';
@@ -3513,7 +3513,7 @@
         <div class="pr-meta">หมวด: ${esc(k.category)}${k.parentId && globalDatabase.some(x => x.id === k.parentId) ? ' · ตัวย่อยของ ' + esc(prParentLabel(k)) : ''} · ระดับ: ${esc(k.level)} · เป้าหมาย: <b>${esc(k.target) || '-'}</b> · ปีงบประมาณ ${selectedFy}</div>${pl && pl.length > 1 ? prPlacesNote(pl) : ''}`;
       if (opts.chart) {
         h += `<div class="pr-chart">${generateSvgLineChart(k.years, k.target, yl)}</div>
-          <table class="pr-table" style="font-size:${landscape ? '12pt' : '9.5pt'};"><thead><tr>${thMonthsNames.map(m => `<th>${m}</th>`).join('')}<th>สรุป</th></tr></thead>
+          <table class="pr-table" style="font-size:${landscape ? '10.5pt' : '8pt'};"><thead><tr>${thMonthsNames.map(m => `<th>${m}</th>`).join('')}<th>สรุป</th></tr></thead>
           <tbody><tr>${k.months.map(v => `<td>${prNum(v)}</td>`).join('')}<td>${calculateMonthlySummary(k.months, k.summaryMethod)}<br><span class="pr-method">${esc(k.summaryMethod || 'เฉลี่ย')}</span></td></tr></tbody></table>`;
       }
       if (opts.detail) h += `<div class="pr-label">รายละเอียด/การวิเคราะห์ตัวชี้วัด</div><div class="pr-text">${esc(k.templateDetails) || '-'}</div>`;
