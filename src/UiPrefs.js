@@ -18,7 +18,7 @@ function saveUiPrefs(token, prefs) {
     var user = requireUser_(token);
     var p = prefs || {};
     var clean = {
-      mode: UI_MODES.indexOf(p.mode) !== -1 ? p.mode : "card",
+      mode: UI_MODES.indexOf(p.mode) !== -1 ? p.mode : "table",
       hide: (Array.isArray(p.hide) ? p.hide : []).filter(function(g, i, a) { return UI_HIDE_GROUPS.indexOf(g) !== -1 && a.indexOf(g) === i; })
     };
     PropertiesService.getScriptProperties().setProperty(UI_PREFS_PREFIX + user.username, JSON.stringify(clean));

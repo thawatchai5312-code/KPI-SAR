@@ -692,8 +692,8 @@
     <div class="nav-spacer"></div>
     <div class="nav-actions">
       <div class="mode-switch" id="mode-switch" role="group" aria-label="รูปแบบการแสดงตัวชี้วัด">
-        <button type="button" data-mode="card" class="on" onclick="setListMode('card')" title="แสดงเป็นการ์ดตัวชี้วัด">🗂️ การ์ด</button>
-        <button type="button" data-mode="table" onclick="setListMode('table')" title="แสดงเป็นตารางแบบ Google Sheet">📋 ตาราง</button>
+        <button type="button" data-mode="card" onclick="setListMode('card')" title="แสดงเป็นการ์ดตัวชี้วัด">🗂️ การ์ด</button>
+        <button type="button" data-mode="table" class="on" onclick="setListMode('table')" title="แสดงเป็นตารางแบบ Google Sheet">📋 ตาราง</button>
       </div>
       <button class="btn btn-accent" id="btn-add-kpi" style="display: none;" onclick="guardUnsaved(openAddKpiModal)">➕ เพิ่มตัวชี้วัดใหม่</button>
       <button class="btn btn-primary" id="btn-export-pdf" onclick="guardUnsaved(exportPdfClick)">📄 Export PDF</button>
@@ -1008,7 +1008,7 @@
     let globalDatabase = [];
     const CARD_SEL = '.kpi-card, tr.kpi-row';           // การ์ด (มุมมองการ์ด) หรือแถว (มุมมองตาราง) ของตัวชี้วัด
     const EDITING_SEL = '.kpi-card.editing, tr.kpi-row.editing';
-    let listMode = 'card';                               // 'card' | 'table' (จำตามบัญชี — ดู UiPrefs.js)
+    let listMode = 'table';                              // 'table' (ค่าเริ่มต้นของทุกคน) | 'card' — จำตามบัญชี ดู UiPrefs.js
     let currentTab = 'home';
     let selectedKpiId = null;
 
@@ -4044,7 +4044,7 @@
       document.querySelectorAll('#mode-switch button').forEach(b => b.classList.toggle('on', b.dataset.mode === listMode));
     }
     function uiPrefsApply(p) {
-      const mode = p && p.mode === 'table' ? 'table' : 'card';
+      const mode = p && p.mode === 'card' ? 'card' : 'table'; // ยังไม่เคยเลือก = ตาราง
       tblHide.clear();
       ((p && p.hide) || []).forEach(g => tblHide.add(g));
       const changed = mode !== listMode;
@@ -4065,7 +4065,7 @@
       }, 600);
     }
     function uiPrefsReset() {
-      listMode = 'card'; tblHide.clear(); clearTimeout(uiPrefsTimer); updateModeSwitch();
+      listMode = 'table'; tblHide.clear(); clearTimeout(uiPrefsTimer); updateModeSwitch();
     }
 
     // ---------- สลับการ์ด / ตาราง ----------
