@@ -558,14 +558,14 @@ function getKpiPermission_(user, kpi, fy) {
       return false; // รายบุคคล: เห็นถึงเจ้าของและหัวหน้าหน่วยเท่านั้น (ผ่านเงื่อนไข edit ด้านบน)
     });
   }
-  var current = getCurrentFiscalYear_();
+  // ทุกปีงบแก้ได้ตามสิทธิ์เดียวกัน (ไม่จำกัดเฉพาะปีงบปัจจุบัน/ปีก่อนหน้า)
   return {
     view: view,
     mine: mine,
     inDept: inDept,
     isOwner: isOwner,
-    editResults: edit && fy >= current - 1,
-    editDetails: edit && fy === current
+    editResults: edit,
+    editDetails: edit
   };
 }
 
