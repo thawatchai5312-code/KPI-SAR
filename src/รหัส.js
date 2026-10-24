@@ -318,10 +318,15 @@ function saveKpi(token, fy, item) {
       bound = viewFillPlaceholders_(bound, item.name || old.name);
       if (bound.map(catKey_).join("\n") !== baseCats.map(catKey_).join("\n")) newCats = bound;
     }
+    // หมวดที่เพิ่มเองแต่เว้นหมวดย่อยไว้ ("รอจัดหมวดย่อย") → ระบบเลือกให้
+    if (newCats) newCats = viewFillPlaceholders_(newCats, item.name || old.name);
     var catsAfter = newCats || old.cats;
     var coreAfter = catsAfter.some(function(c) { return isCorePart_(c.part); });
     if (newLevels.length > 0 && coreAfter && !hasHospitalLevel_(newLevels)) {
       return { success: false, message: "ตัวชี้วัดที่อยู่ในหมวด Part I–IV ต้องมีระดับ SAR หรือ QA-หน่วยงาน อย่างน้อย 1 ระดับ" };
+    }
+    if (levelsChanged && viewLevelKinds_(newLevels).qa && !viewLevelKinds_(old.levels).qa && !catsAfter.some(function(c) { return viewIsQaPart_(c.part); })) {
+      return { success: false, message: "ระดับ QA-หน่วยงาน ต้องมีหมวด QA ของหน่วย — ระบุหน่วยงานของตัวชี้วัด หรือเพิ่มหมวด \"<หน่วย> QA\"" };
     }
     if ((levelsChanged || newCats) && viewLevelKinds_(newLevels.length > 0 ? newLevels : old.levels).sar && !coreAfter) {
       return { success: false, message: "ตัวชี้วัดระดับ SAR ต้องอยู่ในหมวด Part I–IV อย่างน้อย 1 หมวด (เลือกหมวด รพ.)" };

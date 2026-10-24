@@ -1965,10 +1965,10 @@
       return input(false);
     }
 
-    function catRowHtml(c, locked) {
+    function catRowHtml(c, locked, catHint) {
       const dis = locked ? 'disabled' : '';
       const part = `<span class="cat-kind">${catKindTag(c.part)}</span><input type="text" class="editable-input cat-part" list="part-options" placeholder="หมวดหลัก (Part)" value="${esc(c.part)}" oninput="this.parentElement.querySelector('.cat-kind').innerHTML = catKindTag(this.value.trim())" ${dis}>`;
-      const cat = `<input type="text" class="editable-input cat-cat" list="cat-options-dyn" onfocus="fillCatOptions(this)" placeholder="หมวดย่อย" value="${esc(c.category)}" ${dis}>`;
+      const cat = `<input type="text" class="editable-input cat-cat" list="cat-options-dyn" onfocus="fillCatOptions(this)" placeholder="${esc(catHint || 'หมวดย่อย')}" value="${esc(c.category)}" ${dis}>`;
       const del = `<button type="button" class="btn btn-secondary btn-sm cat-del" onclick="removeCatRow(this)" ${dis}>✕</button>`;
       const why = 'ล็อกไว้: หมวด Part I–IV เป็นของตัวชี้วัดระดับ SAR/QA เพิ่มหรือเอาออกได้เฉพาะ admin / ผอ. / QMR';
       return `<div class="cat-row" data-locked="${locked ? 1 : 0}">${locked ? lockWrap(part + cat + del, why) : part + cat + del}</div>`;
@@ -1986,12 +1986,41 @@
       onEditInput();
     }
 
-    // อ่านรายการหมวดจากแถวในฟอร์ม
+    // อ่านรายการหมวดจากแถวในฟอร์ม (หมวดนอก Part I–IV ที่เว้นหมวดย่อยว่าง = ให้ระบบเลือกให้ตอนบันทึก)
     function readCatRows(containerId) {
-      return Array.from(document.querySelectorAll('#' + containerId + ' .cat-row')).map(r => ({
-        part: r.querySelector('.cat-part').value.trim(),
-        category: r.querySelector('.cat-cat').value.trim()
-      }));
+      return Array.from(document.querySelectorAll('#' + containerId + ' .cat-row')).map(r => {
+        const part = r.querySelector('.cat-part').value.trim(), category = r.querySelector('.cat-cat').value.trim();
+        return { part: part, category: category || (part && !isCorePart(part) ? 'รอจัดหมวดย่อย' : '') };
+      });
+    }
+
+    // การ์ดแก้ไข: ติ๊ก/เอาระดับออก → เพิ่ม/เอาแถวหมวดที่ผูกกับระดับนั้นให้ทันที (กติกาเดียวกับฝั่งเซิร์ฟเวอร์และฟอร์มเพิ่มตัวชี้วัด)
+    //  QA-หน่วยงาน → "<หน่วย> QA" · หน่วยงาน/รายบุคคล → หมวดของหน่วย · SAR → ต้องมีหมวด Part I–IV
+    function edLevelChanged(cb) {
+      const box = document.getElementById('ed-cats');
+      if (!box || !cb || !cb.classList.contains('ed-level-cb')) return;
+      const depts = [...new Set(pdfKpiDepts({ department: (document.getElementById('ed-dept') || {}).value || '' }))];
+      const units = depts.filter(d => !(depts.some(x => x !== 'NSO') && d === 'NSO'));
+      const parts = () => readCatRows('ed-cats').map(c => c.part);
+      const add = (part, hint) => box.insertAdjacentHTML('beforeend', catRowHtml({ part: part, category: '' }, false, hint));
+      const lv = cb.value, on = cb.checked, notes = [];
+      if (lv === 'QA-หน่วยงาน' && on) {
+        if (units.length === 0) notes.push('ระบุหน่วยงานก่อน แล้วเพิ่มหมวด "<หน่วย> QA"');
+        units.forEach(u => { if (parts().indexOf(qaPartOf(u)) === -1) { add(qaPartOf(u), 'มิติที่ 1–5 (เว้นว่าง = ระบบเลือกให้)'); notes.push('เพิ่มหมวด ' + qaPartOf(u)); } });
+      } else if (lv === 'QA-หน่วยงาน') {
+        const rows = Array.from(box.querySelectorAll('.cat-row')).filter(r => isQaPart(r.querySelector('.cat-part').value.trim()));
+        if (rows.length && rows.length < box.querySelectorAll('.cat-row').length) { rows.forEach(r => r.remove()); notes.push('เอาหมวด QA ออกแล้ว'); }
+      } else if ((lv === 'หน่วยงาน' || lv === 'รายบุคคล') && on) {
+        const other = Array.from(document.querySelectorAll('.ed-level-cb')).some(x => x !== cb && x.checked && (x.value === 'หน่วยงาน' || x.value === 'รายบุคคล'));
+        if (!other) units.filter(u => u !== 'NSO').forEach(u => { if (parts().indexOf(u) === -1) { add(u, 'หัวข้อของหน่วย (เว้นว่าง = ระบบเลือกให้)'); notes.push('เพิ่มหมวด ' + u); } });
+      } else if (lv === 'SAR' && on && !parts().some(isCorePart)) {
+        add('', 'หมวด HA เช่น III-4 การดูแลผู้ป่วย');
+        const last = box.querySelector('.cat-row:last-child .cat-part');
+        if (last) { last.placeholder = 'Part I–IV'; last.focus(); }
+        notes.push('ระดับ SAR: เลือกหมวด Part I–IV และกรอกหมวด HA');
+      }
+      if (notes.length) showToast(notes.join(' · '));
+      onEditInput();
     }
 
     // ตรวจรายการหมวด: คืนข้อความผิดพลาด หรือ '' ถ้าผ่าน (oldCats = หมวดเดิม ใช้ตรวจการเพิ่ม Part I–IV)
@@ -2065,7 +2094,7 @@
            <div class="form-group" style="${priv ? '' : 'margin-bottom:0;'}"><label>เป็นตัวชี้วัดย่อยของ <span class="hint" style="margin:0;">(ได้ลำดับย่อยต่อจากตัวแม่ เช่น 4.1, 4.2 · เลือกได้เฉพาะตัวในหมวดเดียวกัน)</span></label>
              ${parentSelectHtml(kpi)}
            </div>
-           ${priv ? `<div class="form-group" style="margin-bottom:0;"><label>ระดับตัวชี้วัด (เลือกได้หลายระดับ — แสดงระดับสูงสุด)</label><div class="level-checks">${levelCheckboxesHtml('ed-level-cb', kpi.levels || [kpi.level])}</div></div>` : ''}`
+           ${priv ? `<div class="form-group" style="margin-bottom:0;"><label>ระดับตัวชี้วัด (เลือกได้หลายระดับ — แสดงระดับสูงสุด)</label><div class="level-checks" onchange="edLevelChanged(event.target)">${levelCheckboxesHtml('ed-level-cb', kpi.levels || [kpi.level])}</div></div>` : ''}`
         : `<p style="font-weight:700; color:#1e293b;">${esc(kpi.owner) || '-'} (${esc(kpi.department) || '-'})</p>`;
 
       const stt = kpiStatus(kpi);
