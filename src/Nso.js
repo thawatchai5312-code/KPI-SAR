@@ -465,6 +465,7 @@ function nsoImportCommit(token) {
     SpreadsheetApp.flush();
     var tidied = tidyApply_(tidyPlanAll_(), { backup: true, users: false }); // ตัวที่เพิ่ง/รวมเข้ามาใหม่: ตัดเลข จัดหมวด 5 มิติ หาตัวแม่ ฯลฯ ตามกติกาเดียวกับ "จัดระเบียบข้อมูล"
     touchUser_(admin, "edit");
+    bumpDataVersion_("*", "*", admin);
     return { success: true, message: "นำเข้า/อัปเดตเรียบร้อย", result: nsoSummary_(plan), wrote: { added: newRows.length, updated: updates.length, mirrored2570New: newRows70.length, mirrored2570Updated: updates70.length, tidied: tidied.logRows } };
   } catch (e) {
     return { success: false, message: "เกิดข้อผิดพลาด: " + e.toString() };

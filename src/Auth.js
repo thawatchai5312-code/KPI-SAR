@@ -689,6 +689,7 @@ function saveUsersForAdmin(token, list, resetList) {
       if (!hasAdmin) return { success: false, message: "ต้องมีผู้ใช้ Tier admin อย่างน้อย 1 คน" };
       if (!seen[me.username]) return { success: false, message: "ไม่สามารถลบบัญชีของตัวเองได้" };
       writeUsers_(sheet, result);
+      bumpDataVersion_("*", "*", me); // สิทธิ์/หน่วยงานของผู้ใช้เปลี่ยน → ตัวชี้วัดที่แต่ละคนเห็น/แก้ได้เปลี่ยน
     } finally {
       lock.releaseLock();
     }

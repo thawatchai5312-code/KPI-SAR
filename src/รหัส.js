@@ -70,7 +70,8 @@ function rowToKpi_(row) {
     editedAt: formatStamp_(row[STAMP_EDIT_AT_COL - 1]),
     editedBy: row[STAMP_EDIT_BY_COL - 1] ? row[STAMP_EDIT_BY_COL - 1].toString() : "",
     viewedAt: formatStamp_(row[STAMP_VIEW_AT_COL - 1]),
-    viewedBy: row[STAMP_VIEW_BY_COL - 1] ? row[STAMP_VIEW_BY_COL - 1].toString() : ""
+    viewedBy: row[STAMP_VIEW_BY_COL - 1] ? row[STAMP_VIEW_BY_COL - 1].toString() : "",
+    rev: rowRev_(row) // ลายนิ้วมือข้อมูลแถว (Live.js) — ตรวจการแก้ชนกัน/อัปเดตอัตโนมัติ
   };
 }
 
@@ -92,6 +93,7 @@ function getAllData(token, requestedFy) {
     if (years.length === 0) return { success: true, data: [], fy: currentFy, currentFy: currentFy, years: [] };
 
     var fy = resolveFiscalYear_(requestedFy);
+    var dataV = dataVersion_(readChangeLog_()); // อ่านเลขรุ่นก่อนอ่านชีต: ถ้ามีคนแก้ระหว่างนี้ รอบอัปเดตถัดไปจะดึงมาให้
     var sources = getAnnualSources_(fy);
     var data = getFiscalSheet_(fy).getDataRange().getValues();
     var allData = [];
@@ -102,7 +104,7 @@ function getAllData(token, requestedFy) {
       allData.push(decorateKpi_(user, fy, kpi, sources));
     }
     // ลำดับหมวดย่อยในมุมมองหน่วยงาน: หัวข้อของหน่วยตามลำดับในไฟล์ NSO
-    return { success: true, data: allData, fy: fy, currentFy: currentFy, years: years, headings: viewHeadings_() };
+    return { success: true, data: allData, fy: fy, currentFy: currentFy, years: years, headings: viewHeadings_(), dataV: dataV };
   } catch(e) {
     return { success: false, message: e.toString() };
   }
@@ -271,6 +273,14 @@ function saveKpi(token, fy, item) {
     var old = rowToKpi_(data[rowIndex]);
     var perm = getKpiPermission_(user, old, fy);
     if (!perm.view) return { success: false, message: "ไม่มีสิทธิ์เข้าถึงตัวชี้วัดนี้" };
+    // มีคนอื่นบันทึกตัวชี้วัดนี้ไปก่อน ระหว่างที่ผู้ใช้กำลังแก้ → ให้หน้าเว็บถามว่าจะโหลดล่าสุด / บันทึกทับ / แก้ต่อ
+    if (item.baseRev && !item.force && item.baseRev !== old.rev) {
+      return {
+        success: false, conflict: true,
+        message: "ตัวชี้วัดนี้ถูกแก้ไขโดย " + (old.editedBy || "ผู้ใช้อื่น") + (old.editedAt ? " เมื่อ " + old.editedAt : "") + " ระหว่างที่คุณกำลังแก้ไข",
+        kpi: decorateKpi_(user, fy, old, getAnnualSources_(fy))
+      };
+    }
     var hasResults = item.years !== undefined || item.months !== undefined;
     var hasDetails = item.templateDetails !== undefined || item.dataSource !== undefined;
     if (hasResults && !perm.editResults) return { success: false, message: "ไม่มีสิทธิ์แก้ไขผลตัวชี้วัดนี้ในปีงบ " + fy };
@@ -442,6 +452,7 @@ function saveKpi(token, fy, item) {
     if (changed) {
       stampRow_(sheet, row, user, "edit");
       touchUser_(user, "edit");
+      bumpDataVersion_(annualChanges.length > 0 ? "*" : fy, [old.id], user); // ผลทั้งปีเขียนลงชีตปีอื่นด้วย
     }
 
     var fresh = rowToKpi_(sheet.getRange(row, 1, 1, KPI_COLS).getValues()[0]);
@@ -609,6 +620,7 @@ function addIndicator(token, fy, newItem) {
       sheet.getRange(1, EXTRA_CATS_COL).setValue(EXTRA_CATS_HEADER).setFontWeight("bold").setBackground("#e0f2fe").setHorizontalAlignment("center");
     }
     touchUser_(user, "edit");
+    bumpDataVersion_(fy, [newId], user);
     return { success: true, message: "เพิ่มตัวชี้วัดในปีงบ " + fy + " เรียบร้อยแล้ว", newId: newId };
   } catch (error) {
     return { success: false, message: "เกิดข้อผิดพลาด: " + error.toString() };
@@ -636,6 +648,7 @@ function deleteIndicator(token, fy, partName, id) {
       // ผอ./QMR ลบได้เฉพาะตัวที่ตัวเองมองเห็น
       if (!getKpiPermission_(user, rowToKpi_(data[rowIndex]), fy).view) return { success: false, message: "ไม่มีสิทธิ์ลบตัวชี้วัดนี้" };
       sheet.deleteRow(rowIndex + 1);
+      bumpDataVersion_(fy, [id.toString().trim()], user);
       return { success: true, message: "ลบตัวชี้วัดออกจากปีงบ " + fy + " เรียบร้อยแล้ว" };
     } else {
       return { success: false, message: "ไม่พบรหัสตัวชี้วัดที่ต้องการลบ" };

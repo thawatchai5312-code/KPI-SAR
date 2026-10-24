@@ -319,6 +319,7 @@ function pctImportCommit(token) {
     var tidied = tidyApply_(tidyPlanAll_(), { backup: true, users: false });
     props.setProperty(PCT_FLAG, nowStamp_());
     touchUser_(admin, "edit");
+    bumpDataVersion_("*", "*", admin);
     return { success: true, message: "นำเข้าตัวชี้วัด PCT เรียบร้อย", wrote: wrote, tidied: tidied.fys, preview: before };
   } catch (e) {
     return { success: false, message: "เกิดข้อผิดพลาด: " + e.toString() };

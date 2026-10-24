@@ -206,6 +206,21 @@
     .login-box h2 { color: #015c8b; margin-bottom: 8px; font-size: 22px; font-weight: 700; }
     .login-box p { color: #64748b; margin-bottom: 20px; font-size: 13px; font-weight: 500; }
 
+    /* หลายคนใช้งานพร้อมกัน: หน้าจอกำลังบันทึก · แจ้งอัปเดตมุมจอ · แถบเตือนในการ์ดที่กำลังแก้ */
+    #busy-overlay { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.45); backdrop-filter: blur(2px); z-index: 3000; display: none; align-items: center; justify-content: center; padding: 15px; cursor: wait; }
+    #busy-overlay.show { display: flex; }
+    .busy-box { background: #fff; border-radius: var(--radius-large); padding: 18px 26px; box-shadow: 0 15px 35px rgba(0,0,0,0.3); display: flex; align-items: center; gap: 14px; font-weight: 700; font-size: 15px; color: #0f172a; max-width: 360px; }
+    .busy-box small { display: block; font-weight: 500; font-size: 12px; color: #64748b; margin-top: 2px; }
+    .busy-spin { width: 30px; height: 30px; flex: none; border-radius: 50%; border: 4px solid #bae6fd; border-top-color: #0284c7; animation: busySpin 0.8s linear infinite; }
+    @keyframes busySpin { to { transform: rotate(360deg); } }
+    #live-toast { position: fixed; right: 16px; bottom: 16px; max-width: min(360px, calc(100vw - 32px)); background: #0c4a6e; color: #fff; padding: 9px 14px; border-radius: 12px; font-weight: 600; font-size: 13px; box-shadow: 0 8px 20px rgba(0,0,0,0.25); z-index: 1900; display: none; animation: liveIn 0.25s ease-out; }
+    @keyframes liveIn { from { transform: translateY(10px); opacity: 0; } to { transform: none; opacity: 1; } }
+    .remote-banner { margin: 6px 0 2px; padding: 8px 10px; border-radius: 10px; background: #fff7ed; border: 1px solid #fdba74; color: #9a3412; font-size: 13px; font-weight: 600; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+    .remote-banner .btn { padding: 4px 10px; font-size: 12px; }
+    .conflict-actions { display: flex; flex-direction: column; gap: 8px; }
+    .conflict-actions .btn { width: 100%; text-align: left; padding: 10px 12px; }
+    .conflict-actions .btn small { display: block; font-weight: 500; font-size: 11.5px; opacity: 0.9; margin-top: 2px; }
+
     #toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: #064e3b; color: #fff; padding: 10px 20px; border-radius: 30px; font-weight: 700; font-size: 14px; box-shadow: 0 8px 20px rgba(0,0,0,0.3); z-index: 2000; display: none; }
 
     /* หน้าติดตามงาน: ซ้าย = กราฟความคืบหน้า, ขวา = ค้นหา + ตารางเดิม */
@@ -889,6 +904,24 @@
     </div>
   </div>
 
+  <div id="modal-conflict" class="modal-overlay">
+    <div class="modal-card" style="max-width: 420px;">
+      <div class="modal-header" style="background: linear-gradient(135deg, #f97316, #ea580c);">⚠️ มีผู้อื่นแก้ไขตัวชี้วัดนี้ไปก่อน</div>
+      <div class="modal-body">
+        <p id="conflict-message" style="font-size: 14px; font-weight: 600; color: #1e293b; white-space: pre-line; margin-bottom: 12px;"></p>
+        <div class="conflict-actions">
+          <button class="btn btn-secondary" onclick="resolveConflict('reload')">🔄 โหลดข้อมูลล่าสุด<small>ดูค่าที่เพิ่งถูกแก้ แล้วแก้ไขต่อจากค่านั้น (ที่คุณพิมพ์ไว้จะหายไป)</small></button>
+          <button class="btn btn-danger" onclick="resolveConflict('force')">💾 บันทึกทับ<small>ใช้ค่าในช่องที่คุณแก้ · ช่องที่คุณไม่ได้แตะ ใช้ค่าล่าสุดของอีกคน</small></button>
+          <button class="btn btn-primary" onclick="resolveConflict('stay')">✏️ กลับไปแก้ต่อ<small>ยังไม่บันทึก กลับไปตรวจข้อมูลในการ์ดก่อน</small></button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="busy-overlay" role="alert" aria-live="assertive">
+    <div class="busy-box"><div class="busy-spin"></div><div><span id="busy-text">กำลังบันทึกข้อมูล…</span><small>กรุณารอสักครู่ อย่าปิดหรือรีเฟรชหน้านี้</small></div></div>
+  </div>
+  <div id="live-toast"></div>
   <div id="toast"></div>
   <div id="print-root"></div>
   <style id="print-page-style">@page { size: A4 landscape; margin: 10mm; }</style>
@@ -1183,6 +1216,7 @@
       openParts.clear(); openCats.clear(); lastInViewKey = null;
       globalProgressData = [];
       tourReset();
+      liveReset();
       rptReset();
       resetTreeFilters(); // ตัวกรองสถานะ/ขอบเขต กลับเป็นค่าเริ่มต้น ไม่ให้ติดไปยังผู้ใช้คนถัดไป
       homeStale = false;
@@ -1237,8 +1271,9 @@
       const wasForced = chpwForced;
       const btn = document.getElementById('chpw-submit');
       btn.disabled = true;
+      showBusy('กำลังเปลี่ยนรหัสผ่าน…');
       google.script.run
-        .withSuccessHandler((res) => {
+        .withSuccessHandler(unbusy((res) => {
           btn.disabled = false;
           if (!res.success) { showAlert('เปลี่ยนรหัสผ่านไม่สำเร็จ', '⚠️', res.message); return; }
           document.getElementById('modal-change-password').style.display = 'none';
@@ -1249,8 +1284,8 @@
           setProgressHeight();
           showAlert('สำเร็จ', '✅', res.message);
           if (wasForced) loadAfterLogin();
-        })
-        .withFailureHandler((err) => { btn.disabled = false; showAlert('เกิดข้อผิดพลาด', '❌', err.toString()); })
+        }))
+        .withFailureHandler(unbusy((err) => { btn.disabled = false; showAlert('เกิดข้อผิดพลาด', '❌', err.toString()); }))
         .changePassword(sessionToken, oldPw, newPw);
     }
 
@@ -1276,6 +1311,8 @@
           }
           if (res.fy !== selectedFy) currentPage = 1;
           globalDatabase = res.data;
+          dataV = res.dataV !== undefined ? res.dataV : 0; // อัปเดตอัตโนมัติ: นับการเปลี่ยนแปลงต่อจากรุ่นนี้
+          remoteEdit = null; liveDeferred = false;
           unitHeadings = res.headings || {};
           selectedFy = res.fy;
           currentFy = res.currentFy;
@@ -2154,6 +2191,7 @@
             </div>
             ${stt.reasons.length ? `<div class="st-reasons ${stt.level}">${stt.reasons.map(r => '• ' + esc(r)).join('  ')}</div>` : ''}
           </div>
+          ${ed ? remoteBannerHtml() : ''}
           <div class="kpi-card-body">
             <div class="card-left">
               <div class="kpi-target-callout">${targetHtml}</div>
@@ -2418,6 +2456,8 @@
       editingId = id;
       editingKey = key;
       selectedKpiId = id;
+      editBaseRev = kpi.rev; // ใช้ตรวจตอนบันทึกว่ามีคนอื่นบันทึกไปก่อนหรือไม่
+      remoteEdit = null;
       rerenderCard(id);
       editSnapshot = JSON.stringify(collectDraft());
       onEditInput();
@@ -2428,7 +2468,7 @@
       editingId = null;
       editingKey = null;
       editSnapshot = null;
-      if (id !== null) rerenderCard(id);
+      if (id !== null && !liveAfterEdit(id)) rerenderCard(id); // ข้อมูลที่คนอื่นเพิ่งบันทึก (ถ้ามี) ใส่ตอนนี้
     }
 
     function cancelEdit() {
@@ -2447,7 +2487,8 @@
       });
     }
 
-    function saveKpiEdit(afterSave, onFail) {
+    // forceLatest: ข้อมูลล่าสุดจากเซิร์ฟเวอร์ เมื่อผู้ใช้เลือก "บันทึกทับ" หลังพบว่ามีคนอื่นบันทึกไปก่อน
+    function saveKpiEdit(afterSave, onFail, forceLatest) {
       if (savingKpi) return;
       const fail = () => { if (onFail) onFail(); };
       const kpi = editingKpi();
@@ -2470,12 +2511,17 @@
         fail(); return;
       }
       const reqFy = selectedFy, reqId = kpi.id, reqToken = sessionToken;
+      let payload = draft;
+      if (forceLatest) { payload = conflictMergeDraft(draft, forceLatest); payload.force = true; }
+      else payload.baseRev = editBaseRev;
       savingKpi = true;
       setCardBusy(true);
+      showBusy('กำลังบันทึกข้อมูล…');
       google.script.run
-        .withSuccessHandler((res) => {
+        .withSuccessHandler(unbusy((res) => {
           savingKpi = false;
           if (sessionToken !== reqToken) return; // ออกจากระบบ/เปลี่ยนผู้ใช้ระหว่างรอ
+          if (!res.success && res.conflict && editingId === reqId) { setCardBusy(false); showConflict(res, afterSave, onFail); return; }
           if (!res.success) { setCardBusy(false); showAlert('บันทึกไม่สำเร็จ', '❌', res.message); fail(); return; }
           if (selectedFy !== reqFy) { showToast('✅ ' + res.message); return; } // เปลี่ยนปีงบระหว่างรอ: ไม่เอาข้อมูลปีเก่ามาใส่ปีใหม่
           const idx = globalDatabase.findIndex(k => k.id === res.kpi.id);
@@ -2484,38 +2530,44 @@
           if (idx !== -1) globalDatabase[idx] = res.kpi;
           dbVersion++; // เลขลำดับ (4.1 ฯลฯ) ต้องคำนวณใหม่
           // ล้างสถานะแก้ไขเฉพาะเมื่อยังแก้ตัวเดิมอยู่ (ถ้าไปแก้ตัวอื่นระหว่างรอ ไม่แตะ)
-          if (editingId === reqId) { editingId = null; editingKey = null; editSnapshot = null; }
+          let listStale = false;
+          if (editingId === reqId) {
+            editingId = null; editingKey = null; editSnapshot = null;
+            remoteEdit = null; // ข้อมูลที่เพิ่งบันทึกใหม่กว่าที่คนอื่นบันทึกไว้
+            listStale = liveDeferred; liveDeferred = false; // ระหว่างแก้มีตัวอื่นเปลี่ยนจนรายการต้องวาดใหม่
+          }
           updateDatalists();
           // หมวดเปลี่ยน → ตัวชี้วัดย้าย/เพิ่ม/หายจากบางหมวด ต้องวาดรายการใหม่ทั้งหมด
-          if (parentMoved || kpiCats(res.kpi).map(c => c.part + '||' + c.category).join('\n') !== oldCatKeys) renderList(); else rerenderCard(res.kpi.id);
+          if (listStale || parentMoved || kpiCats(res.kpi).map(c => c.part + '||' + c.category).join('\n') !== oldCatKeys) renderList(); else rerenderCard(res.kpi.id);
           renderTree();
           if (currentTab === 'progress') loadProgressSummary();
           showToast(res.changed ? '✅ ' + res.message : 'ℹ️ ' + res.message);
           if (afterSave) afterSave();
-        })
-        .withFailureHandler((err) => {
+        }))
+        .withFailureHandler(unbusy((err) => {
           savingKpi = false;
           setCardBusy(false);
           showAlert('เกิดข้อผิดพลาดในการบันทึก', '❌', err.toString());
           fail();
-        })
-        .saveKpi(reqToken, reqFy, draft);
+        }))
+        .saveKpi(reqToken, reqFy, payload);
     }
 
     function requestDeleteKpi() {
       const kpi = editingKpi();
       if (!kpi) return;
       showConfirm(`ยืนยันการลบตัวชี้วัด:\n"${kpi.name}"\nออกจากปีงบ ${selectedFy} (ปีงบอื่นยังเก็บไว้เป็นประวัติ)?`, () => {
+        showBusy('กำลังลบตัวชี้วัด…');
         google.script.run
-          .withSuccessHandler((res) => {
+          .withSuccessHandler(unbusy((res) => {
             if (res.success) {
               showToast('🗑️ ' + res.message);
               editingId = null; editSnapshot = null;
               selectedKpiId = null;
               fetchAllDataFromServer(true);
             } else { showAlert('ข้อผิดพลาด', '❌', res.message); }
-          })
-          .withFailureHandler((err) => showAlert('เกิดข้อผิดพลาดในการลบข้อมูล', '❌', err.toString()))
+          }))
+          .withFailureHandler(unbusy((err) => showAlert('เกิดข้อผิดพลาดในการลบข้อมูล', '❌', err.toString())))
           .deleteIndicator(sessionToken, selectedFy, kpi.part, kpi.id);
       });
     }
@@ -2650,15 +2702,16 @@
       newItem.part = all[0].part;
       newItem.category = all[0].category;
       document.getElementById('modal-add-kpi').style.display = 'none';
+      showBusy('กำลังเพิ่มตัวชี้วัด…');
       google.script.run
-        .withSuccessHandler((res) => {
+        .withSuccessHandler(unbusy((res) => {
           if (!res.success) { showAlert('ข้อผิดพลาด', '❌', res.message); return; }
           showToast('✅ เพิ่มตัวชี้วัดเรียบร้อยแล้ว');
           pendingSelectAfterLoad = { id: res.newId, edit: true };
           switchMenu('home');
           fetchAllDataFromServer(true);
-        })
-        .withFailureHandler((err) => showAlert('เกิดข้อผิดพลาด', '❌', err.toString()))
+        }))
+        .withFailureHandler(unbusy((err) => showAlert('เกิดข้อผิดพลาด', '❌', err.toString())))
         .addIndicator(sessionToken, selectedFy, newItem);
     }
 
@@ -2751,16 +2804,17 @@
         const btn = document.getElementById('pct-commit-btn');
         btn.disabled = true;
         document.getElementById('pct-body').innerHTML = '<div class="empty-state">กำลังนำเข้า กรุณารอ อย่าปิดหน้านี้...</div>';
+        showBusy('กำลังนำเข้าตัวชี้วัด PCT…', 420000);
         google.script.run
-          .withSuccessHandler((res) => {
+          .withSuccessHandler(unbusy((res) => {
             if (!res.success) { document.getElementById('pct-body').innerHTML = '<div class="empty-state">' + esc(res.message) + '</div>'; return; }
             renderPctReport(res.preview, true);
             const w = res.wrote;
             if (w) document.getElementById('pct-body').insertAdjacentHTML('afterbegin', `<div class="hint" style="margin:0 0 6px;">บันทึกแล้ว: ${Object.keys(w.fys).map(fy => 'ปีงบ ' + fy + ' เพิ่ม ' + w.fys[fy].created + ' · รวม ' + w.fys[fy].merged + ' · ตัวย่อย ' + w.fys[fy].kids + ' · ลบการ์ดซ้ำ ' + w.fys[fy].dropped).join(' | ')}</div>`);
             fetchAllDataFromServer(true);
             loadSettingsUsers();
-          })
-          .withFailureHandler((err) => { document.getElementById('pct-body').innerHTML = '<div class="empty-state">' + esc(err.toString()) + '</div>'; btn.disabled = false; })
+          }))
+          .withFailureHandler(unbusy((err) => { document.getElementById('pct-body').innerHTML = '<div class="empty-state">' + esc(err.toString()) + '</div>'; btn.disabled = false; }))
           .pctImportCommit(sessionToken);
       });
     }
@@ -2785,8 +2839,9 @@
         const btn = document.getElementById('tidy-commit-btn');
         btn.disabled = true;
         document.getElementById('tidy-body').innerHTML = '<div class="empty-state">กำลังจัดระเบียบ กรุณารอ อย่าปิดหน้านี้...</div>';
+        showBusy('กำลังจัดระเบียบข้อมูล…', 420000);
         google.script.run
-          .withSuccessHandler((res) => {
+          .withSuccessHandler(unbusy((res) => {
             if (!res.success) { document.getElementById('tidy-body').innerHTML = '<div class="empty-state">' + esc(res.message) + '</div>'; btn.disabled = false; return; }
             renderTidyReport(res.preview, true);
             const w = res.wrote;
@@ -2794,8 +2849,8 @@
             btn.disabled = true;
             fetchAllDataFromServer(true);
             loadSettingsUsers();
-          })
-          .withFailureHandler((err) => { document.getElementById('tidy-body').innerHTML = '<div class="empty-state">' + esc(err.toString()) + '</div>'; btn.disabled = false; })
+          }))
+          .withFailureHandler(unbusy((err) => { document.getElementById('tidy-body').innerHTML = '<div class="empty-state">' + esc(err.toString()) + '</div>'; btn.disabled = false; }))
           .tidyCommit(sessionToken);
       });
     }
@@ -2820,16 +2875,17 @@
         const btn = document.getElementById('nso-commit-btn');
         btn.disabled = true;
         document.getElementById('nso-body').innerHTML = '<div class="empty-state">กำลังนำเข้า กรุณารอ อย่าปิดหน้านี้...</div>';
+        showBusy('กำลังนำเข้าข้อมูล NSO…', 420000);
         google.script.run
-          .withSuccessHandler((res) => {
+          .withSuccessHandler(unbusy((res) => {
             if (!res.success) { document.getElementById('nso-body').innerHTML = '<div class="empty-state">' + esc(res.message) + '</div>'; btn.disabled = false; return; }
             renderNsoReport(res.result, true);
             const w = res.wrote;
             document.getElementById('nso-body').insertAdjacentHTML('afterbegin', `<div class="hint" style="margin:0 0 6px;">เขียนจริง: เพิ่ม ${w.added} · อัปเดต ${w.updated} · สำเนาไปปีงบ 2570: เพิ่ม ${w.mirrored2570New} อัปเดต ${w.mirrored2570Updated}</div>`);
             btn.disabled = false;
             fetchAllDataFromServer(true);
-          })
-          .withFailureHandler((err) => { document.getElementById('nso-body').innerHTML = '<div class="empty-state">' + esc(err.toString()) + '</div>'; btn.disabled = false; })
+          }))
+          .withFailureHandler(unbusy((err) => { document.getElementById('nso-body').innerHTML = '<div class="empty-state">' + esc(err.toString()) + '</div>'; btn.disabled = false; }))
           .nsoImportCommit(sessionToken);
       });
     }
@@ -2905,28 +2961,30 @@
     }
 
     function generateAccounts() {
+      showBusy('กำลังสร้างบัญชีผู้ใช้…');
       google.script.run
-        .withSuccessHandler((res) => {
+        .withSuccessHandler(unbusy((res) => {
           if (res.success) { showAlert('สำเร็จ', '✅', res.message); mergeNewAccounts(); }
           else showAlert('ข้อผิดพลาด', '❌', res.message);
-        })
-        .withFailureHandler((err) => showAlert('ข้อผิดพลาด', '❌', err.toString()))
+        }))
+        .withFailureHandler(unbusy((err) => showAlert('ข้อผิดพลาด', '❌', err.toString())))
         .generateAccountsFromOwners(sessionToken);
     }
 
     function saveSettings() {
       const users = settingsUsers.filter(u => (u.username || '').trim() !== '');
       const resets = Object.keys(settingsResets).filter(n => settingsResets[n]);
+      showBusy('กำลังบันทึกรายชื่อผู้ใช้…');
       google.script.run
-        .withSuccessHandler((res) => {
+        .withSuccessHandler(unbusy((res) => {
           if (res.success) {
             document.getElementById('modal-settings').style.display = 'none';
             showAlert('สำเร็จ', '✅', res.message);
           } else {
             showAlert('ข้อผิดพลาด', '❌', res.message);
           }
-        })
-        .withFailureHandler((err) => showAlert('ข้อผิดพลาด', '❌', err.toString()))
+        }))
+        .withFailureHandler(unbusy((err) => showAlert('ข้อผิดพลาด', '❌', err.toString())))
         .saveUsersForAdmin(sessionToken, users, resets);
     }
 
@@ -3588,6 +3646,242 @@
       document.addEventListener('mouseout', (e) => { if (!e.relatedTarget || !(e.relatedTarget.closest && e.relatedTarget.closest('[data-reason]'))) hide(); });
       document.addEventListener('scroll', hide, true);
     })();
+  </script>
+
+  <script>
+    // ===================== หลายคนใช้งานพร้อมกัน =====================
+    // 1) หน้าจอ "กำลังบันทึก" กันกดซ้ำระหว่างรอเซิร์ฟเวอร์
+    // 2) ถามการเปลี่ยนแปลงทุก 10 วินาที แล้วอัปเดตเฉพาะการ์ดที่เปลี่ยน (ไม่รีเฟรชหน้า ไม่แตะการ์ดที่กำลังแก้)
+    // 3) การ์ดที่กำลังแก้ถูกคนอื่นบันทึกไปก่อน → แถบเตือนในการ์ด + ถามตอนบันทึก (โหลดล่าสุด / บันทึกทับ / แก้ต่อ)
+
+    let busyCount = 0, busyTimer = null;
+    function showBusy(msg, timeoutMs) {
+      busyCount++;
+      document.getElementById('busy-text').innerText = msg || 'กำลังบันทึกข้อมูล…';
+      document.getElementById('busy-overlay').classList.add('show');
+      if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); // กัน Enter/Space กดปุ่มเดิมซ้ำ
+      clearTimeout(busyTimer);
+      // ไม่ได้คำตอบนานผิดปกติ: ปลดหน้าจอให้ใช้งานต่อได้ (งานฝั่งเซิร์ฟเวอร์อาจยังทำอยู่ — ข้อมูลจะอัปเดตเองเมื่อเสร็จ)
+      busyTimer = setTimeout(() => {
+        busyCount = 0;
+        document.getElementById('busy-overlay').classList.remove('show');
+        showAlert('ยังไม่ได้รับคำตอบจากเซิร์ฟเวอร์', '⏳', 'ระบบอาจยังบันทึกอยู่ กรุณารอสักครู่แล้วตรวจสอบข้อมูลอีกครั้ง (หน้าจอจะอัปเดตข้อมูลล่าสุดให้เอง)');
+      }, timeoutMs || 90000);
+    }
+    function hideBusy() {
+      busyCount = Math.max(0, busyCount - 1);
+      if (busyCount > 0) return;
+      clearTimeout(busyTimer);
+      document.getElementById('busy-overlay').classList.remove('show');
+    }
+    // ห่อ callback ของ google.script.run ให้ปิดหน้าจอกำลังบันทึกก่อนทำงานต่อ
+    function unbusy(fn) {
+      return (...args) => { hideBusy(); if (fn) fn(...args); };
+    }
+
+    // ---------- อัปเดตอัตโนมัติ ----------
+    const LIVE_POLL_MS = 10000;
+    let dataV = null;          // เลขรุ่นข้อมูลที่หน้านี้มี (null = ยังไม่ได้โหลด)
+    let liveInFlight = 0;      // เวลาที่ส่งคำถามรอบปัจจุบัน (0 = ไม่มีค้าง)
+    let liveDeferred = false;  // มีการเปลี่ยนที่ต้องวาดรายการใหม่ทั้งหมด แต่รอให้แก้ไขเสร็จก่อน
+    let editBaseRev = null;    // รุ่นของตัวชี้วัดตอนเริ่มแก้ไข (ส่งไปตรวจว่ามีคนอื่นบันทึกไปก่อนไหม)
+    let remoteEdit = null;     // ข้อมูลล่าสุดของตัวที่กำลังแก้ ที่คนอื่นเพิ่งบันทึก ({ removed: true } = ถูกลบ/ไม่มีสิทธิ์แล้ว)
+
+    function liveReset() {
+      dataV = null; liveInFlight = 0; liveDeferred = false; editBaseRev = null; remoteEdit = null;
+      busyCount = 0; clearTimeout(busyTimer);
+      document.getElementById('busy-overlay').classList.remove('show');
+      document.getElementById('live-toast').style.display = 'none';
+      document.getElementById('modal-conflict').style.display = 'none';
+      conflictState = null;
+    }
+
+    function livePoll() {
+      if (!sessionToken || !isAppUnlocked || dataV === null || document.hidden) return;
+      if (savingKpi || busyCount > 0 || tourState.active) return; // ระหว่างบันทึก/สอนการใช้งาน: ข้ามรอบนี้
+      if (liveInFlight && Date.now() - liveInFlight < 60000) return;
+      const token = sessionToken, fy = selectedFy, v0 = dataV, seq = fetchSeq;
+      liveInFlight = Date.now();
+      google.script.run
+        .withSuccessHandler((res) => {
+          liveInFlight = 0;
+          // ระหว่างรอ: ออกจากระบบ/เปลี่ยนปีงบ/โหลดใหม่ทั้งหมด/เริ่มบันทึก → ทิ้งผลรอบนี้ (รอบถัดไปถามใหม่)
+          if (token !== sessionToken || fy !== selectedFy || v0 !== dataV || seq !== fetchSeq) return;
+          if (!res || !res.success) {
+            if (res && res.message && res.message.indexOf('SESSION_EXPIRED') !== -1) showLogin('เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่');
+            return;
+          }
+          if (savingKpi || busyCount > 0 || tourState.active) return;
+          liveApply(res);
+        })
+        .withFailureHandler(() => { liveInFlight = 0; })
+        .pollChanges(token, fy, v0);
+    }
+    setInterval(livePoll, LIVE_POLL_MS);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) livePoll(); });
+
+    // ค่าที่ทำให้การ์ดต่างกัน (ข้อมูล + สิทธิ์ของผู้ใช้คนนี้)
+    function liveSig(k) {
+      return [k.rev, k.canEditResults, k.canEditDetails, k.isOwner, k.inDept, k.mine, JSON.stringify(k.cats), (k.lockedYears || []).join()].join('|');
+    }
+    function liveListSig() {
+      return globalDatabase.length ? uniqueById(getOrderedKpis()).map(k => k.key).join('\n') : '';
+    }
+
+    function liveApply(res) {
+      dataV = res.v;
+      if (res.same) return;
+      const before = liveListSig();
+      const idx = new Map(globalDatabase.map((k, i) => [k.id, i]));
+      const changed = [], seen = new Set();
+      (res.kpis || []).forEach(k => {
+        seen.add(k.id);
+        const i = idx.get(k.id);
+        if (i !== undefined && liveSig(globalDatabase[i]) === liveSig(k)) return;
+        if (k.id === editingId) { liveMarkRemote(k); return; } // ไม่แตะการ์ดที่กำลังแก้ — ขึ้นแถบเตือนแทน
+        if (i === undefined) globalDatabase.push(k); else globalDatabase[i] = k;
+        changed.push(k);
+      });
+      const removed = (res.full ? globalDatabase.map(k => k.id).filter(id => !seen.has(id)) : (res.removed || []).filter(id => idx.has(id)))
+        .filter(id => { if (id !== editingId) return true; liveMarkRemote({ id: id, removed: true }); return false; });
+      if (res.full && res.headings) unitHeadings = res.headings;
+      if (changed.length === 0 && removed.length === 0) return;
+      if (removed.length) {
+        const gone = new Set(removed);
+        globalDatabase = globalDatabase.filter(k => !gone.has(k.id));
+        if (selectedKpiId && gone.has(selectedKpiId)) selectedKpiId = null;
+      }
+      dbVersion++; // เลขลำดับ (4.1 ฯลฯ) ต้องคำนวณใหม่
+      updateDatalists();
+      if (liveListSig() !== before) {
+        if (editingId !== null) { liveDeferred = true; changed.forEach(k => rerenderCard(k.id)); renderTree(); }
+        else liveRender();
+      } else {
+        changed.forEach(k => rerenderCard(k.id));
+        renderTree();
+        liveRefreshPages();
+      }
+      liveNotice(changed.length + removed.length, changed, res.by);
+    }
+
+    // วาดรายการใหม่ทั้งหมด โดยคงหน้าและตำแหน่งเลื่อนจอเดิม
+    function liveRender() {
+      const y = window.scrollY;
+      renderTree();
+      renderList();
+      window.scrollTo(0, y);
+      liveRefreshPages();
+    }
+    function liveRefreshPages() {
+      if (currentTab === 'progress') loadProgressSummary();
+      if (currentTab === 'report' && typeof rptRenderPreview === 'function') rptRenderPreview();
+    }
+
+    function liveNotice(n, changed, by) {
+      const me = currentUser ? currentUser.username : '';
+      let names = (by || []).filter(u => u && u !== me);
+      if (names.length === 0) names = Array.from(new Set(changed.map(k => k.editedBy).filter(u => u && u !== me)));
+      const t = document.getElementById('live-toast');
+      t.innerText = '🔄 อัปเดตข้อมูลล่าสุด ' + n + ' ตัวชี้วัด' + (names.length ? ' (' + names.slice(0, 3).join(', ') + (names.length > 3 ? ' และอีก ' + (names.length - 3) + ' คน' : '') + ')' : '');
+      t.style.display = 'block';
+      clearTimeout(liveNotice._timer);
+      liveNotice._timer = setTimeout(() => { t.style.display = 'none'; }, 4500);
+    }
+
+    // ---------- การ์ดที่กำลังแก้ถูกคนอื่นบันทึก ----------
+    function remoteBannerHtml() {
+      if (!remoteEdit || (!remoteEdit.removed && remoteEdit.rev === editBaseRev)) return ''; // เปลี่ยนแค่สิทธิ์ ไม่ใช่ข้อมูล: ไม่ต้องเตือน
+      if (remoteEdit.removed) {
+        return `<div class="remote-banner">⚠️ ตัวชี้วัดนี้เพิ่งถูกลบ หรือคุณไม่มีสิทธิ์แก้ไขแล้ว — บันทึกไม่ได้ <button class="btn btn-secondary" onclick="exitEdit()">ปิดการแก้ไข</button></div>`;
+      }
+      return `<div class="remote-banner">⚠️ <span><b>${esc(remoteEdit.editedBy || 'ผู้ใช้อื่น')}</b> เพิ่งบันทึกตัวชี้วัดนี้${remoteEdit.editedAt ? ' (' + esc(remoteEdit.editedAt) + ')' : ''} ระหว่างที่คุณกำลังแก้</span>
+        <button class="btn btn-secondary" onclick="liveReloadClick()">🔄 โหลดข้อมูลล่าสุด</button></div>`;
+    }
+    function liveMarkRemote(k) {
+      remoteEdit = k;
+      const card = document.querySelector('.kpi-card.editing');
+      if (!card) return;
+      const old = card.querySelector('.remote-banner');
+      if (!remoteBannerHtml()) return;
+      if (old) old.outerHTML = remoteBannerHtml();
+      else card.querySelector('.kpi-card-head').insertAdjacentHTML('afterend', remoteBannerHtml());
+    }
+    function liveReloadClick() {
+      if (!remoteEdit || remoteEdit.removed) return;
+      const latest = remoteEdit;
+      if (isDirty()) showConfirm('โหลดข้อมูลล่าสุด?\nข้อมูลที่คุณแก้ไว้ในการ์ดนี้จะหายไป', () => liveReloadEditing(latest));
+      else liveReloadEditing(latest);
+    }
+    // ใช้ข้อมูลล่าสุดแทนของเดิม แล้วเปิดโหมดแก้ไขการ์ดเดิมต่อจากค่าล่าสุด
+    function liveReloadEditing(latest) {
+      const key = editingKey;
+      const i = globalDatabase.findIndex(k => k.id === latest.id);
+      if (i !== -1) globalDatabase[i] = latest; else globalDatabase.push(latest);
+      remoteEdit = null;
+      editingId = null; editingKey = null; editSnapshot = null;
+      liveDeferred = false;
+      dbVersion++;
+      updateDatalists();
+      liveRender();
+      startEditNow(latest.id, findPlacement(key) ? key : undefined);
+      showToast(editingId === latest.id ? '🔄 โหลดข้อมูลล่าสุดแล้ว แก้ไขต่อได้เลย' : '🔄 โหลดข้อมูลล่าสุดแล้ว');
+    }
+    // แก้ไขเสร็จ/ยกเลิก: ใส่ข้อมูลล่าสุดที่รอไว้ และวาดรายการที่เลื่อนไว้ — คืน true ถ้าวาดรายการใหม่แล้ว
+    function liveAfterEdit(id) {
+      const r = remoteEdit;
+      remoteEdit = null;
+      if (r && r.id === id) {
+        if (r.removed) globalDatabase = globalDatabase.filter(k => k.id !== id);
+        else { const i = globalDatabase.findIndex(k => k.id === id); if (i !== -1) globalDatabase[i] = r; }
+        if (r.removed && selectedKpiId === id) selectedKpiId = null;
+        dbVersion++;
+        updateDatalists();
+        liveDeferred = true;
+      }
+      if (!liveDeferred) return false;
+      liveDeferred = false;
+      liveRender();
+      return true;
+    }
+
+    // ---------- บันทึกชนกัน ----------
+    let conflictState = null;
+    function showConflict(res, afterSave, onFail) {
+      conflictState = { latest: res.kpi, afterSave: afterSave, onFail: onFail };
+      remoteEdit = null;
+      liveMarkRemote(res.kpi);
+      document.getElementById('conflict-message').innerText = res.message + '\nต้องการทำอย่างไรต่อ?';
+      document.getElementById('modal-conflict').style.display = 'flex';
+    }
+    function resolveConflict(choice) {
+      document.getElementById('modal-conflict').style.display = 'none';
+      const st = conflictState;
+      conflictState = null;
+      if (!st) return;
+      const fail = () => { if (st.onFail) st.onFail(); };
+      if (choice === 'force') { saveKpiEdit(st.afterSave, st.onFail, st.latest); return; }
+      if (choice === 'reload' && editingId === st.latest.id) liveReloadEditing(st.latest);
+      fail();
+    }
+    // บันทึกทับ: ช่องที่ผู้ใช้แก้ (เทียบกับตอนเริ่มแก้) ใช้ค่าของผู้ใช้ · ช่องที่ไม่ได้แตะ ไม่ส่ง/ใช้ค่าล่าสุด (ไม่ลบงานของอีกคน)
+    function conflictMergeDraft(draft, latest) {
+      let snap = {};
+      try { snap = JSON.parse(editSnapshot || '{}'); } catch (e) {}
+      const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+      const out = { id: draft.id };
+      if (draft.years !== undefined) {
+        // ผลทั้งปี/รายเดือนต้องส่งคู่กัน (ฝั่งเซิร์ฟเวอร์อ่านทั้งสองชุดพร้อมกัน)
+        const pick = (mine, base, cur) => mine.map((v, i) => (base && v !== base[i]) ? v : cur[i]);
+        out.years = pick(draft.years, snap.years, latest.years);
+        out.months = pick(draft.months, snap.months, latest.months);
+        if (same(out.years, latest.years) && same(out.months, latest.months)) { delete out.years; delete out.months; }
+      }
+      Object.keys(draft).forEach(f => {
+        if (f === 'id' || f === 'years' || f === 'months') return;
+        if (!same(draft[f], snap[f])) out[f] = draft[f];
+      });
+      return out;
+    }
   </script>
 
   <script>

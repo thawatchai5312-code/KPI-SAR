@@ -600,6 +600,7 @@ function tidyCommit(token) {
     var wrote = tidyApply_(plan, { backup: true, users: true });
     SpreadsheetApp.flush();
     touchUser_(admin, "edit");
+    bumpDataVersion_("*", "*", admin);
     return { success: true, message: "จัดระเบียบเรียบร้อย", wrote: wrote, preview: tidySummary_(tidyPlanAll_()) };
   } catch (e) {
     return { success: false, message: "เกิดข้อผิดพลาด: " + e.toString() };
