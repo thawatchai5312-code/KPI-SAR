@@ -574,7 +574,10 @@
     #tour-tip .tour-bar { height: 5px; background: #e2e8f0; border-radius: 999px; margin: 10px 0; overflow: hidden; }
     #tour-tip .tour-bar span { display: block; height: 100%; background: linear-gradient(90deg, #22b04b, #16a34a); border-radius: 999px; transition: width .25s; }
     #tour-tip .tour-foot { display: flex; justify-content: space-between; gap: 8px; }
-    @media (max-width: 700px) { #tour-tip { left: 8px !important; right: 8px; top: auto !important; bottom: 8px; width: auto; max-width: none; } }
+    @media (max-width: 700px) {
+      #tour-tip { left: 8px !important; right: 8px; top: auto !important; bottom: 8px; width: auto; max-width: none; }
+      #tour-tip.tip-top { top: 8px !important; bottom: auto; }
+    }
   </style>
 </head>
 <body>
@@ -3592,10 +3595,23 @@
     // ทำงานบนหน้าจอจริง: ไฮไลต์ส่วนต่าง ๆ ทีละขั้น (ไม่แก้ข้อมูลใด ๆ) · สิ้นสุดได้ทุกขั้น · เรียกซ้ำได้จากปุ่ม 🎓
     const TOUR_MANUAL_FULL = 'https://claude.ai/artifact/D9J4BE8amE77v1xiPD1Sft';
     const TOUR_MANUAL_QUICK = 'https://claude.ai/artifact/CTvPP71JP7fthnwRTe2R95';
-    const tourState = { active: false, i: 0, steps: [], token: 0, timer: null, poll: null, el: null, step: null };
+    const tourState = { active: false, i: 0, steps: [], token: 0, timer: null, poll: null, el: null, step: null, ctx: null };
 
     const tourVisible = el => !!el && el.getClientRects().length > 0 && el.getBoundingClientRect().width > 0;
     const tourFirst = sel => { const e = document.querySelector(sel); return tourVisible(e) ? e : null; };
+    // หลายช่องในขั้นเดียว: คืนรายการองค์ประกอบ (ต้องมองเห็นครบทุกตัว) กรอบไฮไลต์จะครอบทุกตัวรวมกัน
+    const tourAll = sels => { const els = sels.map(sel => { const e = document.querySelector(sel); return e ? (e.closest('.form-group') || e) : null; }); return els.every(tourVisible) ? els : null; };
+    const tourGroup = sel => { const e = document.querySelector(sel); const g = e && (e.closest('.form-group') || e.closest('.info-card') || e); return tourVisible(g) ? g : null; };
+
+    // การ์ดที่แก้ไขได้ใบแรกในหน้าที่แสดงอยู่ (ใช้ตอนสอนขั้นแก้ไข) — ไม่มี = ข้ามขั้นแก้ไข
+    function tourEditPlacement() {
+      const list = uniqueById(getOrderedKpis()), from = (Math.min(Math.max(1, currentPage), totalPages(list.length)) - 1) * pageSize;
+      return list.slice(from, from + pageSize).find(k => k.canEditResults || k.canEditDetails) || null;
+    }
+    const tourEditKpi = () => { const p = tourEditPlacement(); return p ? globalDatabase.find(k => k.id === p.id) : null; };
+    const tourCanDet = () => { const k = tourEditKpi(); return !!(k && k.canEditDetails); };
+    const tourCanRes = () => { const k = tourEditKpi(); return !!(k && k.canEditResults); };
+    const tourAddOk = () => isPrivilegedUser() || selectedFy === currentFy;
 
     function tourScopeText() {
       const d = defaultScope();
@@ -3615,12 +3631,56 @@
           html: () => '<p>ปุ่มสถานะเป็นแบบไล่ระดับ:</p><ul><li>🔴 <b>ต้องแก้ไข</b> เห็นเฉพาะแดง</li><li>🟡 <b>รอติดตาม</b> เห็นแดง + เหลือง</li><li>🟢 <b>ครบถ้วน</b> เห็นทั้ง 3 สี (ค่าตั้งต้น)</li></ul><p>ใช้ไล่ทำงานเรื่องเร่งด่วนก่อน</p>' },
         { page: 'home', target: () => tourFirst('#accordion-tree-container'), title: 'รายการหมวดและตัวชี้วัด',
           html: () => '<p>กดหัวหมวดเพื่อกางดู กดชื่อตัวชี้วัดเพื่อเลื่อนไปที่การ์ด จุดสีหน้าชื่อคือสถานะ</p><ul><li>เลข <b>3.</b> = ลำดับในหมวด · <b>3.1</b> = ตัวชี้วัดย่อยของข้อ 3</li><li>🔗 = ตัวชี้วัดนี้อยู่หลายหมวด</li></ul><p>กด <b>ย่อทั้งหมด</b> เพื่อปิดทุกหมวดในครั้งเดียว</p>' },
-        { page: 'home', target: () => tourFirst('#kpi-list-area .kpi-card'), title: 'การ์ดตัวชี้วัด',
+        { page: 'home', when: () => uniqueById(getOrderedKpis()).length > 0, target: () => tourFirst('#kpi-list-area .kpi-card'), title: 'การ์ดตัวชี้วัด',
           html: () => '<p>การ์ดแสดงชื่อ เป้าหมาย กราฟผล 5 ปีงบ ผลรายเดือน รายละเอียด/การวิเคราะห์ ที่มาข้อมูล และผู้รับผิดชอบ</p><p>ป้าย <b>สถานะ</b> บอกเหตุผลว่าต้องทำอะไรต่อ — 🔴 ต้องแก้ไข · 🟡 รอติดตาม · 🟢 ครบถ้วน</p>' },
-        { page: 'home', target: () => tourFirst('#kpi-list-area .kpi-card-actions .btn'), title: 'กรอกผลและแก้ไข',
-          html: () => '<p>กด <b>✏️ แก้ไข</b> เพื่อกรอกผลรายเดือน แก้รายละเอียด ที่มาข้อมูล แล้วกด <b>💾 บันทึกข้อมูล</b></p><ul><li>ผลรายเดือนมักกรอกย้อนหลัง 1 เดือน ระบบเช็กถึงเดือนที่แล้ว</li><li>แต่ละปีงบใหม่ ต้องอัปเดตการวิเคราะห์อย่างน้อย 1 ครั้ง</li><li>ลืมกดบันทึก ระบบจะเตือนก่อนเปลี่ยนหน้า</li></ul><p>(ขั้นนี้แค่อธิบาย ยังไม่ได้เปิดโหมดแก้ไข)</p>' },
+        { page: 'home', when: () => !!tourEditKpi(), target: () => { const p = tourEditPlacement(); return p ? tourFirst('#card-' + cssId(p.key) + ' .kpi-card-actions .btn') : null; }, title: 'กรอกผลและแก้ไข',
+          html: () => '<p>กด <b>✏️ แก้ไข</b> ที่การ์ดที่คุณแก้ได้ เพื่อกรอกผลรายเดือน แก้รายละเอียด ที่มาข้อมูล แล้วกด <b>💾 บันทึกข้อมูล</b></p><p>ขั้นถัดไประบบจะ <b>เปิดโหมดแก้ไขจริง</b> ของการ์ดใบนี้ให้ดูทีละช่อง (ในการสอนจะไม่บันทึกอะไร)</p>' },
+        // ---- โหมดแก้ไข (ctx 'edit': ระบบเปิดโหมดแก้ไขของการ์ดที่แก้ได้ใบแรก และปิดให้เองเมื่อจบส่วนนี้โดยไม่บันทึก) ----
+        { page: 'home', ctx: 'edit', when: () => !!tourEditKpi(), target: () => tourFirst('.kpi-card.editing .kpi-card-head'), title: 'โหมดแก้ไข: ชื่อตัวชี้วัด',
+          html: () => '<p>นี่คือโหมดแก้ไขจริงของการ์ดใบนี้ ช่องที่แก้ได้จะเป็นกล่องกรอก ช่องที่ล็อกจะเป็นตัวอักษรธรรมดา (เอาเมาส์ชี้ช่องที่ล็อกเพื่อดูเหตุผล)</p><ul><li><b>ชื่อตัวชี้วัด</b> แก้ได้ในช่องแรก (เฉพาะผู้ที่มีสิทธิ์แก้รายละเอียด ในปีงบปัจจุบัน)</li><li>แถวปุ่มด้านขวา: 💾 บันทึก · ยกเลิก</li></ul>' },
+        { page: 'home', ctx: 'edit', when: () => tourCanDet(), target: () => tourFirst('#ed-target'), title: 'ค่าเป้าหมาย',
+          html: () => '<p>พิมพ์ค่าเป้าหมายพร้อมเครื่องหมาย เช่น <b>≥ 80 %</b> หรือ <b>100%</b> ระบบใช้วาดเส้นเป้าหมายสีแดงในกราฟ</p>' },
+        { page: 'home', ctx: 'edit', when: () => !!tourEditKpi(), target: () => { const e = document.getElementById('ed-y4'), t = e && e.closest('table'); return tourVisible(t) ? t : null; }, title: 'ผลทั้งปี (5 ปีงบ)',
+          html: () => '<p>ผลรวมทั้งปีของปีงบนี้และย้อนหลัง 4 ปี กรอกเป็นตัวเลข</p><ul><li>ช่องที่มีไอคอนล็อก = ผลปีที่ผ่านมาที่อ้างอิงจากชีตต้นทาง แก้ได้เฉพาะ admin / ผอ. / QMR</li><li>ผลของปีงบอื่นที่ตรงกัน ระบบอัปเดตให้ทุกชีตเอง</li></ul>' },
+        { page: 'home', ctx: 'edit', when: () => tourCanRes(), target: () => { const e = document.getElementById('ed-m0'), t = e && e.closest('.data-table-wrapper'); return tourVisible(t) ? t : null; }, title: 'ผลรายเดือน',
+          html: () => '<p>กรอกผลของแต่ละเดือน ต.ค.–ก.ย. เว้นว่างถ้ายังไม่มีผล</p><ul><li>ผลมักกรอกย้อนหลัง 1 เดือน ระบบเช็กถึง <b>เดือนที่แล้ว</b></li><li>ใต้ตารางมี <b>สรุปรายเดือน</b> คำนวณให้เอง (เฉลี่ย / ผลรวม / เดือนล่าสุด)</li></ul>' },
+        { page: 'home', ctx: 'edit', when: () => isPrivilegedUser() && !!tourEditKpi(), target: () => tourAll(['#ed-frequency', '#ed-summary']), title: 'ความถี่และวิธีสรุปผล (ผู้บริหาร)',
+          html: () => '<ul><li><b>ความถี่การเก็บข้อมูล</b> รายเดือน / รายไตรมาส / ครึ่งปี / รายปี ระบบเช็กผลเฉพาะรอบที่ถึงกำหนด</li><li><b>วิธีสรุปผลรายเดือน</b> เฉลี่ย / ผลรวม / เดือนล่าสุด</li></ul><p>ช่องนี้ผู้บริหารและผู้ดูแลระบบแก้ได้</p>' },
+        { page: 'home', ctx: 'edit', when: () => tourCanDet(), target: () => tourGroup('#ed-details'), title: 'รายละเอียด / การวิเคราะห์',
+          html: () => '<p>เขียน <b>ผลการวิเคราะห์</b>: แนวโน้มของผล สาเหตุ ปัญหา/อุปสรรค และแนวทางพัฒนา</p><ul><li>ทุกปีงบใหม่ ต้องแก้ข้อความช่องนี้หรือช่องที่มาข้อมูลอย่างน้อย 1 ครั้ง ระบบจึงนับว่า "อัปเดตการวิเคราะห์" แล้ว</li><li>นิยาม สูตร และแหล่งข้อมูล ให้ใส่ในช่อง "ที่มา/สูตร" ถัดไป</li></ul>' },
+        { page: 'home', ctx: 'edit', when: () => tourCanDet(), target: () => tourGroup('#ed-source'), title: 'ที่มาแหล่งข้อมูล / สูตรคำนวณ',
+          html: () => '<p>ใส่ <b>นิยาม</b> · ตัวตั้ง (A) / ตัวหาร (B) · <b>สูตรคำนวณ</b> · แหล่งข้อมูลและวิธีเก็บ</p><p>ถ้าเว้นว่าง การ์ดจะขึ้นสถานะ 🟡 "ยังไม่ระบุที่มาข้อมูล/สูตร"</p>' },
+        { page: 'home', ctx: 'edit', when: () => tourCanDet(), target: () => tourAll(['#ed-owner', '#ed-dept']), title: 'ผู้รับผิดชอบและหน่วยงาน',
+          html: () => '<ul><li><b>ผู้รับผิดชอบ</b> พิมพ์ชื่อผู้ใช้ภาษาไทย คั่นหลายคนด้วย <b>/</b> คนที่มีชื่อในช่องนี้จะเห็นและแก้ตัวชี้วัดนี้ได้</li><li><b>หน่วยงาน</b> คั่นด้วย / เช่น <b>ER / IPD</b> เพิ่มหรือเอาหน่วยออก ระบบเพิ่ม/ลบหมวดของหน่วยนั้นให้ตอนบันทึก (NSO เป็นสังกัดซ้อน ไม่มีหมวด NSO)</li></ul>' },
+        { page: 'home', ctx: 'edit', when: () => tourCanDet(), target: () => tourGroup('#ed-cats'), title: 'หมวดที่แสดง',
+          html: () => '<p>ตัวชี้วัดเดียวกันแสดงได้หลายหมวด แก้ที่ไหนก็เปลี่ยนทุกหมวด ป้ายหน้าแถวบอกชนิด:</p><ul><li>🏥 <b>รพ.</b> Part I–IV (เพิ่ม/เอาออกได้เฉพาะ admin / ผอ. / QMR)</li><li>🩺 <b>QA</b> "&lt;หน่วย&gt; QA" › มิติที่ 1–5</li><li>🏷️ <b>หน่วยงาน</b> ชื่อหน่วย › หัวข้อ</li></ul><p>กด <b>➕ เพิ่มหมวด</b> เพื่อเพิ่มแถว (เว้นหมวดย่อยว่าง ระบบเลือกให้ตอนบันทึก)</p>' },
+        { page: 'home', ctx: 'edit', when: () => tourCanDet(), target: () => tourGroup('#ed-parent'), title: 'ตั้งเป็นตัวชี้วัดย่อย',
+          html: () => '<p>ถ้าตัวนี้เป็นส่วนย่อยของอีกตัว เลือกตัวแม่ที่นี่ ตัวย่อยจะได้เลขต่อจากตัวแม่ เช่น <b>4.1, 4.2</b> (ซ้อนได้อีก 1 ชั้น เช่น 4.1.1) และแสดงเยื้องใต้ตัวแม่</p><p>เลือกได้เฉพาะตัวที่อยู่หมวดเดียวกัน</p>' },
+        { page: 'home', ctx: 'edit', when: () => isPrivilegedUser() && tourCanDet(), target: () => tourGroup('.kpi-card.editing .ed-level-cb'), title: 'ระดับตัวชี้วัด (ผู้บริหาร)',
+          html: () => '<p>ติ๊กได้หลายระดับ (แสดงระดับสูงสุด) หมวดผูกกับระดับ:</p><ul><li><b>SAR</b> ต้องอยู่ใน Part I–IV</li><li><b>QA-หน่วยงาน</b> ติ๊กแล้วแถวหมวด "&lt;หน่วย&gt; QA" เพิ่มให้ทันที</li><li><b>หน่วยงาน / รายบุคคล</b> ผูกกับหมวดของหน่วย</li></ul>' },
+        { page: 'home', ctx: 'edit', when: () => !!tourEditKpi(), target: () => tourFirst('.kpi-card.editing .kpi-card-actions'), title: 'บันทึกหรือยกเลิก',
+          html: () => '<ul><li><b>💾 บันทึกข้อมูล</b> บันทึกทุกช่องที่แก้ในครั้งเดียว และลงเวลา/ชื่อผู้แก้ให้เอง</li><li><b>ยกเลิก</b> ทิ้งสิ่งที่แก้</li><li>ถ้าข้อมูลไม่ครบ ระบบเตือนก่อนบันทึก และเตือนถ้าลืมกดบันทึกตอนเปลี่ยนหน้า</li></ul><p>ตอนนี้เป็นการสอน จึงยังไม่ได้บันทึกอะไร — ขั้นต่อไประบบจะปิดโหมดแก้ไขให้เอง</p>' },
         { page: 'home', target: () => tourFirst('.nav-actions'), title: 'ซ่อนกราฟ / เพิ่มตัวชี้วัด / Export',
-          html: () => '<ul><li><b>🙈 ซ่อนกราฟ</b> ให้การ์ดสั้นลง</li><li><b>➕ เพิ่มตัวชี้วัดใหม่</b> ติ๊กระดับ แล้วระบบสร้างช่องหมวดตามระดับให้ (SAR → Part I–IV · QA → QA ของหน่วย · หน่วยงาน → หัวข้อของหน่วย)</li><li><b>📄 Export PDF</b> พาไปหน้าสรุปรายงาน</li></ul>' },
+          html: () => '<ul><li><b>🙈 ซ่อนกราฟ</b> ให้การ์ดสั้นลง</li><li><b>➕ เพิ่มตัวชี้วัดใหม่</b> ขั้นถัดไปจะเปิดหน้าต่างให้ดูทีละช่อง</li><li><b>📄 Export PDF</b> พาไปหน้าสรุปรายงาน</li></ul>' },
+        // ---- เพิ่มตัวชี้วัดใหม่ (ctx 'add': ระบบเปิดหน้าต่างเพิ่มตัวชี้วัดและปิดให้เองโดยไม่บันทึก) ----
+        { page: 'home', ctx: 'add', when: tourAddOk, target: () => tourFirst('#modal-add-kpi .modal-card'), title: 'เพิ่มตัวชี้วัดใหม่',
+          html: () => '<p>ระบบเปิดหน้าต่างเพิ่มตัวชี้วัดให้ดูช่องจริง (ยังไม่บันทึก)</p><ul><li>เจ้าหน้าที่และหัวหน้าเพิ่มได้เฉพาะ <b>ปีงบปัจจุบัน</b> ระบบใส่ชื่อผู้เพิ่มเป็นผู้รับผิดชอบให้เสมอ</li><li>ปีงบถัดไปจะคัดลอกตัวชี้วัดตามจากปีล่าสุดเอง</li></ul>' },
+        { page: 'home', ctx: 'add', when: tourAddOk, target: () => tourAll(['#add-kpi-name', '#add-kpi-target']), title: 'ชื่อและค่าเป้าหมาย',
+          html: () => '<p>กรอก <b>ชื่อตัวชี้วัด</b> (ช่องที่จำเป็น) และ <b>ค่าเป้าหมาย</b> เช่น <b>&gt; 80</b> หรือ <b>100%</b></p>' },
+        { page: 'home', ctx: 'add', when: tourAddOk, target: () => tourGroup('#add-kpi-source'), title: 'ที่มาข้อมูล / สูตรคำนวณ',
+          html: () => '<p>ใส่นิยาม สูตร ตัวตั้ง/ตัวหาร และแหล่งข้อมูล (ไม่บังคับ แต่ถ้าเว้นว่าง การ์ดจะขึ้น 🟡 รอติดตาม)</p>' },
+        { page: 'home', ctx: 'add', when: tourAddOk, target: () => tourAll(['#add-kpi-owner', '#add-kpi-dept']), title: 'ผู้รับผิดชอบและหน่วยงาน',
+          html: () => '<ul><li><b>ผู้รับผิดชอบ</b> คั่นหลายคนด้วย / (เจ้าหน้าที่/หัวหน้า ระบบใส่ชื่อตัวเองให้)</li><li><b>หน่วยงาน</b> คั่นด้วย / เช่น <b>ER / IPD</b> ใช้สร้างหมวดของหน่วยในขั้นถัดไป (ว่างไว้ = ใช้หน่วยของผู้รับผิดชอบ)</li></ul>' },
+        { page: 'home', ctx: 'add', when: tourAddOk, target: () => tourGroup('#add-kpi-levels'), title: 'ระดับตัวชี้วัด (ตั้งค่าหลัก)',
+          html: () => '<p>ติ๊กได้หลายระดับ <b>หมวดผูกกับระดับที่ติ๊ก</b> — ติ๊กแล้วช่อง "หมวดตามระดับ" ด้านล่างเปลี่ยนตามทันที:</p><ul><li>🏥 <b>SAR</b> ตัวชี้วัดโรงพยาบาล → Part I–IV</li><li>🩺 <b>QA-หน่วยงาน</b> → "&lt;หน่วย&gt; QA" › มิติที่ 1–5</li><li>🏢 <b>หน่วยงาน</b> / 👤 <b>รายบุคคล</b> → หน่วย › หัวข้อ</li></ul>' },
+        { page: 'home', ctx: 'add', when: tourAddOk, target: () => tourGroup('#add-kpi-level-cats'), title: 'หมวดตามระดับ (ตั้งค่าหลัก)',
+          html: () => '<ul><li>🏥 <b>รพ.</b> เลือก Part I–IV และกรอก<b>หมวด HA</b> เช่น III-4 การดูแลผู้ป่วย (ระดับ SAR ต้องกรอก)</li><li>🩺 <b>QA</b> เลือกมิติที่ 1–5 ของแต่ละหน่วย หรือเว้นว่างให้ระบบเลือก</li><li>🏷️ <b>หน่วยงาน</b> พิมพ์หัวข้อของหน่วย หรือเว้นว่างให้ระบบเลือกให้ตามชื่อตัวชี้วัด</li></ul><p>หน่วยงาน "ER / NSO" ได้หมวดของ ER อย่างเดียว ไม่มีหมวด NSO</p>' },
+        { page: 'home', ctx: 'add', when: tourAddOk, target: () => tourGroup('#add-kpi-extra-cats'), title: 'แสดงในหมวดอื่นด้วย',
+          html: () => '<p>ถ้าอยากให้ตัวชี้วัดเดียวกันขึ้นในหมวดอื่นด้วย เช่น <b>PCT › กลุ่มโรค</b> หรือหมวดที่ตั้งเอง กด <b>➕ เพิ่มอีกหมวด</b> (ไม่บังคับ)</p>' },
+        { page: 'home', ctx: 'add', when: tourAddOk, target: () => tourAll(['#add-kpi-frequency', '#add-kpi-summary']), title: 'ความถี่และวิธีสรุปผล',
+          html: () => '<ul><li><b>ความถี่การเก็บข้อมูล</b> รายเดือน / รายไตรมาส / ครึ่งปี / รายปี ระบบเช็กผลเฉพาะรอบที่ถึงกำหนด</li><li><b>วิธีสรุปผลรายเดือน</b> เฉลี่ย / ผลรวม / เดือนล่าสุด</li></ul><p>เลือกได้ตอนเพิ่ม หลังจากนั้นผู้บริหารเป็นผู้แก้</p>' },
+        { page: 'home', ctx: 'add', when: tourAddOk, target: () => tourFirst('#modal-add-kpi .modal-footer'), title: 'บันทึกตัวชี้วัดใหม่',
+          html: () => '<p>กด <b>💾 บันทึกข้อมูล</b> ระบบตรวจว่ากรอกชื่อ ระดับ และหมวดครบ (ระดับ SAR ต้องมีหมวด Part I–IV · QA/หน่วยงาน ต้องมีหน่วยงาน) แล้วพาไปที่การ์ดใหม่ในโหมดแก้ไข ให้กรอกผลต่อได้ทันที</p><p>ตอนนี้เป็นการสอน ยังไม่ได้บันทึก — ขั้นต่อไประบบจะปิดหน้าต่างให้เอง</p>' },
         { page: 'report', target: () => tourFirst('#rp-side'), title: 'สรุปรายงานและพิมพ์ PDF',
           html: () => '<p>ใช้ตัวกรองชุดเดียวกับหน้าแรก (มุมมอง ขอบเขต สถานะ) แล้ว:</p><ul><li>ติ๊ก<b>หมวดที่จะพิมพ์</b></li><li>เลือก<b>เนื้อหา</b> (ตาราง กราฟ รายละเอียด ที่มา ผู้รับผิดชอบ) และ<b>แนวกระดาษ</b></li><li>กด <b>📄 Export PDF</b> แล้วเลือกปลายทาง "บันทึกเป็น PDF"</li></ul><p>ตัวชี้วัดที่อยู่หลายหมวด ตารางผลขึ้นทุกหมวด ส่วนรายละเอียดขึ้นครั้งเดียว</p>' },
         { page: 'progress', target: () => tourFirst('#page-progress .progress-grid'), title: 'ติดตามงาน',
@@ -3678,6 +3738,37 @@
       else if (e.key === 'ArrowLeft') tourBack();
     }
 
+    // ผลของ target(): องค์ประกอบเดียวหรือรายการ → รายการที่มองเห็นครบ (ไม่ครบ = null)
+    function tourNorm(t) {
+      const list = Array.isArray(t) ? t : (t ? [t] : []);
+      return list.length && list.every(tourVisible) ? list : null;
+    }
+
+    // บริบทของขั้น: 'edit' = เปิดโหมดแก้ไขของการ์ดที่แก้ได้ใบแรก · 'add' = เปิดหน้าต่างเพิ่มตัวชี้วัด (ทั้งสองแบบไม่บันทึกอะไร)
+    function tourOpenCtx(ctx) {
+      if (ctx === 'edit') {
+        const p = tourEditPlacement();
+        if (!p) return false;
+        startEditNow(p.id, p.key);
+        tourState.ctx = 'edit';
+        return editingId === p.id;
+      }
+      if (ctx === 'add') {
+        if (!tourAddOk()) return false;
+        openAddKpiModal();
+        tourState.ctx = 'add';
+        return true;
+      }
+      return false;
+    }
+
+    function tourCloseCtx() {
+      const ctx = tourState.ctx;
+      tourState.ctx = null;
+      if (ctx === 'edit' && editingId !== null) exitEdit();              // ทิ้งการแก้ไข ไม่บันทึก
+      if (ctx === 'add') document.getElementById('modal-add-kpi').style.display = 'none';
+    }
+
     function tourNext() { if (tourState.active) tourGo(tourState.i + 1, 1); }
     function tourBack() { if (tourState.active) tourGo(tourState.i - 1, -1); }
 
@@ -3690,11 +3781,14 @@
       if (i < 0) { i = 0; dir = 1; }
       const step = steps[i];
       tourState.i = i; tourState.step = step;
+      const want = step.ctx || null;
+      if (tourState.ctx !== want) tourCloseCtx();                        // ออกจากบริบทเดิม (ปิดโหมดแก้ไข/หน้าต่างที่เปิดไว้)
       if (step.page && currentTab !== step.page) switchMenu(step.page);
+      if (want && tourState.ctx !== want && !tourOpenCtx(want)) { tourGo(i + dir, dir); return; } // เปิดบริบทไม่ได้ (เช่น ไม่มีการ์ดที่แก้ได้) = ข้ามขั้น
       let tries = 0;
       tourState.poll = setInterval(() => {
         if (!tourState.active || tourState.token !== my) { clearInterval(tourState.poll); return; }
-        const el = step.target();
+        const el = tourNorm(step.target());
         if (el || ++tries > 30) {
           clearInterval(tourState.poll);
           if (!el) { tourGo(i + dir, dir); return; }
@@ -3707,6 +3801,7 @@
       const total = tourState.steps.length;
       const tip = document.getElementById('tour-tip');
       tourState.el = el;
+      if (el[0].closest('.modal-body')) el[0].scrollIntoView({ block: 'nearest' }); // ช่องในหน้าต่างที่เลื่อนได้: เลื่อนให้เห็นก่อนวางกรอบ
       tip.innerHTML = `<div class="tour-head"><span class="tour-step">ขั้นที่ ${i + 1}/${total}</span><button type="button" class="tour-end" onclick="tourStop()">✕ สิ้นสุด</button></div>
         <div class="tour-title">${step.title}</div><div class="tour-body">${step.html()}</div>
         <div class="tour-bar"><span style="width:${Math.round((i + 1) / total * 100)}%"></span></div>
@@ -3715,37 +3810,58 @@
       tip.style.display = 'block';
       document.getElementById('tour-spot').style.display = 'block';
       // เลื่อนองค์ประกอบเข้ากลางจอถ้าอยู่นอกจอ (จอมือถือเว้นที่ล่างให้กล่องคำอธิบาย)
-      const r = el.getBoundingClientRect(), vh = window.innerHeight;
+      const r = tourRect(el), vh = window.innerHeight;
       const mobile = window.innerWidth <= 700, reserve = mobile ? tip.offsetHeight + 24 : 0;
-      if (r.top < 70 || r.bottom > vh - reserve) {
+      const inModal = !!el[0].closest('.modal-overlay');
+      if (!inModal && (r.top < 70 || r.bottom > vh - reserve)) {
         if (r.height > vh - reserve - 90) window.scrollBy(0, r.top - 80);
-        else el.scrollIntoView({ block: mobile ? 'start' : 'center' });
+        else el[0].scrollIntoView({ block: mobile ? 'start' : 'center' });
         if (mobile) window.scrollBy(0, -80);
       }
       tourPlace();
+    }
+
+    // กรอบที่ครอบองค์ประกอบทั้งหมดของขั้น (ขั้นที่ไฮไลต์หลายช่องรวมกัน)
+    function tourRect(els) {
+      const rs = els.map(e => e.getBoundingClientRect());
+      const left = Math.min(...rs.map(r => r.left)), top = Math.min(...rs.map(r => r.top));
+      const right = Math.max(...rs.map(r => r.right)), bottom = Math.max(...rs.map(r => r.bottom));
+      return { left: left, top: top, right: right, bottom: bottom, width: right - left, height: bottom - top };
     }
 
     // วางกรอบไฮไลต์และกล่องคำอธิบาย (เรียกซ้ำตอนเลื่อน/ย่อขยาย/ทุก 0.4 วินาที)
     function tourPlace() {
       if (!tourState.active || !tourState.step) return;
       let el = tourState.el;
-      if (!el || !document.body.contains(el) || !tourVisible(el)) { el = tourState.step.target(); tourState.el = el; }
+      if (!el || !el.every(e => document.body.contains(e) && tourVisible(e))) { el = tourNorm(tourState.step.target()); tourState.el = el; }
       const spot = document.getElementById('tour-spot'), tip = document.getElementById('tour-tip');
       if (!el || !spot || !tip || tip.style.display === 'none') return;
       const vw = window.innerWidth, vh = window.innerHeight, pad = 6;
-      const r = el.getBoundingClientRect();
+      const r = tourRect(el);
       const x1 = Math.max(4, r.left - pad), y1 = Math.max(4, r.top - pad);
       const x2 = Math.min(vw - 4, r.right + pad), y2 = Math.min(vh - 4, r.bottom + pad);
       Object.assign(spot.style, { left: x1 + 'px', top: y1 + 'px', width: Math.max(10, x2 - x1) + 'px', height: Math.max(10, y2 - y1) + 'px' });
-      if (vw <= 700) return; // มือถือ: กล่องอยู่ชิดล่างตาม CSS
+      if (vw <= 700) { // มือถือ: กล่องชิดล่างจอ ถ้าบังช่องที่ไฮไลต์อยู่ให้ย้ายขึ้นชิดบน
+        const mth = tip.offsetHeight;
+        tip.classList.toggle('tip-top', r.bottom > vh - mth - 16 && r.top > mth + 16);
+        return;
+      }
+      tip.classList.remove('tip-top');
       const tw = tip.offsetWidth, th = tip.offsetHeight, gap = 14;
-      const spots = [
+      // ช่องในหน้าต่างป๊อปอัป: วางกล่องข้างหน้าต่างก่อน จะได้ไม่บังช่องอื่นในหน้าต่าง
+      const card = el[0].closest('.modal-card'), mr = card ? card.getBoundingClientRect() : null;
+      // [x, y, ด้านข้าง?] — กล่องที่วางข้างกรอบเลื่อนขึ้นลงให้พอดีจอได้ · วางบน/ล่างต้องพอดีทั้งกล่อง
+      const spots = mr ? [
+        [mr.right + gap, y1, true], [mr.left - tw - gap, y1, true],
+        [x1, y2 + gap], [x1, y1 - th - gap]
+      ] : [
         [x1, y2 + gap],                        // ล่าง
         [x1, y1 - th - gap],                   // บน
-        [x2 + gap, y1],                        // ขวา
-        [x1 - tw - gap, y1]                    // ซ้าย
+        [x2 + gap, y1, true],                  // ขวา
+        [x1 - tw - gap, y1, true]              // ซ้าย
       ];
-      let pos = spots.find(([x, y]) => x >= 8 && y >= 8 && x + tw <= vw - 8 && y + th <= vh - 8);
+      const fits = ([x, y, side]) => x >= 8 && x + tw <= vw - 8 && (side ? th <= vh - 16 : (y >= 8 && y + th <= vh - 8));
+      let pos = spots.find(fits);
       if (!pos) pos = [Math.max(8, Math.min(vw - tw - 8, x2 + gap)), Math.max(8, vh - th - 16)]; // ไม่พอที่ข้างกรอบ: ชิดล่างจอ
       tip.style.left = Math.max(8, Math.min(pos[0], vw - tw - 8)) + 'px';
       tip.style.top = Math.max(8, Math.min(pos[1], vh - th - 8)) + 'px';
@@ -3754,6 +3870,7 @@
     // ปิดการสอน (ปุ่มสิ้นสุด / Esc / ถึงขั้นสุดท้าย) แล้วกลับหน้าแรก
     function tourStop() {
       if (!tourState.active) return;
+      tourCloseCtx();
       tourTeardown();
       if (currentTab !== 'home') switchMenu('home');
       window.scrollTo(0, 0);
@@ -3761,6 +3878,7 @@
 
     // ล้างสถานะการสอนโดยไม่เปลี่ยนหน้า (ใช้ตอนออกจากระบบ)
     function tourReset() {
+      tourState.ctx = null; // ออกจากระบบ: showLogin ปิดโหมดแก้ไข/หน้าต่างให้เองอยู่แล้ว
       tourTeardown();
       const w = document.getElementById('modal-tour-welcome');
       if (w) w.style.display = 'none';
