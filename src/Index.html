@@ -3440,6 +3440,37 @@
     function prNum(v) { return v !== null && v !== undefined ? Math.round(v * 100) / 100 : '-'; }
     function prShort(text, n) { return text.length > n ? text.substring(0, n - 1) + '…' : text; }
 
+    // เลขข้อในรายงาน: รันต่อเนื่องทั้งเล่มตามลำดับที่พิมพ์ (ไม่เริ่ม 1 ใหม่ทุกหมวด) — ตัวหลัก 1…N
+    // ตัวย่อยใช้เลขตัวแม่ในหมวดเดียวกันของรายงาน เช่น 15.1 · ตัวแม่ไม่อยู่ในหมวดนี้ของรายงาน = นับเป็นตัวหลัก
+    // ตัวเดียวกันที่อยู่หลายหมวด ได้เลขใหม่ทุกหมวดที่ขึ้น · เลขบนการ์ดหน้าเว็บยังเป็นเลขในหมวดเหมือนเดิม
+    let prNos = new Map();
+    function prNumbering(tree) {
+      const out = new Map();
+      let root = 0;
+      Object.keys(tree).sort(comparePartNames).forEach(part => {
+        Object.keys(tree[part]).sort(catOrderOf(part)).forEach(cat => {
+          const nums = new Map(), kids = new Map();
+          tree[part][cat].forEach(k => {
+            const pno = k.parentId ? nums.get(k.parentId) : '';
+            let no;
+            if (pno) { const n = (kids.get(k.parentId) || 0) + 1; kids.set(k.parentId, n); no = pno + '.' + n; }
+            else no = String(++root);
+            nums.set(k.id, no);
+            out.set(part + '||' + cat + '||' + k.id, no);
+          });
+        });
+      });
+      return out;
+    }
+    function prNo(k) { return prNos.get(k.part + '||' + k.category + '||' + k.id) || ''; }
+    function prNoLabel(k) { const no = prNo(k); return !no || no.indexOf('.') !== -1 ? no : no + '.'; }
+    function prParentLabel(k) {
+      const p = globalDatabase.find(x => x.id === k.parentId);
+      if (!p) return '';
+      const no = prNoLabel({ part: k.part, category: k.category, id: p.id });
+      return (no ? 'ข้อ ' + no + ' ' : '') + p.name;
+    }
+
     function prMainTables(kpis, landscape) {
       const yl = [selectedFy - 4, selectedFy - 3, selectedFy - 2, selectedFy - 1, selectedFy];
       const fs = landscape ? '12pt' : '11pt';
@@ -3453,7 +3484,7 @@
       let b = `<div class="pr-sub-title">ผลลัพธ์รายเดือน ปีงบประมาณ ${selectedFy}</div><table class="pr-table" style="font-size:${fsMonth};">${cols(wB)}
         <thead><tr><th>ที่</th><th>ตัวชี้วัด</th>${thMonthsNames.map(m => `<th>${m}</th>`).join('')}<th>สรุป</th></tr></thead><tbody>`;
       kpis.forEach(k => {
-        const no = kpiNumber(k);
+        const no = prNo(k);
         const isSub = no.indexOf('.') !== -1;
         const sub = isSub ? ' pr-subkpi' : ' pr-main';   // ตัวชี้วัดหลัก: ลำดับ+ชื่อเป็นตัวหนา · ตัวย่อยปกติ
         const noCls = isSub ? '' : ' class="pr-main"';
@@ -3471,15 +3502,15 @@
 
     // ตัวชี้วัดที่ขึ้นรายละเอียดไปแล้วในหมวดก่อนหน้า: บอกชื่อ/หมวด และชี้ไปหมวดที่มีรายละเอียด/ที่มา
     function prRefBlock(k, pl) {
-      return `<div class="pr-block pr-ref"><div class="pr-kpi-title">${kpiNoLabel(k)} ${esc(k.name)}</div>
+      return `<div class="pr-block pr-ref"><div class="pr-kpi-title">${prNoLabel(k)} ${esc(k.name)}</div>
         <div class="pr-meta">หมวด: ${esc(k.category)} · เป้าหมาย: <b>${esc(k.target) || '-'}</b> · ปีงบประมาณ ${selectedFy}</div>
         <div class="pr-note">🔗 เป็นตัวชี้วัดเดียวกับ ${esc(prPlaceText(pl[0]))} — รายละเอียด/การวิเคราะห์ และที่มา/สูตรคำนวณ ดูที่หมวดนั้น<br>อยู่ในรายงานนี้ ${pl.length} หมวด: ${pl.map(p => esc(prPlaceText(p))).join(' · ')}</div></div>`;
     }
 
     function prBlock(k, opts, landscape, pl) {
       const yl = [selectedFy - 4, selectedFy - 3, selectedFy - 2, selectedFy - 1, selectedFy];
-      let h = `<div class="pr-block"><div class="pr-kpi-title">${kpiNoLabel(k)} ${esc(k.name)}</div>
-        <div class="pr-meta">หมวด: ${esc(k.category)}${k.parentId && globalDatabase.some(x => x.id === k.parentId) ? ' · ตัวย่อยของ ' + esc(parentLabel(k)) : ''} · ระดับ: ${esc(k.level)} · เป้าหมาย: <b>${esc(k.target) || '-'}</b> · ปีงบประมาณ ${selectedFy}</div>${pl && pl.length > 1 ? prPlacesNote(pl) : ''}`;
+      let h = `<div class="pr-block"><div class="pr-kpi-title">${prNoLabel(k)} ${esc(k.name)}</div>
+        <div class="pr-meta">หมวด: ${esc(k.category)}${k.parentId && globalDatabase.some(x => x.id === k.parentId) ? ' · ตัวย่อยของ ' + esc(prParentLabel(k)) : ''} · ระดับ: ${esc(k.level)} · เป้าหมาย: <b>${esc(k.target) || '-'}</b> · ปีงบประมาณ ${selectedFy}</div>${pl && pl.length > 1 ? prPlacesNote(pl) : ''}`;
       if (opts.chart) {
         h += `<div class="pr-chart">${generateSvgLineChart(k.years, k.target, yl)}</div>
           <table class="pr-table" style="font-size:${landscape ? '12pt' : '9.5pt'};"><thead><tr>${thMonthsNames.map(m => `<th>${m}</th>`).join('')}<th>สรุป</th></tr></thead>
@@ -3509,13 +3540,14 @@
         if (!tree[k.part][k.category]) tree[k.part][k.category] = [];
         tree[k.part][k.category].push(k);
       });
+      prNos = prNumbering(tree); // นับก่อนตัดตัวอย่างบนจอ: ตัวอย่างกับ Export PDF ได้เลขเดียวกัน
       // ตัวที่อยู่หลายหมวด: ตารางผลขึ้นทุกหมวด · รายละเอียด/ที่มาขึ้นเต็มที่หมวดแรก (ตามลำดับหมวดหลัก → หมวดย่อย) หมวดอื่นบอกว่าเป็นตัวเดียวกับหมวดไหน
       const places = new Map(); // id → [{ part, category, no }] ตามลำดับในรายงาน
       Object.keys(tree).sort(comparePartNames).forEach(part => {
         Object.keys(tree[part]).sort(catOrderOf(part)).forEach(cat => {
           tree[part][cat].forEach(k => {
             if (!places.has(k.id)) places.set(k.id, []);
-            places.get(k.id).push({ part: part, category: cat, no: kpiNoLabel(k) });
+            places.get(k.id).push({ part: part, category: cat, no: prNoLabel(k) });
           });
         });
       });
