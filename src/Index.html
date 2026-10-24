@@ -293,6 +293,8 @@
     .pr-method { font-size: 7.5pt; font-weight: 400; color: #475569; }
     .pr-label { font-size: 14pt; font-weight: 700; color: #166534; margin-top: 4px; }
     .pr-text { font-size: 14pt; white-space: pre-line; }
+    .pr-note { font-size: 12pt; color: #1e3a8a; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 4px; padding: 3px 8px; margin: 4px 0; }
+    .pr-block.pr-ref { border-left-color: #3b82f6; }
     /* ================= สไตล์ใหม่ (ตัวอย่าง): Google Sans, การ์ดโค้งมน, สีสดขึ้น ================= */
     :root {
       --primary-gradient: linear-gradient(135deg, #22b04b, #00733a);
@@ -3336,10 +3338,23 @@
       return a + '</tbody></table>' + b + '</tbody></table>';
     }
 
-    function prBlock(k, opts, landscape) {
+    // "ข้อ 3. Part II › 9 มาตรฐานสำคัญจำเป็น" ของแต่ละหมวดที่ตัวชี้วัดอยู่ในรายงาน
+    function prPlaceText(p) { return 'ข้อ ' + p.no + ' ' + partLabel(p.part) + ' › ' + p.category; }
+    function prPlacesNote(pl) {
+      return `<div class="pr-note">🔗 ตัวชี้วัดเดียวกัน อยู่ในรายงานนี้ ${pl.length} หมวด: ${pl.map(p => esc(prPlaceText(p))).join(' · ')}</div>`;
+    }
+
+    // ตัวชี้วัดที่ขึ้นรายละเอียดไปแล้วในหมวดก่อนหน้า: บอกชื่อ/หมวด และชี้ไปหมวดที่มีรายละเอียด/ที่มา
+    function prRefBlock(k, pl) {
+      return `<div class="pr-block pr-ref"><div class="pr-kpi-title">${kpiNoLabel(k)} ${esc(k.name)}</div>
+        <div class="pr-meta">หมวด: ${esc(k.category)} · เป้าหมาย: <b>${esc(k.target) || '-'}</b> · ปีงบประมาณ ${selectedFy}</div>
+        <div class="pr-note">🔗 เป็นตัวชี้วัดเดียวกับ ${esc(prPlaceText(pl[0]))} — รายละเอียด/การวิเคราะห์ และที่มา/สูตรคำนวณ ดูที่หมวดนั้น<br>อยู่ในรายงานนี้ ${pl.length} หมวด: ${pl.map(p => esc(prPlaceText(p))).join(' · ')}</div></div>`;
+    }
+
+    function prBlock(k, opts, landscape, pl) {
       const yl = [selectedFy - 4, selectedFy - 3, selectedFy - 2, selectedFy - 1, selectedFy];
       let h = `<div class="pr-block"><div class="pr-kpi-title">${kpiNoLabel(k)} ${esc(k.name)}</div>
-        <div class="pr-meta">หมวด: ${esc(k.category)}${k.parentId && globalDatabase.some(x => x.id === k.parentId) ? ' · ตัวย่อยของ ' + esc(parentLabel(k)) : ''} · ระดับ: ${esc(k.level)} · เป้าหมาย: <b>${esc(k.target) || '-'}</b> · ปีงบประมาณ ${selectedFy}</div>`;
+        <div class="pr-meta">หมวด: ${esc(k.category)}${k.parentId && globalDatabase.some(x => x.id === k.parentId) ? ' · ตัวย่อยของ ' + esc(parentLabel(k)) : ''} · ระดับ: ${esc(k.level)} · เป้าหมาย: <b>${esc(k.target) || '-'}</b> · ปีงบประมาณ ${selectedFy}</div>${pl && pl.length > 1 ? prPlacesNote(pl) : ''}`;
       if (opts.chart) {
         h += `<div class="pr-chart">${generateSvgLineChart(k.years, k.target, yl)}</div>
           <table class="pr-table" style="font-size:${landscape ? '12pt' : '9.5pt'};"><thead><tr>${thMonthsNames.map(m => `<th>${m}</th>`).join('')}<th>สรุป</th></tr></thead>
@@ -3369,14 +3384,15 @@
         if (!tree[k.part][k.category]) tree[k.part][k.category] = [];
         tree[k.part][k.category].push(k);
       });
-      // ตัวที่อยู่หลายหมวดพิมพ์ครั้งเดียว: เก็บไว้ในหมวดแรก (ตามลำดับหมวดหลัก → หมวดย่อย) ตัดออกจากหมวดถัดไป
-      const printed = new Set();
+      // ตัวที่อยู่หลายหมวด: ตารางผลขึ้นทุกหมวด · รายละเอียด/ที่มาขึ้นเต็มที่หมวดแรก (ตามลำดับหมวดหลัก → หมวดย่อย) หมวดอื่นบอกว่าเป็นตัวเดียวกับหมวดไหน
+      const places = new Map(); // id → [{ part, category, no }] ตามลำดับในรายงาน
       Object.keys(tree).sort(comparePartNames).forEach(part => {
         Object.keys(tree[part]).sort(catOrderOf(part)).forEach(cat => {
-          tree[part][cat] = tree[part][cat].filter(k => !printed.has(k.id) && printed.add(k.id));
-          if (tree[part][cat].length === 0) delete tree[part][cat];
+          tree[part][cat].forEach(k => {
+            if (!places.has(k.id)) places.set(k.id, []);
+            places.get(k.id).push({ part: part, category: cat, no: kpiNoLabel(k) });
+          });
         });
-        if (Object.keys(tree[part]).length === 0) delete tree[part];
       });
       if (limit) { // ตัวอย่างบนจอ: ตัดให้เหลือ limit ตัวแรก
         let left = limit;
@@ -3400,7 +3416,10 @@
           const kpis = tree[part][cat];
           html += `<div class="pr-cat">${esc(cat)}</div>`;
           if (opts.table) html += prMainTables(kpis, landscape);
-          if (perKpi) html += kpis.map(k => prBlock(k, opts, landscape)).join('');
+          if (perKpi) html += kpis.map(k => {
+            const pl = places.get(k.id), first = pl[0];
+            return first.part === part && first.category === cat ? prBlock(k, opts, landscape, pl) : prRefBlock(k, pl);
+          }).join('');
         });
       });
       return html;
