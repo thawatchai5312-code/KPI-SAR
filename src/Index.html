@@ -3719,6 +3719,7 @@
       if (tourState.active || !isAppUnlocked) return;
       tourState.steps = tourSteps().filter(s => !s.when || s.when());
       tourState.active = true;
+      if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); // ไม่ให้ Enter/Space ไปกดปุ่มบนหน้าจอที่อยู่ใต้การสอน
       tourState.token++;
       const blocker = document.createElement('div'); blocker.id = 'tour-blocker';
       const spot = document.createElement('div'); spot.id = 'tour-spot'; spot.style.display = 'none';
@@ -3733,6 +3734,12 @@
 
     function tourKey(e) {
       if (!tourState.active) return;
+      if (e.key === 'Tab') { // วนโฟกัสเฉพาะปุ่มในกล่องคำอธิบาย
+        const tip = document.getElementById('tour-tip'), f = tip ? Array.from(tip.querySelectorAll('button:not([disabled]), a[href]')) : [];
+        e.preventDefault();
+        if (f.length) f[(f.indexOf(document.activeElement) + (e.shiftKey ? -1 : 1) + f.length) % f.length].focus({ preventScroll: true });
+        return;
+      }
       if (e.key === 'Escape') tourStop();
       else if (e.key === 'ArrowRight') tourNext();
       else if (e.key === 'ArrowLeft') tourBack();
@@ -3809,6 +3816,7 @@
           <button type="button" class="btn btn-primary btn-sm" onclick="tourNext()">${step.last ? '✔ เสร็จสิ้น' : 'ถัดไป ▶'}</button></div>`;
       tip.style.display = 'block';
       document.getElementById('tour-spot').style.display = 'block';
+      tip.querySelector('.tour-foot .btn-primary').focus({ preventScroll: true }); // Enter = ถัดไป
       // เลื่อนองค์ประกอบเข้ากลางจอถ้าอยู่นอกจอ (จอมือถือเว้นที่ล่างให้กล่องคำอธิบาย)
       const r = tourRect(el), vh = window.innerHeight;
       const mobile = window.innerWidth <= 700, reserve = mobile ? tip.offsetHeight + 24 : 0;
