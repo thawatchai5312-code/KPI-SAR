@@ -236,6 +236,11 @@
     .kpi-table .c-name { left: 48px; box-shadow: 2px 0 0 #cbd5e1; font-weight: 600; }
     .kpi-table td.c-act { position: sticky; right: 0; z-index: 2; box-shadow: -2px 0 0 #cbd5e1; }
     .kpi-table th.c-act { right: 0; }
+    .kpi-table td.c-act { text-align: center; vertical-align: top; padding: 4px; }
+    .tbl-edit-btn { padding: 3px 8px; font-size: 11.5px; }
+    .tbl-acts { display: flex; gap: 4px; }
+    .tbl-acts .btn { flex: 1 1 0; min-width: 0; padding: 4px 0; font-size: 14px; line-height: 1.2; text-align: center; }
+    .kpi-table td.c-act .dirty-mark { display: none; margin-top: 3px; font-size: 10.5px; line-height: 1.2; }
     .kpi-row { --rb: #fff; --stc: #cbd5e1; scroll-margin-top: 70px; }
     .kpi-row.st-green { --stc: #22c55e; } .kpi-row.st-yellow { --stc: #facc15; } .kpi-row.st-red { --stc: #ef4444; }
     .kpi-row:hover { --rb: #f8fafc; }
@@ -4020,7 +4025,7 @@
     const TBL_GROUPS = [['annual', 'ผลทั้งปี'], ['monthly', 'ผลรายเดือน'], ['settings', 'ตั้งค่า'], ['text', 'รายละเอียด'], ['people', 'ผู้รับผิดชอบ'], ['cats', 'หมวด/ตัวแม่'], ['history', 'ประวัติ']];
     const tblHide = new Set(); // กลุ่มคอลัมน์ที่ซ่อนไว้ (จำตามบัญชี)
     const TBL_COLS = (() => {
-      const c = [{ k: 'no', w: 48 }, { k: 'name', w: 270 }, { k: 'st', w: 124 }, { k: 'tg', w: 112 }];
+      const c = [{ k: 'no', w: 48 }, { k: 'name', w: 270 }, { k: 'st', w: 108 }, { k: 'tg', w: 90 }];
       for (let i = 0; i < 5; i++) c.push({ k: 'y' + i, g: 'annual', w: 78 });
       for (let i = 0; i < 12; i++) c.push({ k: 'm' + i, g: 'monthly', w: 68 });
       c.push({ k: 'sum', g: 'monthly', w: 96 });
@@ -4029,7 +4034,7 @@
       c.push({ k: 'own', g: 'people', w: 170 }, { k: 'dep', g: 'people', w: 130 });
       c.push({ k: 'cat', g: 'cats', w: 260 }, { k: 'par', g: 'cats', w: 230 });
       c.push({ k: 'edt', g: 'history', w: 190 }, { k: 'viw', g: 'history', w: 190 });
-      c.push({ k: 'act', w: 200 });
+      c.push({ k: 'act', w: 100 });
       return c;
     })();
 
@@ -4154,8 +4159,8 @@
       c.viw = { h: stampText(kpi.viewedAt, kpi.viewedBy) };
       let act;
       if (ed) {
-        act = `<button class="btn btn-primary btn-sm" onclick="saveKpiEdit()">💾 บันทึก</button> <button class="btn btn-secondary btn-sm" onclick="cancelEdit()">ยกเลิก</button>` +
-          (priv ? ' <button class="btn btn-danger btn-sm" onclick="requestDeleteKpi()" title="ลบตัวชี้วัด">🗑️</button>' : '') + ' <span class="dirty-mark" id="dirty-mark">● ยังไม่ได้บันทึก</span>';
+        act = `<div class="tbl-acts"><button class="btn btn-primary btn-sm" onclick="saveKpiEdit()" title="บันทึกข้อมูล" aria-label="บันทึกข้อมูล">💾</button><button class="btn btn-secondary btn-sm" onclick="cancelEdit()" title="ยกเลิกการแก้ไข" aria-label="ยกเลิกการแก้ไข">✖</button>` +
+          (priv ? '<button class="btn btn-danger btn-sm" onclick="requestDeleteKpi()" title="ลบตัวชี้วัด" aria-label="ลบตัวชี้วัด">🗑️</button>' : '') + '</div><span class="dirty-mark" id="dirty-mark">● ยังไม่ได้บันทึก</span>';
         if (canDet) {
           const parts = kpiCats(kpi).map(x => catRowHtml(x, !priv && isCorePart(x.part))).join('');
           act += `<div class="tbl-hold" hidden>
@@ -4170,7 +4175,7 @@
           </div>`;
         }
       } else if (kpi.canEditResults || kpi.canEditDetails) {
-        act = `<button class="btn btn-accent btn-sm" onclick="startEditFromCard(this)">✏️ แก้ไข</button>`;
+        act = `<button class="btn btn-accent btn-sm tbl-edit-btn" onclick="startEditFromCard(this)">✏️ แก้ไข</button>`;
       } else {
         act = `<span class="hint" style="margin:0;">ดูอย่างเดียว</span>`;
       }
@@ -4371,8 +4376,8 @@
           html: () => '<p>ติ๊กได้หลายระดับ (แสดงระดับสูงสุด) หมวดผูกกับระดับ:</p><ul><li><b>SAR</b> ต้องอยู่ใน Part I–IV</li><li><b>QA-หน่วยงาน</b> ติ๊กแล้วแถวหมวด "&lt;หน่วย&gt; QA" เพิ่มให้ทันที</li><li><b>หน่วยงาน / รายบุคคล</b> ผูกกับหมวดของหน่วย</li></ul>' },
         { page: 'home', ctx: 'edit', when: () => !!tourEditKpi(), target: () => tourFirst('.kpi-card.editing .kpi-card-actions'), title: 'บันทึกหรือยกเลิก',
           html: () => '<ul><li><b>💾 บันทึกข้อมูล</b> บันทึกทุกช่องที่แก้ในครั้งเดียว และลงเวลา/ชื่อผู้แก้ให้เอง</li><li><b>ยกเลิก</b> ทิ้งสิ่งที่แก้</li><li>ถ้าข้อมูลไม่ครบ ระบบเตือนก่อนบันทึก และเตือนถ้าลืมกดบันทึกตอนเปลี่ยนหน้า</li></ul><p>ตอนนี้เป็นการสอน จึงยังไม่ได้บันทึกอะไร — ขั้นต่อไประบบจะปิดโหมดแก้ไขให้เอง</p>' },
-        { page: 'home', target: () => tourFirst('.nav-actions'), title: 'ซ่อนกราฟ / เพิ่มตัวชี้วัด / Export',
-          html: () => '<ul><li><b>🙈 ซ่อนกราฟ</b> ให้การ์ดสั้นลง</li><li><b>➕ เพิ่มตัวชี้วัดใหม่</b> ขั้นถัดไปจะเปิดหน้าต่างให้ดูทีละช่อง</li><li><b>📄 Export PDF</b> พาไปหน้าสรุปรายงาน</li></ul>' },
+        { page: 'home', target: () => tourFirst('.nav-actions'), title: 'การ์ด/ตาราง / เพิ่มตัวชี้วัด / Export',
+          html: () => '<ul><li><b>🗂️ การ์ด / 📋 ตาราง</b> สลับรูปแบบแสดงตัวชี้วัด ตารางแก้ได้ทีละแถวเหมือน Google Sheet ซ่อน/แสดงกลุ่มคอลัมน์ได้ ระบบจำให้ตามบัญชี (ปุ่ม 🙈 ซ่อนกราฟ อยู่ข้างตัวเลือกจำนวนต่อหน้า ในมุมมองการ์ด)</li><li><b>➕ เพิ่มตัวชี้วัดใหม่</b> ขั้นถัดไปจะเปิดหน้าต่างให้ดูทีละช่อง</li><li><b>📄 Export PDF</b> พาไปหน้าสรุปรายงาน</li></ul>' },
         // ---- เพิ่มตัวชี้วัดใหม่ (ctx 'add': ระบบเปิดหน้าต่างเพิ่มตัวชี้วัดและปิดให้เองโดยไม่บันทึก) ----
         { page: 'home', ctx: 'add', when: tourAddOk, target: () => tourFirst('#modal-add-kpi .modal-card'), title: 'เพิ่มตัวชี้วัดใหม่',
           html: () => '<p>ระบบเปิดหน้าต่างเพิ่มตัวชี้วัดให้ดูช่องจริง (ยังไม่บันทึก)</p><ul><li>เจ้าหน้าที่และหัวหน้าเพิ่มได้เฉพาะ <b>ปีงบปัจจุบัน</b> ระบบใส่ชื่อผู้เพิ่มเป็นผู้รับผิดชอบให้เสมอ</li><li>ปีงบถัดไปจะคัดลอกตัวชี้วัดตามจากปีล่าสุดเอง</li></ul>' },
