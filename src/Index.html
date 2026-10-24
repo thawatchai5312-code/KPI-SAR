@@ -1294,12 +1294,16 @@
     // ปีงบจะเปลี่ยนเมื่อโหลดสำเร็จเท่านั้น (requestedFy = ปีที่ขอ) ถ้าล้มเหลวยังเป็นปีเดิมและข้อมูลเดิม ไม่ให้บันทึกลงผิดปี
     function fetchAllDataFromServer(quiet = false, afterLoad = null, requestedFy = null) {
       const seq = ++fetchSeq;
+      // โหลดครั้งแรกหลังล็อกอิน (quiet = false) มีหน้า "กำลังดาวน์โหลดฐานข้อมูล" เต็มจออยู่แล้ว · ครั้งอื่นขึ้นป๊อปอัปกลางจอ
+      const overlay = quiet;
+      const busyWrap = (f) => overlay ? unbusy(f) : f;
+      if (overlay) showBusy(requestedFy !== null && requestedFy !== selectedFy ? 'กำลังโหลดข้อมูลปีงบ ' + requestedFy + '…' : 'กำลังโหลดข้อมูลล่าสุด…');
       const loadFailed = (msg) => {
         renderFiscalYearSelect();
         if (!quiet) showLoadFailed(msg); // โหลดครั้งแรกหลังล็อกอิน: ต้องมีทางลองใหม่ ไม่ให้ค้างที่หน้า "กำลังดาวน์โหลด"
       };
       google.script.run
-        .withSuccessHandler((res) => {
+        .withSuccessHandler(busyWrap((res) => {
           if (seq !== fetchSeq || !sessionToken) return;
           if (!res.success) {
             if (res.message && res.message.indexOf('SESSION_EXPIRED') !== -1) { showLogin('เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่'); return; }
@@ -1337,11 +1341,11 @@
           // เข้าระบบครั้งแรก: ให้เลือกปีงบก่อนเข้าใช้งาน ป้องกันหลงปี (หลังจากนั้นใช้ตัวเลือกปีงบบนแถบนำทางตามปกติ)
           if (!quiet) showFiscalYearPicker();
           if (afterLoad) afterLoad();
-        })
-        .withFailureHandler((err) => {
+        }))
+        .withFailureHandler(busyWrap((err) => {
           if (seq !== fetchSeq) return;
           showAlert('เกิดข้อผิดพลาดเครือข่าย', '❌', err.toString()); loadFailed(err.toString());
-        })
+        }))
         .getAllData(sessionToken, requestedFy !== null ? requestedFy : selectedFy);
     }
 
@@ -2786,13 +2790,14 @@
       document.getElementById('modal-pct').style.display = 'flex';
       document.getElementById('pct-commit-btn').disabled = true;
       document.getElementById('pct-body').innerHTML = '<div class="empty-state">กำลังตรวจสอบข้อมูลทุกปีงบ (อาจใช้เวลาครู่หนึ่ง)...</div>';
+      showBusy('กำลังตรวจสอบข้อมูลทุกปีงบ…', 300000);
       google.script.run
-        .withSuccessHandler((res) => {
+        .withSuccessHandler(unbusy((res) => {
           if (!res.success) { document.getElementById('pct-body').innerHTML = '<div class="empty-state">' + esc(res.message) + '</div>'; return; }
           renderPctReport(res.preview, false);
           document.getElementById('pct-commit-btn').disabled = !!res.preview.done;
-        })
-        .withFailureHandler((err) => { document.getElementById('pct-body').innerHTML = '<div class="empty-state">' + esc(err.toString()) + '</div>'; })
+        }))
+        .withFailureHandler(unbusy((err) => { document.getElementById('pct-body').innerHTML = '<div class="empty-state">' + esc(err.toString()) + '</div>'; }))
         .pctImportPreview(sessionToken);
     }
     function confirmPct() {
@@ -2820,13 +2825,14 @@
       document.getElementById('modal-tidy').style.display = 'flex';
       document.getElementById('tidy-commit-btn').disabled = true;
       document.getElementById('tidy-body').innerHTML = '<div class="empty-state">กำลังตรวจสอบข้อมูลทุกปีงบ (อาจใช้เวลาครู่หนึ่ง)...</div>';
+      showBusy('กำลังตรวจสอบข้อมูลทุกปีงบ…', 300000);
       google.script.run
-        .withSuccessHandler((res) => {
+        .withSuccessHandler(unbusy((res) => {
           if (!res.success) { document.getElementById('tidy-body').innerHTML = '<div class="empty-state">' + esc(res.message) + '</div>'; return; }
           renderTidyReport(res.preview, false);
           document.getElementById('tidy-commit-btn').disabled = !res.preview.hasWork;
-        })
-        .withFailureHandler((err) => { document.getElementById('tidy-body').innerHTML = '<div class="empty-state">' + esc(err.toString()) + '</div>'; })
+        }))
+        .withFailureHandler(unbusy((err) => { document.getElementById('tidy-body').innerHTML = '<div class="empty-state">' + esc(err.toString()) + '</div>'; }))
         .tidyPreview(sessionToken);
     }
 
@@ -2856,13 +2862,14 @@
       document.getElementById('modal-nso').style.display = 'flex';
       document.getElementById('nso-commit-btn').disabled = true;
       document.getElementById('nso-body').innerHTML = '<div class="empty-state">กำลังอ่านไฟล์ต้นทางและเทียบกับข้อมูลในระบบ (อาจใช้เวลาครู่หนึ่ง)...</div>';
+      showBusy('กำลังอ่านไฟล์ต้นทางและเทียบกับข้อมูลในระบบ…', 300000);
       google.script.run
-        .withSuccessHandler((res) => {
+        .withSuccessHandler(unbusy((res) => {
           if (!res.success) { document.getElementById('nso-body').innerHTML = '<div class="empty-state">' + esc(res.message) + '</div>'; return; }
           renderNsoReport(res.preview, false);
           document.getElementById('nso-commit-btn').disabled = false;
-        })
-        .withFailureHandler((err) => { document.getElementById('nso-body').innerHTML = '<div class="empty-state">' + esc(err.toString()) + '</div>'; })
+        }))
+        .withFailureHandler(unbusy((err) => { document.getElementById('nso-body').innerHTML = '<div class="empty-state">' + esc(err.toString()) + '</div>'; }))
         .nsoImportPreview(sessionToken);
     }
 
@@ -2893,8 +2900,9 @@
     }
 
     function loadSettingsUsers() {
+      showBusy('กำลังโหลดรายชื่อผู้ใช้…');
       google.script.run
-        .withSuccessHandler((res) => {
+        .withSuccessHandler(unbusy((res) => {
           if (res.success) {
             settingsUsers = res.users;
             settingsServerNames = new Set(res.users.map(u => u.username));
@@ -2903,8 +2911,8 @@
           } else {
             showAlert('ข้อผิดพลาด', '❌', res.message || 'ไม่สามารถโหลดรายชื่อผู้ใช้ได้');
           }
-        })
-        .withFailureHandler((err) => showAlert('ข้อผิดพลาด', '❌', err.toString()))
+        }))
+        .withFailureHandler(unbusy((err) => showAlert('ข้อผิดพลาด', '❌', err.toString())))
         .getUsersForAdmin(sessionToken);
     }
 
@@ -2942,8 +2950,9 @@
 
     // สร้างบัญชีแล้ว เอาเฉพาะบัญชีใหม่มาต่อท้ายตาราง ไม่ล้างสิ่งที่ admin แก้ไว้แต่ยังไม่ได้บันทึก
     function mergeNewAccounts() {
+      showBusy('กำลังโหลดรายชื่อผู้ใช้…');
       google.script.run
-        .withSuccessHandler((res) => {
+        .withSuccessHandler(unbusy((res) => {
           if (!res.success) { showAlert('ข้อผิดพลาด', '❌', res.message); return; }
           const have = new Set(settingsUsers.map(u => u.username));
           res.users.forEach(u => {
@@ -2951,8 +2960,8 @@
             settingsServerNames.add(u.username);
           });
           renderSettingsForm();
-        })
-        .withFailureHandler((err) => showAlert('ข้อผิดพลาด', '❌', err.toString()))
+        }))
+        .withFailureHandler(unbusy((err) => showAlert('ข้อผิดพลาด', '❌', err.toString())))
         .getUsersForAdmin(sessionToken);
     }
 
@@ -3257,9 +3266,10 @@
         const w = rpt.waiters; rpt.waiters = [];
         w.forEach(f => f());
       };
+      showBusy('กำลังโหลดตัวเลือกรายงาน…');
       google.script.run
-        .withSuccessHandler((res) => { if (res && res.success && res.prefs) rptApplyPrefs(res.prefs); done(); })
-        .withFailureHandler(done)
+        .withSuccessHandler(unbusy((res) => { if (res && res.success && res.prefs) rptApplyPrefs(res.prefs); done(); }))
+        .withFailureHandler(unbusy(done))
         .getReportPrefs(token);
     }
 
