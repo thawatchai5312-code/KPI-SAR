@@ -206,6 +206,60 @@
     .login-box h2 { color: #015c8b; margin-bottom: 8px; font-size: 22px; font-weight: 700; }
     .login-box p { color: #64748b; margin-bottom: 20px; font-size: 13px; font-weight: 500; }
 
+    /* ---------- มุมมองตาราง (แบบ Google Sheet) ---------- */
+    .mode-switch { display: inline-flex; background: rgba(255,255,255,0.92); border-radius: 999px; padding: 3px; box-shadow: 0 2px 8px rgba(0,0,0,0.12); }
+    .mode-switch button { border: 0; background: transparent; padding: 5px 12px; border-radius: 999px; font-weight: 700; font-size: 13px; color: var(--primary-color); cursor: pointer; white-space: nowrap; }
+    .mode-switch button.on { background: var(--primary-color); color: #fff; }
+    .pager-size .btn { margin-left: 6px; }
+    #kpi-list-area.table-mode { position: sticky; top: var(--tree-top, 70px); height: calc(100vh - var(--tree-top, 70px) - 10px); min-height: 360px; display: flex; flex-direction: column; }
+    .tbl-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 6px 12px; flex-wrap: wrap; background: #fff; border-radius: 10px; padding: 6px 10px; margin-bottom: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.06); font-size: 13px; font-weight: 700; color: #334155; }
+    .tbl-groups { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; }
+    .tbl-chip { border: 1px solid #cbd5e1; background: #f1f5f9; color: #64748b; border-radius: 999px; padding: 3px 10px; font-size: 12px; font-weight: 700; cursor: pointer; }
+    .tbl-chip.on { background: #dcfce7; color: #166534; border-color: #86efac; }
+    .tbl-wrap { flex: 1; min-height: 0; overflow: auto; background: #fff; border: 1px solid #cbd5e1; border-radius: 12px; box-shadow: var(--box-shadow); position: relative; }
+    table.kpi-table { border-collapse: separate; border-spacing: 0; table-layout: fixed; font-size: 13px; }
+    .kpi-table col[data-g], .kpi-table th[data-g], .kpi-table td[data-g] { }
+    .kpi-table.hide-annual [data-g="annual"], .kpi-table.hide-monthly [data-g="monthly"], .kpi-table.hide-settings [data-g="settings"], .kpi-table.hide-text [data-g="text"],
+    .kpi-table.hide-people [data-g="people"], .kpi-table.hide-cats [data-g="cats"], .kpi-table.hide-history [data-g="history"] { display: none; }
+    .kpi-table th { position: sticky; z-index: 3; background: #e0f2fe; color: #0f172a; border-right: 1px solid #bfdbfe; border-bottom: 1px solid #93c5fd; padding: 4px 6px; font-size: 12.5px; text-align: center; white-space: nowrap; box-sizing: border-box; line-height: 1.25; }
+    .kpi-table thead tr.tbl-h1 th { top: 0; height: 32px; }
+    .kpi-table thead tr.tbl-h2 th { top: 32px; height: 32px; background: #f0f9ff; }
+    .kpi-table thead th.tbl-top2 { top: 0; }
+    .kpi-table th.c-no, .kpi-table th.c-name { z-index: 6; }
+    .kpi-table th.c-act { z-index: 5; }
+    .kpi-table th.grp-month { background: #fef3c7; } .kpi-table thead tr.tbl-h2 th.grp-month { background: #fffbeb; }
+    .kpi-table td { border-right: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0; padding: 4px 6px; vertical-align: top; background: var(--rb, #fff); overflow: hidden; text-align: left; }
+    .kpi-table td.tbl-num { text-align: center; }
+    .kpi-table td.tbl-num.num0 { padding: 0; }
+    .kpi-table .c-no, .kpi-table .c-name { position: sticky; z-index: 2; }
+    .kpi-table .c-no { left: 0; text-align: center; font-weight: 700; color: #475569; border-left: 5px solid var(--stc, #cbd5e1); }
+    .kpi-table .c-name { left: 48px; box-shadow: 2px 0 0 #cbd5e1; font-weight: 600; }
+    .kpi-table td.c-act { position: sticky; right: 0; z-index: 2; box-shadow: -2px 0 0 #cbd5e1; }
+    .kpi-table th.c-act { right: 0; }
+    .kpi-row { --rb: #fff; --stc: #cbd5e1; scroll-margin-top: 70px; }
+    .kpi-row.st-green { --stc: #22c55e; } .kpi-row.st-yellow { --stc: #facc15; } .kpi-row.st-red { --stc: #ef4444; }
+    .kpi-row:hover { --rb: #f8fafc; }
+    .kpi-row.selected { --rb: #fefce8; }
+    .kpi-row.editing { --rb: #eff6ff; }
+    .kpi-row.flash td { animation: rowFlash 1.6s ease; }
+    @keyframes rowFlash { 0%, 40% { background: #fde68a; } }
+    .tbl-clamp { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; white-space: pre-line; overflow-wrap: anywhere; cursor: pointer; line-height: 1.45; }
+    .kpi-row.expanded .tbl-clamp { display: block; -webkit-line-clamp: unset; }
+    .tbl-name.sub { padding-left: 14px; font-weight: 500; }
+    .tbl-in { width: 100%; padding: 4px 6px; font-size: 13px; }
+    .kpi-table td .cell-input { padding: 6px 3px !important; }
+    .kpi-table td select.tbl-in { padding: 4px 2px; }
+    .kpi-table .tbl-cat td { background: var(--primary-gradient); padding: 0; border: 0; overflow: visible; }
+    .tbl-cat-label { position: sticky; left: 0; display: inline-block; padding: 6px 14px; font-weight: 700; color: #fff; font-size: 14px; }
+    .tbl-prev { white-space: pre-line; overflow-wrap: anywhere; max-height: 4.4em; overflow: hidden; margin-bottom: 4px; color: #0f172a; }
+    .tbl-empty { color: #94a3b8; font-weight: 500; }
+    .tbl-sec { margin-bottom: 14px; padding: 8px; border-radius: 10px; border: 1px solid transparent; }
+    .tbl-sec.focus { border-color: #86efac; background: #f0fdf4; }
+    .tbl-lab { display: block; font-size: 13px; font-weight: 700; color: #334155; margin-bottom: 5px; }
+    .remote-row td { background: #fff7ed; padding: 0; }
+    .remote-row .remote-banner { position: sticky; left: 0; display: inline-flex; margin: 4px 8px; }
+    @media (max-width: 1000px) { #kpi-list-area.table-mode { position: static; height: 82vh; } .nav-actions { flex-wrap: wrap; } }
+
     /* หลายคนใช้งานพร้อมกัน: หน้าจอกำลังบันทึก · แจ้งอัปเดตมุมจอ · แถบเตือนในการ์ดที่กำลังแก้ */
     #busy-overlay { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.45); backdrop-filter: blur(2px); z-index: 3000; display: none; align-items: center; justify-content: center; padding: 15px; cursor: wait; }
     #busy-overlay.show { display: flex; }
@@ -632,7 +686,10 @@
     <div class="nav-item" id="menu-progress-btn" onclick="guardUnsaved(() => switchMenu('progress'))">📋 ติดตามงาน (Progress)</div>
     <div class="nav-spacer"></div>
     <div class="nav-actions">
-      <button class="btn btn-secondary" id="btn-toggle-chart" onclick="toggleCharts()">🙈 ซ่อนกราฟ</button>
+      <div class="mode-switch" id="mode-switch" role="group" aria-label="รูปแบบการแสดงตัวชี้วัด">
+        <button type="button" data-mode="card" class="on" onclick="setListMode('card')" title="แสดงเป็นการ์ดตัวชี้วัด">🗂️ การ์ด</button>
+        <button type="button" data-mode="table" onclick="setListMode('table')" title="แสดงเป็นตารางแบบ Google Sheet">📋 ตาราง</button>
+      </div>
       <button class="btn btn-accent" id="btn-add-kpi" style="display: none;" onclick="guardUnsaved(openAddKpiModal)">➕ เพิ่มตัวชี้วัดใหม่</button>
       <button class="btn btn-primary" id="btn-export-pdf" onclick="guardUnsaved(exportPdfClick)">📄 Export PDF</button>
     </div>
@@ -908,6 +965,17 @@
     </div>
   </div>
 
+  <div id="modal-tbl-long" class="modal-overlay">
+    <div class="modal-card" style="max-width: 760px; width: 96%;">
+      <div class="modal-header">✏️ แก้ไขรายละเอียดเพิ่มเติม (ยังไม่บันทึก จนกว่าจะกด 💾 ที่แถวในตาราง)</div>
+      <div class="modal-body" id="tbl-long-body" style="max-height: 68vh; overflow-y: auto;"></div>
+      <div class="modal-footer" style="display: flex; justify-content: space-between;">
+        <button class="btn btn-secondary" onclick="tblCloseLong(false)">ยกเลิก</button>
+        <button class="btn btn-primary" onclick="tblCloseLong(true)">✔ ตกลง</button>
+      </div>
+    </div>
+  </div>
+
   <div id="modal-conflict" class="modal-overlay">
     <div class="modal-card" style="max-width: 420px;">
       <div class="modal-header" style="background: linear-gradient(135deg, #f97316, #ea580c);">⚠️ มีผู้อื่นแก้ไขตัวชี้วัดนี้ไปก่อน</div>
@@ -933,6 +1001,9 @@
   <script>
     // ===================== สถานะ =====================
     let globalDatabase = [];
+    const CARD_SEL = '.kpi-card, tr.kpi-row';           // การ์ด (มุมมองการ์ด) หรือแถว (มุมมองตาราง) ของตัวชี้วัด
+    const EDITING_SEL = '.kpi-card.editing, tr.kpi-row.editing';
+    let listMode = 'card';                               // 'card' | 'table' (จำตามบัญชี — ดู UiPrefs.js)
     let currentTab = 'home';
     let selectedKpiId = null;
 
@@ -1165,6 +1236,7 @@
           isAppUnlocked = true;
           applyUserUi();
           applyDefaultFilters();
+          uiPrefsLoad();
 
           if (currentUser.mustChange) {
             document.getElementById('login-box-content').innerHTML = `
@@ -1217,6 +1289,7 @@
       globalProgressData = [];
       tourReset();
       liveReset();
+      uiPrefsReset();
       rptReset();
       resetTreeFilters(); // ตัวกรองสถานะ/ขอบเขต กลับเป็นค่าเริ่มต้น ไม่ให้ติดไปยังผู้ใช้คนถัดไป
       homeStale = false;
@@ -1224,7 +1297,7 @@
       document.getElementById('user-bar').style.display = 'none';
       document.getElementById('pw-warning-bar').style.display = 'none';
       chpwForced = false;
-      ['modal-settings', 'modal-add-kpi', 'modal-fy', 'modal-unsaved', 'modal-change-password', 'modal-alert', 'modal-confirm']
+      ['modal-settings', 'modal-add-kpi', 'modal-fy', 'modal-unsaved', 'modal-change-password', 'modal-alert', 'modal-confirm', 'modal-tbl-long']
         .forEach(id => { document.getElementById(id).style.display = 'none'; });
       document.getElementById('accordion-tree-container').innerHTML = '<div class="empty-state">กรุณาเข้าสู่ระบบ...</div>';
       document.getElementById('kpi-list-area').innerHTML = '';
@@ -1328,7 +1401,6 @@
 
           editingId = null; editSnapshot = null;
           if (!quiet) pickInitialView(); // เข้าระบบครั้งแรก: ถ้ามุมมองตั้งต้นว่าง ให้ไปมุมมองแรกที่มีตัวชี้วัด
-          document.getElementById('btn-toggle-chart').innerText = chartVisible ? '🙈 ซ่อนกราฟ' : '📈 แสดงกราฟ';
           setStickyOffsets();
           renderTree();
           renderList();
@@ -1925,7 +1997,7 @@
       openParts.add(focusP.part);
       openCats.add(focusP.part + '||' + focusP.category);
       suppressTreeSyncUntil = Date.now() + 1500; // ระหว่างเลื่อนจอไปหาการ์ด ไม่ให้แถบซ้ายกระโดดตามการ์ดที่ผ่าน
-      const page = Math.floor(idx / pageSize) + 1;
+      const page = listMode === 'table' ? currentPage : Math.floor(idx / pageSize) + 1; // ตาราง: ทุกแถวอยู่ในหน้าเดียว
       if (page !== currentPage || !document.getElementById('card-' + cssId(k.key))) {
         currentPage = page;
         renderList();
@@ -1939,6 +2011,7 @@
         card.classList.remove('flash');
         void card.offsetWidth;
         card.classList.add('flash');
+        setTimeout(() => card.classList.remove('flash'), 1800);
       }
     }
 
@@ -1969,7 +2042,7 @@
         ${withSize ? `<span class="pager-size">แสดงหน้าละ
           <select class="editable-input" style="width:auto; display:inline-block; padding:2px 6px;" onchange="setPageSize(this)">
             ${[10, 20, 50].map(s => `<option value="${s}" ${s === pageSize ? 'selected' : ''}>${s}</option>`).join('')}
-          </select> ตัว</span>` : ''}
+          </select> ตัว<button type="button" class="btn btn-secondary btn-sm" id="btn-toggle-chart" onclick="toggleCharts()">${chartVisible ? '🙈 ซ่อนกราฟ' : '📈 แสดงกราฟ'}</button></span>` : ''}
       </div>`;
     }
 
@@ -1996,13 +2069,17 @@
       const area = document.getElementById('kpi-list-area');
       const list = uniqueById(getOrderedKpis()); // ตัวชี้วัดละการ์ดใบเดียวในมุมมองที่เลือก
       if (globalDatabase.length === 0) {
+        area.classList.remove('table-mode');
         area.innerHTML = '<div class="panel"><div class="empty-state">ไม่พบข้อมูลตัวชี้วัดในปีงบนี้</div></div>';
         return;
       }
       if (list.length === 0) {
+        area.classList.remove('table-mode');
         area.innerHTML = `<div class="panel"><div class="empty-state">${emptyListMessage()}</div></div>`;
         return;
       }
+      if (listMode === 'table') { renderTable(list); return; }
+      area.classList.remove('table-mode');
       currentPage = Math.min(Math.max(1, currentPage), totalPages(list.length));
       const pageItems = list.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
@@ -2023,6 +2100,7 @@
 
     // วาดการ์ดของตัวชี้วัดใหม่ทุกใบ (ตัวเดียวกันที่อยู่หลายหมวดจะอัปเดตพร้อมกัน)
     function rerenderCard(id) {
+      if (listMode === 'table') { tblRerenderRow(id); return; }
       let any = false;
       document.querySelectorAll('.kpi-card').forEach(old => {
         if (old.dataset.id !== id) return;
@@ -2300,7 +2378,7 @@
         });
         updateTreeInView();
       }, { threshold: [0, 0.25, 0.5, 0.75, 1] });
-      document.querySelectorAll('.kpi-card').forEach(c => cardObserver.observe(c));
+      document.querySelectorAll(CARD_SEL).forEach(c => cardObserver.observe(c));
     }
 
     // ---------- แถบรายชื่อตัวชี้วัดเลื่อนตามการ์ดที่อยู่บนจอ (ใช้เป็นแถบนำทาง) ----------
@@ -2347,7 +2425,7 @@
     // การ์ดที่ "กำลังอ่าน" = ใบแรกที่ขอบล่างยังพ้นแถบหัวที่ติดด้านบนลงมาเกิน 80px (การ์ดที่โผล่แค่ขอบใต้แถบหัวไม่นับ)
     function currentCardKey() {
       const top = parseFloat(getComputedStyle(document.getElementById('panel-tree')).top) || 0;
-      const card = Array.from(document.querySelectorAll('.kpi-card')).find(c => visibleCards.has(c.dataset.key) && c.getBoundingClientRect().bottom > top + 80);
+      const card = Array.from(document.querySelectorAll(CARD_SEL)).find(c => visibleCards.has(c.dataset.key) && c.getBoundingClientRect().bottom > top + 80);
       return card ? card.dataset.key : undefined;
     }
 
@@ -2384,7 +2462,8 @@
       chartVisible = !chartVisible;
       try { localStorage.setItem('kpi_chart_visible', chartVisible ? '1' : '0'); } catch (e) {}
       document.getElementById('kpi-list-area').classList.toggle('charts-hidden', !chartVisible);
-      document.getElementById('btn-toggle-chart').innerText = chartVisible ? '🙈 ซ่อนกราฟ' : '📈 แสดงกราฟ';
+      const cb = document.getElementById('btn-toggle-chart');
+      if (cb) cb.innerText = chartVisible ? '🙈 ซ่อนกราฟ' : '📈 แสดงกราฟ';
       refreshClamps();
     }
 
@@ -2442,7 +2521,7 @@
     }
     // รหัสตัวชี้วัดอ่านจาก data-attribute ของการ์ด ไม่ฝังในโค้ดของปุ่ม (รหัสที่มีเครื่องหมายคำพูดจะไม่ทำให้ปุ่มพัง)
     function startEditFromCard(btn) {
-      const card = btn.closest('.kpi-card');
+      const card = btn.closest(CARD_SEL);
       startEdit(card.dataset.id, card.dataset.key);
     }
     function toggleExpandFromCard(btn) {
@@ -2454,7 +2533,7 @@
       if (!kpi || !(kpi.canEditResults || kpi.canEditDetails)) return;
       if (!key) {
         // ไม่ระบุการ์ด (เช่น มาจากหน้าติดตามงาน): ใช้การ์ดที่อยู่บนจอ ถ้าไม่มีใช้ใบแรก
-        const card = Array.from(document.querySelectorAll('.kpi-card')).find(c => c.dataset.id === id);
+        const card = Array.from(document.querySelectorAll(CARD_SEL)).find(c => c.dataset.id === id);
         key = card ? card.dataset.key : (viewPlacements(kpi, treeView)[0] || placementsOf(kpi)[0]).key;
       }
       editingId = id;
@@ -2483,7 +2562,7 @@
     // ระหว่างรอผลบันทึก: ปิดช่องกรอกและปุ่มของการ์ดที่กำลังแก้ (กันกดซ้ำ/พิมพ์เพิ่มแล้วหายตอนวาดการ์ดใหม่)
     let savingKpi = false;
     function setCardBusy(busy) {
-      const card = document.querySelector('.kpi-card.editing');
+      const card = document.querySelector(EDITING_SEL);
       if (!card) return;
       card.querySelectorAll('input, textarea, select, button').forEach(el => {
         if (busy) { if (!el.disabled) { el.dataset.busy = '1'; el.disabled = true; } }
@@ -3848,8 +3927,9 @@
     }
     function liveMarkRemote(k) {
       remoteEdit = k;
-      const card = document.querySelector('.kpi-card.editing');
+      const card = document.querySelector(EDITING_SEL);
       if (!card) return;
+      if (card.tagName === 'TR') { tblMarkRemote(card); return; }
       const old = card.querySelector('.remote-banner');
       if (!remoteBannerHtml()) return;
       if (old) old.outerHTML = remoteBannerHtml();
@@ -3930,6 +4010,294 @@
         if (!same(draft[f], snap[f])) out[f] = draft[f];
       });
       return out;
+    }
+  </script>
+
+  <script>
+    // ===================== มุมมองตาราง (แบบ Google Sheet) =====================
+    // ข้อมูล/สิทธิ์/การบันทึก ชุดเดียวกับการ์ดทุกอย่าง: แถวที่แก้ใช้ id ช่องกรอก (ed-*) ชุดเดียวกัน → collectDraft / saveKpiEdit /
+    // แก้ชนกัน / กำลังบันทึก / อัปเดตอัตโนมัติ ทำงานเหมือนการ์ด · ช่องยาว (รายละเอียด ที่มา หมวด ตัวแม่ ระดับ) แก้ในหน้าต่างกลางจอ
+    const TBL_GROUPS = [['annual', 'ผลทั้งปี'], ['monthly', 'ผลรายเดือน'], ['settings', 'ตั้งค่า'], ['text', 'รายละเอียด'], ['people', 'ผู้รับผิดชอบ'], ['cats', 'หมวด/ตัวแม่'], ['history', 'ประวัติ']];
+    const tblHide = new Set(); // กลุ่มคอลัมน์ที่ซ่อนไว้ (จำตามบัญชี)
+    const TBL_COLS = (() => {
+      const c = [{ k: 'no', w: 48 }, { k: 'name', w: 270 }, { k: 'st', w: 124 }, { k: 'tg', w: 112 }];
+      for (let i = 0; i < 5; i++) c.push({ k: 'y' + i, g: 'annual', w: 78 });
+      for (let i = 0; i < 12; i++) c.push({ k: 'm' + i, g: 'monthly', w: 68 });
+      c.push({ k: 'sum', g: 'monthly', w: 96 });
+      c.push({ k: 'sm', g: 'settings', w: 112 }, { k: 'fq', g: 'settings', w: 104 }, { k: 'lv', g: 'settings', w: 150 });
+      c.push({ k: 'det', g: 'text', w: 300 }, { k: 'src', g: 'text', w: 300 });
+      c.push({ k: 'own', g: 'people', w: 170 }, { k: 'dep', g: 'people', w: 130 });
+      c.push({ k: 'cat', g: 'cats', w: 260 }, { k: 'par', g: 'cats', w: 230 });
+      c.push({ k: 'edt', g: 'history', w: 190 }, { k: 'viw', g: 'history', w: 190 });
+      c.push({ k: 'act', w: 200 });
+      return c;
+    })();
+
+    // ---------- จำตามบัญชี ----------
+    let uiPrefsTimer = null;
+    function updateModeSwitch() {
+      document.querySelectorAll('#mode-switch button').forEach(b => b.classList.toggle('on', b.dataset.mode === listMode));
+    }
+    function uiPrefsApply(p) {
+      const mode = p && p.mode === 'table' ? 'table' : 'card';
+      tblHide.clear();
+      ((p && p.hide) || []).forEach(g => tblHide.add(g));
+      const changed = mode !== listMode;
+      listMode = mode;
+      updateModeSwitch();
+      if (changed && globalDatabase.length && editingId === null && currentTab === 'home') renderList();
+    }
+    function uiPrefsLoad() {
+      const token = sessionToken;
+      google.script.run
+        .withSuccessHandler((res) => { if (token === sessionToken && res && res.success && res.prefs) uiPrefsApply(res.prefs); })
+        .getUiPrefs(token);
+    }
+    function uiPrefsSaveSoon() {
+      clearTimeout(uiPrefsTimer);
+      uiPrefsTimer = setTimeout(() => {
+        if (sessionToken) google.script.run.saveUiPrefs(sessionToken, { mode: listMode, hide: Array.from(tblHide) });
+      }, 600);
+    }
+    function uiPrefsReset() {
+      listMode = 'card'; tblHide.clear(); clearTimeout(uiPrefsTimer); updateModeSwitch();
+    }
+
+    // ---------- สลับการ์ด / ตาราง ----------
+    function setListMode(mode) {
+      if (mode === listMode) return;
+      guardUnsaved(() => {
+        listMode = mode;
+        updateModeSwitch();
+        uiPrefsSaveSoon();
+        renderList();
+        const el = selectedKey ? document.getElementById('card-' + cssId(selectedKey)) : null;
+        if (el) el.scrollIntoView({ block: 'start' });
+      });
+    }
+
+    function tblToggleGroup(g) {
+      if (tblHide.has(g)) tblHide.delete(g); else tblHide.add(g);
+      const table = document.getElementById('kpi-table');
+      if (table) table.classList.toggle('hide-' + g, tblHide.has(g));
+      document.querySelectorAll('.tbl-chip').forEach(b => { if (b.dataset.g === g) b.classList.toggle('on', !tblHide.has(g)); });
+      tblFit();
+      uiPrefsSaveSoon();
+    }
+    // ความกว้างตาราง = ผลรวมของคอลัมน์ที่แสดง (ตารางแบบความกว้างคงที่ ไม่ยืดตามข้อความ)
+    function tblFit() {
+      const table = document.getElementById('kpi-table');
+      if (!table) return;
+      table.style.width = TBL_COLS.filter(c => !c.g || !tblHide.has(c.g)).reduce((s, c) => s + c.w, 0) + 'px';
+    }
+
+    // ---------- ส่วนหัว ----------
+    function tblHeadHtml() {
+      const yl = [selectedFy - 4, selectedFy - 3, selectedFy - 2, selectedFy - 1, selectedFy];
+      const lab = { sum: 'สรุป', sm: 'วิธีสรุป', fq: 'ความถี่', lv: 'ระดับ', det: 'รายละเอียด / การวิเคราะห์', src: 'ที่มา / สูตรคำนวณ', own: 'ผู้รับผิดชอบ', dep: 'หน่วยงาน', cat: 'หมวดที่แสดง', par: 'ตัวชี้วัดแม่', edt: '✏️ แก้ไขล่าสุด', viw: '👁️ เข้าดูล่าสุด' };
+      yl.forEach((y, i) => { lab['y' + i] = y; });
+      thMonthsNames.forEach((m, i) => { lab['m' + i] = m; });
+      const g = (key, span, text, cls) => `<th class="${cls || ''}" data-g="${key}" colspan="${span}">${text}</th>`;
+      const top = (k, text) => `<th class="c-${k} tbl-top2" rowspan="2">${text}</th>`;
+      const r1 = `<tr class="tbl-h1">${top('no', 'ข้อ')}${top('name', 'ชื่อตัวชี้วัด')}${top('st', 'สถานะ')}${top('tg', '🎯 เป้าหมาย')}` +
+        g('annual', 5, '📅 ผลทั้งปี (ปีงบประมาณ)') + g('monthly', 13, '📊 ผลรายเดือน ปีงบประมาณ ' + selectedFy, 'grp-month') + g('settings', 3, '⚙️ ตั้งค่า') +
+        g('text', 2, '📝 ข้อความ') + g('people', 2, '👤 ผู้รับผิดชอบ') + g('cats', 2, '🗂️ หมวด') + g('history', 2, '🕘 ประวัติ') + top('act', 'จัดการ') + '</tr>';
+      const r2 = '<tr class="tbl-h2">' + TBL_COLS.filter(c => lab[c.k] !== undefined).map(c => `<th class="c-${c.k}${c.g === 'monthly' ? ' grp-month' : ''}" data-g="${c.g}">${lab[c.k]}</th>`).join('') + '</tr>';
+      return r1 + r2;
+    }
+
+    // ---------- แถว ----------
+    function tblLongBtn(sec) {
+      return `<button type="button" class="btn btn-secondary btn-sm" onclick="tblOpenLong('${sec}')">✎ แก้ไข</button>`;
+    }
+    function tblPrevHtml(sec, d) {
+      const empty = '<span class="tbl-empty">— ว่าง —</span>';
+      let t;
+      if (sec === 'details') t = (d.details || '').trim();
+      else if (sec === 'source') t = (d.source || '').trim();
+      else if (sec === 'cats') t = d.cats.filter(c => c.part || c.category).map(c => partLabel(c.part) + ' › ' + c.category).join('\n');
+      else if (sec === 'parent') t = d.parent;
+      else t = (d.levels || []).join(', ');
+      return `<div class="tbl-prev" data-sec="${sec}">${t ? esc(t) : empty}</div>`;
+    }
+    function tblDataOfKpi(kpi) {
+      return { details: kpi.templateDetails, source: kpi.dataSource, cats: kpiCats(kpi), parent: kpi.parentId ? parentLabel(kpi) || kpi.parentId : '— ไม่ใช่ตัวย่อย —', levels: kpi.levels || [kpi.level] };
+    }
+
+    function tblCells(kpi, ed) {
+      const priv = isPrivilegedUser(), canRes = ed && kpi.canEditResults, canDet = ed && kpi.canEditDetails;
+      const lockD = ed && !canDet, lockR = ed && !kpi.canEditResults;
+      const stt = kpiStatus(kpi), no = kpiNumber(kpi) || '', isSub = no.indexOf('.') !== -1;
+      const data = tblDataOfKpi(kpi);
+      const clamp = (t, empty, cls) => `<div class="tbl-clamp ${cls || ''}" onclick="tblToggleRow(this)">${t ? esc(t) : '<span class="tbl-empty">' + (empty || '-') + '</span>'}</div>`;
+      const lockD_ = lockD ? { cls: 'locked-cell', at: ` data-reason="${esc(whyNoDetails())}"` } : {};
+      const lockR_ = lockR ? { cls: 'locked-cell', at: ` data-reason="${esc(whyNoResults())}"` } : {};
+      const c = {};
+      c.no = { h: esc(kpiNoLabel(kpi)) };
+      c.name = canDet ? { h: `<textarea id="ed-name" class="editable-input tbl-in" rows="3">${esc(kpi.name)}</textarea>` } : Object.assign({ h: clamp(kpi.name, '-', 'tbl-name' + (isSub ? ' sub' : '')) }, lockD_);
+      c.st = { h: `<span class="st-badge ${stt.level}" style="margin:0;" title="${esc(stt.reasons.join(' · '))}">${stt.icon} ${stt.label}</span>` };
+      c.tg = canDet ? { h: `<input type="text" id="ed-target" class="editable-input tbl-in" value="${esc(kpi.target)}">` } : Object.assign({ h: esc(kpi.target) || '-' }, lockD_);
+      kpi.years.forEach((v, i) => { c['y' + i] = canRes ? { h: yearInputHtml(kpi, i, v), num0: 1 } : Object.assign({ h: v !== null ? v : '-' }, lockR_); });
+      kpi.months.forEach((v, i) => { c['m' + i] = canRes ? { h: `<input type="number" step="any" id="ed-m${i}" class="editable-input cell-input" value="${v !== null ? v : ''}">`, num0: 1 } : Object.assign({ h: v !== null ? v : '-' }, lockR_); });
+      c.sum = { h: `${calculateMonthlySummary(kpi.months, kpi.summaryMethod)}<div class="hint" style="margin:0;">${esc(kpi.summaryMethod || 'เฉลี่ย')}</div>` };
+      c.sm = ed && priv ? { h: `<select id="ed-summary" class="editable-input tbl-in">${SUMMARY_METHODS.map(m => `<option value="${m}" ${m === (kpi.summaryMethod || 'เฉลี่ย') ? 'selected' : ''}>${m}</option>`).join('')}</select>` } : { h: esc(kpi.summaryMethod || 'เฉลี่ย') };
+      c.fq = ed && priv ? { h: `<select id="ed-frequency" class="editable-input tbl-in">${FREQUENCIES.map(m => `<option value="${m}" ${m === (kpi.frequency || 'รายเดือน') ? 'selected' : ''}>${m}</option>`).join('')}</select>` } : { h: esc(kpi.frequency || 'รายเดือน') };
+      const lvTxt = esc(kpi.level) + ((kpi.levels || []).length > 1 ? ' (+' + (kpi.levels.length - 1) + ')' : '');
+      c.lv = canDet && priv ? { h: tblPrevHtml('levels', data) + tblLongBtn('levels') } : Object.assign({ h: `<span title="ทุกระดับ: ${esc((kpi.levels || [kpi.level]).join(', '))}">${lvTxt}</span>` }, canDet ? {} : lockD_);
+      c.det = canDet ? { h: tblPrevHtml('details', data) + tblLongBtn('details') } : Object.assign({ h: clamp(kpi.templateDetails, 'ไม่มีข้อมูลรายละเอียดเพิ่มเติม') }, lockD_);
+      c.src = canDet ? { h: tblPrevHtml('source', data) + tblLongBtn('source') } : Object.assign({ h: clamp(kpi.dataSource, 'ไม่ระบุที่มาข้อมูล') }, lockD_);
+      c.own = canDet ? { h: `<input type="text" id="ed-owner" class="editable-input tbl-in" value="${esc(kpi.owner)}" title="คั่นหลายคนด้วย /">` } : Object.assign({ h: clamp(kpi.owner) }, lockD_);
+      c.dep = canDet ? { h: `<input type="text" id="ed-dept" class="editable-input tbl-in" value="${esc(kpi.department)}">` } : Object.assign({ h: clamp(kpi.department) }, lockD_);
+      c.cat = canDet ? { h: tblPrevHtml('cats', data) + tblLongBtn('cats') } : { h: clamp(kpiCats(kpi).map(x => partLabel(x.part) + ' › ' + x.category).join('\n') + (kpiCats(kpi).length > 1 ? '' : '')) , at: kpiCats(kpi).length > 1 ? ' title="ตัวชี้วัดเดียวกัน แก้ที่หมวดไหนก็เปลี่ยนทุกหมวด"' : '' };
+      c.par = canDet ? { h: tblPrevHtml('parent', data) + tblLongBtn('parent') } : { h: clamp(kpi.parentId && globalDatabase.some(x => x.id === kpi.parentId) ? '↳ ' + parentLabel(kpi) : '', '-') };
+      c.edt = { h: stampText(kpi.editedAt, kpi.editedBy) };
+      c.viw = { h: stampText(kpi.viewedAt, kpi.viewedBy) };
+      let act;
+      if (ed) {
+        act = `<button class="btn btn-primary btn-sm" onclick="saveKpiEdit()">💾 บันทึก</button> <button class="btn btn-secondary btn-sm" onclick="cancelEdit()">ยกเลิก</button>` +
+          (priv ? ' <button class="btn btn-danger btn-sm" onclick="requestDeleteKpi()" title="ลบตัวชี้วัด">🗑️</button>' : '') + ' <span class="dirty-mark" id="dirty-mark">● ยังไม่ได้บันทึก</span>';
+        if (canDet) {
+          const parts = kpiCats(kpi).map(x => catRowHtml(x, !priv && isCorePart(x.part))).join('');
+          act += `<div class="tbl-hold" hidden>
+            <div class="tbl-sec" data-sec="details"><label class="tbl-lab">📝 รายละเอียด/การวิเคราะห์ตัวชี้วัด</label><textarea id="ed-details" class="editable-input" rows="8" placeholder="ผลการวิเคราะห์: แนวโน้มของผล สาเหตุ ปัญหา/อุปสรรค แนวทางพัฒนา (นิยาม สูตร แหล่งข้อมูล ให้ใส่ช่อง &quot;ที่มาแหล่งข้อมูล / สูตรคำนวณ&quot;)">${esc(kpi.templateDetails)}</textarea></div>
+            <div class="tbl-sec" data-sec="source"><label class="tbl-lab">🔗 ที่มาแหล่งข้อมูล / สูตรคำนวณ</label><textarea id="ed-source" class="editable-input" rows="6" placeholder="นิยาม · ตัวตั้ง (A) / ตัวหาร (B) · สูตรคำนวณ · แหล่งข้อมูล / วิธีเก็บข้อมูล">${esc(kpi.dataSource)}</textarea></div>
+            <div class="tbl-sec" data-sec="cats"><label class="tbl-lab">หมวดที่แสดง <span class="hint" style="margin:0;">(ตัวชี้วัดเดียวกัน แสดงได้หลายหมวด · แก้ที่ไหนก็เปลี่ยนทุกหมวด)</span></label>
+              <div id="ed-cats">${parts}</div>
+              <button type="button" class="btn btn-secondary btn-sm" style="margin-top:4px;" onclick="addCatRow('ed-cats')">➕ เพิ่มหมวด</button>
+              ${priv ? '' : '<div class="hint">เพิ่มได้เฉพาะหมวดที่ตั้งชื่อเอง · หมวด Part I–IV ให้ admin / ผอ. / QMR เป็นผู้ดูแล</div>'}</div>
+            <div class="tbl-sec" data-sec="parent"><label class="tbl-lab">เป็นตัวชี้วัดย่อยของ <span class="hint" style="margin:0;">(ได้ลำดับย่อยต่อจากตัวแม่ เช่น 4.1, 4.2 · เลือกได้เฉพาะตัวในหมวดเดียวกัน)</span></label>${parentSelectHtml(kpi)}</div>
+            ${priv ? `<div class="tbl-sec" data-sec="levels"><label class="tbl-lab">ระดับตัวชี้วัด (เลือกได้หลายระดับ — แสดงระดับสูงสุด)</label><div class="level-checks" onchange="edLevelChanged(event.target)">${levelCheckboxesHtml('ed-level-cb', kpi.levels || [kpi.level])}</div></div>` : ''}
+          </div>`;
+        }
+      } else if (kpi.canEditResults || kpi.canEditDetails) {
+        act = `<button class="btn btn-accent btn-sm" onclick="startEditFromCard(this)">✏️ แก้ไข</button>`;
+      } else {
+        act = `<span class="hint" style="margin:0;">ดูอย่างเดียว</span>`;
+      }
+      c.act = { h: act };
+      return c;
+    }
+
+    function tblRowHtml(kpi) {
+      const ed = editingId === kpi.id && editingKey === kpi.key;
+      const stt = kpiStatus(kpi);
+      const cells = tblCells(kpi, ed);
+      const cls = 'kpi-row st-' + stt.level + (ed ? ' editing' : '') + (expandedCards.has(kpi.key) ? ' expanded' : '') + (selectedKpiId === kpi.id ? ' selected' : '');
+      let h = `<tr class="${cls}" id="card-${cssId(kpi.key)}" data-id="${esc(kpi.id)}" data-key="${esc(kpi.key)}">` + TBL_COLS.map(col => {
+        const c = cells[col.k] || { h: '' };
+        const num = /^[ym]\d/.test(col.k) || col.k === 'sum';
+        return `<td class="c-${col.k}${num ? ' tbl-num' : ''}${c.num0 ? ' num0' : ''}${c.cls ? ' ' + c.cls : ''}"${col.g ? ` data-g="${col.g}"` : ''}${c.at || ''}>${c.h}</td>`;
+      }).join('') + '</tr>';
+      if (ed && remoteBannerHtml()) h += `<tr class="remote-row"><td colspan="${TBL_COLS.length}">${remoteBannerHtml()}</td></tr>`;
+      return h;
+    }
+
+    function renderTable(list) {
+      const area = document.getElementById('kpi-list-area');
+      const prev = document.getElementById('tbl-wrap');
+      const keep = prev ? [prev.scrollTop, prev.scrollLeft] : null;
+      let body = '', lastPart = null, lastCat = null;
+      list.forEach(kpi => {
+        if (kpi.part !== lastPart || kpi.category !== lastCat) {
+          body += `<tr class="tbl-cat"><td colspan="${TBL_COLS.length}"><div class="tbl-cat-label"><span class="list-section-part">${esc(partLabel(kpi.part))}</span> › ${esc(kpi.category)}</div></td></tr>`;
+          lastPart = kpi.part; lastCat = kpi.category;
+        }
+        body += tblRowHtml(kpi);
+      });
+      const chips = TBL_GROUPS.map(g => `<button type="button" class="tbl-chip${tblHide.has(g[0]) ? '' : ' on'}" data-g="${g[0]}" onclick="tblToggleGroup('${g[0]}')" title="แสดง/ซ่อนคอลัมน์กลุ่ม ${g[1]}">${g[1]}</button>`).join('');
+      const hideCls = TBL_GROUPS.filter(g => tblHide.has(g[0])).map(g => 'hide-' + g[0]).join(' ');
+      area.innerHTML = `<div class="tbl-toolbar"><span>📋 ตาราง · แสดง ${list.length} ตัวชี้วัด <span class="hint" style="margin:0;">(ชื่อตัวชี้วัดตรึงไว้ทางซ้าย · กดข้อความยาวเพื่อดู/ย่อ)</span></span><span class="tbl-groups"><span class="hint" style="margin:0;">คอลัมน์:</span>${chips}</span></div>
+        <div class="tbl-wrap" id="tbl-wrap"><table class="kpi-table ${hideCls}" id="kpi-table"><colgroup>${TBL_COLS.map(c => `<col${c.g ? ` data-g="${c.g}"` : ''} style="width:${c.w}px">`).join('')}</colgroup><thead>${tblHeadHtml()}</thead><tbody>${body}</tbody></table></div>`;
+      area.classList.add('table-mode');
+      area.classList.remove('charts-hidden');
+      tblFit();
+      const wrap = document.getElementById('tbl-wrap');
+      if (keep) { wrap.scrollTop = keep[0]; wrap.scrollLeft = keep[1]; }
+      wrap.addEventListener('scroll', () => { if (currentTab === 'home') updateTreeInView(); }, { passive: true });
+      afterCardsRendered();
+    }
+
+    function tblRerenderRow(id) {
+      let any = false;
+      document.querySelectorAll('tr.kpi-row').forEach(old => {
+        if (old.dataset.id !== id) return;
+        const p = findPlacement(old.dataset.key);
+        if (!p) return;
+        const nx = old.nextElementSibling;
+        if (nx && nx.classList.contains('remote-row')) nx.remove();
+        old.outerHTML = tblRowHtml(p);
+        any = true;
+      });
+      if (any) afterCardsRendered();
+    }
+
+    function tblMarkRemote(row) {
+      const html = remoteBannerHtml();
+      if (!html) return;
+      const tr = `<tr class="remote-row"><td colspan="${TBL_COLS.length}">${html}</td></tr>`;
+      const nx = row.nextElementSibling;
+      if (nx && nx.classList.contains('remote-row')) nx.outerHTML = tr; else row.insertAdjacentHTML('afterend', tr);
+    }
+
+    function tblToggleRow(el) {
+      const tr = el.closest('tr');
+      if (!tr || tr.classList.contains('editing')) return;
+      const on = tr.classList.toggle('expanded');
+      if (on) expandedCards.add(tr.dataset.key); else expandedCards.delete(tr.dataset.key);
+    }
+
+    // ---------- หน้าต่างแก้ช่องยาว: ย้ายช่องกรอกจริง (ที่ซ่อนอยู่ในแถว) มาแสดง แล้วย้ายกลับ ----------
+    let tblDlg = null;
+    function tblSnap() {
+      return {
+        details: getVal('ed-details'), source: getVal('ed-source'), parent: getVal('ed-parent'),
+        levels: Array.from(document.querySelectorAll('.ed-level-cb')).filter(x => x.checked).map(x => x.value),
+        cats: Array.from(document.querySelectorAll('#ed-cats .cat-row')).map(r => ({ part: r.querySelector('.cat-part').value, category: r.querySelector('.cat-cat').value, locked: r.dataset.locked === '1' }))
+      };
+    }
+    function tblRestore(s) {
+      const set = (id, v) => { const e = document.getElementById(id); if (e && v !== undefined) e.value = v; };
+      set('ed-details', s.details); set('ed-source', s.source); set('ed-parent', s.parent);
+      document.querySelectorAll('.ed-level-cb').forEach(x => { x.checked = s.levels.indexOf(x.value) !== -1; });
+      const box = document.getElementById('ed-cats');
+      if (box) box.innerHTML = s.cats.map(c => catRowHtml(c, c.locked)).join('');
+    }
+    function tblOpenLong(focusSec) {
+      const hold = document.querySelector('tr.kpi-row.editing .tbl-hold');
+      if (!hold || tblDlg) return;
+      const body = document.getElementById('tbl-long-body');
+      tblDlg = { snap: tblSnap() };
+      Array.from(hold.children).forEach(sec => body.appendChild(sec));
+      document.getElementById('modal-tbl-long').style.display = 'flex';
+      const sec = body.querySelector('[data-sec="' + focusSec + '"]');
+      if (sec) {
+        sec.classList.add('focus');
+        setTimeout(() => { sec.scrollIntoView({ block: 'nearest' }); const f = sec.querySelector('textarea, input, select'); if (f) f.focus(); }, 60);
+      }
+    }
+    function tblCloseLong(ok) {
+      const hold = document.querySelector('tr.kpi-row.editing .tbl-hold');
+      const body = document.getElementById('tbl-long-body');
+      if (!ok && tblDlg && hold) tblRestore(tblDlg.snap);
+      Array.from(body.children).forEach(sec => { sec.classList.remove('focus'); if (hold) hold.appendChild(sec); else sec.remove(); });
+      document.getElementById('modal-tbl-long').style.display = 'none';
+      tblDlg = null;
+      tblRefreshPreviews();
+      onEditInput();
+    }
+    function tblRefreshPreviews() {
+      const row = document.querySelector('tr.kpi-row.editing');
+      if (!row) return;
+      const sel = document.getElementById('ed-parent');
+      const d = {
+        details: getVal('ed-details'), source: getVal('ed-source'), cats: readCatRows('ed-cats'),
+        parent: sel && sel.selectedOptions[0] ? sel.selectedOptions[0].textContent.trim() : '',
+        levels: checkedLevels('ed-level-cb')
+      };
+      ['details', 'source', 'cats', 'parent', 'levels'].forEach(sec => {
+        const el = row.querySelector('.tbl-prev[data-sec="' + sec + '"]');
+        if (el) el.outerHTML = tblPrevHtml(sec, d);
+      });
     }
   </script>
 
@@ -4060,6 +4428,7 @@
     // ---------- เดินขั้นตอน ----------
     function tourStart() {
       if (tourState.active || !isAppUnlocked) return;
+      if (listMode === 'table') { tourState.restoreTable = true; listMode = 'card'; updateModeSwitch(); if (currentTab === 'home') renderList(); } // การสอนอธิบายบนการ์ด: ชั่วคราวเท่านั้น ไม่บันทึกเป็นค่าของบัญชี
       tourState.steps = tourSteps().filter(s => !s.when || s.when());
       tourState.active = true;
       if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); // ไม่ให้ Enter/Space ไปกดปุ่มบนหน้าจอที่อยู่ใต้การสอน
@@ -4237,6 +4606,7 @@
 
     function tourTeardown() {
       tourState.active = false; tourState.token++; tourState.step = null; tourState.el = null;
+      if (tourState.restoreTable) { tourState.restoreTable = false; listMode = 'table'; updateModeSwitch(); if (currentTab === 'home' && isAppUnlocked) renderList(); }
       clearInterval(tourState.timer); clearInterval(tourState.poll);
       window.removeEventListener('resize', tourPlace);
       window.removeEventListener('scroll', tourPlace, true);
