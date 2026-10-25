@@ -50,14 +50,14 @@ const U=h.sheets.Users.d; const setPw=(name,pw)=>{const r=U.find(x=>x[0]===name)
  await pg.evaluate(p=>startEdit(p.child,p.key),pick); await pg.waitForTimeout(400);
  await pg.selectOption('#ed-parent',''); await pg.evaluate(()=>saveKpiEdit()); await pg.waitForTimeout(1000);
  assert.strictEqual(h.sheets['ปีงบ 2570'].d.find(r=>r[0]===pick.child)[37],'');
- // report page: Thai digits in document, Arabic outside
+ // report page: Arabic digits everywhere (no Thai digits)
  await pg.evaluate(()=>switchMenu('report')); await pg.waitForTimeout(1500);
  const rp=await pg.evaluate(()=>{const t=document.getElementById('rp-paper').innerText;return {arabic:(t.match(/[0-9]/g)||[]).length,thai:(t.match(/[๐-๙]/g)||[]).length,svgArabic:Array.from(document.querySelectorAll('#rp-paper svg text')).filter(e=>/[0-9]/.test(e.textContent)).length,more:document.getElementById('rp-more').innerText.slice(0,60),side:(document.getElementById('rp-side').innerText.match(/[0-9]/g)||[]).length,len:t.length}});
- console.log('report',JSON.stringify(rp)); assert(rp.len>500&&rp.arabic===0&&rp.thai>50&&rp.svgArabic===0&&rp.side>0);
+ console.log('report',JSON.stringify(rp)); assert(rp.len>500&&rp.arabic>50&&rp.thai===0&&rp.svgArabic>0&&rp.side>0);
  await pg.screenshot({path:'ui32-report.png'});
  // print html too
- const pr=await pg.evaluate(()=>{const s=buildPrintHtml(rpt.opts,false);const d=document.createElement('div');d.innerHTML=s;return {arabic:(d.innerText.match(/[0-9]/g)||[]).length,hasStyleNums:/width:\d/.test(s)}});
- console.log('print',JSON.stringify(pr)); assert(pr.arabic===0&&pr.hasStyleNums);
+ const pr=await pg.evaluate(()=>{const s=buildPrintHtml(rpt.opts,false);const d=document.createElement('div');d.innerHTML=s;return {arabic:(d.innerText.match(/[0-9]/g)||[]).length,thai:(d.innerText.match(/[๐-๙]/g)||[]).length,hasStyleNums:/width:\d/.test(s)}});
+ console.log('print',JSON.stringify(pr)); assert(pr.arabic>50&&pr.thai===0&&pr.hasStyleNums);
  // home page: names use Arabic digits (after import-tidy)
  await pg.evaluate(()=>switchMenu('home')); await pg.waitForTimeout(800);
  const home=await pg.evaluate(()=>({thaiInNames:globalDatabase.filter(k=>/[๐-๙]/.test(k.name+k.target+k.templateDetails+k.dataSource)).length}));

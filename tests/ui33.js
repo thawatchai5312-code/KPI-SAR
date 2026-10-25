@@ -15,7 +15,7 @@ const U=h.sheets.Users.d; const r0=U.find(x=>x[0]==='Admin'); r0[1]=C.hashPasswo
  await pg.fill('#login-username','Admin');await pg.fill('#login-password','pw123456');await pg.click('#login-box-content button');await pg.waitForSelector('#modal-fy',{state:'visible'});await pg.click('#modal-fy button');await pg.waitForSelector('#app-login-screen',{state:'hidden'});await pg.waitForTimeout(400);
  await pg.evaluate(()=>setTreeView('unit')); await pg.evaluate(()=>switchMenu('report')); await pg.waitForTimeout(1500);
  const chk=(sel)=>pg.evaluate(sel=>{const rows=[...document.querySelectorAll(sel+' table.pr-table')].filter(t=>t.querySelector('th').innerText.trim()==='ที่').flatMap(t=>[...t.querySelectorAll('tbody tr')]);const out={main:0,sub:0,badMain:0,badSub:0,otherBold:0};
-   rows.forEach(tr=>{const tds=[...tr.children];const num=tds[0],name=tds[1];const isSub=num.innerText.includes('.')&&/[๐-๙]\.[๐-๙]/.test(num.innerText);
+   rows.forEach(tr=>{const tds=[...tr.children];const num=tds[0],name=tds[1];const isSub=num.innerText.includes('.')&&/[0-9]\.[0-9]/.test(num.innerText);
      const wn=getComputedStyle(num).fontWeight,wm=getComputedStyle(name).fontWeight;const bold=w=>Number(w)>=600;
      if(isSub){out.sub++;if(bold(wn)||bold(wm))out.badSub++}else{out.main++;if(!bold(wn)||!bold(wm))out.badMain++}
      tds.slice(2).forEach(td=>{if(!td.classList.contains('pr-target')&&bold(getComputedStyle(td).fontWeight))out.otherBold++})});return out},sel);

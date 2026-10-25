@@ -62,7 +62,7 @@ C.PropertiesService.getScriptProperties().setProperty('HEAD_SEED_V1','done');
  assert(await pg.evaluate(pid=>!!document.querySelector('.kpi-card[data-id="'+pid+'"]'),badge.pid)); 
  // report ↳
  await pg.click('#menu-report-btn'); await pg.waitForSelector('#rp-cat-list label'); await pg.waitForTimeout(600);
- const rp=await pg.evaluate(()=>{const s=buildPrintHtml(rpt.opts,true);return s.includes('pr-subkpi')&&/<td>[๐-๙]+\.[๐-๙]+<\/td>/.test(s)}); assert(rp,'report shows sub numbers (Thai digits)');
+ const rp=await pg.evaluate(()=>{const s=buildPrintHtml(rpt.opts,true);return s.includes('pr-subkpi')&&/<td>[0-9]+\.[0-9]+<\/td>/.test(s)}); assert(rp,'report shows sub numbers (Arabic digits)');
  // view tab highlight colors
  await pg.click('#menu-home-btn'); await pg.waitForTimeout(400);
  await pg.evaluate(()=>{document.querySelectorAll('#view-tabs .view-tab').forEach(b=>{b.classList.add('active')})}); await pg.waitForTimeout(400);

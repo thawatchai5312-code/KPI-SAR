@@ -48,7 +48,7 @@ const U=h.sheets.Users.d;const ad=U.find(r=>r[2]==='admin');ad[1]=C.hashPassword
    globalDatabase=keep;dbVersion++;
    return rows.find(r=>r[1]===s.name||s.name.startsWith(r[1].replace('…','')));});
  assert(sub&&!sub[0].includes('.'),'orphan sub numbered as main '+JSON.stringify(sub));console.log('orphan sub →',sub[0]);
- // rendered preview + thai digits still OK
- await pg.evaluate(()=>rptRenderPreview());const firstNo=await pg.evaluate(()=>document.querySelector('#rp-paper table.pr-table tbody tr td').textContent);assert(firstNo==='๑',firstNo);
+ // rendered preview + Arabic digits
+ await pg.evaluate(()=>rptRenderPreview());const firstNo=await pg.evaluate(()=>document.querySelector('#rp-paper table.pr-table tbody tr td').textContent);assert(firstNo==='1',firstNo);
  assert(errs.length===0,errs.join());await b.close();console.log('ALL OK');
 })().catch(e=>{console.error(e);process.exit(1)});

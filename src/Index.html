@@ -3770,14 +3770,9 @@
       return h + '</div>';
     }
 
-    // เอกสารสรุปรายงาน (ตัวอย่างบนจอ + ตอนพิมพ์) ใช้เลขไทยทั้งฉบับ: แปลงเฉพาะตัวอักษรที่แสดง ไม่แตะแท็ก/แอตทริบิวต์/รหัสอักขระ (&#39;)
-    const TH_DIGITS = '๐๑๒๓๔๕๖๗๘๙';
-    function thaiDigitsHtml(html) {
-      return html.replace(/(<[^>]*>|&#?\w+;)|[0-9]/g, (m, keep) => keep || TH_DIGITS[m]);
-    }
-
+    // เอกสารสรุปรายงาน (ตัวอย่างบนจอ + ตอนพิมพ์/Export PDF) ใช้เลขอารบิกเหมือนทั้งเว็บ
     function buildPrintHtml(opts, landscape, limit) {
-      return thaiDigitsHtml(buildPrintHtmlRaw(opts, landscape, limit));
+      return buildPrintHtmlRaw(opts, landscape, limit);
     }
     function buildPrintHtmlRaw(opts, landscape, limit) {
       const chosenAll = rptChosen();
