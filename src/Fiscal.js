@@ -124,10 +124,24 @@ function ensureFiscalSheets_() {
   try {
     if (listFiscalYears_().length === 0) migrateDatabaseToFiscalYears_();
     years = listFiscalYears_();
-    if (years.length > 0 && years.indexOf(current) === -1 && years[0] < current) createFiscalYearSheet_(current);
+    if (years.length > 0 && years.indexOf(current) === -1 && years[0] < current) {
+      createFiscalYearSheet_(current);
+      carryOverDocsForNewYear_(current);
+    }
     ensureFiscalTrigger_();
   } finally {
     lock.releaseLock();
+  }
+}
+
+/** ปีงบใหม่เพิ่งถูกสร้าง: ดึงข้อความ SAR + CLT จากปีก่อนมาเป็นร่าง (ถ้าพลาด ไม่กระทบการสร้างปี — admin กดปุ่มดึงเองได้) · เรียกภายใต้ script lock */
+function carryOverDocsForNewYear_(fy) {
+  try {
+    var res = carryOverDocs_(fy), sys = { username: "ระบบ" };
+    if (res.sar > 0) bumpDataVersion_(fy, [], sys, SARDOC_SAR);
+    if (res.clt > 0) bumpDataVersion_(fy, [], sys, SARDOC_CLT);
+  } catch (e) {
+    console.error("ดึงข้อความ SAR/CLT จากปีก่อนไม่สำเร็จ: " + e);
   }
 }
 

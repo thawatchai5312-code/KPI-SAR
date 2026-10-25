@@ -395,6 +395,8 @@
     .clt-drv-head b { color: #14532d; white-space: nowrap; padding-top: 6px; }
     .clt-drv-head textarea { flex: 1; font-weight: 600; resize: vertical; }
     .clt-drv-pk { margin-bottom: 8px; }
+    .doc-draft { background: #fef9c3; color: #854d0e; border: 1px solid #fde68a; border-radius: 8px; padding: 1px 8px; font-weight: 600; }
+    .clt-draft { color: #ca8a04; font-weight: 700; }
     .clt-kcell { min-width: 130px; }
     .clt-chips { display: flex; flex-wrap: wrap; gap: 3px; margin-bottom: 3px; }
     .clt-chip { background: #dcfce7; color: #14532d; border-radius: 10px; padding: 1px 4px 1px 8px; font-size: 12px; display: inline-flex; gap: 4px; align-items: center; }
@@ -3865,8 +3867,12 @@
       sar.onlyMine = false; sar.onlyTodo = false; sar.deferred = false;
     }
     function sarCanUse() { return !!currentUser && (currentUser.tier === 'head' || isPrivilegedUser()); }
+    // ข้อความที่ลอกมาจากปีงบก่อน (ยังไม่มีใครตรวจ) มี "แก้ไขล่าสุดโดย" = "ร่างจากปีงบ <ปี>" — บันทึกหรือกดยืนยันแล้วป้ายหาย · ยังไม่นับว่ากรอกแล้ว
+    function docIsDraft(it) { return !!(it && it.text && /^ร่างจากปีงบ /.test(it.by || '')); }
+    function docDraftBadge(it) { return `<span class="doc-draft" title="ข้อความลอกมาจากปีงบก่อน ตรวจและแก้ไขแล้วกดบันทึก หรือกดยืนยันถ้าใช้ได้เลย">📋 ${esc(it.by)} — ยังไม่ได้ตรวจ</span>`; }
     function sarSaved(id) { return sar.pdca[id] || { text: '', rev: 0, at: '', by: '' }; }
-    function sarHasPdca(id) { return !!sarSaved(id).text.trim(); }
+    function sarIsDraft(id) { return docIsDraft(sarSaved(id)); }
+    function sarHasPdca(id) { const it = sarSaved(id); return !!it.text.trim() && !docIsDraft(it); }
     function sarDirtyIds() { return Array.from(sar.drafts.keys()); }
     function sarDetails(k) { return String(k.templateDetails || '').split('\n').filter(l => !SAR_NOTE_LINE.test(l.trim())).join('\n').trim(); }
 
@@ -3915,6 +3921,7 @@
           <div id="sar-cat-list" class="rpt-cat-list"></div>
         </div>
         <button type="button" class="btn btn-secondary" style="width: 100%; margin-bottom: 6px;" onclick="guardUnsaved(sarCopyPrev)">📋 คัดลอกการวิเคราะห์และ PDCA จากปีงบก่อนหน้า (เป็นร่าง)</button>
+        ${docCarryBtnHtml()}
         <button type="button" class="btn btn-primary" id="sar-export-btn" style="width: 100%;" onclick="sarExportDocx()">📥 Export Word (.docx)</button>
         <p class="hint" id="sar-hint" style="margin-top: 6px;"></p>`;
     }
@@ -4008,6 +4015,7 @@
 
     function sarOpenSar() {
       if (!sar.controlsBuilt) { document.getElementById('sar-controls').innerHTML = sarControlsHtml(); sar.controlsBuilt = true; }
+      docCarryBtnShow();
       if (sar.fy !== selectedFy) { sar.loaded = false; sar.pdca = {}; sar.drafts.clear(); sar.remote.clear(); sar.page = 1; }
       document.getElementById('sar-only-mine').checked = sar.onlyMine;
       document.getElementById('sar-only-todo').checked = sar.onlyTodo;
@@ -4131,6 +4139,38 @@
       sarRender(true);
     }
 
+    function sarConfirmDraft(id) {
+      const token = sessionToken, fy = selectedFy;
+      showBusy('กำลังบันทึก…');
+      google.script.run
+        .withSuccessHandler(unbusy((res) => {
+          if (token !== sessionToken || fy !== selectedFy) return;
+          if (res && res.success) { if (res.item) sar.pdca[id] = res.item; showToast('✅ ยืนยันแล้ว'); sarRender(true); }
+          else if (!sarSessionGone(res)) showAlert('ยืนยันไม่สำเร็จ', '⚠️', res ? res.message : '');
+        }))
+        .withFailureHandler(unbusy((err) => showAlert('เกิดข้อผิดพลาดเครือข่าย', '❌', String(err))))
+        .confirmDocDraft(token, fy, 'SAR', 'PDCA|' + id);
+    }
+    // admin: ดึงข้อความ SAR + CLT ทั้งเล่มจากปีงบก่อนหน้า (ปีงบใหม่ระบบดึงให้เองตอน 1 ต.ค. — ปุ่มนี้ไว้ดึงซ้ำ/ปีที่สร้างไปแล้ว) เติมเฉพาะที่ยังว่าง
+    function docCarryOver() {
+      showConfirm('ดึงข้อความ SAR (วิเคราะห์และ PDCA) และ CLT ทั้งเล่มจากปีงบก่อนหน้า มาเป็นร่างของปีงบ ' + selectedFy + ' ?\nเติมเฉพาะหัวข้อที่ยังว่าง (ไม่ทับของที่กรอกแล้ว) · ตัวชี้วัดที่ปีนี้ไม่มีจะข้ามไป · ข้อความที่ได้เป็นร่าง ตรวจและแก้ไขก่อนส่ง', () => {
+        const token = sessionToken, fy = selectedFy;
+        showBusy('กำลังดึงข้อความจากปีงบก่อน…');
+        google.script.run
+          .withSuccessHandler(unbusy((res) => {
+            if (token !== sessionToken || fy !== selectedFy) return;
+            if (res && res.success) {
+              showAlert((res.sar + res.clt) > 0 ? 'ดึงข้อมูลแล้ว' : 'ไม่มีอะไรให้ดึง', (res.sar + res.clt) > 0 ? '✅' : 'ℹ️', res.message);
+              sar.loaded = false; clt.loaded = false; clt.draft = null; clt.remote = null;
+              if (docTab === 'clt') cltLoad(); else sarLoad();
+            } else if (!sarSessionGone(res)) showAlert('ดึงข้อมูลไม่สำเร็จ', '⚠️', res ? res.message : '');
+          }))
+          .withFailureHandler(unbusy((err) => showAlert('เกิดข้อผิดพลาดเครือข่าย', '❌', String(err))))
+          .carryOverDocsFromPrevious(token, fy);
+      });
+    }
+    function docCarryBtnHtml() { return `<button type="button" class="btn btn-secondary doc-carry-btn" style="width: 100%; margin-bottom: 6px; display: none; white-space: normal; line-height: 1.35;" onclick="guardUnsaved(docCarryOver)">📋 ดึงข้อมูลทั้งเล่ม (SAR + CLT) จากปีงบก่อน · admin</button>`; }
+    function docCarryBtnShow() { const admin = !!currentUser && currentUser.tier === 'admin'; document.querySelectorAll('.doc-carry-btn').forEach(b => { b.style.display = admin ? '' : 'none'; }); }
     function sarCopyPrev() {
       showConfirm('คัดลอกการวิเคราะห์และ PDCA จากปีงบก่อนหน้ามาเป็นร่างของปีงบ ' + selectedFy + ' ?\nคัดลอกเฉพาะตัวชี้วัดที่คุณแก้ได้ และที่ยังว่างในปีงบนี้ (ไม่ทับของที่กรอกแล้ว) · ตรวจและแก้ไขก่อนส่ง', () => {
         const token = sessionToken, fy = selectedFy;
@@ -4170,7 +4210,8 @@
 
     function sarPdcaHtml(k) {
       const id = k.id, s = sarSaved(id);
-      const stamp = s.at ? `แก้ไขล่าสุด ${esc(s.at)}${s.by ? ' โดย ' + esc(s.by) : ''}` : 'ยังไม่มีข้อมูล';
+      const isDraft = docIsDraft(s);
+      const stamp = isDraft ? docDraftBadge(s) : s.at ? `แก้ไขล่าสุด ${esc(s.at)}${s.by ? ' โดย ' + esc(s.by) : ''}` : 'ยังไม่มีข้อมูล';
       if (!k.canEditDetails) {
         return `<div class="pr-text">${esc(s.text) || '-'}</div><div class="sar-stamp">${stamp} · 🔒 แก้ได้เฉพาะหัวหน้าหน่วยของตัวชี้วัดนี้, ผอ./QMR, admin</div>`;
       }
@@ -4184,6 +4225,7 @@
           ${small('sar-revert', 'sarRevert', '↩ ยกเลิกการแก้ไข', !dirty)}
           ${small('sar-heads', 'sarInsertHeads', '➕ ใส่หัวข้อ')}
           ${sarDetails(k) ? small('sar-from', 'sarFromDetails', '⬇ ดึงจากการวิเคราะห์เดิม') : ''}
+          ${isDraft && !dirty ? small('sar-confirm', 'sarConfirmDraft', '✔ ตรวจแล้ว ใช้ข้อความนี้') : ''}
           <span class="sar-stamp">${stamp}</span>
         </div></div>`;
     }
@@ -4336,15 +4378,20 @@
       if (sarDirtyIds().length > 0) { showAlert('มีการวิเคราะห์และ PDCA ที่ยังไม่ได้บันทึก', '⚠️', 'กรุณากด 💾 บันทึก หรือ ↩ ยกเลิกการแก้ไข ก่อน Export (ไฟล์ใช้เฉพาะข้อความที่บันทึกแล้ว)'); return; }
       const chosen = sarChosen();
       if (chosen.length === 0) { showAlert('ยังไม่ได้เลือกหมวด', '⚠️', 'กรุณาเลือกหมวดตัวชี้วัดอย่างน้อย 1 หมวด'); return; }
-      showBusy('กำลังสร้างไฟล์ Word…', 900000);
-      try {
-        await docLoadScript(SAR_DOCX_URL, 'docx');
-        const blob = await sarBuildDocx(chosen);
-        downloadBlob(blob, 'SAR_Part-I-IV_FY' + selectedFy + '.docx');
-        showToast('✅ สร้างไฟล์ Word แล้ว — ตรวจในโฟลเดอร์ดาวน์โหลด');
-      } catch (e) {
-        showAlert('สร้างไฟล์ Word ไม่สำเร็จ', '❌', String((e && e.message) || e));
-      } finally { hideBusy(); }
+      const go = async () => {
+        showBusy('กำลังสร้างไฟล์ Word…', 900000);
+        try {
+          await docLoadScript(SAR_DOCX_URL, 'docx');
+          const blob = await sarBuildDocx(chosen);
+          downloadBlob(blob, 'SAR_Part-I-IV_FY' + selectedFy + '.docx');
+          showToast('✅ สร้างไฟล์ Word แล้ว — ตรวจในโฟลเดอร์ดาวน์โหลด');
+        } catch (e) {
+          showAlert('สร้างไฟล์ Word ไม่สำเร็จ', '❌', String((e && e.message) || e));
+        } finally { hideBusy(); }
+      };
+      const nDraft = uniqueById(chosen).filter(k => sarIsDraft(k.id)).length;
+      if (nDraft > 0) showConfirm('ยังมีการวิเคราะห์และ PDCA ที่เป็นร่างจากปีงบก่อน (ยังไม่ได้ตรวจ) ' + nDraft + ' ตัวชี้วัด — ข้อความร่างจะอยู่ในไฟล์ด้วย\n\nต้องการ Export ต่อหรือไม่?', go);
+      else go();
     }
 
     // เอกสาร A4 แนวนอน ฟอนต์ TH SarabunPSK เลขอารบิก: ต่อหมวด = ตารางเป้าหมาย+ผล 5 ปี แล้วตาราง (กราฟ | การวิเคราะห์ + สรุป PDCA)
@@ -4486,9 +4533,14 @@
     }
     function cltCanUse() { return !!currentUser && (isPrivilegedUser() || (currentUser.tier === 'head' && (currentUser.depts || []).indexOf('PCT') !== -1)); }
     function cltItem(key) { return clt.items[key] || { text: '', rev: 0, at: '', by: '' }; }
-    function cltHasText(key) {
-      if (/^D\|[^|]+\|pm$/.test(key) && cltPmDisplayRows(key.split('|')[1]).length) return true; // Process Management ดึงจาก Driver อัตโนมัติ
+    function cltFilledText(key) { // มีข้อความ (รวมร่าง) — Process Management นับว่ามีถ้า Driver เลือกตัวชี้วัดไว้ เพราะ Export ดึงแถวมาให้เอง
+      if (/^D\|[^|]+\|pm$/.test(key) && cltPmDisplayRows(key.split('|')[1]).length) return true;
       return !!cltItem(key).text.trim();
+    }
+    function cltIsDraft(key) { return docIsDraft(cltItem(key)); }
+    function cltHasText(key) { // กรอกแล้ว (ไม่นับร่างที่ลอกจากปีก่อนและยังไม่ได้ตรวจ)
+      if (/^D\|[^|]+\|pm$/.test(key) && !cltIsDraft('D|' + key.split('|')[1] + '|driver') && cltPmDisplayRows(key.split('|')[1]).length) return true; // Process Management ดึงจาก Driver อัตโนมัติ
+      return cltFilledText(key) && !cltIsDraft(key);
     }
     function cltGroups() {
       const g = new Set();
@@ -4549,6 +4601,7 @@
     function cltOpenPage() {
       if (!cltCanUse()) { docSwitch('sar'); return; }
       if (!clt.controlsBuilt) { document.getElementById('clt-controls').innerHTML = cltControlsHtml(); clt.controlsBuilt = true; }
+      docCarryBtnShow();
       if (clt.fy !== selectedFy) { clt.loaded = false; clt.items = {}; clt.kpis = []; clt.draft = null; clt.remote = null; clt.sel = 'O|mission'; clt.open = new Set(); }
       document.getElementById('clt-export-btn').style.display = isPrivilegedUser() ? '' : 'none';
       if (clt.loaded) cltRender(); else cltLoad();
@@ -4601,6 +4654,7 @@
         <div id="clt-progress"></div>
         <div id="clt-tree" class="clt-tree"></div>
         <button type="button" class="btn btn-secondary" style="width: 100%; margin: 8px 0 6px;" onclick="guardUnsaved(cltCopyPrev)">📋 คัดลอกข้อความจากปีงบก่อนหน้า (เป็นร่าง)</button>
+        ${docCarryBtnHtml()}
         <button type="button" class="btn btn-primary" id="clt-export-btn" style="width: 100%;" onclick="cltExportPptx()">📥 Export PowerPoint (.pptx)</button>
         <p class="hint" style="margin-top: 6px;">กรอกทีละหัวข้อทางซ้าย · ตัวเลข/กราฟของตัวชี้วัดมาจากระบบ (ปีงบนี้ย้อนหลัง 5 ปี) · Process Flowchart เว้นสไลด์ไว้ให้แปะรูปเองหลัง Export · การ Export รวมเล่มทำโดย ผอ./QMR/admin</p>`;
     }
@@ -4613,7 +4667,7 @@
       return keys;
     }
     function cltTreeHtml() {
-      const sel = clt.sel, mark = key => (cltHasText(key) ? '<span class="clt-ok">✓</span>' : '<span class="clt-no">○</span>');
+      const sel = clt.sel, mark = key => (cltHasText(key) ? '<span class="clt-ok">✓</span>' : cltIsDraft(key) ? '<span class="clt-draft" title="ร่างจากปีงบก่อน ยังไม่ได้ตรวจ">✎</span>' : '<span class="clt-no">○</span>');
       const link = (key, label, ok) => `<div class="clt-link${sel === key ? ' active' : ''}" data-key="${esc(key)}" onclick="cltSelect(this.dataset.key)">${ok === undefined ? '' : ok} ${label}</div>`;
       let h = `<div class="clt-head">ภาพรวม PCT</div>`;
       CLT_OVERVIEW.forEach(s => { h += link(s.key, esc(s.title), s.type === 'dims' ? '' : mark(s.key)); });
@@ -4724,7 +4778,23 @@
       cltRender();
     }
 
-    function cltStampHtml(key) { const it = cltItem(key); return `<span class="sar-stamp">${it.at ? 'แก้ไขล่าสุด ' + esc(it.at) + (it.by ? ' โดย ' + esc(it.by) : '') : 'ยังไม่มีข้อมูล'}</span>`; }
+    function cltStampHtml(key) {
+      const it = cltItem(key);
+      if (docIsDraft(it)) return `<button type="button" class="btn btn-secondary btn-sm" data-key="${esc(key)}" onclick="cltConfirmDraft(this.dataset.key)">✔ ตรวจแล้ว ใช้ข้อความนี้</button> <span class="sar-stamp">${docDraftBadge(it)}</span>`;
+      return `<span class="sar-stamp">${it.at ? 'แก้ไขล่าสุด ' + esc(it.at) + (it.by ? ' โดย ' + esc(it.by) : '') : 'ยังไม่มีข้อมูล'}</span>`;
+    }
+    function cltConfirmDraft(key) {
+      const token = sessionToken, fy = selectedFy;
+      showBusy('กำลังบันทึก…');
+      google.script.run
+        .withSuccessHandler(unbusy((res) => {
+          if (token !== sessionToken || fy !== selectedFy) return;
+          if (res && res.success) { if (res.item) clt.items[key] = res.item; showToast('✅ ยืนยันแล้ว'); cltRender(true); }
+          else if (!sarSessionGone(res)) showAlert('ยืนยันไม่สำเร็จ', '⚠️', res ? res.message : '');
+        }))
+        .withFailureHandler(unbusy((err) => showAlert('เกิดข้อผิดพลาดเครือข่าย', '❌', String(err))))
+        .confirmDocDraft(token, fy, 'CLT', key);
+    }
     function cltActionsHtml(key, extra) {
       const dirty = cltDirty();
       return `<div class="sar-actions"><button type="button" class="btn btn-primary btn-sm" id="clt-save" onclick="cltSave()"${dirty ? '' : ' disabled'}>💾 บันทึก</button>
@@ -4775,7 +4845,7 @@
       return out;
     }
     function cltChipsHtml(ids) {
-      return ids.map(id => { const k = cltKpiById(id); return `<span class="clt-chip" title="${esc(k ? k.name : id)}">${esc(k ? prShort(k.name, 30) : id)}<b data-id="${esc(id)}" onclick="cltKpiDrop(this)" title="เอาออก">×</b></span>`; }).join('');
+      return ids.map(id => { const k = cltKpiById(id); return `<span class="clt-chip" title="${esc(k ? k.name : 'ไม่พบตัวชี้วัดนี้ในปีงบนี้ (' + id + ')')}">${esc(k ? prShort(k.name, 30) : '(ไม่พบตัวชี้วัด)')}<b data-id="${esc(id)}" onclick="cltKpiDrop(this)" title="เอาออก">×</b></span>`; }).join('');
     }
     function cltKcellHtml(g, ids, attrs) {
       const list = cltKpisPicked(g);
@@ -5016,9 +5086,18 @@
     // หัวข้อข้อความที่ยังว่างของกลุ่มโรคที่เลือก (ใช้เตือนก่อน Export)
     function cltMissing() {
       const out = [];
-      CLT_OVERVIEW.forEach(s => { if ((s.type === 'text' || s.type === 'table') && !cltHasText(s.key)) out.push(s.title); });
+      CLT_OVERVIEW.forEach(s => { if ((s.type === 'text' || s.type === 'table') && !cltFilledText(s.key)) out.push(s.title); });
       cltSelectedGroups().forEach(g => CLT_DISEASE.forEach(s => {
-        if ((s.type === 'text' || s.type === 'table') && !cltHasText('D|' + g + '|' + s.f)) out.push(g + ' › ' + s.title);
+        if ((s.type === 'text' || s.type === 'table') && !cltFilledText('D|' + g + '|' + s.f)) out.push(g + ' › ' + s.title);
+      }));
+      return out;
+    }
+    // หัวข้อที่ยังเป็นร่างจากปีงบก่อน (ลอกมาแล้วยังไม่ได้ตรวจ) ของกลุ่มโรคที่เลือก
+    function cltDrafts() {
+      const out = [];
+      CLT_OVERVIEW.forEach(s => { if ((s.type === 'text' || s.type === 'table') && cltIsDraft(s.key)) out.push(s.title); });
+      cltSelectedGroups().forEach(g => CLT_DISEASE.forEach(s => {
+        if ((s.type === 'text' || s.type === 'table') && cltIsDraft('D|' + g + '|' + s.f)) out.push(g + ' › ' + s.title);
       }));
       return out;
     }
@@ -5037,8 +5116,10 @@
           showAlert('สร้างไฟล์ PowerPoint ไม่สำเร็จ', '❌', String((e && e.message) || e));
         } finally { hideBusy(); }
       };
-      const miss = cltMissing();
-      if (miss.length > 0) showConfirm('ยังไม่ได้กรอก ' + miss.length + ' หัวข้อ (สไลด์ของหัวข้อที่ว่างจะไม่ขึ้นในไฟล์):\n' + miss.slice(0, 6).join('\n') + (miss.length > 6 ? '\n… และอีก ' + (miss.length - 6) + ' หัวข้อ' : '') + '\n\nต้องการ Export ต่อหรือไม่?', go);
+      const miss = cltMissing(), drafts = cltDrafts();
+      const msg = (miss.length > 0 ? 'ยังไม่ได้กรอก ' + miss.length + ' หัวข้อ (สไลด์ของหัวข้อที่ว่างจะไม่ขึ้นในไฟล์):\n' + miss.slice(0, 6).join('\n') + (miss.length > 6 ? '\n… และอีก ' + (miss.length - 6) + ' หัวข้อ' : '') : '')
+        + (drafts.length > 0 ? (miss.length > 0 ? '\n\n' : '') + 'ยังเป็นร่างจากปีงบก่อน (ยังไม่ได้ตรวจ) ' + drafts.length + ' หัวข้อ — ข้อความร่างจะอยู่ในไฟล์ด้วย' : '');
+      if (msg) showConfirm(msg + '\n\nต้องการ Export ต่อหรือไม่?', go);
       else go();
     }
 

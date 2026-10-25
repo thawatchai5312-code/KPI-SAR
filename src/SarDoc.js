@@ -13,6 +13,9 @@ var SARDOC_MAX_CHARS = 45000; // เซลล์ของชีตรับไ�
 var SARDOC_TIERS = { head: 1, executive: 1, admin: 1 };
 var SARDOC_SAR = "SAR";
 var SARDOC_PDCA_PREFIX = "PDCA|";
+// ข้อความที่ลอกมาจากปีงบก่อน (ยังไม่มีใครตรวจ): ช่อง "แก้ไขล่าสุดโดย" เป็น "ร่างจากปีงบ <ปี>" — พอมีคนบันทึกหรือกดยืนยัน ช่องนี้เปลี่ยนเป็นชื่อผู้ใช้ (ป้ายร่างหายเอง)
+var SARDOC_DRAFT_PREFIX = "ร่างจากปีงบ ";
+function sarDocIsDraftBy_(by) { return (by || "").toString().indexOf(SARDOC_DRAFT_PREFIX) === 0; }
 
 function requireDocUser_(token) {
   var user = requireUser_(token);
@@ -197,7 +200,7 @@ function copySarPdcaFromPrevious(token, fy) {
       if (!isPdca(key) || !prev.rows[key].text) return;
       if (visible[key.slice(SARDOC_PDCA_PREFIX.length)]) entries.push({ key: key, text: prev.rows[key].text });
     });
-    var copied = sarDocFillMany_(user, fy, SARDOC_SAR, entries);
+    var copied = sarDocFillMany_({ username: SARDOC_DRAFT_PREFIX + prev.fy }, fy, SARDOC_SAR, entries);
     if (copied > 0) {
       touchUser_(user, "edit");
       bumpDataVersion_(fy, [], user, SARDOC_SAR);
@@ -369,15 +372,149 @@ function copyCltFromPrevious(token, fy) {
     Object.keys(prev.rows).forEach(function(key) {
       if (!prev.rows[key].text || cltCheckKey_(key, ids).error) return;
       if (CLT_ADMIN_KEYS_.indexOf(key) !== -1 && user.tier !== "admin") return;
-      entries.push({ key: key, text: prev.rows[key].text });
+      var text = cltCarryText_(key, prev.rows[key].text, ids);
+      if (text) entries.push({ key: key, text: text });
     });
-    var copied = sarDocFillMany_(user, fy, SARDOC_CLT, entries);
+    var copied = sarDocFillMany_({ username: SARDOC_DRAFT_PREFIX + prev.fy }, fy, SARDOC_CLT, entries);
     if (copied > 0) {
       touchUser_(user, "edit");
       bumpDataVersion_(fy, [], user, SARDOC_CLT);
     }
     return { success: true, from: prev.fy, copied: copied,
       message: copied > 0 ? "คัดลอกข้อความ CLT จากปีงบ " + prev.fy + " แล้ว " + copied + " รายการ (เป็นร่าง — ตรวจและแก้ไขก่อนส่ง)" : "ไม่มีรายการที่ต้องคัดลอก (กรอกไว้แล้วทั้งหมด)" };
+  } catch (e) {
+    return { success: false, message: e.toString() };
+  } finally {
+    if (lock) lock.releaseLock();
+  }
+}
+
+// ================================================================ ขึ้นปีงบใหม่: ดึงข้อความ SAR + CLT จากปีก่อน
+
+/** ข้อความ CLT ที่ลอกจากปีก่อน: ตาราง Driver Diagram ตัดรหัสตัวชี้วัดที่ปีนี้ไม่มีออกจากช่องตัวชี้วัด (ช่อง 5–8) · Process Management ทิ้งแถวที่ผูกตัวชี้วัดที่ปีนี้ไม่มี — คืนข้อความว่างถ้าไม่เหลืออะไร */
+function cltCarryText_(key, text, ids) {
+  var m = /^D\|[^|]+\|(driver|pm)$/.exec(key);
+  if (!m) return text;
+  var rows;
+  try { rows = JSON.parse(text); } catch (e) { return text; }
+  if (!Array.isArray(rows)) return text;
+  var out = [];
+  rows.forEach(function(r) {
+    if (!Array.isArray(r)) return;
+    r = r.slice();
+    if (m[1] === "driver") {
+      for (var c = 4; c < 8 && c < r.length; c++) {
+        r[c] = (r[c] || "").toString().split(",").map(function(x) { return x.trim(); }).filter(function(id) { return id && ids[id]; }).join(",");
+      }
+    } else if (r.length >= 5 && r[4] && !ids[r[4]]) {
+      return;
+    }
+    out.push(r);
+  });
+  return out.length ? JSON.stringify(out) : "";
+}
+
+/** รหัสตัวชี้วัด Part I–IV ที่มีในชีตปีงบ fy */
+function sarCoreKpiIds_(fy) {
+  var out = {}, sheet = getFiscalSheet_(fy);
+  if (!sheet) return out;
+  var data = sheet.getDataRange().getValues();
+  for (var r = 1; r < data.length; r++) {
+    if (!data[r][0]) continue;
+    var kpi = rowToKpi_(data[r]);
+    if (inCorePart_(kpi)) out[kpi.id] = true;
+  }
+  return out;
+}
+
+/**
+ * ลอกข้อความ SAR (สรุป PDCA) และ CLT ทั้งเล่มจากปีงบก่อนหน้าล่าสุดที่มีข้อมูล มาเป็น "ร่าง" ของปีงบ fy
+ * เติมเฉพาะหัวข้อที่ยังว่าง (ไม่ทับของที่กรอกแล้ว) · ข้ามตัวชี้วัดที่ปีนี้ไม่มี · เรียกภายใต้ script lock
+ * คืน { sar, clt, sarFrom, cltFrom } = จำนวนที่ลอกและปีต้นทาง
+ */
+function carryOverDocs_(fy) {
+  var out = { sar: 0, clt: 0, sarFrom: null, cltFrom: null }, sheet = sarDocSheetIfAny_();
+  if (!sheet) return out;
+  var isPdca = function(k) { return k.indexOf(SARDOC_PDCA_PREFIX) === 0; };
+  var prevS = sarDocPreviousWithData_(sheet, fy, SARDOC_SAR, isPdca);
+  if (prevS) {
+    var core = sarCoreKpiIds_(fy), entries = [];
+    Object.keys(prevS.rows).forEach(function(key) {
+      if (!isPdca(key) || !prevS.rows[key].text) return;
+      if (core[key.slice(SARDOC_PDCA_PREFIX.length)]) entries.push({ key: key, text: prevS.rows[key].text });
+    });
+    out.sar = sarDocFillMany_({ username: SARDOC_DRAFT_PREFIX + prevS.fy }, fy, SARDOC_SAR, entries);
+    out.sarFrom = prevS.fy;
+  }
+  var prevC = sarDocPreviousWithData_(sheet, fy, SARDOC_CLT, function() { return true; });
+  if (prevC) {
+    var ids = {}, items = [];
+    cltKpis_(fy).forEach(function(k) { ids[k.id] = true; });
+    Object.keys(prevC.rows).forEach(function(key) {
+      if (!prevC.rows[key].text || cltCheckKey_(key, ids).error) return;
+      var text = cltCarryText_(key, prevC.rows[key].text, ids);
+      if (text) items.push({ key: key, text: text });
+    });
+    out.clt = sarDocFillMany_({ username: SARDOC_DRAFT_PREFIX + prevC.fy }, fy, SARDOC_CLT, items);
+    out.cltFrom = prevC.fy;
+  }
+  return out;
+}
+
+/** admin กดปุ่ม: ดึงข้อความ SAR + CLT ทั้งเล่มจากปีงบก่อนหน้ามาเป็นร่างของปีงบ fy (กดซ้ำได้ — เติมเฉพาะที่ยังว่าง) */
+function carryOverDocsFromPrevious(token, fy) {
+  var lock = null;
+  try {
+    var user = requireUser_(token);
+    if (user.tier !== "admin") return { success: false, message: "เฉพาะผู้ดูแลระบบ (admin) เท่านั้น" };
+    lock = LockService.getScriptLock();
+    lock.waitLock(30000);
+    fy = resolveFiscalYear_(fy);
+    var res = carryOverDocs_(fy);
+    if (res.sar + res.clt > 0) {
+      touchUser_(user, "edit");
+      if (res.sar > 0) bumpDataVersion_(fy, [], user, SARDOC_SAR);
+      if (res.clt > 0) bumpDataVersion_(fy, [], user, SARDOC_CLT);
+    }
+    var msg;
+    if (!res.sarFrom && !res.cltFrom) msg = "ยังไม่มีข้อความ SAR / CLT ของปีงบก่อนหน้าให้ดึง";
+    else if (res.sar + res.clt === 0) msg = "ไม่มีรายการที่ต้องดึง (ปีงบนี้กรอกไว้แล้วทั้งหมด)";
+    else msg = "ดึงจากปีงบก่อนหน้าแล้ว: SAR " + res.sar + " ตัวชี้วัด" + (res.sarFrom ? " (จากปีงบ " + res.sarFrom + ")" : "") + " · CLT " + res.clt + " หัวข้อ" + (res.cltFrom ? " (จากปีงบ " + res.cltFrom + ")" : "") + " — เป็นร่าง ตรวจและแก้ไขก่อนส่ง";
+    return { success: true, sar: res.sar, clt: res.clt, sarFrom: res.sarFrom, cltFrom: res.cltFrom, message: msg };
+  } catch (e) {
+    return { success: false, message: e.toString() };
+  } finally {
+    if (lock) lock.releaseLock();
+  }
+}
+
+/** ยืนยันว่าตรวจร่างที่ลอกมาแล้ว (ใช้ข้อความเดิม): ป้ายร่างหาย — ต้องมีสิทธิ์แก้หัวข้อนั้น */
+function confirmDocDraft(token, fy, doc, key) {
+  var lock = null;
+  try {
+    var user = doc === SARDOC_CLT ? requireCltUser_(token) : requireDocUser_(token);
+    lock = LockService.getScriptLock();
+    lock.waitLock(30000);
+    fy = resolveFiscalYear_(fy);
+    key = (key || "").toString();
+    if (doc === SARDOC_SAR) {
+      var id = key.slice(SARDOC_PDCA_PREFIX.length);
+      if (key.indexOf(SARDOC_PDCA_PREFIX) !== 0 || !sarVisibleKpis_(user, fy)[id]) return { success: false, message: "ไม่มีสิทธิ์แก้ไขตัวชี้วัดนี้ในปีงบ " + fy };
+    } else if (doc === SARDOC_CLT) {
+      var ids = {};
+      if (/^(DIM\||D\|[^|]*\|R\|)/.test(key)) cltKpis_(fy).forEach(function(k) { ids[k.id] = true; });
+      if (cltCheckKey_(key, ids).error) return { success: false, message: "กุญแจข้อความ CLT ไม่ถูกต้อง" };
+      if (CLT_ADMIN_KEYS_.indexOf(key) !== -1 && user.tier !== "admin") return { success: false, message: "เฉพาะผู้ดูแลระบบ (admin)" };
+    } else {
+      return { success: false, message: "ชนิดเอกสารไม่ถูกต้อง" };
+    }
+    var sheet = sarDocSheetIfAny_(), cur = sarDocRead_(sheet, fy, doc)[key];
+    if (!cur || !sarDocIsDraftBy_(cur.by)) return { success: true, changed: false, item: cur ? { text: cur.text, rev: cur.rev, at: cur.at, by: cur.by } : null };
+    var stamp = nowStamp_(), rev = cur.rev + 1;
+    sheet.getRange(cur.row, 5, 1, 3).setValues([[rev, stamp, user.username]]);
+    touchUser_(user, "edit");
+    bumpDataVersion_(fy, [], user, doc);
+    return { success: true, changed: true, item: { text: cur.text, rev: rev, at: stamp, by: user.username } };
   } catch (e) {
     return { success: false, message: e.toString() };
   } finally {
