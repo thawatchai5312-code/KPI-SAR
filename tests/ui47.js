@@ -57,6 +57,28 @@ async function open(b,user,opts={}){
  // เป็นมุมมอง รพ. เสมอ แม้หน้าแรกอยู่มุมมองอื่น/ตัวกรองอื่น
  await pg.evaluate(()=>{switchMenu('home');setTreeView('unit')});await pg.waitForSelector('#kpi-table');await pg.click('#menu-sar-btn');await pg.waitForSelector('#sar-pager-top .pager');
  const s1b=await pg.evaluate(()=>({parts:[...document.querySelectorAll('#sar-paper .pr-part')].map(e=>e.textContent),total:uniqueById(sarChosen()).length}));assert(s1b.parts[0]==='Part I'&&s1b.total===s1.total,'always hospital view '+JSON.stringify(s1b));
+ // ---- นำทางจากแถบซ้าย: ช่อง ☑ แยกจากชื่อ · กดชื่อ = ไปหน้า/หัวหมวดทางขวา (ไม่ติ๊กให้)
+ const sep=await pg.evaluate(()=>({cat:document.querySelector('#sar-cat-list .sar-cat').closest('.check-row').tagName,part:document.querySelector('#sar-cat-list .sar-part').closest('.check-row').tagName,named:!!document.querySelector('#sar-cat-list .sar-cat').closest('.check-row').querySelector('.sar-nav')}));
+ assert(sep.cat==='DIV'&&sep.part==='DIV'&&sep.named,'checkbox is separate from the clickable name (no wrapping label): '+JSON.stringify(sep));
+ const last=await pg.evaluate(()=>{const n=[...document.querySelectorAll('#sar-cat-list .sar-nav[data-cat]')].pop();return {part:n.dataset.part,cat:n.dataset.cat}});
+ await pg.locator('#sar-cat-list .sar-nav[data-cat]').last().click();await pg.waitForTimeout(400);
+ const nv1=await pg.evaluate(l=>{const el=[...document.querySelectorAll('#sar-paper [data-sar-cat]')].find(e=>e.dataset.sarCat===l.part+'||'+l.cat),r=el&&el.getBoundingClientRect(),idx=sarPreviewRows(sarChosen()).findIndex(k=>k.part===l.part&&k.category===l.cat);
+   return {page:sar.page,want:Math.floor(idx/sar.size)+1,found:!!el,top:r&&Math.round(r.top),unchecked:sar.unchecked.size,allChecked:[...document.querySelectorAll('#sar-cat-list input')].every(i=>i.checked)}},last);
+ console.log('nav last cat',JSON.stringify(nv1));
+ assert(nv1.page>1&&nv1.page===nv1.want&&nv1.found&&nv1.top>=0&&nv1.top<400&&nv1.unchecked===0&&nv1.allChecked,'click on category name jumps right pane to it without changing checkboxes: '+JSON.stringify(nv1));
+ await pg.locator('#sar-cat-list .sar-nav:not([data-cat])').nth(1).click();await pg.waitForTimeout(400);
+ const nv2=await pg.evaluate(()=>{const p=document.querySelectorAll('#sar-cat-list .sar-nav:not([data-cat])')[1].dataset.part,el=[...document.querySelectorAll('#sar-paper [data-sar-part]')].find(e=>e.dataset.sarPart===p),r=el&&el.getBoundingClientRect(),idx=sarPreviewRows(sarChosen()).findIndex(k=>k.part===p);
+   return {p,page:sar.page,want:Math.floor(idx/sar.size)+1,found:!!el,top:r&&Math.round(r.top)}});
+ assert(nv2.found&&nv2.page===nv2.want&&nv2.top>=0&&nv2.top<400,'click on Part name jumps to the Part heading: '+JSON.stringify(nv2));
+ // หมวดที่ไม่ได้ติ๊ก: ไม่มีให้ไปหา → แจ้งให้ติ๊กก่อน (ไม่ติ๊กให้เอง ไม่เปลี่ยนหน้า)
+ await pg.locator('#sar-cat-list .sar-cat').nth(1).uncheck();await pg.waitForTimeout(200);
+ const pgB=await pg.evaluate(()=>sar.page);
+ assert(await pg.evaluate(()=>document.querySelectorAll('#sar-cat-list .sar-nav.off').length)===1,'unchecked name greyed');
+ await pg.locator('#sar-cat-list .sar-nav[data-cat]').nth(1).click();await pg.waitForTimeout(200);
+ const tt=await pg.evaluate(()=>({t:document.getElementById('toast').innerText,vis:getComputedStyle(document.getElementById('toast')).display,page:sar.page,un:sar.unchecked.size}));
+ assert(/ยังไม่ได้ติ๊ก/.test(tt.t)&&tt.vis!=='none'&&tt.page===pgB&&tt.un===1,'unchecked category: asks to tick first, nothing changes: '+JSON.stringify(tt));
+ await pg.locator('#sar-cat-list .sar-cat').nth(1).check();await pg.waitForTimeout(200);assert(await pg.evaluate(()=>sar.unchecked.size)===0);
+ await pg.evaluate(()=>{sar.page=1;sarRender();window.scrollTo(0,0)});await pg.waitForTimeout(200);
  // เลขข้อต่อเนื่องจากหน้าแรกของเอกสาร และหน้า 2 ต่อจากหน้า 1
  const nos1=await pg.evaluate(()=>[...document.querySelectorAll('#sar-paper .pr-kpi-title')].map(e=>e.textContent.split(' ')[0]));
  await pg.click('#sar-pager-top .page-btn:has-text("2")');await pg.waitForTimeout(300);

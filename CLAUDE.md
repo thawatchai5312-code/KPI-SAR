@@ -95,9 +95,10 @@ bash tests/run.sh          # ทั้งหมด รวมหน้าเว�
 - เลขในเว็บเป็นเลขอารบิก ส่วนเอกสารสรุปรายงาน/พิมพ์ใช้เลขไทย · ขนาดตัวอักษรพิมพ์: เนื้อหา 12pt, ตารางรายเดือนแนวตั้ง 9pt
 
 - เอกสาร สรพ. (เมนู 🏛️ เอกสาร สรพ. — head/executive/admin; แท็บ CLT เฉพาะ admin, ผอ./QMR, หัวหน้าหน่วย PCT): SAR = ตัวชี้วัด รพ. Part I–IV มุมมอง "รพ." เสมอ (`sarAllPlacements`, ไม่ขึ้นกับตัวกรองหน้าแรก)
-  ตัวเลขแก้ไม่ได้ในหน้านี้ · สรุป PDCA เก็บใน `SAR_Doc` กุญแจ `PDCA|<รหัส>` แก้ได้ตามสิทธิ์ `editDetails` · CLT กุญแจ `O|…`, `D|<กลุ่มโรค>|…`, `DIM|<รหัส>`, `S|groups`
+  ตัวเลขแก้ไม่ได้ในหน้านี้ · สรุป PDCA เก็บใน `SAR_Doc` กุญแจ `PDCA|<รหัส>` แก้ได้ตามสิทธิ์ `editDetails` · CLT กุญแจ `O|…`, `D|<กลุ่มโรค>|…`, `DIM|<รหัส>`, `S|groups` (โรคที่ใส่ในเอกสาร), `S|kpis` (ตัวชี้วัดที่ **ไม่เอา** `["<กลุ่มโรค>|<รหัส>"]`) — สองกุญแจหลังแก้ได้เฉพาะ **admin** (`CLT_ADMIN_KEYS_`) คัดลอกจากปีก่อนเฉพาะตอน admin
   — ทุกการเขียนอยู่ใต้ lock + ตรวจ `baseRev` + `bumpDataVersion_(fy, [], user, "SAR"|"CLT")` (`pollChanges` ส่ง `docs` ให้หน้าเว็บดึงใหม่) · ช่องที่กำลังพิมพ์ห้ามถูกวาดทับ (`sarRender` รอ `focusout`)
   ผอ./QMR เห็นหมวด PCT ฝั่งหน้าเว็บไม่ครบ → CLT ใช้รายการตัวชี้วัดจาก `getCltDoc` (เซิร์ฟเวอร์) ไม่ใช่ `globalDatabase`
+- แถบซ้ายหน้า SAR/CLT: ช่อง ☑ (เลือกว่าอยู่ในเอกสาร) แยกจากชื่อ (กด = นำทาง: SAR `sarNavTo`, CLT `cltOpenGroup`) — อย่าใส่ checkbox กับชื่อใน `<label>` เดียวกัน · กราฟตัวชี้วัดใน Word/PowerPoint เป็นรูป PNG จาก `generateSvgLineChart` (`sarChartCanvas`) เหมือนบนเว็บ
 - Export ทำในเบราว์เซอร์: Word = `docx@9.5.1`, PowerPoint = `pptxgenjs@4.0.1` โหลดจาก jsDelivr ตอนกดปุ่ม (ระบุเวอร์ชันตายตัว) · ฟอนต์ TH SarabunPSK เลขอารบิก · ขนาดตัวอักษรไทยใน docx ต้องตั้ง `sizeComplexScript`/`boldComplexScript` ด้วย
   (ไม่งั้น Word ใช้ขนาด/ตัวหนาของอักษรซับซ้อนเดิม) · ต้องทดสอบการดาวน์โหลดบน `/exec` จริงหลัง deploy ทุกครั้งที่แก้ส่วน Export (sandbox iframe ของ Apps Script)
 

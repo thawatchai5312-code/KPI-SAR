@@ -44,8 +44,16 @@ r=C.saveCltItem(tP,FY,'D|STEMI|R|'+stemi.id,'ผลลัพธ์ STEMI',0);ass
 r=C.saveCltItem(tP,FY,'DIM|'+stemi.id,'b',0);assert(r.success&&r.item.text==='B','dim uppercased');
 r=C.saveCltItem(tP,FY,'DIM|'+stemi.id,'Z',1);assert(!r.success&&/มิติ/.test(r.message));
 r=C.saveCltItem(tP,FY,'DIM|'+stemi.id,'',1);assert(r.success&&r.item.text===''&&r.item.rev===2,'clear dim');
-r=C.saveCltItem(tP,FY,'S|groups',JSON.stringify(['STEMI','DM']),0);assert(r.success);
-r=C.saveCltItem(tP,FY,'S|groups',JSON.stringify(['a|b']),1);assert(!r.success&&/กลุ่ม/.test(r.message));
+// เลือกโรค/ตัวชี้วัดที่จะใส่ในเอกสาร (S|groups, S|kpis): แก้ได้เฉพาะ admin
+for(const [t,who] of [[tP,'PCT head'],[tE,'executive']]){
+  r=C.saveCltItem(t,FY,'S|groups',JSON.stringify(['STEMI','DM']),0);assert(!r.success&&/เฉพาะผู้ดูแลระบบ/.test(r.message),who+' cannot pick groups: '+JSON.stringify(r));
+  r=C.saveCltItem(t,FY,'S|kpis','[]',0);assert(!r.success&&/เฉพาะผู้ดูแลระบบ/.test(r.message),who+' cannot pick kpis')}
+assert(!C.getCltDoc(tA,FY).items['S|groups']&&!C.getCltDoc(tA,FY).items['S|kpis'],'nothing written by non-admin');
+r=C.saveCltItem(tA,FY,'S|groups',JSON.stringify(['STEMI','DM']),0);assert(r.success);
+r=C.saveCltItem(tA,FY,'S|groups',JSON.stringify(['a|b']),1);assert(!r.success&&/กลุ่ม/.test(r.message));
+for(const bad of ['x','{}','["a"]','["a|b|c"]','[1]','["|id"]','["g|"]',JSON.stringify(Array(5001).fill('a|b'))]){
+  r=C.saveCltItem(tA,FY,'S|kpis',bad,0);assert(!r.success&&/ตัวชี้วัดที่ไม่เอา/.test(r.message),'bad S|kpis '+bad.slice(0,20)+': '+JSON.stringify(r))}
+assert(!C.getCltDoc(tA,FY).items['S|kpis'],'invalid S|kpis not written');
 r=C.saveCltItem(tP,FY,'D|จิตเวช ซึมเศร้า/ฆ่าตัวตาย|context','มีเครื่องหมาย / ในชื่อกลุ่ม',0);assert(r.success);
 const doc=C.getCltDoc(tE,FY);assert(doc.items['O|mission'].text==='พันธกิจ 2570\n  ดูแลผู้ป่วย'&&doc.items['D|STEMI|R|'+stemi.id].rev===1&&doc.items['D|จิตเวช ซึมเศร้า/ฆ่าตัวตาย|context']);
 
@@ -72,12 +80,17 @@ C.saveCltItem(tA,PREV,'O|mission','พันธกิจปี 69',0);C.saveCltI
 C.saveCltItem(tA,PREV,'D|STEMI|R|'+k69.find(k=>k.groups.includes('STEMI')).id,'ผลลัพธ์ STEMI ปี 69',0);
 C.saveCltItem(tA,PREV,'O|qi',JSON.stringify([['เดิม','ปี 69']]),0);
 const dm69=k69.find(k=>k.groups.includes('DM'));C.saveCltItem(tA,PREV,'D|DM|R|'+dm69.id,'ผลลัพธ์ DM ปี 69',0);
+const stemi69=k69.find(k=>k.groups.includes('STEMI'));
+r=C.saveCltItem(tA,PREV,'S|kpis',JSON.stringify(['STEMI|'+stemi69.id]),0);assert(r.success&&r.item.rev===1,'admin saves S|kpis: '+JSON.stringify(r));
+assert(JSON.parse(C.getCltDoc(tE,PREV).items['S|kpis'].text)[0]==='STEMI|'+stemi69.id,'everyone reads the same selection');
 // ปีงบนี้ (2570) มี mission และผลลัพธ์ STEMI แล้ว → ไม่ทับ · focus / qi / ผลลัพธ์ DM ยังว่าง → เติม
 const n0=h.sheets.SAR_Doc.d.length;
 r=C.copyCltFromPrevious(tP,FY);assert(r.success&&r.from===PREV&&r.copied===3&&/คัดลอก/.test(r.message),JSON.stringify(r));
 let d=C.getCltDoc(tA,FY).items;assert(d['O|mission'].text==='หัวหน้า PCT ทับ'&&d['O|focus'].text==='จุดเน้นปี 69'&&d['O|focus'].rev===1&&JSON.parse(d['O|qi'].text)[0][0]==='เดิม'&&d['D|DM|R|'+dm69.id].text==='ผลลัพธ์ DM ปี 69'&&d['D|STEMI|R|'+stemi.id].text==='ผลลัพธ์ STEMI','copy fills only empty');
 assert(d['O|priority']===undefined||d['O|priority'].text==='','empty ones not copied');
+assert(!C.getCltDoc(tA,FY).items['S|kpis'],'PCT head copy skips the admin-only selection (S|kpis)');
 r=C.copyCltFromPrevious(tP,FY);assert(r.success&&r.copied===0,'second copy: nothing');
+r=C.copyCltFromPrevious(tA,FY);assert(r.success&&r.copied===1&&JSON.parse(C.getCltDoc(tA,FY).items['S|kpis'].text)[0]==='STEMI|'+stemi69.id,'admin copy brings S|kpis: '+JSON.stringify(r));
 assert(!C.copyCltFromPrevious(tA,PREV).success,'no earlier year');
 // ปีงบก่อนมีตัวชี้วัดที่ปีนี้ไม่มี → ข้าม
 h.sheets.SAR_Doc.d.push([PREV,'CLT','D|STEMI|R|KPI-GONE',  'ของตัวที่หายไป',1,'x','y'],[PREV,'CLT','DIM|KPI-GONE','C',1,'x','y']);

@@ -71,6 +71,9 @@ async function open(b,user){
 
  // ---- 3. กลุ่มโรค: เปิด STEMI · ตัวชี้วัด · มิติ · ข้อความ
  await pg.click('#clt-tree .clt-group-name[data-g="STEMI"]');await pg.waitForSelector('#clt-tree .clt-link[data-key^="D|STEMI|R|"]');
+ await pg.waitForFunction(()=>clt.sel==='D|STEMI|context');assert(/บริบท/.test(await pg.textContent('#clt-editor .clt-title')),'group click opens first section (context)');
+ await pg.click('#clt-tree .clt-group-name[data-g="STEMI"]');assert(await pg.evaluate(()=>!clt.open.has('STEMI')&&!document.querySelector('#clt-tree .clt-link[data-key^="D|STEMI|R|"]')),'second click collapses');
+ await pg.click('#clt-tree .clt-group-name[data-g="STEMI"]');await pg.waitForSelector('#clt-tree .clt-link[data-key^="D|STEMI|R|"]');
  const rl=await pg.evaluate(()=>[...document.querySelectorAll('#clt-tree .clt-link[data-key^="D|STEMI|R|"]')].map(e=>e.dataset.key));assert(rl.length>=4,'STEMI kpis '+rl.length);
  await pg.click('#clt-tree .clt-link[data-key="D|STEMI|context"]');await pg.fill('#clt-text','บริบท STEMI');await pg.click('#clt-save');await pg.waitForFunction(()=>clt.items['D|STEMI|context']);
  await pg.click('#clt-tree .clt-link[data-key="D|STEMI|flow"]');assert(/แปะรูปเอง/.test(await pg.textContent('#clt-editor')),'flowchart note');
@@ -85,8 +88,18 @@ async function open(b,user){
  const dm=await pg.evaluate(()=>({rows:document.querySelectorAll('#clt-editor table tbody tr').length,groups:cltSelectedGroups().length,stemiRow:[...document.querySelectorAll('#clt-editor table tbody tr')].find(r=>r.textContent.startsWith('STEMI')).children.length}));assert(dm.rows===dm.groups&&dm.stemiRow===9,JSON.stringify(dm));
  // เลือกกลุ่มโรค: เอาออกบางกลุ่ม → บันทึก S|groups
  const g0=await pg.evaluate(()=>cltSelectedGroups().length);
- await pg.uncheck('#clt-tree input[data-g="Med error"]');await pg.waitForFunction(n=>cltSelectedGroups().length===n-1,g0);
+ await pg.uncheck('#clt-tree input:not([data-k])[data-g="Med error"]');await pg.waitForFunction(n=>cltSelectedGroups().length===n-1,g0);
  assert(JSON.parse(C.getCltDoc(tA,fy).items['S|groups'].text).length===g0-1&&!JSON.parse(C.getCltDoc(tA,fy).items['S|groups'].text).includes('Med error'),'S|groups saved');
+ const exKid=rl[1].split('|')[3],pk0=await pg.evaluate(()=>cltKpisPicked('STEMI').length);
+ await pg.uncheck(`#clt-tree input[data-g="STEMI"][data-k="${exKid}"]`);await pg.waitForFunction(id=>cltExcluded().has('STEMI|'+id),exKid);
+ assert(JSON.parse(C.getCltDoc(tA,fy).items['S|kpis'].text).includes('STEMI|'+exKid),'S|kpis saved in the system');
+ assert(await pg.evaluate(id=>{const r=document.querySelector(`#clt-tree input[data-k="${id}"]`).closest('.clt-kpi-row');return r.classList.contains('clt-off')&&/ไม่ใส่ในเอกสาร/.test(r.textContent)},exKid),'excluded kpi greyed with tag');
+ assert(await pg.evaluate(()=>cltKpisPicked('STEMI').length)===pk0-1,'picked count -1');
+ await pg.click(`#clt-tree .clt-link[data-key="D|STEMI|R|${exKid}"]`);await pg.waitForSelector('#clt-editor .pr-chart svg');
+ await pg.screenshot({path:OUT+'/clt-3-picked.png'});
+ await pg.evaluate(()=>{currentUser.tier='head';cltRenderTree()});
+ assert(await pg.evaluate(()=>{const c=[...document.querySelectorAll('#clt-tree input[type=checkbox]')];return c.length>20&&c.every(i=>i.disabled)}),'non-admin: all pick boxes disabled');
+ await pg.evaluate(()=>{currentUser.tier='admin';cltRenderTree()});
  await pg.screenshot({path:OUT+'/clt-2-editor.png'});
 
  // ---- 4. แก้ชนกัน (ผอ. แก้ก่อน) + แก้ต่อจากของฉัน
@@ -110,9 +123,12 @@ async function open(b,user){
  const slides=list.filter(x=>/^ppt\/slides\/slide\d+\.xml$/.test(x)),charts=list.filter(x=>/^ppt\/charts\/chart\d+\.xml$/.test(x));
  const sx=n=>execFileSync('unzip',['-p',file,'ppt/slides/slide'+n+'.xml'],{maxBuffer:1<<28}).toString('utf8');
  let all='';slides.forEach((_,i)=>{all+=sx(i+1)});
- const nGroups=await pg.evaluate(()=>cltSelectedGroups().length),nKpis=await pg.evaluate(()=>cltSelectedGroups().reduce((n,g)=>n+cltKpisOf(g).length,0));
+ const nGroups=await pg.evaluate(()=>cltSelectedGroups().length),nKpis=await pg.evaluate(()=>cltSelectedGroups().reduce((n,g)=>n+cltKpisPicked(g).length,0)),withData=await pg.evaluate(()=>cltSelectedGroups().reduce((n,g)=>n+cltKpisPicked(g).filter(k=>k.years.some(v=>v!==null)).length,0));
  console.log('pptx',Math.round(fs.statSync(file).size/1024)+'KB','slides',slides.length,'charts',charts.length,'groups',nGroups,'kpis',nKpis);
- assert(charts.length>0&&charts.length<=nKpis&&charts.length>nKpis*0.7,'one native chart per kpi with data '+charts.length+'/'+nKpis);
+ const pics=(all.match(/<p:pic>/g)||[]).length,media=list.filter(x=>/^ppt\/media\/.+\.png$/.test(x)).length;
+ assert(charts.length===0&&pics===withData&&pics>nKpis*0.7&&media>0,'chart = PNG of the web chart, one picture per picked kpi with data: pics '+pics+' / withData '+withData+' / picked '+nKpis+' (native charts '+charts.length+', media '+media+')');
+ const stemiSlides=slides.map((_,i)=>sx(i+1)).filter(x=>x.includes('ผลลัพธ์และการพัฒนาที่ผ่านมา · STEMI')).length;
+ assert(stemiSlides===await pg.evaluate(()=>cltKpisPicked('STEMI').length)&&stemiSlides===pk0-1,'excluded kpi has no result slide: '+stemiSlides+' vs '+(pk0-1));
  assert(all.includes('พันธกิจ 2570 ดูแลผู้ป่วยทุกกลุ่ม'.slice(0,0)||'ผอ.แก้อีก')&&all.includes('ผู้ป่วยฉุกเฉิน')&&all.includes('บริบท STEMI')&&all.includes('อบรม EKG')&&all.includes('ส่งไลน์ช้า'),'texts present');
  assert((all.match(/แทรกรูป Process Flowchart ที่นี่/g)||[]).length===nGroups,'one flowchart placeholder per selected group');
  assert(!all.includes('Med error'.slice(0,0)||'ระบุตัวผู้ป่วยผิดพลาด')||true);

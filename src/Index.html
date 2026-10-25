@@ -348,6 +348,11 @@
     #sar-scroll { overflow-x: auto; }
     #sar-paper { background: #fff; margin: 0 auto; box-sizing: content-box; width: 277mm; padding: 10mm; box-shadow: 0 2px 14px rgba(16, 40, 24, 0.18); font-size: 12pt; color: #0f172a; line-height: 1.4; }
     #sar-cat-list { max-height: 36vh; }
+    .sar-nav { cursor: pointer; flex: 1; }
+    .sar-nav:hover { text-decoration: underline; color: #0b6b3a; }
+    .sar-nav.off { color: #94a3b8; font-weight: 500; }
+    #sar-paper .pr-part, #sar-paper .pr-cat { scroll-margin-top: calc(var(--tree-top, 70px) + 8px); }
+    #sar-paper .sar-flash { outline: 3px solid #f59e0b; outline-offset: 2px; }
     .sar-grid { display: grid; grid-template-columns: 45fr 55fr; gap: 12px; align-items: start; }
     .sar-left, .sar-right { min-width: 0; }
     .sar-box { margin-top: 3px; }
@@ -374,6 +379,12 @@
     .clt-group > .clt-link { margin-left: 22px; }
     .clt-ok { color: #16a34a; font-weight: 700; }
     .clt-no { color: #94a3b8; }
+    .clt-kpi-row { display: flex; align-items: flex-start; gap: 5px; margin-left: 18px; }
+    .clt-kpi-row > input, .clt-group-head > input { flex: none; width: 16px; height: 16px; margin-top: 3px; }
+    .clt-kpi-row .clt-link { flex: 1; margin-left: 0; }
+    .clt-off .clt-link, .clt-group.off > .clt-link, .clt-group.off .clt-group-name { opacity: 0.55; }
+    .clt-offtag { flex: none; font-size: 11px; color: #94a3b8; white-space: nowrap; margin-top: 3px; }
+    .clt-group-name:hover { text-decoration: underline; }
     .clt-title { margin: 2px 0 6px; color: #14532d; font-size: 18px; }
     .clt-grid { border-collapse: collapse; width: 100%; margin-bottom: 6px; }
     .clt-grid th, .clt-grid td { border: 1px solid #cbd5e1; padding: 3px; vertical-align: top; }
@@ -3919,9 +3930,10 @@
       Object.keys(groups).sort(comparePartNames).forEach(part => {
         const cats = Object.keys(groups[part]).sort(catOrderOf(part));
         const on = cats.filter(c => !sar.unchecked.has(part + '||' + c)).length;
-        html += `<label class="check-row" style="font-weight:700; color:#015c8b;"><input type="checkbox" class="sar-part" data-part="${esc(part)}" data-on="${on}" data-n="${cats.length}"${on === cats.length ? ' checked' : ''} onchange="sarTogglePart(this)"> ${esc(partLabel(part))}</label>`;
+        html += `<div class="check-row" style="font-weight:700; color:#015c8b; cursor:default;"><input type="checkbox" class="sar-part" data-part="${esc(part)}" data-on="${on}" data-n="${cats.length}"${on === cats.length ? ' checked' : ''} onchange="sarTogglePart(this)" title="ติ๊ก = ใส่ทั้ง Part นี้ในเอกสาร"><span class="sar-nav${on === 0 ? ' off' : ''}" data-part="${esc(part)}" onclick="sarNavTo(this.dataset.part)" title="กดเพื่อไปที่ Part นี้ทางขวา">${esc(partLabel(part))}</span></div>`;
         cats.forEach(cat => {
-          html += `<label class="check-row" style="margin-left:22px;"><input type="checkbox" class="sar-cat" data-part="${esc(part)}" data-cat="${esc(cat)}"${sar.unchecked.has(part + '||' + cat) ? '' : ' checked'} onchange="sarToggleCat(this)"> ${esc(cat)} (${groups[part][cat]})</label>`;
+          const catOn = !sar.unchecked.has(part + '||' + cat);
+          html += `<div class="check-row" style="margin-left:22px; cursor:default;"><input type="checkbox" class="sar-cat" data-part="${esc(part)}" data-cat="${esc(cat)}"${catOn ? ' checked' : ''} onchange="sarToggleCat(this)" title="ติ๊ก = ใส่หมวดนี้ในเอกสาร"><span class="sar-nav${catOn ? '' : ' off'}" data-part="${esc(part)}" data-cat="${esc(cat)}" onclick="sarNavTo(this.dataset.part, this.dataset.cat)" title="กดเพื่อไปที่หมวดนี้ทางขวา">${esc(cat)} (${groups[part][cat]})</span></div>`;
         });
       });
       box.innerHTML = html || '<div class="empty-state">ไม่มีตัวชี้วัด Part I–IV</div>';
@@ -3945,6 +3957,22 @@
       sarChoiceChanged();
     }
     function sarSetFilter(name, on) { sar[name] = on; sar.page = 1; sarRender(); }
+    // กดชื่อ Part/หมวดทางซ้าย → ฝั่งขวาไปหน้าที่หมวดนั้นอยู่ แล้วเลื่อนไปที่หัวหมวด (cat ไม่ระบุ = ทั้ง Part)
+    function sarNavTo(part, cat) {
+      const inDoc = sarAllPlacements().some(p => p.part === part && (cat === undefined || p.category === cat) && !sar.unchecked.has(p.part + '||' + p.category));
+      if (!inDoc) { showToast('☑ ' + (cat === undefined ? 'Part' : 'หมวด') + 'นี้ยังไม่ได้ติ๊กให้อยู่ในเอกสาร — ติ๊กช่องหน้าชื่อก่อน'); return; }
+      const idx = sarPreviewRows(sarChosen()).findIndex(k => k.part === part && (cat === undefined || k.category === cat));
+      if (idx === -1) { showToast('ไม่มีตัวชี้วัดในหมวดนี้ตามตัวกรองที่เลือก (เฉพาะที่ฉันแก้ได้ / เฉพาะที่ยังไม่มีการวิเคราะห์และ PDCA)'); return; }
+      sar.page = Math.floor(idx / sar.size) + 1;
+      sarRender();
+      const want = cat === undefined ? part : part + '||' + cat;
+      const el = Array.from(document.querySelectorAll('#sar-paper [data-sar-part], #sar-paper [data-sar-cat]'))
+        .find(e => (cat === undefined ? e.dataset.sarPart : e.dataset.sarCat) === want);
+      if (!el) return;
+      el.scrollIntoView({ block: 'start' });
+      el.classList.add('sar-flash');
+      setTimeout(() => el.classList.remove('sar-flash'), 1600);
+    }
 
     // ---------- เปิดหน้า / โหลดสรุป PDCA ----------
     // เปิดหน้าเอกสาร สรพ. — แท็บ SAR (ทุกคนที่ใช้หน้านี้ได้) หรือ CLT (admin, ผอ./QMR, หัวหน้าหน่วย PCT)
@@ -4175,8 +4203,8 @@
         Object.keys(tree[part]).sort(catOrderOf(part)).forEach(cat => {
           const kpis = tree[part][cat].filter(p => show.has(p.key));
           if (kpis.length === 0) return;
-          if (!partDone) { html += `<div class="pr-part">${esc(partLabel(part))}</div>`; partDone = true; }
-          html += `<div class="pr-cat">${esc(cat)}</div><div class="pr-sub-title">เป้าหมายและผลทั้งปี</div>${sarResultTable(kpis, yl)}`;
+          if (!partDone) { html += `<div class="pr-part" data-sar-part="${esc(part)}">${esc(partLabel(part))}</div>`; partDone = true; }
+          html += `<div class="pr-cat" data-sar-cat="${esc(part + '||' + cat)}">${esc(cat)}</div><div class="pr-sub-title">เป้าหมายและผลทั้งปี</div>${sarResultTable(kpis, yl)}`;
           html += kpis.map(k => sarBlockHtml(k, places.get(k.id), yl)).join('');
         });
       });
@@ -4266,8 +4294,8 @@
       setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 10000);
     }
 
-    // กราฟเส้น (SVG ของหน้าเว็บ) → PNG 1200×460 สำหรับแปะในไฟล์ Word
-    function sarChartPng(k, yl) {
+    // กราฟเส้น (SVG ของหน้าเว็บ) → canvas 1200×460 สำหรับแปะในไฟล์ Word / PowerPoint (รูปแบบเดียวกับกราฟบนหน้าเว็บ)
+    function sarChartCanvas(k, yl) {
       return new Promise((resolve, reject) => {
         const svg = generateSvgLineChart(k.years, k.target, yl)
           .replace(/^<svg [^>]*>/, '<svg xmlns="http:\/\/www.w3.org/2000/svg" viewBox="0 0 600 230" width="1200" height="460" font-family="Sarabun, \'Noto Sans Thai\', Tahoma, sans-serif">');
@@ -4278,11 +4306,15 @@
           const g = c.getContext('2d');
           g.fillStyle = '#fff'; g.fillRect(0, 0, 1200, 460);
           g.drawImage(img, 0, 0, 1200, 460);
-          c.toBlob(b => (b ? b.arrayBuffer().then(buf => resolve(new Uint8Array(buf))) : reject(new Error('แปลงกราฟไม่สำเร็จ'))), 'image/png');
+          resolve(c);
         };
         img.onerror = () => reject(new Error('แปลงกราฟไม่สำเร็จ'));
         img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
       });
+    }
+    function sarChartPng(k, yl) { // Uint8Array ของ PNG (Word)
+      return sarChartCanvas(k, yl).then(c => new Promise((resolve, reject) =>
+        c.toBlob(b => (b ? b.arrayBuffer().then(buf => resolve(new Uint8Array(buf))) : reject(new Error('แปลงกราฟไม่สำเร็จ'))), 'image/png')));
     }
 
     async function sarExportDocx() {
@@ -4451,6 +4483,12 @@
       if (!it) return all;
       try { const pick = JSON.parse(it); return all.filter(g => pick.indexOf(g) !== -1); } catch (e) { return all; }
     }
+    // เลือกโรค/ตัวชี้วัดที่จะใส่ในเอกสาร: บันทึกในระบบ (S|groups, S|kpis) — แก้ได้เฉพาะ admin
+    function cltCanPick() { return !!currentUser && currentUser.tier === 'admin'; }
+    function cltExcluded() { // ตัวชี้วัดที่ไม่เอา: "<กลุ่มโรค>|<รหัส>"
+      try { const x = JSON.parse(cltItem('S|kpis').text || '[]'); return new Set(Array.isArray(x) ? x : []); } catch (e) { return new Set(); }
+    }
+    function cltKpisPicked(group) { const ex = cltExcluded(); return cltKpisOf(group).filter(k => !ex.has(group + '|' + k.id)); }
     function cltKpisOf(group) {
       return clt.kpis.filter(k => k.groups.indexOf(group) !== -1)
         .sort((a, b) => ((a.order === null ? 1e9 : a.order) - (b.order === null ? 1e9 : b.order)) || a.row - b.row);
@@ -4540,7 +4578,7 @@
       const keys = [];
       CLT_DISEASE.forEach(s => {
         if (s.type === 'text' || s.type === 'table') keys.push('D|' + group + '|' + s.f);
-        else if (s.type === 'results') cltKpisOf(group).forEach(k => keys.push('D|' + group + '|R|' + k.id));
+        else if (s.type === 'results') cltKpisPicked(group).forEach(k => keys.push('D|' + group + '|R|' + k.id));
       });
       return keys;
     }
@@ -4550,15 +4588,19 @@
       let h = `<div class="clt-head">ภาพรวม PCT</div>`;
       CLT_OVERVIEW.forEach(s => { h += link(s.key, esc(s.title), s.type === 'dims' ? '' : mark(s.key)); });
       const picked = new Set(cltSelectedGroups());
-      h += `<div class="clt-head" style="margin-top:8px;">กลุ่มโรค <span class="hint" style="font-weight:400;">(ติ๊กเพื่อใส่ในเอกสาร)</span></div>`;
+      const canPick = cltCanPick(), ex = cltExcluded();
+      h += `<div class="clt-head" style="margin-top:8px;">กลุ่มโรค <span class="hint" style="font-weight:400;">(${canPick ? 'ติ๊ก ☑ = ใส่ในเอกสาร · กดชื่อเพื่อเปิดดู' : 'ติ๊กเลือกได้เฉพาะ admin · กดชื่อเพื่อเปิดดู'})</span></div>`;
       cltGroups().forEach(g => {
         const keys = cltSectionKeys(g), done = keys.filter(cltHasText).length, open = clt.open.has(g);
-        h += `<div class="clt-group"><div class="clt-group-head"><input type="checkbox" data-g="${esc(g)}" ${picked.has(g) ? 'checked' : ''} onchange="cltPickGroup(this.dataset.g, this.checked)" title="ใส่กลุ่มโรคนี้ในเอกสาร">
-          <span class="clt-group-name" data-g="${esc(g)}" onclick="cltToggleGroup(this.dataset.g)">${open ? '▾' : '▸'} ${esc(g)}</span><span class="hint">${done}/${keys.length}</span></div>`;
+        h += `<div class="clt-group${picked.has(g) ? '' : ' off'}"><div class="clt-group-head"><input type="checkbox" data-g="${esc(g)}" ${picked.has(g) ? 'checked' : ''}${canPick ? '' : ' disabled'} onchange="cltPickGroup(this.dataset.g, this.checked)" title="${canPick ? 'ติ๊ก = ใส่กลุ่มโรคนี้ในเอกสาร' : 'เลือกได้เฉพาะผู้ดูแลระบบ (admin)'}">
+          <span class="clt-group-name" data-g="${esc(g)}" onclick="cltOpenGroup(this.dataset.g)" title="กดเพื่อเปิด/ย่อรายการหัวข้อ">${open ? '▾' : '▸'} ${esc(g)}</span>${picked.has(g) ? '' : '<span class="clt-offtag">ไม่ใส่ในเอกสาร</span>'}<span class="hint">${done}/${keys.length}</span></div>`;
         if (open) {
           CLT_DISEASE.forEach(s => {
             if (s.type === 'results') {
-              cltKpisOf(g).forEach(k => { const key = 'D|' + g + '|R|' + k.id; h += link(key, '📈 ' + esc(prShort(k.name, 48)), mark(key)); });
+              cltKpisOf(g).forEach(k => {
+                const key = 'D|' + g + '|R|' + k.id, on = !ex.has(g + '|' + k.id);
+                h += `<div class="clt-kpi-row${on ? '' : ' clt-off'}"><input type="checkbox" data-g="${esc(g)}" data-k="${esc(k.id)}" ${on ? 'checked' : ''}${canPick ? '' : ' disabled'} onchange="cltPickKpi(this.dataset.g, this.dataset.k, this.checked)" title="${canPick ? 'ติ๊ก = ใส่ตัวชี้วัดนี้ในเอกสาร' : 'เลือกได้เฉพาะผู้ดูแลระบบ (admin)'}">${link(key, '📈 ' + esc(prShort(k.name, 48)), mark(key))}${on ? '' : '<span class="clt-offtag">ไม่ใส่ในเอกสาร</span>'}</div>`;
+              });
             } else { const key = 'D|' + g + '|' + s.f; h += link(key, esc(s.title), s.type === 'flow' ? '' : mark(key)); }
           });
         }
@@ -4566,7 +4608,13 @@
       });
       return h;
     }
-    function cltToggleGroup(g) { if (clt.open.has(g)) clt.open.delete(g); else clt.open.add(g); cltRenderTree(); }
+    // กดชื่อโรค: ถ้ายังย่ออยู่ = กางรายการ + เปิดหัวข้อแรกทางขวา · ถ้ากางอยู่ = ย่อ
+    function cltOpenGroup(g) {
+      if (clt.open.has(g)) { clt.open.delete(g); cltRenderTree(); return; }
+      clt.open.add(g); cltRenderTree();
+      const first = CLT_DISEASE.find(s => s.f);
+      if (first) cltSelect('D|' + g + '|' + first.f);
+    }
     function cltRenderTree() {
       const box = document.getElementById('clt-tree'), keep = box.scrollTop;
       box.innerHTML = cltTreeHtml();
@@ -4582,10 +4630,17 @@
         <div class="pg-bar"><span style="width:${keys.length ? Math.round(done / keys.length * 100) : 0}%; background:#16a34a;"></span></div></div>`;
     }
     function cltPickGroup(g, on) {
+      if (!cltCanPick()) { showToast('เลือกโรคที่จะใส่ในเอกสารได้เฉพาะผู้ดูแลระบบ (admin)'); cltRenderTree(); return; }
       const cur = new Set(cltSelectedGroups());
       if (on) cur.add(g); else cur.delete(g);
       const list = cltGroups().filter(x => cur.has(x));
       cltSaveRaw('S|groups', JSON.stringify(list), () => { cltRenderTree(); cltRenderProgress(); }, () => cltRenderTree());
+    }
+    function cltPickKpi(g, id, on) {
+      if (!cltCanPick()) { showToast('เลือกตัวชี้วัดที่จะใส่ในเอกสารได้เฉพาะผู้ดูแลระบบ (admin)'); cltRenderTree(); return; }
+      const ex = cltExcluded(), key = g + '|' + id;
+      if (on) ex.delete(key); else ex.add(key);
+      cltSaveRaw('S|kpis', JSON.stringify(Array.from(ex).sort()), () => { cltRenderTree(); cltRenderProgress(); }, () => cltRenderTree());
     }
 
     // ---------- ตัวแก้ไขทางขวา ----------
@@ -4689,7 +4744,7 @@
       let h = `<p class="hint">ตารางนี้ขึ้นในเอกสารอัตโนมัติ จากตัวชี้วัดของกลุ่มโรคที่เลือก — ปรับมิติของตัวชี้วัดแต่ละตัวได้ที่หน้า 📈 ผลลัพธ์ของตัวชี้วัดนั้น</p>
         <div style="overflow-x:auto;"><table class="pr-table" style="font-size:11pt;"><thead><tr><th style="width:9%;">โรค</th>${CLT_DIMS.map(d => `<th>${d[1]}<br>${d[2]}</th>`).join('')}</tr></thead><tbody>`;
       groups.forEach(g => {
-        const ks = cltKpisOf(g);
+        const ks = cltKpisPicked(g);
         h += `<tr><td class="pr-left"><b>${esc(g)}</b></td>${CLT_DIMS.map(d => `<td class="pr-left" style="white-space:normal; vertical-align:top;">${ks.filter(k => cltDimOf(k) === d[0]).map(k => '- ' + esc(prShort(k.name, 70))).join('<br>')}</td>`).join('')}</tr>`;
       });
       return h + '</tbody></table></div>';
@@ -4815,7 +4870,7 @@
       else go();
     }
 
-    // กราฟเส้นของ PowerPoint (แก้ข้อมูลในไฟล์ได้): ผลลัพธ์ 5 ปี + เส้นเป้าหมาย (ถ้าเป้าหมายมีตัวเลข)
+    // กราฟของ PowerPoint เป็นรูป PNG ของกราฟเดียวกับหน้าเว็บ/ไฟล์ Word (ผลลัพธ์ 5 ปี + เส้นเป้าหมาย) — แก้ข้อมูลในไฟล์ไม่ได้
     async function cltBuildPptx() {
       const P = new window.PptxGenJS(), F = DOC_FONT, yl = sarYearLabels().map(String);
       P.layout = 'LAYOUT_WIDE'; // 13.33 x 7.5 นิ้ว
@@ -4877,8 +4932,6 @@
         flush();
       };
       const evenW = n => Array(n).fill(12.4 / n);
-      const num = v => (v === null || v === undefined ? null : v);
-      const targetNum = t => { const m = String(t || '').match(/-?\d+(\.\d+)?/); return m ? parseFloat(m[0]) : null; };
 
       // ---- ปก
       const cover = slide('');
@@ -4898,7 +4951,7 @@
       const groups = cltSelectedGroups();
       {
         const cols = ['โรค'].concat(CLT_DIMS.map(d => d[1] + ' ' + d[2]));
-        const rows = groups.map(g => [g].concat(CLT_DIMS.map(d => cltKpisOf(g).filter(k => cltDimOf(k) === d[0]).map(k => '- ' + k.name).join('\n'))));
+        const rows = groups.map(g => [g].concat(CLT_DIMS.map(d => cltKpisPicked(g).filter(k => cltDimOf(k) === d[0]).map(k => '- ' + k.name).join('\n'))));
         tableSlides('ตัวชี้วัดของ CLT/PCT ตามมิติคุณภาพ', cols, rows, [1.2].concat(Array(8).fill(1.4)), 11);
       }
       tbl('risks', 'ความเสี่ยงและมาตรการป้องกัน', [3.4, 1.4, 4.2, 3.4]);
@@ -4910,7 +4963,7 @@
       let nSlides = 0;
       for (const g of groups) {
         docBusyText('กำลังสร้างสไลด์ ' + g + '…'); await docYield();
-        const D = f => cltItem('D|' + g + '|' + f).text, ks = cltKpisOf(g);
+        const D = f => cltItem('D|' + g + '|' + f).text, ks = cltKpisPicked(g);
         const sec = slide('');
         sec.addText(docXml(g), { x: 0.5, y: 2.6, w: 12.3, h: 1.0, fontFace: F, fontSize: 38, bold: true, color: '14532D', align: 'center' });
         sec.addText('ข้อมูลคุณภาพของแต่ละโรค (Clinical Tracer) · ' + ks.length + ' ตัวชี้วัด', { x: 0.5, y: 3.7, w: 12.3, h: 0.6, fontFace: F, fontSize: 22, color: '475569', align: 'center' });
@@ -4931,16 +4984,14 @@
         // ผลลัพธ์รายตัวชี้วัด
         for (const k of ks) {
           const s = slide('ผลลัพธ์และการพัฒนาที่ผ่านมา · ' + g);
-          const tv = targetNum(k.target), hasData = k.years.some(v => v !== null);
+          const hasData = k.years.some(v => v !== null);
           s.addText(docXml(k.name) + '\nเป้าหมาย: ' + docXml(k.target || '-'), { x: 0.5, y: 1.0, w: 12.3, h: 0.8, fontFace: F, fontSize: 18, bold: true, color: '0F172A', valign: 'top' });
-          if (hasData) {
-            const series = [{ name: 'ผลลัพธ์', labels: yl, values: k.years.map(num) }];
-            if (tv !== null) series.push({ name: 'เป้าหมาย ' + (k.target || ''), labels: yl, values: yl.map(() => tv) });
-            s.addChart(P.charts.LINE, series, { x: 0.5, y: 1.85, w: 7.2, h: 4.9, chartColors: ['0284C7', 'F43F5E'], lineSize: 3, lineDataSymbolSize: 9,
-              showLegend: true, legendPos: 'b', legendFontFace: F, legendFontSize: 14, showValue: true, dataLabelFontFace: F, dataLabelFontSize: 14, dataLabelPosition: 't',
-              catAxisLabelFontFace: F, catAxisLabelFontSize: 14, valAxisLabelFontFace: F, valAxisLabelFontSize: 13, valGridLine: { color: 'E2E8F0', size: 0.75 }, displayBlanksAs: 'gap' });
-          } else s.addText('ยังไม่มีข้อมูลผลลัพธ์', { x: 0.5, y: 3.5, w: 7.2, h: 0.8, fontFace: F, fontSize: 20, italic: true, color: '94A3B8', align: 'center' });
           const note = cltItem('D|' + g + '|R|' + k.id).text.trim();
+          const cw = note ? 7.2 : 9.6, cx = note ? 0.5 : (13.33 - 9.6) / 2, chh = cw * 460 / 1200; // ไม่มีข้อความข้างกราฟ → กราฟใหญ่ขึ้นกลางสไลด์
+          if (hasData) {
+            const png = (await sarChartCanvas(k, yl)).toDataURL('image/png').replace(/^data:/, '');
+            s.addImage({ data: png, x: cx, y: 1.85 + (4.9 - chh) / 2, w: cw, h: chh });
+          } else s.addText('ยังไม่มีข้อมูลผลลัพธ์', { x: cx, y: 3.5, w: cw, h: 0.8, fontFace: F, fontSize: 20, italic: true, color: '94A3B8', align: 'center' });
           if (note) {
             const pt = note.length > 900 ? 14 : note.length > 500 ? 16 : 18;
             s.addText(docXml(note), { x: 7.9, y: 1.85, w: 4.95, h: 4.9, fontFace: F, fontSize: pt, color: '0F172A', valign: 'top', margin: 6, fill: { color: 'F0FDF4' }, line: { color: 'BBF7D0', width: 1 }, fit: 'shrink' });

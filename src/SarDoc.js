@@ -226,6 +226,9 @@ var CLT_DISEASE_FIELDS = { context: "text", challenge: "text", purpose: "text", 
 var CLT_TABLE_MAX_ROWS = 300;
 var CLT_TABLE_MAX_COLS = 8;
 
+// กุญแจที่แก้ได้เฉพาะ admin: โรค/ตัวชี้วัดที่ใส่ในเอกสาร CLT
+var CLT_ADMIN_KEYS_ = ["S|groups", "S|kpis"];
+
 function cltAllowed_(user) {
   return user.tier === "admin" || user.tier === "executive" || (user.tier === "head" && user.depts.indexOf(PCT_UNIT) !== -1);
 }
@@ -259,6 +262,7 @@ function cltCheckKey_(key, kpiIds) {
   var p = key.split("|");
   if (p[0] === "O" && p.length === 2 && CLT_OVERVIEW_FIELDS.hasOwnProperty(p[1])) return { kind: CLT_OVERVIEW_FIELDS[p[1]] };
   if (key === "S|groups") return { kind: "groups" };
+  if (key === "S|kpis") return { kind: "kpiex" };
   if (p[0] === "D" && p.length === 3 && p[1] && p[1].length <= 100 && CLT_DISEASE_FIELDS.hasOwnProperty(p[2])) return { kind: CLT_DISEASE_FIELDS[p[2]] };
   if (p[0] === "D" && p.length === 4 && p[1] && p[1].length <= 100 && p[2] === "R" && kpiIds[p[3]]) return { kind: "result" };
   if (p[0] === "DIM" && p.length === 2 && kpiIds[p[1]]) return { kind: "dim" };
@@ -287,6 +291,12 @@ function cltCleanValue_(kind, content) {
     try { g = JSON.parse(content || "[]"); } catch (e) { g = null; }
     if (!Array.isArray(g) || g.length > 100 || g.some(function(x) { return typeof x !== "string" || !x || x.length > 100 || /[|\r\n]/.test(x); })) return { error: "รายการกลุ่มโรคไม่ถูกต้อง" };
     return { value: JSON.stringify(g) };
+  }
+  if (kind === "kpiex") { // ตัวชี้วัดที่ไม่เอา: ["<กลุ่มโรค>|<รหัสตัวชี้วัด>", …]
+    var x;
+    try { x = JSON.parse(content || "[]"); } catch (e) { x = null; }
+    if (!Array.isArray(x) || x.length > 5000 || x.some(function(e) { return typeof e !== "string" || !/^[^|\r\n]{1,100}\|[^|\r\n]{1,100}$/.test(e); })) return { error: "รายการตัวชี้วัดที่ไม่เอาไม่ถูกต้อง" };
+    return { value: JSON.stringify(x) };
   }
   if (kind === "dim") {
     var d = content.trim().toUpperCase();
@@ -323,6 +333,7 @@ function saveCltItem(token, fy, key, content, baseRev, force) {
     if (/^(DIM\||D\|[^|]*\|R\|)/.test(key || "")) cltKpis_(fy).forEach(function(k) { ids[k.id] = true; });
     var spec = cltCheckKey_(key, ids);
     if (spec.error) return { success: false, message: spec.error };
+    if (CLT_ADMIN_KEYS_.indexOf(key) !== -1 && user.tier !== "admin") return { success: false, message: "เลือกโรค/ตัวชี้วัดที่จะใส่ในเอกสารได้เฉพาะผู้ดูแลระบบ (admin)" };
     var clean = cltCleanValue_(spec.kind, content);
     if (clean.error) return { success: false, message: clean.error };
     var res = sarDocWrite_(user, fy, SARDOC_CLT, key, clean.value, baseRev, force);
@@ -357,6 +368,7 @@ function copyCltFromPrevious(token, fy) {
     var entries = [];
     Object.keys(prev.rows).forEach(function(key) {
       if (!prev.rows[key].text || cltCheckKey_(key, ids).error) return;
+      if (CLT_ADMIN_KEYS_.indexOf(key) !== -1 && user.tier !== "admin") return;
       entries.push({ key: key, text: prev.rows[key].text });
     });
     var copied = sarDocFillMany_(user, fy, SARDOC_CLT, entries);
