@@ -390,6 +390,10 @@
     .clt-grid th, .clt-grid td { border: 1px solid #cbd5e1; padding: 3px; vertical-align: top; }
     .clt-grid th { background: #dcfce7; color: #14532d; font-size: 13px; }
     .clt-grid textarea { width: 100%; min-width: 150px; resize: vertical; font-size: 13.5px; }
+    .clt-drv { border: 1px solid #bbf7d0; border-radius: 10px; padding: 10px; margin-bottom: 12px; background: #f8fffa; }
+    .clt-drv-head { display: flex; gap: 8px; align-items: flex-start; margin-bottom: 6px; }
+    .clt-drv-head b { color: #14532d; white-space: nowrap; padding-top: 6px; }
+    .clt-drv-head textarea { flex: 1; font-weight: 600; resize: vertical; }
     @media (max-width: 1000px) {
       #sar-side, #clt-side { position: static; max-height: none; }
       #sar-side.collapsed #sar-controls, #clt-side.collapsed #clt-controls { display: none; }
@@ -4445,7 +4449,7 @@
       { f: 'context', title: 'บริบท (Context)', type: 'text', hint: 'ลักษณะพื้นที่/ระยะทางส่งต่อ ระบบการดูแลที่มี ทีมที่รับผิดชอบ สถิติที่ผ่านมา' },
       { f: 'challenge', title: 'ประเด็น/ความท้าทาย และความเสี่ยงสำคัญ', type: 'text', hint: 'ประเด็นท้าทายด้านการวินิจฉัย การรักษา ศักยภาพ · ตามด้วยความเสี่ยงสำคัญ (บรรทัดละข้อ)' },
       { f: 'purpose', title: 'เป้าหมาย (Purpose)', type: 'text', hint: 'เป้าหมายหลักของการดูแลโรคนี้ เช่น ผู้ป่วยปลอดภัย เข้าถึงรวดเร็ว' },
-      { f: 'driver', title: 'ปัจจัยขับเคลื่อน (Driver Diagram)', type: 'table', cols: ['Primary driver', 'Secondary driver', 'Change idea / Intervention'] },
+      { f: 'driver', title: 'ปัจจัยขับเคลื่อน (Driver Diagram)', type: 'table', cols: ['Purpose', 'Primary driver', 'Secondary driver', 'Change idea / Intervention'], purpose: true, hint: '1 Purpose = 1 ตาราง · โรคหนึ่งมีได้หลาย Purpose (กด ➕ เพิ่ม Purpose)' },
       { f: 'flow', title: 'Process Flowchart', type: 'flow' },
       { f: 'pm', title: 'การจัดการกระบวนการ (Process Management)', type: 'table', cols: ['กระบวนการ', 'ข้อกำหนดของกระบวนการ', 'ตัวชี้วัดของกระบวนการ / เป้าหมาย', 'การออกแบบกระบวนการ'] },
       { f: 'results', title: 'ผลลัพธ์รายตัวชี้วัด', type: 'results' },
@@ -4710,6 +4714,11 @@
         return head + (s.hint ? `<p class="hint">${esc(s.hint)}</p>` : '') + remote +
           `<textarea id="clt-text" class="editable-input sar-pdca" rows="14" oninput="cltInput(this)">${esc(val)}</textarea>` + cltActionsHtml(key);
       }
+      if (s.type === 'table' && s.purpose) {
+        const rows = clt.draft && clt.draft.key === key ? clt.draft.rows : cltDrvRows(cltRows(cltItem(key).text));
+        return head + `<p class="hint">${esc(s.hint)}</p>` + remote + `<div id="clt-drv">${cltDrvHtml(rows)}</div>` +
+          cltActionsHtml(key, `<button type="button" class="btn btn-secondary btn-sm" onclick="cltDrvAddGroup()">➕ เพิ่ม Purpose (ตารางใหม่)</button>`);
+      }
       if (s.type === 'table') {
         const rows = clt.draft && clt.draft.key === key ? clt.draft.rows : cltRows(cltItem(key).text);
         const grid = `<div style="overflow-x:auto;"><table class="clt-grid"><thead><tr>${s.cols.map(c => `<th>${esc(c)}</th>`).join('')}<th></th></tr></thead><tbody id="clt-grid-body">${cltGridRowsHtml(rows, s.cols.length)}</tbody></table></div>`;
@@ -4725,6 +4734,32 @@
       return list.map((r, i) => `<tr>${Array.from({ length: n }, (_, c) => `<td><textarea class="editable-input" rows="3" data-r="${i}" data-c="${c}" oninput="cltCell(this)">${esc(r[c] || '')}</textarea></td>`).join('')}
         <td><button type="button" class="btn btn-secondary btn-sm" title="ลบแถวนี้" onclick="cltDelRow(${i})">🗑</button></td></tr>`).join('');
     }
+    // Driver diagram: แถวละ [Purpose, Primary, Secondary, Change idea] — แถวติดกันที่ Purpose เดียวกัน = 1 ตาราง (ข้อมูลเดิม 3 ช่อง = ยังไม่มี Purpose)
+    function cltDrvRows(rows) { return rows.map(r => r.length >= 4 ? r.slice(0, 4) : [''].concat(r, ['', '', '']).slice(0, 4)); }
+    function cltDrvGroups(rows) {
+      const out = [];
+      rows.forEach((r, i) => { const last = out[out.length - 1]; if (last && last.p === r[0]) last.n++; else out.push({ p: r[0], s: i, n: 1 }); });
+      return out;
+    }
+    function cltDrvHtml(rows) {
+      const list = rows.length ? rows : [['', '', '', '']];
+      return cltDrvGroups(list).map((g, gi) => `<div class="clt-drv">
+        <div class="clt-drv-head"><b>Purpose ${gi + 1}</b><textarea class="editable-input" rows="2" data-s="${g.s}" data-n="${g.n}" placeholder="เป้าหมาย (Purpose) ของตารางนี้" oninput="cltDrvPurpose(this)">${esc(g.p)}</textarea>
+          <button type="button" class="btn btn-secondary btn-sm" title="ลบ Purpose นี้ทั้งตาราง" onclick="cltDrvDelGroup(${g.s}, ${g.n})">🗑 ลบตาราง</button></div>
+        <div style="overflow-x:auto;"><table class="clt-grid"><thead><tr><th>Primary driver</th><th>Secondary driver</th><th>Change idea / Intervention</th><th></th></tr></thead><tbody>${list.slice(g.s, g.s + g.n).map((r, k) =>
+          `<tr>${[1, 2, 3].map(c => `<td><textarea class="editable-input" rows="3" data-r="${g.s + k}" data-c="${c}" oninput="cltCell(this)">${esc(r[c] || '')}</textarea></td>`).join('')}
+          <td><button type="button" class="btn btn-secondary btn-sm" title="ลบแถวนี้" onclick="cltDelRow(${g.s + k})">🗑</button></td></tr>`).join('')}</tbody></table></div>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="cltDrvAddRow(${g.s + g.n})">➕ เพิ่มแถวในตารางนี้</button></div>`).join('');
+    }
+    function cltDrvDraft() { const rows = cltTableDraft(); if (!rows.length) rows.push(['', '', '', '']); return rows; }
+    function cltDrvPurpose(el) { const rows = cltDrvDraft(), s = +el.dataset.s, n = +el.dataset.n; for (let i = s; i < s + n; i++) rows[i][0] = el.value; cltSyncButtons(); }
+    function cltDrvAddRow(at) { const rows = cltDrvDraft(); rows.splice(at, 0, [rows[at - 1][0], '', '', '']); cltRegrid(); }
+    function cltDrvAddGroup() {
+      const rows = cltDrvDraft();
+      // Purpose ใหม่ต้องไม่ซ้ำตารางสุดท้าย ไม่งั้นจะรวมเป็นตารางเดียวกัน
+      rows.push([rows[rows.length - 1][0] === '' ? ' ' : '', '', '', '']); cltRegrid();
+    }
+    function cltDrvDelGroup(s, n) { showConfirm('ลบ Purpose นี้และทุกแถวในตารางนี้ใช่หรือไม่?', () => { cltDrvDraft().splice(s, n); cltRegrid(); }); }
     function cltResultHtml(s, remote) {
       const k = s.kpi;
       if (!k) return '<div class="empty-state">ไม่พบตัวชี้วัดนี้ในปีงบนี้</div>';
@@ -4759,7 +4794,7 @@
     function cltInput(el) { clt.draft = { key: clt.sel, text: el.value }; cltSyncButtons(); }
     function cltTableDraft() {
       if (clt.draft && clt.draft.key === clt.sel && clt.draft.rows) return clt.draft.rows;
-      const rows = cltRows(cltItem(clt.sel).text).map(r => r.slice());
+      const raw = cltRows(cltItem(clt.sel).text), rows = (cltSpecOf(clt.sel).purpose ? cltDrvRows(raw) : raw).map(r => r.slice());
       clt.draft = { key: clt.sel, rows: rows };
       return rows;
     }
@@ -4769,7 +4804,11 @@
       rows[r][c] = el.value;
       cltSyncButtons();
     }
-    function cltRegrid() { const s = cltSpecOf(clt.sel); document.getElementById('clt-grid-body').innerHTML = cltGridRowsHtml(clt.draft.rows, s.cols.length); cltSyncButtons(); }
+    function cltRegrid() {
+      const s = cltSpecOf(clt.sel);
+      if (s.purpose) { document.getElementById('clt-drv').innerHTML = cltDrvHtml(clt.draft.rows); cltSyncButtons(); return; }
+      document.getElementById('clt-grid-body').innerHTML = cltGridRowsHtml(clt.draft.rows, s.cols.length); cltSyncButtons();
+    }
     function cltAddRow() { const rows = cltTableDraft(); const n = cltSpecOf(clt.sel).cols.length; if (rows.length === 0) rows.push(Array(n).fill('')); rows.push(Array(n).fill('')); cltRegrid(); }
     function cltDelRow(i) { const rows = cltTableDraft(); rows.splice(i, 1); cltRegrid(); }
     function cltSeedGroups() {
@@ -4915,16 +4954,18 @@
         flush();
       };
       // ตาราง: แบ่งแถวลงหลายสไลด์ให้พอดีความสูง (หัวตารางซ้ำ) — widths รวม 12.4 นิ้ว
-      const tableSlides = (title, cols, rows, widths, pt) => {
+      // top = ข้อความหัวตารางเต็มแถว (เช่น Purpose ของ Driver diagram) ซ้ำทุกสไลด์ของตาราง
+      const tableSlides = (title, cols, rows, widths, pt, top) => {
         pt = pt || 16;
         const hdr = cols.map(c => ({ text: docXml(c), options: { bold: true, fill: { color: 'DCFCE7' }, color: '14532D', align: 'center', valign: 'middle', fontFace: F, fontSize: pt, border: BORDER } }));
         const rowH = r => Math.max.apply(null, r.map((c, i) => est(c, widths[i] - 0.2, pt))) * pt * 1.25 / 72 + 0.14;
-        const avail = 5.75 - (Math.max.apply(null, cols.map((c, i) => est(c, widths[i] - 0.2, pt))) * pt * 1.25 / 72 + 0.14);
+        const topRow = top ? [{ text: docXml(top), options: { colspan: cols.length, bold: true, fill: { color: '14532D' }, color: 'FFFFFF', align: 'left', valign: 'middle', fontFace: F, fontSize: pt + 2, border: BORDER } }] : null;
+        const avail = 5.75 - (Math.max.apply(null, cols.map((c, i) => est(c, widths[i] - 0.2, pt))) * pt * 1.25 / 72 + 0.14) - (top ? est(top, 12.2, pt + 2) * (pt + 2) * 1.25 / 72 + 0.14 : 0);
         let page = [], used = 0, part = 0;
         const flush = () => {
           if (!page.length) return;
           const s = slide(title + (part > 0 ? ' (ต่อ)' : ''));
-          s.addTable([hdr].concat(page.map(r => r.map((c, i) => ({ text: docXml(c), options: { fontFace: F, fontSize: pt, color: '0F172A', valign: 'top', align: i === 0 ? 'left' : 'left', border: BORDER } })))),
+          s.addTable((topRow ? [topRow, hdr] : [hdr]).concat(page.map(r => r.map((c, i) => ({ text: docXml(c), options: { fontFace: F, fontSize: pt, color: '0F172A', valign: 'top', align: i === 0 ? 'left' : 'left', border: BORDER } })))),
             { x: 0.45, y: 1.1, w: 12.4, colW: widths, margin: [0.04, 0.08, 0.04, 0.08], autoPage: false });
           part++; page = []; used = 0;
         };
@@ -4975,7 +5016,11 @@
         const drv = cltRows(D('driver'));
         if (D('purpose').trim() || drv.length) {
           if (D('purpose').trim()) textSlides(g + ' · เป้าหมาย (Purpose)', [{ text: D('purpose') }]);
-          if (drv.length) tableSlides(g + ' · ปัจจัยขับเคลื่อน (Driver Diagram)', ['Primary driver', 'Secondary driver', 'Change idea / Intervention'], drv, [3.4, 4.0, 5.0]);
+          if (drv.length) {
+            const dr = cltDrvRows(drv);
+            cltDrvGroups(dr).forEach(gr => tableSlides(g + ' · ปัจจัยขับเคลื่อน (Driver Diagram)', ['Primary driver', 'Secondary driver', 'Change idea / Intervention'],
+              (rs => rs.length ? rs : [['', '', '']])(dr.slice(gr.s, gr.s + gr.n).map(r => r.slice(1)).filter(r => r.some(c => String(c).trim()))), [3.4, 4.0, 5.0], 16, gr.p.trim() ? 'Purpose: ' + gr.p.trim() : ''));
+          }
         }
         const fl = slide(g + ' · Process Flowchart ของการดูแลผู้ป่วย');
         fl.addText('(แทรกรูป Process Flowchart ที่นี่)', { x: 0.5, y: 3.0, w: 12.3, h: 1.0, fontFace: F, fontSize: 24, color: '94A3B8', align: 'center', italic: true });
