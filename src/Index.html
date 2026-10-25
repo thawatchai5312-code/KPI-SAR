@@ -4246,7 +4246,7 @@
     });
 
     // ---------- Export Word (.docx) — สร้างในเบราว์เซอร์ (ไลบรารี docx โหลดจาก CDN ตอนกด Export) ----------
-    const SAR_DOCX_URL = 'https://cdn.jsdelivr.net/npm/docx@9.5.1/dist/index.iife.js';
+    const SAR_DOCX_URL = 'https:\/\/cdn.jsdelivr.net/npm/docx@9.5.1/dist/index.iife.js';
     const DOC_FONT = 'TH SarabunPSK';
     function docLoadScript(url, globalName) {
       if (window[globalName]) return Promise.resolve();
@@ -4272,7 +4272,7 @@
     function sarChartPng(k, yl) {
       return new Promise((resolve, reject) => {
         const svg = generateSvgLineChart(k.years, k.target, yl)
-          .replace(/^<svg [^>]*>/, '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 230" width="1200" height="460" font-family="Sarabun, \'Noto Sans Thai\', Tahoma, sans-serif">');
+          .replace(/^<svg [^>]*>/, '<svg xmlns="http:\/\/www.w3.org/2000/svg" viewBox="0 0 600 230" width="1200" height="460" font-family="Sarabun, \'Noto Sans Thai\', Tahoma, sans-serif">');
         const img = new Image();
         img.onload = () => {
           const c = document.createElement('canvas');
@@ -4788,7 +4788,7 @@
     }
 
     // ---------- Export PowerPoint (.pptx) ----------
-    const CLT_PPTX_URL = 'https://cdn.jsdelivr.net/npm/pptxgenjs@4.0.1/dist/pptxgen.bundle.js';
+    const CLT_PPTX_URL = 'https:\/\/cdn.jsdelivr.net/npm/pptxgenjs@4.0.1/dist/pptxgen.bundle.js';
     // หัวข้อข้อความที่ยังว่างของกลุ่มโรคที่เลือก (ใช้เตือนก่อน Export)
     function cltMissing() {
       const out = [];
@@ -5586,8 +5586,8 @@
   <script>
     // ===================== ระบบสอนการใช้งาน (Guided Tour) =====================
     // ทำงานบนหน้าจอจริง: ไฮไลต์ส่วนต่าง ๆ ทีละขั้น (ไม่แก้ข้อมูลใด ๆ) · สิ้นสุดได้ทุกขั้น · เรียกซ้ำได้จากปุ่ม 🎓
-    const TOUR_MANUAL_FULL = 'https://claude.ai/artifact/D9J4BE8amE77v1xiPD1Sft';
-    const TOUR_MANUAL_QUICK = 'https://claude.ai/artifact/CTvPP71JP7fthnwRTe2R95';
+    const TOUR_MANUAL_FULL = 'https:\/\/claude.ai/artifact/D9J4BE8amE77v1xiPD1Sft';
+    const TOUR_MANUAL_QUICK = 'https:\/\/claude.ai/artifact/CTvPP71JP7fthnwRTe2R95';
     const tourState = { active: false, i: 0, steps: [], token: 0, timer: null, poll: null, el: null, step: null, ctx: null };
 
     const tourVisible = el => !!el && el.getClientRects().length > 0 && el.getBoundingClientRect().width > 0;
