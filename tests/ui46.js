@@ -64,7 +64,7 @@ const tA=C.createSession_(ad[0],ad[1]);
  const r1=await pg.evaluate(()=>({blocks:document.querySelectorAll('#rp-paper .pr-block').length,rows:document.querySelectorAll('#rp-paper table.pr-table')[0].querySelectorAll('tbody tr').length,size:rpt.size,sel:document.querySelector('#rp-pager-top .pager-size select').value,info:document.querySelector('#rp-pager-top .pager-info').textContent.trim(),bottom:!!document.querySelector('#rp-more .pager'),total:rptRowCount()}));
  assert(r1.size===10&&r1.sel==='10'&&r1.blocks<=10&&r1.bottom&&/แสดง 1–10 จาก/.test(r1.info),JSON.stringify(r1));console.log('report page 1',r1.info);
  // numbers on page 2 continue (full-report numbers, not restarted)
- const full=await pg.evaluate(()=>{const d=document.createElement('div');d.innerHTML=buildPrintHtmlRaw(rpt.opts,true,0);return [...d.querySelectorAll('.pr-kpi-title')].map(x=>thaiDigitsHtml(x.textContent.split(' ')[0]))});
+ const full=await pg.evaluate(()=>{const d=document.createElement('div');d.innerHTML=buildPrintHtmlRaw(rpt.opts,true,0);return [...d.querySelectorAll('.pr-kpi-title')].map(x=>x.textContent.split(' ')[0])});
  await pg.click('#rp-pager-top .page-btn:has-text("2")');await pg.waitForTimeout(500);
  const p2=await pg.evaluate(()=>[...document.querySelectorAll('#rp-paper .pr-kpi-title')].map(x=>x.textContent.split(' ')[0]));
  assert.deepStrictEqual(p2,full.slice(10,20).map(x=>x),'page 2 numbers = full report numbers 11..20 '+p2.join(','));
