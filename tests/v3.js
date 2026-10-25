@@ -1,0 +1,16 @@
+const h=require('./harness4');const C=h.ctx;const assert=require('assert');
+const U=h.sheets.Users.d;
+const tok=C.createSession_('Admin',U.find(r=>r[0]==='Admin')[1]);
+const pv=C.tidyPreview(tok);assert(pv.success,pv.message);console.log('preview',JSON.stringify(pv.preview.fys));
+console.log(pv.preview.samples.cats.slice(0,12).map(x=>x.n+'  '+x.map).join('\n'));
+const c=C.tidyCommit(tok);assert(c.success,c.message);console.log('commit',JSON.stringify(c.wrote));
+const p2=C.tidyPreview(tok);console.log('2nd hasWork',p2.preview.hasWork,JSON.stringify(p2.preview.fys.map(f=>[f.fy,f.rows])));
+assert(!p2.preview.hasWork);
+console.log('sheets',Object.keys(h.sheets).filter(n=>/สำรอง/.test(n)).join(','));
+const n=C.nsoImportPreview(tok);console.log('nso',n.success,JSON.stringify(n.preview&&n.preview.counts));
+const Y=h.sheets['ปีงบ 2570'].d.slice(1).filter(r=>r[0]);
+const cats=r=>C.kpiCats_({cats:[{part:r[2],category:r[3]}].concat(C.parseExtraCats_(r[36]))});
+let nsoCat=0,qa=0,qaIds=new Set();Y.forEach(r=>{const cs=cats(r);if(cs.some(c=>c.part==='NSO'))nsoCat++;if(cs.some(c=>/ QA$/.test(c.part))){qa++;}});
+console.log('rows',Y.length,'with NSO cat',nsoCat,'with QA cat',qa);
+assert(nsoCat===0);
+require('fs').writeFileSync('v3out.json',JSON.stringify({y70:h.sheets['ปีงบ 2570'].d,y69:h.sheets['ปีงบ 2569'].d}));

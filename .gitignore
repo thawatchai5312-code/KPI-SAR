@@ -1,2 +1,6 @@
 node_modules/
 .clasprc.json
+
+# ข้อมูลทดสอบ (ข้อมูลจริงของ รพ.) และผลลัพธ์เทสต์ — ห้ามขึ้น git (repo เป็น public)
+tests/fixtures/
+tests/out/

@@ -1,0 +1,20 @@
+// NSO import of brand-new rows → tidy places them per view rules
+const h=require('./harness4');const C=h.ctx;const assert=require('assert');
+const U=h.sheets.Users.d;const tok=C.createSession_('Admin',U.find(r=>r[0]==='Admin')[1]);
+assert(C.tidyCommit(tok).success);
+const mkRow=(id,part,cat,name)=>{const r=Array(27).fill('');r[0]=id;r[2]=part;r[3]=cat;r[4]=name;r[5]='80 %';r[26]='ER';return r;};
+h.nsoSheet.d.push(mkRow('KPI-9000000000001','ER QA','มิติที่ 3 ด้านประสิทธิภาพของการปฏิบัติงาน','ทดสอบตัวใหม่ QA ของ ER ร้อยละความครบถ้วนของการส่งรายงาน'));
+h.nsoSheet.d.push(mkRow('KPI-9000000000002','ER','Triage','ทดสอบตัวใหม่ ร้อยละการคัดแยกถูกต้อง'));
+h.nsoSheet.d.push(mkRow('KPI-9000000000003','IC','มิติ 2 คุณภาพ','ทดสอบตัวใหม่ IC อัตราการติดเชื้อ'));
+const r=C.nsoImportCommit(tok);assert(r.success,r.message);console.log('import',JSON.stringify(r.wrote||r.counts||{}).slice(0,200));
+const S=h.sheets['ปีงบ 2569'];
+const find=src=>{const sync=C.nsoReadSync_();const our=sync[src].ourId;return C.rowToKpi_(S.d.find(x=>x[0]===our));};
+const show=k=>k.cats.map(c=>c.part+'›'+c.category).join(' ; ')+' ['+k.levels+']';
+const a=find('KPI-9000000000001'),b=find('KPI-9000000000002'),c=find('KPI-9000000000003');
+console.log(show(a));console.log(show(b));console.log(show(c));
+assert(a.cats.length===1&&a.cats[0].part==='ER QA'&&a.cats[0].category==='มิติที่ 3 ด้านประสิทธิภาพของการปฏิบัติงาน');
+assert(b.cats.length===1&&b.cats[0].part==='ER'&&b.cats[0].category==='Triage');
+assert(c.cats.some(x=>x.part==='IC QA'&&/^มิติที่ 2/.test(x.category))&&c.cats.some(x=>x.part==='ER QA')&&!c.cats.some(x=>x.part==='ER'));
+assert(a.levels.includes('QA-หน่วยงาน')&&c.levels.includes('QA-หน่วยงาน'));
+const p=C.tidyPreview(tok);assert(!p.preview.hasWork,'idempotent after import');
+console.log('ALL OK');
