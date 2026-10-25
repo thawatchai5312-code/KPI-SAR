@@ -11,7 +11,7 @@
 - หลังแก้โค้ดใน `src/` เสร็จและเทสต์ผ่าน: `npm run deploy` → `git commit` → `git push -u origin claude/apps-script-auto-deploy-nhxswh`
   (งานเอกสาร/เทสต์ล้วนไม่ต้อง deploy) — **ห้ามสร้าง Pull Request** เว้นแต่ผู้ใช้สั่ง
 - ทำงานบน branch `claude/apps-script-auto-deploy-nhxswh` (เป็น default branch ของ repo)
-- เมื่อฟีเจอร์ที่ผู้ใช้เห็นเปลี่ยน ให้อัปเดตคู่มือที่ลิงก์เดิม (Artifact — publish ทับ URL เดิม ห้ามสร้างลิงก์ใหม่)
+- **คู่มือ: อัปเดตเฉพาะเมื่อผู้ใช้สั่งเท่านั้น** (ผู้ใช้แก้ระบบต่อเนื่อง การอัปเดตคู่มือทุกครั้งเปลือง token) — แก้ระบบเสร็จ **ไม่ต้อง**แตะคู่มือเอง ตอนผู้ใช้สั่งให้อัปเดต: publish ทับลิงก์เดิม (Artifact) ห้ามสร้างลิงก์ใหม่
   - คู่มือฉบับเต็ม: https://claude.ai/artifact/D9J4BE8amE77v1xiPD1Sft
   - คู่มือย่อ: https://claude.ai/artifact/CTvPP71JP7fthnwRTe2R95
   - อ่านของเดิมด้วย Artifact `read` ก่อนแก้/เปลี่ยนรูป · **ห้ามใช้ชื่อจริงของบุคลากร**ในคู่มือ/ภาพตัวอย่าง (ใช้ "มานี (ชื่อสมมติ)")
