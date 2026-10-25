@@ -4260,7 +4260,7 @@
     }
     function docBusyText(msg) { const el = document.getElementById('busy-text'); if (el) el.innerText = msg; }
     function docYield() { return new Promise(r => setTimeout(r, 0)); }
-    function docXml(s) { return String(s === null || s === undefined ? '' : s).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F￾￿]/g, ''); }
+    function docXml(s) { return String(s === null || s === undefined ? '' : s).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFE\uFFFF]/g, ''); }
     function downloadBlob(blob, name) {
       const url = URL.createObjectURL(blob), a = document.createElement('a');
       a.href = url; a.download = name; a.style.display = 'none';
