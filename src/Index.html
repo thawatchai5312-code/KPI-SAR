@@ -394,6 +394,16 @@
     .clt-drv-head { display: flex; gap: 8px; align-items: flex-start; margin-bottom: 6px; }
     .clt-drv-head b { color: #14532d; white-space: nowrap; padding-top: 6px; }
     .clt-drv-head textarea { flex: 1; font-weight: 600; resize: vertical; }
+    .clt-drv-pk { margin-bottom: 8px; }
+    .clt-kcell { min-width: 130px; }
+    .clt-chips { display: flex; flex-wrap: wrap; gap: 3px; margin-bottom: 3px; }
+    .clt-chip { background: #dcfce7; color: #14532d; border-radius: 10px; padding: 1px 4px 1px 8px; font-size: 12px; display: inline-flex; gap: 4px; align-items: center; }
+    .clt-chip b { cursor: pointer; color: #b91c1c; padding: 0 3px; }
+    .clt-kpick summary { cursor: pointer; font-size: 12.5px; color: #15803d; font-weight: 600; }
+    .clt-klist { max-height: 180px; overflow-y: auto; border: 1px solid #cbd5e1; border-radius: 6px; padding: 4px; background: #fff; margin-top: 3px; }
+    .clt-klist label { display: block; font-size: 12.5px; padding: 2px 0; cursor: pointer; }
+    .clt-ro { text-align: left; font-size: 13.5px; white-space: pre-wrap; color: #334155; background: #f1f5f9; border-radius: 6px; padding: 4px 6px; margin-bottom: 3px; }
+    .clt-auto td:first-child select { width: 100%; min-width: 150px; }
     @media (max-width: 1000px) {
       #sar-side, #clt-side { position: static; max-height: none; }
       #sar-side.collapsed #sar-controls, #clt-side.collapsed #clt-controls { display: none; }
@@ -4449,9 +4459,9 @@
       { f: 'context', title: 'บริบท (Context)', type: 'text', hint: 'ลักษณะพื้นที่/ระยะทางส่งต่อ ระบบการดูแลที่มี ทีมที่รับผิดชอบ สถิติที่ผ่านมา' },
       { f: 'challenge', title: 'ประเด็น/ความท้าทาย และความเสี่ยงสำคัญ', type: 'text', hint: 'ประเด็นท้าทายด้านการวินิจฉัย การรักษา ศักยภาพ · ตามด้วยความเสี่ยงสำคัญ (บรรทัดละข้อ)' },
       { f: 'purpose', title: 'เป้าหมาย (Purpose)', type: 'text', hint: 'เป้าหมายหลักของการดูแลโรคนี้ เช่น ผู้ป่วยปลอดภัย เข้าถึงรวดเร็ว' },
-      { f: 'driver', title: 'ปัจจัยขับเคลื่อน (Driver Diagram)', type: 'table', cols: ['Purpose', 'Primary driver', 'Secondary driver', 'Change idea / Intervention'], purpose: true, hint: '1 Purpose = 1 ตาราง · โรคหนึ่งมีได้หลาย Purpose (กด ➕ เพิ่ม Purpose)' },
+      { f: 'driver', title: 'ปัจจัยขับเคลื่อน (Driver Diagram)', type: 'table', cols: ['Purpose', 'Primary driver', 'Secondary driver', 'Change idea / Intervention'], purpose: true, hint: '1 Purpose = 1 ตาราง · โรคหนึ่งมีได้หลาย Purpose (กด ➕ เพิ่ม Purpose) · กด ➕ ตัวชี้วัด เพื่อเลือกตัวชี้วัดของโรคนี้ (เลือกได้หลายตัว) — ตัวชี้วัดที่เลือกจะขึ้นในหน้าการจัดการกระบวนการให้อัตโนมัติ' },
       { f: 'flow', title: 'Process Flowchart', type: 'flow' },
-      { f: 'pm', title: 'การจัดการกระบวนการ (Process Management)', type: 'table', cols: ['กระบวนการ', 'ข้อกำหนดของกระบวนการ', 'ตัวชี้วัดของกระบวนการ / เป้าหมาย', 'การออกแบบกระบวนการ'] },
+      { f: 'pm', title: 'การจัดการกระบวนการ (Process Management)', type: 'table', cols: ['กระบวนการ', 'ข้อกำหนดของกระบวนการ', 'ตัวชี้วัดของกระบวนการ / เป้าหมาย', 'การออกแบบกระบวนการ'], pm: true, hint: 'แถวตามตัวชี้วัดที่เลือกไว้ในหน้าปัจจัยขับเคลื่อน (Driver Diagram) — กระบวนการ ตัวชี้วัด/เป้าหมาย และ Change idea มาให้อัตโนมัติ · กรอกเฉพาะข้อกำหนดของกระบวนการและคำอธิบายเพิ่มเติม' },
       { f: 'results', title: 'ผลลัพธ์รายตัวชี้วัด', type: 'results' },
       { f: 'plan', title: 'แผนพัฒนาต่อไป', type: 'text', hint: 'แผนพัฒนา/นวัตกรรมที่จะทำต่อ' }
     ];
@@ -4476,7 +4486,10 @@
     }
     function cltCanUse() { return !!currentUser && (isPrivilegedUser() || (currentUser.tier === 'head' && (currentUser.depts || []).indexOf('PCT') !== -1)); }
     function cltItem(key) { return clt.items[key] || { text: '', rev: 0, at: '', by: '' }; }
-    function cltHasText(key) { return !!cltItem(key).text.trim(); }
+    function cltHasText(key) {
+      if (/^D\|[^|]+\|pm$/.test(key) && cltPmDisplayRows(key.split('|')[1]).length) return true; // Process Management ดึงจาก Driver อัตโนมัติ
+      return !!cltItem(key).text.trim();
+    }
     function cltGroups() {
       const g = new Set();
       clt.kpis.forEach(k => k.groups.forEach(x => g.add(x)));
@@ -4493,6 +4506,19 @@
       try { const x = JSON.parse(cltItem('S|kpis').text || '[]'); return new Set(Array.isArray(x) ? x : []); } catch (e) { return new Set(); }
     }
     function cltKpisPicked(group) { const ex = cltExcluded(); return cltKpisOf(group).filter(k => !ex.has(group + '|' + k.id)); }
+    // ตัวชี้วัดในตาราง Driver Diagram: แถวละ 8 ช่อง [Purpose, Primary, Secondary, Change idea, KPI ของ Purpose, KPI ของ Primary, KPI ของ Secondary, KPI ของ Change idea] — ตัวชี้วัดเก็บเป็นรหัสคั่นด้วย ","
+    // ตาราง Process Management: แถวละ 5 ช่อง [กระบวนการ(ถ้าแก้เอง), ข้อกำหนด, (ว่าง), อธิบายเพิ่มเติม, รหัสตัวชี้วัด] — มีรหัส = แถวที่ผูกกับ Driver · ไม่มีรหัส = แถวเพิ่มเอง [กระบวนการ, ข้อกำหนด, ตัวชี้วัด, การออกแบบ]
+    const CLT_PM_PROCS = ['Access & Entry', 'Assessment', 'Diagnosis', 'Plan of care', 'Care', 'Discharge planning', 'General care', 'Care of high risk', 'Nutrition', 'Rehabilitation', 'Information & Empowerment', 'Continuity of care', 'Health promotion'];
+    const CLT_DIM_PROC = { A: 'Access & Entry', B: 'Continuity of care', C: 'Plan of care', D: 'Care', E: 'Care', F: 'Care of high risk', G: 'Information & Empowerment', H: 'Health promotion' };
+    function cltIds(v) { return String(v || '').split(',').map(x => x.trim()).filter(Boolean); }
+    function cltKpiById(id) { return clt.kpis.find(k => k.id === id) || null; }
+    function cltRowWidth(key) { return /\|driver$/.test(key) ? 8 : /\|pm$/.test(key) ? 5 : (cltSpecOf(key).cols || []).length; }
+    function cltNormRows(key, rows) {
+      if (!/\|(driver|pm)$/.test(key)) return rows;
+      const n = cltRowWidth(key);
+      if (/\|driver$/.test(key)) rows = rows.map(r => r.length >= 4 ? r.slice() : [''].concat(r)); // ข้อมูลเดิมที่ยังไม่มีช่อง Purpose (3 ช่อง)
+      return rows.map(r => { const a = r.slice(0, n).map(c => String(c === null || c === undefined ? '' : c)); while (a.length < n) a.push(''); return a; });
+    }
     function cltKpisOf(group) {
       return clt.kpis.filter(k => k.groups.indexOf(group) !== -1)
         .sort((a, b) => ((a.order === null ? 1e9 : a.order) - (b.order === null ? 1e9 : b.order)) || a.row - b.row);
@@ -4652,10 +4678,12 @@
       const d = clt.draft;
       if (!d) return false;
       const saved = cltItem(d.key).text;
-      return d.rows ? cltCleanRows(d.rows) !== saved : d.text !== saved;
+      return d.rows ? cltCleanRows(d.rows, d.key) !== cltCleanRows(cltNormRows(d.key, cltRows(saved)), d.key) : d.text !== saved;
     }
-    function cltCleanRows(rows) {
-      const out = rows.map(r => r.map(c => String(c || '').trim())).filter(r => r.some(c => c));
+    function cltCleanRows(rows, key) {
+      let out = rows.map(r => r.map(c => String(c || '').trim()));
+      if (/\|pm$/.test(key || '')) out = out.filter(r => !r[4] || r.slice(0, 4).some(c => c)); // แถวผูกตัวชี้วัดที่ยังไม่ได้กรอกอะไร = ไม่ต้องเก็บ
+      out = out.filter(r => r.some(c => c));
       return out.length ? JSON.stringify(out) : '';
     }
     function cltSelect(key) {
@@ -4715,9 +4743,14 @@
           `<textarea id="clt-text" class="editable-input sar-pdca" rows="14" oninput="cltInput(this)">${esc(val)}</textarea>` + cltActionsHtml(key);
       }
       if (s.type === 'table' && s.purpose) {
-        const rows = clt.draft && clt.draft.key === key ? clt.draft.rows : cltDrvRows(cltRows(cltItem(key).text));
+        const rows = clt.draft && clt.draft.key === key ? clt.draft.rows : cltNormRows(key, cltRows(cltItem(key).text));
         return head + `<p class="hint">${esc(s.hint)}</p>` + remote + `<div id="clt-drv">${cltDrvHtml(rows)}</div>` +
           cltActionsHtml(key, `<button type="button" class="btn btn-secondary btn-sm" onclick="cltDrvAddGroup()">➕ เพิ่ม Purpose (ตารางใหม่)</button>`);
+      }
+      if (s.type === 'table' && s.pm) {
+        const rows = clt.draft && clt.draft.key === key ? clt.draft.rows : cltNormRows(key, cltRows(cltItem(key).text));
+        return head + `<p class="hint">${esc(s.hint)}</p>` + remote + `<div id="clt-pm" style="overflow-x:auto;">${cltPmHtml(rows, s.group)}</div>` +
+          cltActionsHtml(key, `<button type="button" class="btn btn-secondary btn-sm" onclick="cltPmAddRow()">➕ เพิ่มแถวเอง (นอกเหนือจากตัวชี้วัด)</button>`);
       }
       if (s.type === 'table') {
         const rows = clt.draft && clt.draft.key === key ? clt.draft.rows : cltRows(cltItem(key).text);
@@ -4734,32 +4767,111 @@
       return list.map((r, i) => `<tr>${Array.from({ length: n }, (_, c) => `<td><textarea class="editable-input" rows="3" data-r="${i}" data-c="${c}" oninput="cltCell(this)">${esc(r[c] || '')}</textarea></td>`).join('')}
         <td><button type="button" class="btn btn-secondary btn-sm" title="ลบแถวนี้" onclick="cltDelRow(${i})">🗑</button></td></tr>`).join('');
     }
-    // Driver diagram: แถวละ [Purpose, Primary, Secondary, Change idea] — แถวติดกันที่ Purpose เดียวกัน = 1 ตาราง (ข้อมูลเดิม 3 ช่อง = ยังไม่มี Purpose)
-    function cltDrvRows(rows) { return rows.map(r => r.length >= 4 ? r.slice(0, 4) : [''].concat(r, ['', '', '']).slice(0, 4)); }
+    // Driver diagram: แถวติดกันที่ Purpose เดียวกัน = 1 ตาราง (ข้อมูลเดิม 3 ช่อง = ยังไม่มี Purpose) · แต่ละช่องมีตัวชี้วัดของโรคนั้นได้หลายตัว
+    function cltDrvRows(rows) { return cltNormRows('D|x|driver', rows); }
     function cltDrvGroups(rows) {
       const out = [];
       rows.forEach((r, i) => { const last = out[out.length - 1]; if (last && last.p === r[0]) last.n++; else out.push({ p: r[0], s: i, n: 1 }); });
       return out;
     }
-    function cltDrvHtml(rows) {
-      const list = rows.length ? rows : [['', '', '', '']];
-      return cltDrvGroups(list).map((g, gi) => `<div class="clt-drv">
-        <div class="clt-drv-head"><b>Purpose ${gi + 1}</b><textarea class="editable-input" rows="2" data-s="${g.s}" data-n="${g.n}" placeholder="เป้าหมาย (Purpose) ของตารางนี้" oninput="cltDrvPurpose(this)">${esc(g.p)}</textarea>
-          <button type="button" class="btn btn-secondary btn-sm" title="ลบ Purpose นี้ทั้งตาราง" onclick="cltDrvDelGroup(${g.s}, ${g.n})">🗑 ลบตาราง</button></div>
-        <div style="overflow-x:auto;"><table class="clt-grid"><thead><tr><th>Primary driver</th><th>Secondary driver</th><th>Change idea / Intervention</th><th></th></tr></thead><tbody>${list.slice(g.s, g.s + g.n).map((r, k) =>
-          `<tr>${[1, 2, 3].map(c => `<td><textarea class="editable-input" rows="3" data-r="${g.s + k}" data-c="${c}" oninput="cltCell(this)">${esc(r[c] || '')}</textarea></td>`).join('')}
-          <td><button type="button" class="btn btn-secondary btn-sm" title="ลบแถวนี้" onclick="cltDelRow(${g.s + k})">🗑</button></td></tr>`).join('')}</tbody></table></div>
-        <button type="button" class="btn btn-secondary btn-sm" onclick="cltDrvAddRow(${g.s + g.n})">➕ เพิ่มแถวในตารางนี้</button></div>`).join('');
+    function cltChipsHtml(ids) {
+      return ids.map(id => { const k = cltKpiById(id); return `<span class="clt-chip" title="${esc(k ? k.name : id)}">${esc(k ? prShort(k.name, 30) : id)}<b data-id="${esc(id)}" onclick="cltKpiDrop(this)" title="เอาออก">×</b></span>`; }).join('');
     }
-    function cltDrvDraft() { const rows = cltTableDraft(); if (!rows.length) rows.push(['', '', '', '']); return rows; }
+    function cltKcellHtml(g, ids, attrs) {
+      const list = cltKpisPicked(g);
+      return `<div class="clt-kcell" ${attrs}><div class="clt-chips">${cltChipsHtml(ids)}</div><details class="clt-kpick"><summary>➕ ตัวชี้วัด</summary><div class="clt-klist">${list.length ? list.map(k =>
+        `<label title="${esc(k.name)}"><input type="checkbox" value="${esc(k.id)}"${ids.indexOf(k.id) !== -1 ? ' checked' : ''} onchange="cltKpiToggle(this)"> ${esc(prShort(k.name, 90))}</label>`).join('') : '<span class="hint">ยังไม่มีตัวชี้วัดของโรคนี้ที่ติ๊กใส่เอกสาร</span>'}</div></details></div>`;
+    }
+    function cltDrvHtml(rows) {
+      const list = rows.length ? rows : [Array(8).fill('')], g = cltSpecOf(clt.sel).group;
+      return cltDrvGroups(list).map((gr, gi) => `<div class="clt-drv">
+        <div class="clt-drv-head"><b>Purpose ${gi + 1}</b><textarea class="editable-input" rows="2" data-s="${gr.s}" data-n="${gr.n}" placeholder="เป้าหมาย (Purpose) ของตารางนี้" oninput="cltDrvPurpose(this)">${esc(gr.p)}</textarea>
+          <button type="button" class="btn btn-secondary btn-sm" title="ลบ Purpose นี้ทั้งตาราง" onclick="cltDrvDelGroup(${gr.s}, ${gr.n})">🗑 ลบตาราง</button></div>
+        <div class="clt-drv-pk"><span class="hint">ตัวชี้วัดของ Purpose:</span> ${cltKcellHtml(g, cltIds(list[gr.s][4]), `data-s="${gr.s}" data-n="${gr.n}" data-k="4"`)}</div>
+        <div style="overflow-x:auto;"><table class="clt-grid"><thead><tr><th>Primary driver</th><th>ตัวชี้วัด</th><th>Secondary driver</th><th>ตัวชี้วัด</th><th>Change idea / Intervention</th><th>ตัวชี้วัด</th><th></th></tr></thead><tbody>${list.slice(gr.s, gr.s + gr.n).map((r, k) => {
+          const i = gr.s + k, tx = c => `<td><textarea class="editable-input" rows="3" data-r="${i}" data-c="${c}" oninput="cltCell(this)">${esc(r[c] || '')}</textarea></td>`, kc = c => `<td class="clt-ktd">${cltKcellHtml(g, cltIds(r[c]), `data-r="${i}" data-k="${c}"`)}</td>`;
+          return `<tr>${tx(1)}${kc(5)}${tx(2)}${kc(6)}${tx(3)}${kc(7)}<td><button type="button" class="btn btn-secondary btn-sm" title="ลบแถวนี้" onclick="cltDelRow(${i})">🗑</button></td></tr>`;
+        }).join('')}</tbody></table></div>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="cltDrvAddRow(${gr.s + gr.n})">➕ เพิ่มแถวในตารางนี้</button></div>`).join('');
+    }
+    function cltDrvDraft() { const rows = cltTableDraft(); if (!rows.length) rows.push(Array(8).fill('')); return rows; }
     function cltDrvPurpose(el) { const rows = cltDrvDraft(), s = +el.dataset.s, n = +el.dataset.n; for (let i = s; i < s + n; i++) rows[i][0] = el.value; cltSyncButtons(); }
-    function cltDrvAddRow(at) { const rows = cltDrvDraft(); rows.splice(at, 0, [rows[at - 1][0], '', '', '']); cltRegrid(); }
+    function cltDrvAddRow(at) { const rows = cltDrvDraft(); rows.splice(at, 0, [rows[at - 1][0], '', '', '', rows[at - 1][4], '', '', '']); cltRegrid(); }
     function cltDrvAddGroup() {
       const rows = cltDrvDraft();
       // Purpose ใหม่ต้องไม่ซ้ำตารางสุดท้าย ไม่งั้นจะรวมเป็นตารางเดียวกัน
-      rows.push([rows[rows.length - 1][0] === '' ? ' ' : '', '', '', '']); cltRegrid();
+      rows.push([rows[rows.length - 1][0] === '' ? ' ' : '', '', '', '', '', '', '', '']); cltRegrid();
     }
     function cltDrvDelGroup(s, n) { showConfirm('ลบ Purpose นี้และทุกแถวในตารางนี้ใช่หรือไม่?', () => { cltDrvDraft().splice(s, n); cltRegrid(); }); }
+    // เลือก/เอาตัวชี้วัดออกของช่อง (ไม่วาดตารางใหม่ — รายการที่เปิดอยู่จะได้ไม่ปิด)
+    function cltKcellSet(cell, fn) {
+      const rows = cltDrvDraft(), k = +cell.dataset.k;
+      const idx = cell.dataset.s !== undefined ? Array.from({ length: +cell.dataset.n }, (_, j) => +cell.dataset.s + j) : [+cell.dataset.r];
+      const ids = fn(cltIds(rows[idx[0]][k]));
+      idx.forEach(i => { rows[i][k] = ids.join(','); });
+      cell.querySelector('.clt-chips').innerHTML = cltChipsHtml(ids);
+      cell.querySelectorAll('input[type=checkbox]').forEach(cb => { cb.checked = ids.indexOf(cb.value) !== -1; });
+      cltSyncButtons();
+    }
+    function cltKpiToggle(cb) { const id = cb.value, on = cb.checked; cltKcellSet(cb.closest('.clt-kcell'), ids => on ? (ids.indexOf(id) === -1 ? ids.concat(id) : ids) : ids.filter(x => x !== id)); }
+    function cltKpiDrop(b) { const id = b.dataset.id; cltKcellSet(b.closest('.clt-kcell'), ids => ids.filter(x => x !== id)); }
+
+    // ---- การจัดการกระบวนการ (Process Management): แถวตามตัวชี้วัดที่เลือกใน Driver (อัตโนมัติ) + แถวที่เพิ่มเอง
+    function cltDrvSaved(g) { return cltNormRows('D|' + g + '|driver', cltRows(cltItem('D|' + g + '|driver').text)); }
+    function cltDrvKpiIds(g) {
+      const out = [];
+      cltDrvSaved(g).forEach(r => [4, 5, 6, 7].forEach(c => cltIds(r[c]).forEach(id => { if (out.indexOf(id) === -1) out.push(id); })));
+      return out.filter(id => cltKpiById(id));
+    }
+    function cltPmIdeas(g, id) { // Change idea ของแถว Driver ที่เลือกตัวชี้วัดนี้
+      const seen = [];
+      cltDrvSaved(g).forEach(r => {
+        if (![4, 5, 6, 7].some(c => cltIds(r[c]).indexOf(id) !== -1)) return;
+        const t = String(r[3]).trim();
+        if (t && seen.indexOf(t) === -1) seen.push(t);
+      });
+      return seen.join('\n');
+    }
+    function cltPmIndicator(k) { return k.name + (k.target ? ' (เป้าหมาย ' + k.target + ')' : ''); }
+    // แถวที่แสดง/ส่งออก: [กระบวนการ, ข้อกำหนด, ตัวชี้วัด/เป้าหมาย, การออกแบบ, รหัสตัวชี้วัด(แถวอัตโนมัติ)]
+    function cltPmDisplayRows(g, rows) {
+      rows = rows || cltNormRows('D|' + g + '|pm', cltRows(cltItem('D|' + g + '|pm').text));
+      const out = [];
+      cltDrvKpiIds(g).forEach(id => {
+        const k = cltKpiById(id), sv = rows.find(r => r[4] === id) || ['', '', '', '', id];
+        out.push([sv[0] || CLT_DIM_PROC[cltDimOf(k)], sv[1], cltPmIndicator(k), [cltPmIdeas(g, id), sv[3]].filter(x => String(x).trim()).join('\n'), id]);
+      });
+      rows.forEach(r => { if (!r[4]) out.push([r[0], r[1], r[2], r[3], '']); });
+      return out;
+    }
+    function cltPmHtml(rows, g) {
+      const ids = cltDrvKpiIds(g);
+      const ta = (attrs, v, ph) => `<textarea class="editable-input" rows="3" ${attrs}${ph ? ` placeholder="${ph}"` : ''}>${esc(v || '')}</textarea>`;
+      let h = '';
+      if (!ids.length) h += '<div class="pr-note">ยังไม่ได้เลือกตัวชี้วัดในหน้า "ปัจจัยขับเคลื่อน (Driver Diagram)" ของโรคนี้ — เลือกแล้วแถวจะขึ้นที่นี่ให้อัตโนมัติ (บันทึกหน้า Driver ก่อน)</div>';
+      h += '<table class="clt-grid"><thead><tr>' + ['กระบวนการ', 'ข้อกำหนดของกระบวนการ', 'ตัวชี้วัดของกระบวนการ / เป้าหมาย', 'การออกแบบกระบวนการ'].map(c => `<th>${c}</th>`).join('') + '<th></th></tr></thead><tbody>';
+      ids.forEach(id => {
+        const k = cltKpiById(id), sv = rows.find(r => r[4] === id) || ['', '', '', '', id], dflt = CLT_DIM_PROC[cltDimOf(k)], ideas = cltPmIdeas(g, id);
+        const opts = CLT_PM_PROCS.concat(sv[0] && CLT_PM_PROCS.indexOf(sv[0]) === -1 ? [sv[0]] : []);
+        h += `<tr class="clt-auto"><td><select class="editable-input" data-id="${esc(id)}" data-f="0" onchange="cltPmSet(this)"><option value="">${esc(dflt)} (ตามมิติ)</option>${opts.map(o => `<option value="${esc(o)}"${sv[0] === o ? ' selected' : ''}>${esc(o)}</option>`).join('')}</select></td>
+          <td>${ta(`data-id="${esc(id)}" data-f="1" oninput="cltPmSet(this)"`, sv[1])}</td>
+          <td class="clt-ro">${esc(cltPmIndicator(k))}</td>
+          <td>${ideas ? `<div class="clt-ro">${esc(ideas).replace(/\n/g, '<br>')}</div>` : ''}${ta(`data-id="${esc(id)}" data-f="3" oninput="cltPmSet(this)"`, sv[3], 'อธิบายเพิ่มเติม')}</td><td></td></tr>`;
+      });
+      rows.forEach((r, i) => {
+        if (r[4]) return;
+        h += `<tr>${[0, 1, 2, 3].map(c => `<td>${ta(`data-r="${i}" data-c="${c}" oninput="cltCell(this)"`, r[c])}</td>`).join('')}<td><button type="button" class="btn btn-secondary btn-sm" title="ลบแถวนี้" onclick="cltDelRow(${i})">🗑</button></td></tr>`;
+      });
+      return h + '</tbody></table>';
+    }
+    function cltPmSet(el) {
+      const rows = cltTableDraft(), id = el.dataset.id;
+      let r = rows.find(x => x[4] === id);
+      if (!r) { r = ['', '', '', '', id]; rows.push(r); }
+      r[+el.dataset.f] = el.value;
+      cltSyncButtons();
+    }
+    function cltPmAddRow() { cltTableDraft().push(['', '', '', '', '']); cltRegrid(); }
     function cltResultHtml(s, remote) {
       const k = s.kpi;
       if (!k) return '<div class="empty-state">ไม่พบตัวชี้วัดนี้ในปีงบนี้</div>';
@@ -4794,12 +4906,12 @@
     function cltInput(el) { clt.draft = { key: clt.sel, text: el.value }; cltSyncButtons(); }
     function cltTableDraft() {
       if (clt.draft && clt.draft.key === clt.sel && clt.draft.rows) return clt.draft.rows;
-      const raw = cltRows(cltItem(clt.sel).text), rows = (cltSpecOf(clt.sel).purpose ? cltDrvRows(raw) : raw).map(r => r.slice());
+      const rows = cltNormRows(clt.sel, cltRows(cltItem(clt.sel).text)).map(r => r.slice());
       clt.draft = { key: clt.sel, rows: rows };
       return rows;
     }
     function cltCell(el) {
-      const rows = cltTableDraft(), r = +el.dataset.r, c = +el.dataset.c, n = cltSpecOf(clt.sel).cols.length;
+      const rows = cltTableDraft(), r = +el.dataset.r, c = +el.dataset.c, n = cltRowWidth(clt.sel);
       while (rows.length <= r) rows.push(Array(n).fill(''));
       rows[r][c] = el.value;
       cltSyncButtons();
@@ -4807,9 +4919,10 @@
     function cltRegrid() {
       const s = cltSpecOf(clt.sel);
       if (s.purpose) { document.getElementById('clt-drv').innerHTML = cltDrvHtml(clt.draft.rows); cltSyncButtons(); return; }
+      if (s.pm) { document.getElementById('clt-pm').innerHTML = cltPmHtml(clt.draft.rows, s.group); cltSyncButtons(); return; }
       document.getElementById('clt-grid-body').innerHTML = cltGridRowsHtml(clt.draft.rows, s.cols.length); cltSyncButtons();
     }
-    function cltAddRow() { const rows = cltTableDraft(); const n = cltSpecOf(clt.sel).cols.length; if (rows.length === 0) rows.push(Array(n).fill('')); rows.push(Array(n).fill('')); cltRegrid(); }
+    function cltAddRow() { const rows = cltTableDraft(); const n = cltRowWidth(clt.sel); if (rows.length === 0) rows.push(Array(n).fill('')); rows.push(Array(n).fill('')); cltRegrid(); }
     function cltDelRow(i) { const rows = cltTableDraft(); rows.splice(i, 1); cltRegrid(); }
     function cltSeedGroups() {
       const rows = cltTableDraft().filter(r => r.some(c => String(c).trim()));
@@ -4844,7 +4957,7 @@
     function cltSave(force) {
       const d = clt.draft;
       if (!d || !sessionToken) return;
-      const key = d.key, value = d.rows ? JSON.stringify(d.rows) : d.text;
+      const key = d.key, value = d.rows ? (cltCleanRows(d.rows, key) || '[]') : d.text;
       const token = sessionToken, fy = selectedFy;
       showBusy('กำลังบันทึก…');
       google.script.run
@@ -5017,14 +5130,19 @@
         if (D('purpose').trim() || drv.length) {
           if (D('purpose').trim()) textSlides(g + ' · เป้าหมาย (Purpose)', [{ text: D('purpose') }]);
           if (drv.length) {
-            const dr = cltDrvRows(drv);
-            cltDrvGroups(dr).forEach(gr => tableSlides(g + ' · ปัจจัยขับเคลื่อน (Driver Diagram)', ['Primary driver', 'Secondary driver', 'Change idea / Intervention'],
-              (rs => rs.length ? rs : [['', '', '']])(dr.slice(gr.s, gr.s + gr.n).map(r => r.slice(1)).filter(r => r.some(c => String(c).trim()))), [3.4, 4.0, 5.0], 16, gr.p.trim() ? 'Purpose: ' + gr.p.trim() : ''));
+            const dr = cltDrvRows(drv), kn = v => cltIds(v).map(id => { const k = cltKpiById(id); return k ? '- ' + k.name : ''; }).filter(Boolean).join('\n');
+            cltDrvGroups(dr).forEach(gr => {
+              const rs = dr.slice(gr.s, gr.s + gr.n).map(r => [r[1], kn(r[5]), r[2], kn(r[6]), r[3], kn(r[7])]).filter(r => r.some(c => String(c).trim()));
+              const pk = kn(dr[gr.s][4]).split('\n').map(x => x.replace(/^- /, '')).filter(Boolean).join('; ');
+              const top = [gr.p.trim() ? 'Purpose: ' + gr.p.trim() : '', pk ? 'ตัวชี้วัด: ' + pk : ''].filter(Boolean).join(' · ');
+              tableSlides(g + ' · ปัจจัยขับเคลื่อน (Driver Diagram)', ['Primary driver', 'ตัวชี้วัด', 'Secondary driver', 'ตัวชี้วัด', 'Change idea / Intervention', 'ตัวชี้วัด'],
+                rs.length ? rs : [['', '', '', '', '', '']], [2.0, 1.7, 2.0, 1.7, 3.3, 1.7], 12, top);
+            });
           }
         }
         const fl = slide(g + ' · Process Flowchart ของการดูแลผู้ป่วย');
         fl.addText('(แทรกรูป Process Flowchart ที่นี่)', { x: 0.5, y: 3.0, w: 12.3, h: 1.0, fontFace: F, fontSize: 24, color: '94A3B8', align: 'center', italic: true });
-        const pm = cltRows(D('pm'));
+        const pm = cltPmDisplayRows(g).map(r => r.slice(0, 4));
         if (pm.length) tableSlides(g + ' · การจัดการกระบวนการ (Process Management)', ['กระบวนการ', 'ข้อกำหนดของกระบวนการ', 'ตัวชี้วัดของกระบวนการ / เป้าหมาย', 'การออกแบบกระบวนการ'], pm, [2.2, 3.2, 3.2, 3.8], 15);
         // ผลลัพธ์รายตัวชี้วัด
         for (const k of ks) {
