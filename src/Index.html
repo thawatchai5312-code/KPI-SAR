@@ -307,7 +307,7 @@
     /* ---------- หน้าสรุปรายงาน ---------- */
     .report-grid { display: grid; grid-template-columns: 22fr 78fr; gap: 10px; align-items: start; }
     #rp-side { position: sticky; top: var(--tree-top, 70px); max-height: calc(100vh - var(--tree-top, 70px) - 10px); overflow-y: auto; }
-    #rp-main { background: #e8eeea; }
+    #rp-main { background: #e8eeea; scroll-margin-top: var(--tree-top, 70px); }
     #rp-scroll { overflow-x: auto; }
     #rp-paper { background: #fff; margin: 0 auto; box-sizing: content-box; padding: 10mm; box-shadow: 0 2px 14px rgba(16, 40, 24, 0.18); }
     #rp-paper.landscape { width: 277mm; }
@@ -399,9 +399,10 @@
     .app-header .sub { font-size: 13px; font-weight: 500; opacity: 0.8; }
     .btn-icon { background: rgba(255,255,255,0.14); border: 1px solid rgba(255,255,255,0.28); border-radius: 999px; padding: 6px 14px; font-size: 13px; }
     .nav-bar { background: var(--primary-gradient); border-radius: 0 0 22px 22px; padding: 8px 12px; box-shadow: 0 8px 20px rgba(0, 115, 58, 0.25); margin-bottom: 14px; top: 0; }
-    .nav-item { color: rgba(255,255,255,0.92); font-size: 14px; padding: 8px 18px; }
+    .nav-item { color: #fff; font-size: 14px; padding: 8px 18px; border: 1px solid transparent; }
+    .nav-item:not(.active):not(.static) { background: rgba(255,255,255,0.14); border-color: rgba(255,255,255,0.5); }
     .nav-item.active { background: #fff; color: var(--primary-color); box-shadow: 0 3px 10px rgba(0,0,0,0.15); }
-    .nav-item:not(.active):not(.static):hover { background: rgba(255,255,255,0.18); color: #fff; }
+    .nav-item:not(.active):not(.static):hover { background: rgba(255,255,255,0.28); color: #fff; }
     .nav-item.static { color: #fff; }
     .nav-bar #fy-select { border: none; border-radius: 999px; font-weight: 700; color: var(--primary-color); }
     .nav-actions .btn { box-shadow: 0 2px 8px rgba(0,0,0,0.12); }
@@ -736,6 +737,7 @@
         <p class="hint" style="margin-top: 6px;">ตัวอย่างด้านขวาคือรายงานที่จะพิมพ์ กด Export แล้วเลือกปลายทาง "บันทึกเป็น PDF" · ระบบจำหมวดที่ติ๊ก เนื้อหา และแนวกระดาษของคุณไว้ให้</p>
       </div>
       <div class="panel" id="rp-main">
+        <div id="rp-pager-top"></div>
         <div id="rp-scroll"><div id="rp-paper" class="landscape"></div></div>
         <div id="rp-more" class="rp-more"></div>
       </div>
@@ -1098,6 +1100,7 @@
     // คิดจากตัวชี้วัดทั้งหมดของหมวด (ไม่ขึ้นกับตัวกรอง) เลขจึงคงที่ · คำนวณใหม่เมื่อข้อมูลเปลี่ยน (dbVersion)
     let dbVersion = 0, kpiNoCache = null, kpiNoDb = null, kpiNoVer = -1;
     function kpiNumber(kpi) {
+      if (listMode === 'table' && currentTab === 'home') { const v = tblNumbers().get(kpi.id); if (v !== undefined) return v; } // ตาราง: เลขรันต่อเนื่องทั้งรายการ เหมือนหน้าสรุปรายงาน
       if (kpiNoDb !== globalDatabase || kpiNoVer !== dbVersion) {
         kpiNoCache = new Map(); kpiNoDb = globalDatabase; kpiNoVer = dbVersion;
         const blocks = {};
@@ -1116,6 +1119,18 @@
         });
       }
       return kpiNoCache.get(kpi.part + '||' + kpi.category + '||' + kpi.id) || '';
+    }
+    // มุมมองตาราง: เลขข้อรันต่อเนื่องตามลำดับที่แสดง (กติกาเดียวกับสรุปรายงาน — ตัวหลัก 1…N ตัวย่อยต่อจากตัวแม่ ตัวแม่ไม่อยู่ในหมวดเดียวกันนับเป็นตัวหลัก)
+    let tblNoMap = null, tblNoDb = null, tblNoSig = '';
+    function tblNumbers() {
+      const sig = [dbVersion, treeView, appliedFilters.mode, appliedFilters.scope].join('|');
+      if (tblNoMap && tblNoDb === globalDatabase && tblNoSig === sig) return tblNoMap;
+      const tree = {};
+      uniqueById(getOrderedKpis()).forEach(k => { ((tree[k.part] = tree[k.part] || {})[k.category] = tree[k.part][k.category] || []).push(k); });
+      const byKey = prNumbering(tree), byId = new Map();
+      uniqueById(getOrderedKpis()).forEach(k => byId.set(k.id, byKey.get(k.part + '||' + k.category + '||' + k.id)));
+      tblNoMap = byId; tblNoDb = globalDatabase; tblNoSig = sig;
+      return byId;
     }
     // เลขหน้าชื่อ: ตัวหลัก "4." · ตัวย่อย "4.1"
     function kpiNoLabel(kpi) {
@@ -1407,7 +1422,7 @@
           if (!quiet) pickInitialView(); // เข้าระบบครั้งแรก: ถ้ามุมมองตั้งต้นว่าง ให้ไปมุมมองแรกที่มีตัวชี้วัด
           setStickyOffsets();
           renderTree();
-          renderList();
+          if (currentTab === 'home') renderList(); else homeStale = true;
           if (currentTab === 'progress') loadProgressSummary();
           if (currentTab === 'report') rptOpenPage();
 
@@ -2002,13 +2017,14 @@
       openCats.add(focusP.part + '||' + focusP.category);
       suppressTreeSyncUntil = Date.now() + 1500; // ระหว่างเลื่อนจอไปหาการ์ด ไม่ให้แถบซ้ายกระโดดตามการ์ดที่ผ่าน
       const page = listMode === 'table' ? currentPage : Math.floor(idx / pageSize) + 1; // ตาราง: ทุกแถวอยู่ในหน้าเดียว
-      if (page !== currentPage || !document.getElementById('card-' + cssId(k.key))) {
+      if (page !== currentPage || (listMode !== 'table' && !document.getElementById('card-' + cssId(k.key)))) {
         currentPage = page;
         renderList();
       }
       renderTree();
       scrollTreeTo(focusP.key);
       trackView(id);
+      if (listMode === 'table') tblEnsureRendered(k.key);
       const card = document.getElementById('card-' + cssId(k.key));
       if (card) {
         card.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -2070,6 +2086,7 @@
     }
 
     function renderList() {
+      tblStop();
       const area = document.getElementById('kpi-list-area');
       const list = uniqueById(getOrderedKpis()); // ตัวชี้วัดละการ์ดใบเดียวในมุมมองที่เลือก
       if (globalDatabase.length === 0) {
@@ -2540,6 +2557,7 @@
         const card = Array.from(document.querySelectorAll(CARD_SEL)).find(c => c.dataset.id === id);
         key = card ? card.dataset.key : (viewPlacements(kpi, treeView)[0] || placementsOf(kpi)[0]).key;
       }
+      if (listMode === 'table') tblEnsureRendered(key);
       editingId = id;
       editingKey = key;
       selectedKpiId = id;
@@ -3324,15 +3342,15 @@
       return String(k.department || '').replace(/TB clinic/g, 'TB').split(/[\/\s,]+/).map(d => PDF_DEPT_ALIASES[d.trim()] || d.trim()).filter(Boolean);
     }
 
-    const RPT_STEP = 30; // ตัวอย่างบนจอแสดงทีละ 30 ตัวชี้วัด เลื่อนลงแล้วโหลดต่อ (ตอน Export ใส่ครบทุกตัว)
+    const RPT_SIZES = [10, 30, 50]; // ตัวอย่างบนจอแสดงทีละ 10/30/50 ตัวชี้วัด แบ่งหน้าเหมือนหน้าแรก (ตอน Export ใส่ครบทุกตัว)
     const RPT_DEFAULT_OPTS = { table: true, chart: true, detail: true, source: true, owner: true };
-    const rpt = { loaded: false, loading: false, waiters: [], orient: 'landscape', opts: Object.assign({}, RPT_DEFAULT_OPTS), unchecked: new Set(), limit: RPT_STEP };
+    const rpt = { loaded: false, loading: false, waiters: [], orient: 'landscape', opts: Object.assign({}, RPT_DEFAULT_OPTS), unchecked: new Set(), page: 1, size: 10 };
     let rptSaveTimer = null, rptPreviewTimer = null, rptControlsBuilt = false;
 
     function rptReset() {
       clearTimeout(rptSaveTimer); clearTimeout(rptPreviewTimer);
       rpt.loaded = false; rpt.loading = false; rpt.waiters = []; rpt.orient = 'landscape';
-      rpt.opts = Object.assign({}, RPT_DEFAULT_OPTS); rpt.unchecked = new Set(); rpt.limit = RPT_STEP;
+      rpt.opts = Object.assign({}, RPT_DEFAULT_OPTS); rpt.unchecked = new Set(); rpt.page = 1; rpt.size = 10;
     }
 
     function rptApplyPrefs(p) {
@@ -3348,16 +3366,19 @@
       if (rpt.loading) return;
       rpt.loading = true;
       const token = sessionToken;
+      let fired = false;
       const done = () => {
+        if (fired) return;
+        fired = true; clearTimeout(timer); hideBusy();
         if (sessionToken !== token) return;
         rpt.loaded = true; rpt.loading = false;
-        const w = rpt.waiters; rpt.waiters = [];
-        w.forEach(f => f());
+        const w = rpt.waiters; rpt.waiters = []; w.forEach(f => f());
       };
+      const timer = setTimeout(done, 8000); // เซิร์ฟเวอร์ไม่ตอบ: ใช้ตัวเลือกตั้งต้นไปก่อน ไม่ให้หน้าค้างรอ
       showBusy('กำลังโหลดตัวเลือกรายงาน…');
       google.script.run
-        .withSuccessHandler(unbusy((res) => { if (res && res.success && res.prefs) rptApplyPrefs(res.prefs); done(); }))
-        .withFailureHandler(unbusy(done))
+        .withSuccessHandler((res) => { if (!fired && res && res.success && res.prefs) rptApplyPrefs(res.prefs); done(); })
+        .withFailureHandler(done)
         .getReportPrefs(token);
     }
 
@@ -3474,45 +3495,73 @@
         if (currentTab !== 'report') return;
         if (!rptControlsBuilt) { document.getElementById('rp-controls').innerHTML = rptControlsHtml('rp'); rptControlsBuilt = true; }
         rptSync('rp');
-        rpt.limit = RPT_STEP;
+        rpt.page = 1;
         rptRenderPreview();
       });
     }
 
     function rptPreviewSoon() {
       clearTimeout(rptPreviewTimer);
-      rptPreviewTimer = setTimeout(() => { rpt.limit = RPT_STEP; rptRenderPreview(); }, 250);
+      rptPreviewTimer = setTimeout(() => { rpt.page = 1; rptRenderPreview(); }, 250);
     }
 
-    function rptRenderPreview() {
+    // ตัวอย่างบนจอ: แสดงทีละหน้า (10/30/50 ตัวชี้วัด) — วาดเฉพาะหน้าที่เลือก ไม่วาดทั้งรายงาน (ตอน Export ใส่ครบทุกตัว)
+    function rptRowCount() { return rptChosen().length; } // แถวในรายงาน (ตัวที่อยู่หลายหมวดนับทุกหมวดที่ขึ้น)
+    function rptPagerHtml(n, withSize) {
+      const pages = Math.max(1, Math.ceil(n / rpt.size)), uniq = uniqueById(rptChosen()).length;
+      const from = n === 0 ? 0 : (rpt.page - 1) * rpt.size + 1, to = Math.min(n, rpt.page * rpt.size);
+      const nums = [];
+      for (let p = 1; p <= pages; p++) {
+        if (p === 1 || p === pages || Math.abs(p - rpt.page) <= 2) nums.push(p);
+        else if (nums[nums.length - 1] !== '…') nums.push('…');
+      }
+      const btn = (label, p, disabled, active) => `<button type="button" class="page-btn${active ? ' active' : ''}" ${disabled ? 'disabled' : `onclick="rptGoPage(${p})"`}>${label}</button>`;
+      return `<div class="pager">
+        <span class="pager-info">แสดง ${from}–${to} จาก ${n} ${uniq === n ? 'ตัวชี้วัด' : `รายการ (${uniq} ตัวชี้วัด — ตัวที่อยู่หลายหมวดขึ้นทุกหมวด)`} · Export PDF จะใส่ครบทุกตัว</span>
+        <span class="pager-buttons">
+          ${btn('«', 1, rpt.page === 1)}${btn('‹', rpt.page - 1, rpt.page === 1)}
+          ${nums.map(p => p === '…' ? '<span class="page-gap">…</span>' : btn(p, p, false, p === rpt.page)).join('')}
+          ${btn('›', rpt.page + 1, rpt.page === pages)}${btn('»', pages, rpt.page === pages)}
+        </span>
+        ${withSize ? `<span class="pager-size">แสดงหน้าละ
+          <select class="editable-input" style="width:auto; display:inline-block; padding:2px 6px;" onchange="rptSetSize(this)">
+            ${RPT_SIZES.map(z => `<option value="${z}" ${z === rpt.size ? 'selected' : ''}>${z}</option>`).join('')}
+          </select> ตัว</span>` : ''}
+      </div>`;
+    }
+    function rptGoPage(p) {
+      rpt.page = p;
+      rptRenderPreview();
+      const m = document.getElementById('rp-main');
+      if (m) m.scrollIntoView({ block: 'start' });
+    }
+    function rptSetSize(sel) {
+      rpt.size = Number(sel.value) || 10;
+      rpt.page = 1;
+      rptRenderPreview();
+    }
+
+    // keepScroll: อัปเดตอัตโนมัติ — วาดหน้าเดิมใหม่ที่ตำแหน่งเลื่อนเดิม
+    function rptRenderPreview(keepScroll) {
       if (currentTab !== 'report') return;
-      const paper = document.getElementById('rp-paper'), more = document.getElementById('rp-more');
+      const y = window.scrollY;
+      const paper = document.getElementById('rp-paper'), more = document.getElementById('rp-more'), top = document.getElementById('rp-pager-top');
       const landscape = rpt.orient === 'landscape';
       paper.className = landscape ? 'landscape' : 'portrait';
       const total = uniqueById(rptChosen()).length;
       const hasContent = Object.keys(rpt.opts).some(k => rpt.opts[k]);
       if (total === 0 || !hasContent) {
         paper.innerHTML = `<div class="empty-state">${total === 0 ? 'ยังไม่ได้เลือกตัวชี้วัด — ติ๊กหมวดตัวชี้วัดทางซ้าย' : 'ยังไม่ได้เลือกเนื้อหา — ติ๊กเนื้อหาที่จะพิมพ์ทางซ้าย'}</div>`;
-        more.innerHTML = '';
+        more.innerHTML = ''; top.innerHTML = '';
       } else {
-        paper.innerHTML = buildPrintHtml(rpt.opts, landscape, rpt.limit);
-        const shown = Math.min(rpt.limit, total);
-        more.innerHTML = shown < total
-          ? `ตัวอย่างแสดง ${shown} จาก ${total} ตัวชี้วัด (เลื่อนลงเพื่อดูต่อ) · Export PDF จะใส่ครบทุกตัว <button type="button" class="btn btn-secondary btn-sm" onclick="rptMore()">แสดงเพิ่ม</button>`
-          : `แสดงครบ ${total} ตัวชี้วัด`;
+        const rows = rptRowCount(), pages = Math.max(1, Math.ceil(rows / rpt.size));
+        rpt.page = Math.min(Math.max(1, rpt.page), pages);
+        paper.innerHTML = buildPrintHtml(rpt.opts, landscape, { from: (rpt.page - 1) * rpt.size, to: rpt.page * rpt.size });
+        top.innerHTML = rptPagerHtml(rows, true);
+        more.innerHTML = rptPagerHtml(rows, false);
       }
       rptFit();
-      rptMaybeMore();
-    }
-
-    function rptMore() { rpt.limit += RPT_STEP; rptRenderPreview(); }
-
-    // เลื่อนลงใกล้ท้ายตัวอย่างแล้วโหลดเพิ่มอัตโนมัติ
-    function rptMaybeMore() {
-      if (currentTab !== 'report') return;
-      const more = document.getElementById('rp-more');
-      if (!more || !more.querySelector('button')) return;
-      if (more.getBoundingClientRect().top < window.innerHeight + 400) setTimeout(rptMore, 30);
+      if (keepScroll) window.scrollTo(0, y);
     }
 
     // ย่อกระดาษตัวอย่างให้พอดีความกว้างจอ (ขนาดตัวอักษรกับการตัดบรรทัดคงเดิมเหมือนตอนพิมพ์)
@@ -3524,7 +3573,6 @@
       paper.style.zoom = avail > 0 ? Math.max(0.25, Math.min(1, avail / px)) : 1;
     }
     window.addEventListener('resize', () => { if (currentTab === 'report') rptFit(); });
-    window.addEventListener('scroll', () => { if (currentTab === 'report') rptMaybeMore(); }, { passive: true });
 
     // ---------- ปุ่ม Export PDF บนแถบเมนู: ไปหน้าสรุปรายงาน (ใช้ตัวกรองชุดเดียวกัน ดูตัวอย่างก่อน) ถ้าอยู่หน้านั้นแล้วสั่งพิมพ์เลย ----------
     function exportPdfClick() {
@@ -3645,12 +3693,12 @@
           });
         });
       });
-      if (limit) { // ตัวอย่างบนจอ: ตัดให้เหลือ limit ตัวแรก
-        let left = limit;
+      if (limit) { // ตัวอย่างบนจอ: เฉพาะหน้าที่เลือก — limit = จำนวนแถวแรก หรือ { from, to } (นับตามลำดับในรายงาน เลขข้อนับจากทั้งรายงานแล้วข้างบน)
+        const range = typeof limit === 'number' ? { from: 0, to: limit } : limit;
+        let idx = 0;
         Object.keys(tree).sort(comparePartNames).forEach(part => {
           Object.keys(tree[part]).sort(catOrderOf(part)).forEach(cat => {
-            tree[part][cat] = tree[part][cat].slice(0, Math.max(left, 0));
-            left -= tree[part][cat].length;
+            tree[part][cat] = tree[part][cat].filter(() => { const i = idx++; return i >= range.from && i < range.to; });
             if (tree[part][cat].length === 0) delete tree[part][cat];
           });
           if (Object.keys(tree[part]).length === 0) delete tree[part];
@@ -3900,13 +3948,13 @@
     function liveRender() {
       const y = window.scrollY;
       renderTree();
-      renderList();
+      if (currentTab === 'home') renderList(); else homeStale = true; // หน้าอื่นเปิดอยู่: วาดหน้าแรกตอนกลับมา
       window.scrollTo(0, y);
       liveRefreshPages();
     }
     function liveRefreshPages() {
       if (currentTab === 'progress') loadProgressSummary();
-      if (currentTab === 'report' && typeof rptRenderPreview === 'function') rptRenderPreview();
+      if (currentTab === 'report' && typeof rptRenderPreview === 'function') rptRenderPreview(true);
     }
 
     function liveNotice(n, changed, by) {
@@ -4174,29 +4222,66 @@
       return h;
     }
 
+    // วาดแถวแรกทันที ที่เหลือทยอยเติมเบื้องหลังทีละชุด (ตารางหลายร้อยแถวถ้าวาดทีเดียวจะทำให้จอค้างหลายวินาที)
+    const TBL_FIRST = 60, TBL_CHUNK = 40;
+    let tblPending = [], tblLast = { part: null, cat: null }, tblTimer = null, tblToken = 0;
+    function tblStop() { tblToken++; clearTimeout(tblTimer); tblPending = []; }
+    function tblAppend(n) {
+      const tbody = document.querySelector('#kpi-table tbody');
+      if (!tbody || tblPending.length === 0) return;
+      let html = '';
+      const keys = [];
+      tblPending.splice(0, n).forEach(it => {
+        const kpi = findPlacement(it.key); // ข้อมูลล่าสุดตอนวาด (อาจเพิ่งอัปเดตอัตโนมัติ)
+        if (!kpi) return;
+        if (it.part !== tblLast.part || it.category !== tblLast.cat) {
+          html += `<tr class="tbl-cat"><td colspan="${TBL_COLS.length}"><div class="tbl-cat-label"><span class="list-section-part">${esc(partLabel(it.part))}</span> › ${esc(it.category)}</div></td></tr>`;
+          tblLast = { part: it.part, cat: it.category };
+        }
+        html += tblRowHtml(kpi);
+        keys.push(it.key);
+      });
+      tbody.insertAdjacentHTML('beforeend', html);
+      if (cardObserver) keys.forEach(k => { const r = document.getElementById('card-' + cssId(k)); if (r) cardObserver.observe(r); });
+    }
+    function tblSchedule(token) {
+      clearTimeout(tblTimer);
+      if (tblPending.length === 0) return;
+      tblTimer = setTimeout(() => {
+        if (token !== tblToken) return;
+        tblAppend(TBL_CHUNK);
+        tblSchedule(token);
+      }, 30);
+    }
+    // แถวที่ยังไม่ได้วาด (เช่น กดชื่อในรายการซ้าย/เปิดแก้ไข/ระบบสอน) → วาดต่อจนถึงแถวนั้นก่อน
+    function tblEnsureRendered(key) {
+      if (document.getElementById('card-' + cssId(key))) return;
+      const i = tblPending.findIndex(it => it.key === key);
+      if (i !== -1) tblAppend(i + 1);
+    }
+
     function renderTable(list) {
       const area = document.getElementById('kpi-list-area');
       const prev = document.getElementById('tbl-wrap');
       const keep = prev ? [prev.scrollTop, prev.scrollLeft] : null;
-      let body = '', lastPart = null, lastCat = null;
-      list.forEach(kpi => {
-        if (kpi.part !== lastPart || kpi.category !== lastCat) {
-          body += `<tr class="tbl-cat"><td colspan="${TBL_COLS.length}"><div class="tbl-cat-label"><span class="list-section-part">${esc(partLabel(kpi.part))}</span> › ${esc(kpi.category)}</div></td></tr>`;
-          lastPart = kpi.part; lastCat = kpi.category;
-        }
-        body += tblRowHtml(kpi);
-      });
+      tblStop();
+      const token = tblToken;
+      tblPending = list.map(k => ({ key: k.key, part: k.part, category: k.category }));
+      tblLast = { part: null, cat: null };
       const chips = TBL_GROUPS.map(g => `<button type="button" class="tbl-chip${tblHide.has(g[0]) ? '' : ' on'}" data-g="${g[0]}" onclick="tblToggleGroup('${g[0]}')" title="แสดง/ซ่อนคอลัมน์กลุ่ม ${g[1]}">${g[1]}</button>`).join('');
       const hideCls = TBL_GROUPS.filter(g => tblHide.has(g[0])).map(g => 'hide-' + g[0]).join(' ');
       area.innerHTML = `<div class="tbl-toolbar"><span>📋 ตาราง · แสดง ${list.length} ตัวชี้วัด <span class="hint" style="margin:0;">(ชื่อตัวชี้วัดตรึงไว้ทางซ้าย · กดข้อความยาวเพื่อดู/ย่อ)</span></span><span class="tbl-groups"><span class="hint" style="margin:0;">คอลัมน์:</span>${chips}</span></div>
-        <div class="tbl-wrap" id="tbl-wrap"><table class="kpi-table ${hideCls}" id="kpi-table"><colgroup>${TBL_COLS.map(c => `<col${c.g ? ` data-g="${c.g}"` : ''} style="width:${c.w}px">`).join('')}</colgroup><thead>${tblHeadHtml()}</thead><tbody>${body}</tbody></table></div>`;
+        <div class="tbl-wrap" id="tbl-wrap"><table class="kpi-table ${hideCls}" id="kpi-table"><colgroup>${TBL_COLS.map(c => `<col${c.g ? ` data-g="${c.g}"` : ''} style="width:${c.w}px">`).join('')}</colgroup><thead>${tblHeadHtml()}</thead><tbody></tbody></table></div>`;
       area.classList.add('table-mode');
       area.classList.remove('charts-hidden');
       tblFit();
       const wrap = document.getElementById('tbl-wrap');
+      // เลื่อนค้างไว้ก่อนวาดใหม่ (อัปเดตอัตโนมัติ) → วาดให้ถึงตำแหน่งนั้นก่อน (ประมาณแถวละ 40 px ขึ้นไป)
+      tblAppend(keep && keep[0] > 0 ? Math.max(TBL_FIRST, Math.ceil((keep[0] + wrap.clientHeight) / 40)) : TBL_FIRST);
       if (keep) { wrap.scrollTop = keep[0]; wrap.scrollLeft = keep[1]; }
       wrap.addEventListener('scroll', () => { if (currentTab === 'home') updateTreeInView(); }, { passive: true });
       afterCardsRendered();
+      tblSchedule(token);
     }
 
     function tblRerenderRow(id) {
