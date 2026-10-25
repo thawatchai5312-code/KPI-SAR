@@ -242,10 +242,13 @@
     .tbl-acts .btn { flex: 1 1 0; min-width: 0; padding: 4px 0; font-size: 14px; line-height: 1.2; text-align: center; }
     .kpi-table td.c-act .dirty-mark { display: none; margin-top: 3px; font-size: 10.5px; line-height: 1.2; }
     .kpi-row { --rb: #fff; --stc: #cbd5e1; scroll-margin-top: 70px; }
-    .kpi-row.st-green { --stc: #22c55e; } .kpi-row.st-yellow { --stc: #facc15; } .kpi-row.st-red { --stc: #ef4444; }
+    .kpi-row.st-green { --stc: #22c55e; --fx: #ecfdf5; } .kpi-row.st-yellow { --stc: #facc15; --fx: #fffbeb; } .kpi-row.st-red { --stc: #ef4444; --fx: #fef2f2; }
     .kpi-row:hover { --rb: #f8fafc; }
     .kpi-row.selected { --rb: #fefce8; }
     .kpi-row.editing { --rb: #eff6ff; }
+    /* คอลัมน์ที่ตรึง (ที่ / ชื่อ / จัดการ): สีอ่อนตามสถานะ · แถวที่เลือก/กำลังแก้ใช้สีของแถว */
+    .kpi-row.selected, .kpi-row.editing { --fx: var(--rb); }
+    .kpi-table td.c-no, .kpi-table td.c-name, .kpi-table td.c-act { background: var(--fx, var(--rb)); }
     .kpi-row.flash td { animation: rowFlash 1.6s ease; }
     @keyframes rowFlash { 0%, 40% { background: #fde68a; } }
     .tbl-clamp { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; white-space: pre-line; overflow-wrap: anywhere; cursor: pointer; line-height: 1.45; }
@@ -412,6 +415,7 @@
     .pr-chart svg { width: 100%; height: auto; max-height: 70mm; }
     .pr-method { font-size: 6.5pt; font-weight: 400; color: #475569; }
     .pr-label { font-size: 12pt; font-weight: 700; color: #166534; margin-top: 4px; }
+    .sar-noexport { font-size: 10.5pt; font-weight: 500; color: #64748b; }
     .pr-text { font-size: 12pt; white-space: pre-line; }
     .pr-note { font-size: 10.5pt; color: #1e3a8a; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 4px; padding: 3px 8px; margin: 4px 0; }
     .pr-block.pr-ref { border-left-color: #3b82f6; }
@@ -729,9 +733,9 @@
     <div class="nav-item static">📅 ปีงบ
       <select id="fy-select" class="editable-input" style="width: auto; display: inline-block; padding: 3px 6px; margin-left: 4px;" onchange="onFiscalYearChange(this)"></select>
     </div>
-    <div class="nav-item active" id="menu-home-btn" onclick="guardUnsaved(() => switchMenu('home'))">📊 หน้าแรก (Dashboard)</div>
+    <div class="nav-item active" id="menu-home-btn" onclick="guardUnsaved(() => switchMenu('home'))">📊 หน้าแรก</div>
     <div class="nav-item" id="menu-report-btn" onclick="guardUnsaved(() => switchMenu('report'))">📑 สรุปรายงาน</div>
-    <div class="nav-item" id="menu-progress-btn" onclick="guardUnsaved(() => switchMenu('progress'))">📋 ติดตามงาน (Progress)</div>
+    <div class="nav-item" id="menu-progress-btn" onclick="guardUnsaved(() => switchMenu('progress'))">📋 ติดตามงาน</div>
     <div class="nav-item" id="menu-sar-btn" style="display: none;" onclick="guardUnsaved(() => switchMenu('sar'))">🏛️ เอกสาร สรพ.</div>
     <div class="nav-spacer"></div>
     <div class="nav-actions">
@@ -740,7 +744,6 @@
         <button type="button" data-mode="table" class="on" onclick="setListMode('table')" title="แสดงเป็นตารางแบบ Google Sheet">📋 ตาราง</button>
       </div>
       <button class="btn btn-accent" id="btn-add-kpi" style="display: none;" onclick="guardUnsaved(openAddKpiModal)">➕ เพิ่มตัวชี้วัดใหม่</button>
-      <button class="btn btn-primary" id="btn-export-pdf" onclick="guardUnsaved(exportPdfClick)">📄 Export PDF</button>
     </div>
   </div>
 
@@ -1608,7 +1611,7 @@
 
     // ทำ fn ต่อเมื่อไม่มีงานค้าง ถ้ามีการแก้ไขที่ยังไม่บันทึกจะถามก่อน (บันทึก / ไม่บันทึก / กลับไปแก้ต่อ)
     function guardUnsaved(fn) {
-      const nDoc = docDirtyCount(); // ข้อความหน้าเอกสาร สรพ. (สรุป PDCA / CLT) ที่ยังไม่ได้บันทึก
+      const nDoc = docDirtyCount(); // ข้อความหน้าเอกสาร สรพ. (การวิเคราะห์และ PDCA / CLT) ที่ยังไม่ได้บันทึก
       if (nDoc > 0) {
         showConfirm('มีข้อความเอกสาร สรพ. ที่ยังไม่ได้บันทึก ' + nDoc + ' รายการ\nต้องการออกโดยไม่บันทึกใช่หรือไม่?', () => { sar.drafts.clear(); clt.draft = null; guardUnsaved(fn); }, () => { renderFiscalYearSelect(); restoreTreeFilters(); });
         return;
@@ -3657,11 +3660,6 @@
     }
     window.addEventListener('resize', () => { if (currentTab === 'report') rptFit(); });
 
-    // ---------- ปุ่ม Export PDF บนแถบเมนู: ไปหน้าสรุปรายงาน (ใช้ตัวกรองชุดเดียวกัน ดูตัวอย่างก่อน) ถ้าอยู่หน้านั้นแล้วสั่งพิมพ์เลย ----------
-    function exportPdfClick() {
-      if (currentTab === 'report') generatePdf(); else switchMenu('report');
-    }
-
     function prNum(v) { return v !== null && v !== undefined ? Math.round(v * 100) / 100 : '-'; }
     function prShort(text, n) { return text.length > n ? text.substring(0, n - 1) + '…' : text; }
 
@@ -3831,7 +3829,7 @@
     // SAR = ตัวชี้วัด รพ. Part I–IV (มุมมอง "รพ." เท่านั้น) จัดแบบไฟล์ SAR: ตารางเป้าหมาย+ผล 5 ปีของแต่ละหมวด แล้วตารางกราฟ | การวิเคราะห์ + สรุป PDCA ต่อตัวชี้วัด
     //   สรุป PDCA เก็บฝั่งเซิร์ฟเวอร์ (ชีต SAR_Doc: getSarDoc / saveSarPdca) แยกจากช่อง "รายละเอียด/การวิเคราะห์" เดิม · Export เป็น .docx (ผอ./QMR/admin)
     const SAR_SIZES = [10, 30, 50];
-    const SAR_PDCA_HEADS = 'ปัญหาที่พบ\n\nการพัฒนาที่ผ่านมา\n\nแผนการพัฒนา\n';
+    const SAR_PDCA_HEADS = 'ปัญหาที่พบ\n\nการวางแผนและการกำหนดมาตรฐาน\n\nการปฏิบัติตามแผน\n\nการตรวจสอบผลลัพธ์และวิเคราะห์สาเหตุ\n\nการปรุงมาตรฐานและแผนพัฒนาต่อเนื่อง\n';
     const SAR_NOTE_LINE = /^ตัวย่อยของตัวชี้วัด รพ\. \(SAR\)/; // หมายเหตุที่ระบบใส่ตอนนำเข้า NSO — ไม่ลงเอกสาร
     const sar = { loaded: false, loading: false, refreshing: false, fy: null, pdca: {}, drafts: new Map(), remote: new Map(), unchecked: new Set(),
       page: 1, size: 10, onlyMine: false, onlyTodo: false, controlsBuilt: false, deferred: false };
@@ -3881,7 +3879,7 @@
         <div id="sar-progress"></div>
         <div class="form-group"><label>แสดงในหน้านี้</label>
           <label class="check-row"><input type="checkbox" id="sar-only-mine" onchange="sarSetFilter('onlyMine', this.checked)"> เฉพาะตัวชี้วัดที่ฉันแก้ได้</label>
-          <label class="check-row"><input type="checkbox" id="sar-only-todo" onchange="sarSetFilter('onlyTodo', this.checked)"> เฉพาะที่ยังไม่มีสรุป PDCA</label>
+          <label class="check-row"><input type="checkbox" id="sar-only-todo" onchange="sarSetFilter('onlyTodo', this.checked)"> เฉพาะที่ยังไม่มีการวิเคราะห์และ PDCA</label>
         </div>
         <div class="form-group"><label>หมวดที่จะอยู่ในเอกสาร</label>
           <div class="rpt-bar">
@@ -3891,7 +3889,7 @@
           </div>
           <div id="sar-cat-list" class="rpt-cat-list"></div>
         </div>
-        <button type="button" class="btn btn-secondary" style="width: 100%; margin-bottom: 6px;" onclick="guardUnsaved(sarCopyPrev)">📋 คัดลอกสรุป PDCA จากปีงบก่อนหน้า (เป็นร่าง)</button>
+        <button type="button" class="btn btn-secondary" style="width: 100%; margin-bottom: 6px;" onclick="guardUnsaved(sarCopyPrev)">📋 คัดลอกการวิเคราะห์และ PDCA จากปีงบก่อนหน้า (เป็นร่าง)</button>
         <button type="button" class="btn btn-primary" id="sar-export-btn" style="width: 100%;" onclick="sarExportDocx()">📥 Export Word (.docx)</button>
         <p class="hint" id="sar-hint" style="margin-top: 6px;"></p>`;
     }
@@ -3905,7 +3903,7 @@
       uniq.forEach(k => (pdfKpiDepts(k).length ? pdfKpiDepts(k) : ['(ไม่ระบุหน่วย)']).forEach(d => { const u = units[d] = units[d] || { n: 0, done: 0 }; u.n++; if (sarHasPdca(k.id)) u.done++; }));
       const rows = Object.keys(units).sort((a, b) => (units[b].n - units[b].done) - (units[a].n - units[a].done) || a.localeCompare(b, 'th'))
         .map(d => `<tr><td class="pr-left">${esc(d)}</td><td>${units[d].done}/${units[d].n}</td></tr>`).join('');
-      document.getElementById('sar-progress').innerHTML = `<div class="form-group"><label>ความคืบหน้าสรุป PDCA</label>
+      document.getElementById('sar-progress').innerHTML = `<div class="form-group"><label>ความคืบหน้าการวิเคราะห์และ PDCA</label>
         <div class="pg-part-head"><span>ทั้งหมด</span><span>${done} / ${uniq.length} ตัวชี้วัด</span></div>${bar(done, uniq.length)}
         ${mine.length ? `<div class="pg-part-head" style="margin-top:6px;"><span>ที่ฉันแก้ได้</span><span>${mineDone} / ${mine.length}</span></div>${bar(mineDone, mine.length)}` : ''}
         <details style="margin-top:6px;"><summary class="hint" style="cursor:pointer;">แยกตามหน่วยงาน (ทำแล้ว/ทั้งหมด)</summary>
@@ -3973,8 +3971,8 @@
       document.getElementById('sar-only-todo').checked = sar.onlyTodo;
       document.getElementById('sar-export-btn').style.display = isPrivilegedUser() ? '' : 'none';
       document.getElementById('sar-hint').innerText = isPrivilegedUser()
-        ? 'ตัวอย่างด้านขวาคือเอกสาร SAR ที่จะ Export (ตัวเลขแก้ได้ที่หน้าแรกเท่านั้น) · กรอกสรุป PDCA ใต้แต่ละตัวชี้วัดแล้วกด 💾 บันทึก'
-        : 'กรอกสรุป PDCA ใต้ตัวชี้วัดของหน่วยคุณแล้วกด 💾 บันทึก · การ Export รวมเล่มทำโดย ผอ./QMR/admin';
+        ? 'ตัวอย่างด้านขวาคือเอกสาร SAR ที่จะ Export (ตัวเลขแก้ได้ที่หน้าแรกเท่านั้น) · กรอกการวิเคราะห์และ PDCA ใต้แต่ละตัวชี้วัดแล้วกด 💾 บันทึก'
+        : 'กรอกการวิเคราะห์และ PDCA ใต้ตัวชี้วัดของหน่วยคุณแล้วกด 💾 บันทึก · การ Export รวมเล่มทำโดย ผอ./QMR/admin';
       sarRenderCats();
       if (sar.loaded) sarRender(); else sarLoad();
     }
@@ -3987,12 +3985,12 @@
       if (sar.loading) return;
       const token = sessionToken, fy = selectedFy;
       sar.loading = true;
-      showBusy('กำลังโหลดสรุป PDCA…');
+      showBusy('กำลังโหลดการวิเคราะห์และ PDCA…');
       google.script.run
         .withSuccessHandler(unbusy((res) => {
           sar.loading = false;
           if (token !== sessionToken) return;
-          if (!res || !res.success) { if (!sarSessionGone(res)) showAlert('โหลดสรุป PDCA ไม่สำเร็จ', '❌', res ? res.message : ''); return; }
+          if (!res || !res.success) { if (!sarSessionGone(res)) showAlert('โหลดการวิเคราะห์และ PDCA ไม่สำเร็จ', '❌', res ? res.message : ''); return; }
           if (fy !== selectedFy) { if (currentTab === 'sar') sarOpenPage(); return; } // เปลี่ยนปีงบระหว่างรอ
           sar.pdca = res.pdca; sar.fy = fy; sar.loaded = true;
           if (currentTab === 'sar') sarRender();
@@ -4063,19 +4061,19 @@
       if (!sessionToken || !sarCanUse()) return;
       const s = sarSaved(id), text = sar.drafts.has(id) ? sar.drafts.get(id) : s.text;
       const token = sessionToken, fy = selectedFy;
-      showBusy('กำลังบันทึกสรุป PDCA…');
+      showBusy('กำลังบันทึกการวิเคราะห์และ PDCA…');
       google.script.run
         .withSuccessHandler(unbusy((res) => {
           if (token !== sessionToken || fy !== selectedFy) return;
           if (res && res.success) {
             sar.pdca[id] = res.item; sar.drafts.delete(id); sar.remote.delete(id);
-            showToast(res.changed ? '✅ บันทึกสรุป PDCA แล้ว' : 'ไม่มีการเปลี่ยนแปลง');
+            showToast(res.changed ? '✅ บันทึกการวิเคราะห์และ PDCA แล้ว' : 'ไม่มีการเปลี่ยนแปลง');
             sarRender(true);
           } else if (res && res.conflict) {
             sar.remote.set(id, res.current);
             sarRender(true);
             showAlert('มีคนอื่นบันทึกข้อความนี้ไปก่อน', '⚠️', res.message + '\nดูข้อความล่าสุดในกล่องเตือนใต้ตัวชี้วัด แล้วเลือกว่าจะใช้ของใคร');
-          } else if (!sarSessionGone(res)) showAlert('บันทึกสรุป PDCA ไม่สำเร็จ', '❌', res ? res.message : '');
+          } else if (!sarSessionGone(res)) showAlert('บันทึกการวิเคราะห์และ PDCA ไม่สำเร็จ', '❌', res ? res.message : '');
         }))
         .withFailureHandler(unbusy((err) => showAlert('เกิดข้อผิดพลาดเครือข่าย', '❌', String(err))))
         .saveSarPdca(token, fy, id, text, s.rev, !!force);
@@ -4092,9 +4090,9 @@
     }
 
     function sarCopyPrev() {
-      showConfirm('คัดลอกสรุป PDCA จากปีงบก่อนหน้ามาเป็นร่างของปีงบ ' + selectedFy + ' ?\nคัดลอกเฉพาะตัวชี้วัดที่คุณแก้ได้ และที่ยังว่างในปีงบนี้ (ไม่ทับของที่กรอกแล้ว) · ตรวจและแก้ไขก่อนส่ง', () => {
+      showConfirm('คัดลอกการวิเคราะห์และ PDCA จากปีงบก่อนหน้ามาเป็นร่างของปีงบ ' + selectedFy + ' ?\nคัดลอกเฉพาะตัวชี้วัดที่คุณแก้ได้ และที่ยังว่างในปีงบนี้ (ไม่ทับของที่กรอกแล้ว) · ตรวจและแก้ไขก่อนส่ง', () => {
         const token = sessionToken, fy = selectedFy;
-        showBusy('กำลังคัดลอกสรุป PDCA…');
+        showBusy('กำลังคัดลอกการวิเคราะห์และ PDCA…');
         google.script.run
           .withSuccessHandler(unbusy((res) => {
             if (token !== sessionToken || fy !== selectedFy) return;
@@ -4138,7 +4136,7 @@
       const idAttr = `data-id="${esc(id)}"`;
       const small = (cls, fn, label, hide) => `<button type="button" class="btn btn-secondary btn-sm ${cls}" ${idAttr} onclick="${fn}(this.dataset.id)"${hide ? ' style="display:none"' : ''}>${label}</button>`;
       return `<div class="sar-box${dirty ? ' dirty' : ''}" id="sar-box-${esc(id)}">${remote ? sarRemoteHtml(id, remote) : ''}
-        <textarea class="editable-input sar-pdca" rows="8" ${idAttr} oninput="sarInput(this)" placeholder="สรุปตาม PDCA ของตัวชี้วัดนี้ เช่น ปัญหาที่พบ → การพัฒนาที่ผ่านมา → แผนการพัฒนา">${esc(dirty ? draft : s.text)}</textarea>
+        <textarea class="editable-input sar-pdca" rows="8" ${idAttr} oninput="sarInput(this)" placeholder="วิเคราะห์ผลลัพธ์และ PDCA ของตัวชี้วัดนี้ — กด ➕ ใส่หัวข้อ เพื่อเริ่มตามหัวข้อ PDCA">${esc(dirty ? draft : s.text)}</textarea>
         <div class="sar-actions">
           <button type="button" class="btn btn-primary btn-sm sar-save" ${idAttr} onclick="sarSave(this.dataset.id)"${dirty ? '' : ' disabled'}>💾 บันทึก</button>
           ${small('sar-revert', 'sarRevert', '↩ ยกเลิกการแก้ไข', !dirty)}
@@ -4152,15 +4150,15 @@
       const first = pl[0];
       if (first.part !== k.part || first.category !== k.category) {
         return `<div class="pr-block pr-ref"><div class="pr-kpi-title">${prNoLabel(k)} ${esc(k.name)}</div>
-          <div class="pr-note">🔗 เป็นตัวชี้วัดเดียวกับ ${esc(prPlaceText(first))} — การวิเคราะห์และสรุป PDCA ดูที่หมวดนั้น</div></div>`;
+          <div class="pr-note">🔗 เป็นตัวชี้วัดเดียวกับ ${esc(prPlaceText(first))} — การวิเคราะห์และ PDCA ดูที่หมวดนั้น</div></div>`;
       }
       return `<div class="pr-block sar-block"><div class="sar-grid">
         <div class="sar-left"><div class="pr-kpi-title">${prNoLabel(k)} ${esc(k.name)}</div>
           <div class="pr-meta">เป้าหมาย: <b>${esc(k.target) || '-'}</b> · ปีงบประมาณ ${selectedFy}</div>
           ${pl.length > 1 ? prPlacesNote(pl) : ''}
           ${sarHasResults(k) ? `<div class="pr-chart">${generateSvgLineChart(k.years, k.target, yl)}</div>` : '<div class="pr-text">ยังไม่มีข้อมูลผลลัพธ์</div>'}</div>
-        <div class="sar-right"><div class="pr-label">รายละเอียด/การวิเคราะห์ตัวชี้วัด</div><div class="pr-text">${esc(sarDetails(k)) || '-'}</div>
-          <div class="pr-label">สรุป PDCA</div>${sarPdcaHtml(k)}</div></div></div>`;
+        <div class="sar-right"><div class="pr-label">รายละเอียด/การวิเคราะห์ตัวชี้วัด <span class="sar-noexport">(ไม่แสดงในเอกสารที่ Export — สำหรับให้หัวหน้าดูข้อมูล)</span></div><div class="pr-text">${esc(sarDetails(k)) || '-'}</div>
+          <div class="pr-label">การวิเคราะห์ผลลัพธ์ตามตัวชี้วัดที่สำคัญและ PDCA (คำอธิบาย)</div>${sarPdcaHtml(k)}</div></div></div>`;
     }
 
     // range = { from, to } ตามลำดับแถวที่ผ่านตัวกรอง · เลขข้อ/ตัวที่อยู่หลายหมวดคิดจากทุกหมวดที่เลือก (ตัวกรอง "แสดง" ไม่ทำให้เลขเปลี่ยน)
@@ -4289,7 +4287,7 @@
 
     async function sarExportDocx() {
       if (!isPrivilegedUser() || !sar.loaded) return;
-      if (sarDirtyIds().length > 0) { showAlert('มีสรุป PDCA ที่ยังไม่ได้บันทึก', '⚠️', 'กรุณากด 💾 บันทึก หรือ ↩ ยกเลิกการแก้ไข ก่อน Export (ไฟล์ใช้เฉพาะข้อความที่บันทึกแล้ว)'); return; }
+      if (sarDirtyIds().length > 0) { showAlert('มีการวิเคราะห์และ PDCA ที่ยังไม่ได้บันทึก', '⚠️', 'กรุณากด 💾 บันทึก หรือ ↩ ยกเลิกการแก้ไข ก่อน Export (ไฟล์ใช้เฉพาะข้อความที่บันทึกแล้ว)'); return; }
       const chosen = sarChosen();
       if (chosen.length === 0) { showAlert('ยังไม่ได้เลือกหมวด', '⚠️', 'กรุณาเลือกหมวดตัวชี้วัดอย่างน้อย 1 หมวด'); return; }
       showBusy('กำลังสร้างไฟล์ Word…', 900000);
@@ -4355,8 +4353,7 @@
             left.push(new D.Paragraph({ alignment: D.AlignmentType.CENTER, children: [new D.ImageRun({ type: 'png', data: await sarChartPng(k, yl), transformation: { width: imgW, height: imgH },
               altText: { name: 'chart', title: k.name, description: 'กราฟผลลัพธ์ 5 ปี ' + k.name } })] }));
           } else left.push(para('ยังไม่มีข้อมูลผลลัพธ์', { size: 14, italics: true, color: '64748B' }));
-          const right = [para('รายละเอียด/การวิเคราะห์ตัวชี้วัด', { bold: true, size: 14, color: '166534', after: 20 })].concat(lines(sarDetails(k), { size: 14 }))
-            .concat([para('สรุป PDCA', { bold: true, size: 14, color: '166534', before: 80, after: 20 })]).concat(lines(sarSaved(k.id).text, { size: 14 }));
+          const right = lines(sarSaved(k.id).text, { size: 14 }); // เฉพาะข้อความวิเคราะห์/PDCA ที่กรอก (รายละเอียด/การวิเคราะห์เดิมไม่ลงเอกสาร)
           rows.push(new D.TableRow({ cantSplit: true, children: [cell(left, wB[0]), cell(right, wB[1])] })); // ไม่ตัดแถวข้ามหน้า (แถวสูงเกิน 1 หน้า Word ตัดเอง)
         }
         return new D.Table({ width: { size: W, type: D.WidthType.DXA }, columnWidths: wB, layout: D.TableLayoutType.FIXED, rows: rows });
@@ -5495,8 +5492,25 @@
       tblAppend(keep && keep[0] > 0 ? Math.max(TBL_FIRST, Math.ceil((keep[0] + wrap.clientHeight) / 40)) : TBL_FIRST);
       if (keep) { wrap.scrollTop = keep[0]; wrap.scrollLeft = keep[1]; }
       wrap.addEventListener('scroll', () => { if (currentTab === 'home') updateTreeInView(); }, { passive: true });
+      wrap.addEventListener('wheel', tblWheel, { passive: false });
       afterCardsRendered();
       tblSchedule(token);
+    }
+
+    // ลูกกลิ้งเมาส์: บนคอลัมน์ที่ไม่ตรึง = เลื่อนซ้าย-ขวา (หยุดที่ขอบ) · บนคอลัมน์ที่/ชื่อ/จัดการ = เลื่อนขึ้น-ลงตามเดิม
+    function tblWheel(e) {
+      if (e.ctrlKey || e.shiftKey || e.defaultPrevented) return;
+      const wrap = e.currentTarget, max = wrap.scrollWidth - wrap.clientWidth;
+      if (max <= 1 || Math.abs(e.deltaX) > Math.abs(e.deltaY)) return; // ไม่มีอะไรให้เลื่อนซ้าย-ขวา / ท่าเลื่อนข้างอยู่แล้ว
+      const cell = e.target.closest && e.target.closest('td, th');
+      if (cell && cell.matches('.c-no, .c-name, .c-act')) return;
+      for (let el = e.target; el && el !== wrap; el = el.parentElement) { // ช่องที่มีแถบเลื่อนของตัวเอง (เช่น ข้อความยาว) ให้เลื่อนในช่องก่อน
+        if (el.scrollHeight > el.clientHeight + 1 && /(auto|scroll)/.test(getComputedStyle(el).overflowY)) return;
+      }
+      let d = e.deltaY;
+      if (e.deltaMode === 1) d *= 16; else if (e.deltaMode === 2) d *= wrap.clientWidth;
+      e.preventDefault();
+      wrap.scrollLeft = Math.max(0, Math.min(max, wrap.scrollLeft + d));
     }
 
     function tblRerenderRow(id) {
@@ -5634,7 +5648,7 @@
     function tourSteps() {
       return [
         { page: 'home', target: () => tourFirst('.nav-bar'), title: 'แถบเมนูหลัก',
-          html: () => '<p>ซ้ายสุดคือ <b>ปีงบประมาณ</b> ถัดมา 3 เมนู:</p><ul><li><b>หน้าแรก</b> ตารางตัวชี้วัด (หรือการ์ด) และแถบรายการ</li><li><b>สรุปรายงาน</b> ดูตัวอย่างและพิมพ์ PDF</li><li><b>ติดตามงาน</b> ดูว่าตัวไหนยังต้องกรอก</li></ul><p>ปุ่มขวามือ: การ์ด/ตาราง · เพิ่มตัวชี้วัดใหม่ · Export PDF</p>' },
+          html: () => '<p>ซ้ายสุดคือ <b>ปีงบประมาณ</b> ถัดมา 3 เมนู:</p><ul><li><b>หน้าแรก</b> ตารางตัวชี้วัด (หรือการ์ด) และแถบรายการ</li><li><b>สรุปรายงาน</b> ดูตัวอย่างและพิมพ์ PDF</li><li><b>ติดตามงาน</b> ดูว่าตัวไหนยังต้องกรอก</li></ul><p>ปุ่มขวามือ: การ์ด/ตาราง · เพิ่มตัวชี้วัดใหม่ · ส่วน Export PDF อยู่ที่เมนู <b>สรุปรายงาน</b></p>' },
         { page: 'home', target: () => tourFirst('#view-tabs'), title: 'มุมมอง 3 แบบ',
           html: () => '<p>ตัวชี้วัดแบ่งเป็น 3 มุมมอง ตัวเลขคือจำนวนตัวชี้วัด:</p><ul><li>🏥 <b>รพ.</b> ตัวชี้วัดโรงพยาบาล Part I–IV</li><li>🩺 <b>QA</b> ตัวชี้วัด QA ของแต่ละหน่วย แบ่งเป็นมิติที่ 1–5</li><li>🏷️ <b>หน่วยงาน</b> ตัวชี้วัดของหน่วยเรา (เจ้าหน้าที่และหัวหน้าเริ่มที่นี่)</li></ul><p>ตัวเดียวกันอาจอยู่หลายมุมมอง แต่เป็นตัวชี้วัดเดียวกัน แก้ที่ไหนก็เปลี่ยนทุกที่</p>' },
         { page: 'home', target: () => tourFirst('#tree-filterbar .fb-group'), title: 'ขอบเขต: ของใคร',
@@ -5674,8 +5688,8 @@
           html: () => '<p>กด ✎ แก้ไข แล้วติ๊กได้หลายระดับ (แสดงระดับสูงสุด) หมวดผูกกับระดับ:</p><ul><li><b>SAR</b> ต้องอยู่ใน Part I–IV</li><li><b>QA-หน่วยงาน</b> ติ๊กแล้วแถวหมวด "&lt;หน่วย&gt; QA" เพิ่มให้ทันที</li><li><b>หน่วยงาน / รายบุคคล</b> ผูกกับหมวดของหน่วย</li></ul>' },
         { page: 'home', ctx: 'edit', when: () => !!tourEditKpi(), target: () => tourFirst('tr.kpi-row.editing .tbl-acts'), title: 'บันทึกหรือยกเลิก',
           html: () => '<ul><li><b>💾</b> บันทึกทุกช่องที่แก้ในครั้งเดียว และลงเวลา/ชื่อผู้แก้ให้เอง</li><li><b>✖</b> ยกเลิก ทิ้งสิ่งที่แก้</li><li><b>🗑️</b> ลบตัวชี้วัด (เฉพาะผู้บริหาร)</li><li>เอาเมาส์ชี้ปุ่มเพื่อดูชื่อปุ่ม · ถ้าข้อมูลไม่ครบ ระบบเตือนก่อนบันทึก และเตือนถ้าลืมกดบันทึกตอนเปลี่ยนหน้า</li></ul><p>ตอนนี้เป็นการสอน จึงยังไม่ได้บันทึกอะไร — ขั้นต่อไประบบจะปิดโหมดแก้ไขให้เอง</p>' },
-        { page: 'home', target: () => tourFirst('.nav-actions'), title: 'การ์ด/ตาราง / เพิ่มตัวชี้วัด / Export',
-          html: () => '<ul><li><b>🗂️ การ์ด / 📋 ตาราง</b> สลับรูปแบบแสดงตัวชี้วัด ตารางแก้ได้ทีละแถวเหมือน Google Sheet ซ่อน/แสดงกลุ่มคอลัมน์ได้ (ทุกครั้งที่ล็อกอินเริ่มที่ตาราง และซ่อนคอลัมน์ ตั้งค่า/ประวัติ/หมวด ไว้ก่อน) · ปุ่ม 🙈 ซ่อนกราฟ อยู่ข้างตัวเลือกจำนวนต่อหน้า ในมุมมองการ์ด</li><li><b>➕ เพิ่มตัวชี้วัดใหม่</b> ขั้นถัดไปจะเปิดหน้าต่างให้ดูทีละช่อง</li><li><b>📄 Export PDF</b> พาไปหน้าสรุปรายงาน</li></ul>' },
+        { page: 'home', target: () => tourFirst('.nav-actions'), title: 'การ์ด/ตาราง / เพิ่มตัวชี้วัด',
+          html: () => '<ul><li><b>🗂️ การ์ด / 📋 ตาราง</b> สลับรูปแบบแสดงตัวชี้วัด ตารางแก้ได้ทีละแถวเหมือน Google Sheet ซ่อน/แสดงกลุ่มคอลัมน์ได้ (ทุกครั้งที่ล็อกอินเริ่มที่ตาราง และซ่อนคอลัมน์ ตั้งค่า/ประวัติ/หมวด ไว้ก่อน) · ปุ่ม 🙈 ซ่อนกราฟ อยู่ข้างตัวเลือกจำนวนต่อหน้า ในมุมมองการ์ด</li><li><b>➕ เพิ่มตัวชี้วัดใหม่</b> ขั้นถัดไปจะเปิดหน้าต่างให้ดูทีละช่อง</li></ul>' },
         // ---- เพิ่มตัวชี้วัดใหม่ (ctx 'add': ระบบเปิดหน้าต่างเพิ่มตัวชี้วัดและปิดให้เองโดยไม่บันทึก) ----
         { page: 'home', ctx: 'add', when: tourAddOk, target: () => tourFirst('#modal-add-kpi .modal-card'), title: 'เพิ่มตัวชี้วัดใหม่',
           html: () => '<p>ระบบเปิดหน้าต่างเพิ่มตัวชี้วัดให้ดูช่องจริง (ยังไม่บันทึก)</p><ul><li>เจ้าหน้าที่และหัวหน้าเพิ่มได้เฉพาะ <b>ปีงบปัจจุบัน</b> ระบบใส่ชื่อผู้เพิ่มเป็นผู้รับผิดชอบให้เสมอ</li><li>ปีงบถัดไปจะคัดลอกตัวชี้วัดตามจากปีล่าสุดเอง</li></ul>' },

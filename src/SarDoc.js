@@ -165,7 +165,7 @@ function saveSarPdca(token, fy, id, text, baseRev, force) {
     var res = sarDocWrite_(user, fy, SARDOC_SAR, SARDOC_PDCA_PREFIX + id, text, baseRev, force);
     if (res.conflict) {
       return { success: false, conflict: true, current: res.current,
-        message: "สรุป PDCA นี้ถูกแก้ไขโดย " + (res.current.by || "ผู้ใช้อื่น") + (res.current.at ? " เมื่อ " + res.current.at : "") + " ระหว่างที่คุณกำลังแก้ไข" };
+        message: "การวิเคราะห์และ PDCA นี้ถูกแก้ไขโดย " + (res.current.by || "ผู้ใช้อื่น") + (res.current.at ? " เมื่อ " + res.current.at : "") + " ระหว่างที่คุณกำลังแก้ไข" };
     }
     if (!res.unchanged) {
       touchUser_(user, "edit");
@@ -191,7 +191,7 @@ function copySarPdcaFromPrevious(token, fy) {
     fy = resolveFiscalYear_(fy);
     var isPdca = function(k) { return k.indexOf(SARDOC_PDCA_PREFIX) === 0; };
     var prev = sarDocPreviousWithData_(sarDocSheetIfAny_(), fy, SARDOC_SAR, isPdca);
-    if (!prev) return { success: false, message: "ยังไม่มีสรุป PDCA ของปีงบก่อนหน้าให้คัดลอก" };
+    if (!prev) return { success: false, message: "ยังไม่มีการวิเคราะห์และ PDCA ของปีงบก่อนหน้าให้คัดลอก" };
     var visible = sarVisibleKpis_(user, fy), entries = [];
     Object.keys(prev.rows).forEach(function(key) {
       if (!isPdca(key) || !prev.rows[key].text) return;
@@ -203,7 +203,7 @@ function copySarPdcaFromPrevious(token, fy) {
       bumpDataVersion_(fy, [], user, SARDOC_SAR);
     }
     return { success: true, from: prev.fy, copied: copied,
-      message: copied > 0 ? "คัดลอกสรุป PDCA จากปีงบ " + prev.fy + " แล้ว " + copied + " ตัวชี้วัด (เป็นร่าง — ตรวจและแก้ไขก่อนส่ง)" : "ไม่มีตัวชี้วัดที่ต้องคัดลอก (กรอกไว้แล้วทั้งหมด หรือไม่มีสิทธิ์แก้)" };
+      message: copied > 0 ? "คัดลอกการวิเคราะห์และ PDCA จากปีงบ " + prev.fy + " แล้ว " + copied + " ตัวชี้วัด (เป็นร่าง — ตรวจและแก้ไขก่อนส่ง)" : "ไม่มีตัวชี้วัดที่ต้องคัดลอก (กรอกไว้แล้วทั้งหมด หรือไม่มีสิทธิ์แก้)" };
   } catch (e) {
     return { success: false, message: e.toString() };
   } finally {

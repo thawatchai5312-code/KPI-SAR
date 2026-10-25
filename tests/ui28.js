@@ -47,16 +47,18 @@ const html=fs.readFileSync(require('path').join(__dirname,'../src/Index.html'),'
  // prefs saved server-side per user
  await pg.waitForTimeout(1200);
  let saved=C.getReportPrefs(C.authenticateUser('มานี','secret99').token); console.log('saved',JSON.stringify(saved)); assert(saved.prefs&&saved.prefs.orient==='portrait'&&saved.prefs.opts.chart===false&&saved.prefs.unchecked.length===1);
- // top Export button on report page prints (intercept print)
+ // ปุ่ม Export PDF มุมขวาบนถูกเอาออกแล้ว — พิมพ์จากปุ่มในแถบซ้ายของหน้าสรุปรายงาน (intercept print)
  await pg.evaluate(()=>{window.__printed=0; window.print=()=>{window.__printed++}});
- await pg.click('#btn-export-pdf'); await pg.waitForTimeout(900);
- assert(await pg.evaluate(()=>window.__printed)===1,'export on report page prints directly');
+ assert(await pg.evaluate(()=>!document.getElementById('btn-export-pdf')&&typeof exportPdfClick==='undefined'),'top Export PDF button removed');
+ await pg.click('#rp-side button:has-text("Export PDF")'); await pg.waitForTimeout(900);
+ assert(await pg.evaluate(()=>window.__printed)===1,'export from report page sidebar prints directly');
  const pr=await pg.evaluate(()=>({blocks:document.querySelectorAll('#print-root .pr-block').length,style:document.getElementById('print-page-style').textContent,tables:document.querySelectorAll('#print-root .pr-table').length})); console.log('print',JSON.stringify(pr)); assert(pr.style.includes('portrait')&&pr.tables>0);
- // home page: Export button jumps to report page (no modal), same filters
+ // กลับหน้าแรกแล้วเข้าสรุปรายงานด้วยเมนู: ตัวกรองชุดเดิม (ไม่มี modal)
  await pg.click('#menu-home-btn'); await pg.waitForTimeout(300);
  assert(await pg.evaluate(()=>!document.getElementById('modal-pdf')),'modal removed');
- await pg.click('#btn-export-pdf'); await pg.waitForTimeout(700);
- assert(await pg.evaluate(()=>currentTab)==='report','export from home goes to report page');
+ assert(await pg.evaluate(()=>/^📊 หน้าแรก$/.test(document.getElementById('menu-home-btn').textContent.trim())&&/^📋 ติดตามงาน$/.test(document.getElementById('menu-progress-btn').textContent.trim())),'menu labels without English');
+ await pg.click('#menu-report-btn'); await pg.waitForTimeout(700);
+ assert(await pg.evaluate(()=>currentTab)==='report','report menu opens report page');
  st=await state(pg); assert(st.orient==='portrait'&&st.unchecked===1&&st.blocks>0);
  console.log('errors',pg._errs); await pg.close();
  // ---- same user logs in again (fresh page): remembered

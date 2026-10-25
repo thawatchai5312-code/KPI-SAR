@@ -51,7 +51,7 @@ async function open(b,user,opts={}){
  assert(s1.loaded&&s1.fy===fy&&s1.parts[0]==='Part I'&&s1.blocks>0&&s1.blocks<=10&&s1.charts>0,JSON.stringify(s1));
  assert.deepStrictEqual(s1.ths,['ที่','ตัวชี้วัด','เป้าหมาย','2566','2567','2568','2569','2570'],'5-year table only');
  assert(!s1.monthly&&!s1.owner,'no monthly table / owner in SAR');assert(s1.arabic,'arabic digits');
- assert.deepStrictEqual(s1.hdrs,['รายละเอียด/การวิเคราะห์ตัวชี้วัด','สรุป PDCA']);
+ assert.deepStrictEqual(s1.hdrs,['รายละเอียด/การวิเคราะห์ตัวชี้วัด (ไม่แสดงในเอกสารที่ Export — สำหรับให้หัวหน้าดูข้อมูล)','การวิเคราะห์ผลลัพธ์ตามตัวชี้วัดที่สำคัญและ PDCA (คำอธิบาย)']);
  assert(s1.total>200&&s1.cats>20,JSON.stringify(s1));
  await pg.screenshot({path:OUT+'/sar-1-page.png'});
  // เป็นมุมมอง รพ. เสมอ แม้หน้าแรกอยู่มุมมองอื่น/ตัวกรองอื่น
@@ -84,7 +84,7 @@ async function open(b,user,opts={}){
  assert(await pg.evaluate(()=>!document.querySelector('.sar-box.dirty')),'clean after save');
  // ปุ่มช่วยกรอก
  const second=await pg.evaluate(id=>[...document.querySelectorAll('#sar-paper .sar-pdca')].map(t=>t.dataset.id).find(x=>x!==id),first.id);
- await pg.click(`#sar-box-${second} .sar-heads`);assert((await pg.inputValue(`#sar-paper .sar-pdca[data-id="${second}"]`)).startsWith('ปัญหาที่พบ\n\nการพัฒนาที่ผ่านมา\n\nแผนการพัฒนา'),'insert headings');
+ await pg.click(`#sar-box-${second} .sar-heads`);assert((await pg.inputValue(`#sar-paper .sar-pdca[data-id="${second}"]`)).startsWith('ปัญหาที่พบ\n\nการวางแผนและการกำหนดมาตรฐาน\n\nการปฏิบัติตามแผน\n\nการตรวจสอบผลลัพธ์และวิเคราะห์สาเหตุ\n\nการปรุงมาตรฐานและแผนพัฒนาต่อเนื่อง'),'insert 5 PDCA headings');
  await pg.click(`#sar-box-${second} .sar-revert`);
 
  // ---- 3. แก้ชนกัน: ผอ. บันทึกก่อน แล้ว admin (ฐานรุ่นเก่า) บันทึก → แถบเตือน
@@ -157,6 +157,9 @@ async function open(b,user,opts={}){
  assert(/ตัวชี้วัด\/ผลลัพธ์ \(แสดงกราฟ\)/.test(xml)&&/การวิเคราะห์ผลลัพธ์ตามตัวชี้วัดที่สำคัญและ PDCA/.test(xml),'analysis table headers');
  assert(!/ผลลัพธ์รายเดือน|ผู้รับผิดชอบดูแล|ที่มาแหล่งข้อมูล/.test(xml),'no monthly/owner/source in docx');
  assert(!xml.includes('ตัวย่อยของตัวชี้วัด รพ. (SAR)'),'import note stripped');
+ assert(!xml.includes('รายละเอียด/การวิเคราะห์')&&!xml.includes('สรุป PDCA'),'docx has no details heading and no "สรุป PDCA"');
+ const det=await pg.evaluate(()=>{const t=sarTreeOf(sarChosen());const k=sarFlat(t).find(k=>sarDetails(k).length>30&&/^[ก-๙A-Za-z0-9 ]+$/.test(sarDetails(k).slice(0,25)));return k?sarDetails(k).slice(0,25):null});
+ assert(det&&!xml.includes(det),'details text of a kpi is not in docx: '+det);
  // กดพร้อมที่ยังไม่บันทึก → ไม่ export
  await pg.fill(`#sar-paper .sar-pdca[data-id="${first.id}"]`,'ยังไม่บันทึก');await pg.click('#sar-export-btn');await pg.waitForSelector('#modal-alert',{state:'visible'});assert(/ยังไม่ได้บันทึก/.test(await pg.textContent('#modal-alert')));await pg.click('#modal-alert button');
  await pg.click(`#sar-box-${first.id} .sar-revert`);
