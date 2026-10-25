@@ -84,7 +84,7 @@ async function open(b,user,opts={}){
  assert(await pg.evaluate(()=>!document.querySelector('.sar-box.dirty')),'clean after save');
  // ปุ่มช่วยกรอก
  const second=await pg.evaluate(id=>[...document.querySelectorAll('#sar-paper .sar-pdca')].map(t=>t.dataset.id).find(x=>x!==id),first.id);
- await pg.click(`#sar-box-${second} .sar-heads`);assert((await pg.inputValue(`#sar-paper .sar-pdca[data-id="${second}"]`)).startsWith('ปัญหาที่พบ\n\nการวางแผนและการกำหนดมาตรฐาน\n\nการปฏิบัติตามแผน\n\nการตรวจสอบผลลัพธ์และวิเคราะห์สาเหตุ\n\nการปรุงมาตรฐานและแผนพัฒนาต่อเนื่อง'),'insert 5 PDCA headings');
+ await pg.click(`#sar-box-${second} .sar-heads`);assert((await pg.inputValue(`#sar-paper .sar-pdca[data-id="${second}"]`)).startsWith('ปัญหาที่พบ\n\nการวางแผนและการกำหนดมาตรฐาน\n\nการปฏิบัติตามแผน\n\nการตรวจสอบผลลัพธ์และวิเคราะห์สาเหตุ\n\nการปรับปรุงมาตรฐานและแผนพัฒนาต่อเนื่อง'),'insert 5 PDCA headings');
  await pg.click(`#sar-box-${second} .sar-revert`);
 
  // ---- 3. แก้ชนกัน: ผอ. บันทึกก่อน แล้ว admin (ฐานรุ่นเก่า) บันทึก → แถบเตือน

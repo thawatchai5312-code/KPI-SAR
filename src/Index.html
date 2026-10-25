@@ -3829,7 +3829,7 @@
     // SAR = ตัวชี้วัด รพ. Part I–IV (มุมมอง "รพ." เท่านั้น) จัดแบบไฟล์ SAR: ตารางเป้าหมาย+ผล 5 ปีของแต่ละหมวด แล้วตารางกราฟ | การวิเคราะห์ + สรุป PDCA ต่อตัวชี้วัด
     //   สรุป PDCA เก็บฝั่งเซิร์ฟเวอร์ (ชีต SAR_Doc: getSarDoc / saveSarPdca) แยกจากช่อง "รายละเอียด/การวิเคราะห์" เดิม · Export เป็น .docx (ผอ./QMR/admin)
     const SAR_SIZES = [10, 30, 50];
-    const SAR_PDCA_HEADS = 'ปัญหาที่พบ\n\nการวางแผนและการกำหนดมาตรฐาน\n\nการปฏิบัติตามแผน\n\nการตรวจสอบผลลัพธ์และวิเคราะห์สาเหตุ\n\nการปรุงมาตรฐานและแผนพัฒนาต่อเนื่อง\n';
+    const SAR_PDCA_HEADS = 'ปัญหาที่พบ\n\nการวางแผนและการกำหนดมาตรฐาน\n\nการปฏิบัติตามแผน\n\nการตรวจสอบผลลัพธ์และวิเคราะห์สาเหตุ\n\nการปรับปรุงมาตรฐานและแผนพัฒนาต่อเนื่อง\n';
     const SAR_NOTE_LINE = /^ตัวย่อยของตัวชี้วัด รพ\. \(SAR\)/; // หมายเหตุที่ระบบใส่ตอนนำเข้า NSO — ไม่ลงเอกสาร
     const sar = { loaded: false, loading: false, refreshing: false, fy: null, pdca: {}, drafts: new Map(), remote: new Map(), unchecked: new Set(),
       page: 1, size: 10, onlyMine: false, onlyTodo: false, controlsBuilt: false, deferred: false };
