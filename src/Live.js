@@ -23,12 +23,15 @@ function dataVersion_(log) {
 /**
  * จดว่าข้อมูลเปลี่ยน — เรียกภายใต้ script lock หลังเขียนชีตเสร็จแล้วเท่านั้น
  * fy: ปีงบที่เปลี่ยน หรือ "*" (ทุกปีงบ) · ids: รหัสตัวชี้วัดที่เปลี่ยน หรือ "*" (เปลี่ยนหลายตัว/สิทธิ์ผู้ใช้ → ดึงใหม่ทั้งปีงบ)
+ * doc: ชื่อเอกสารที่เปลี่ยน (เช่น "SAR") เมื่อเปลี่ยนข้อความเอกสาร สรพ. ไม่ใช่แถวตัวชี้วัด — ids เป็น [] ได้ · pollChanges แจ้งชื่อเอกสารให้หน้าเว็บ
  * จดไม่สำเร็จไม่ให้กระทบการบันทึก (หน้าเว็บจะได้ข้อมูลใหม่ตอนโหลดครั้งถัดไป)
  */
-function bumpDataVersion_(fy, ids, user) {
+function bumpDataVersion_(fy, ids, user, doc) {
   try {
     var log = readChangeLog_() || { base: new Date().getTime(), entries: [] };
-    log.entries.push({ v: dataVersion_(log) + 1, fy: fy, ids: ids, by: user ? user.username : "" });
+    var entry = { v: dataVersion_(log) + 1, fy: fy, ids: ids, by: user ? user.username : "" };
+    if (doc) entry.doc = doc;
+    log.entries.push(entry);
     while (log.entries.length > CHANGE_LOG_MAX) log.base = log.entries.shift().v;
     var json = JSON.stringify(log);
     while (json.length > CHANGE_LOG_MAX_CHARS && log.entries.length > 1) {
@@ -72,7 +75,7 @@ function pollChanges(token, fy, lastV) {
     if (v === lastV) return { success: true, v: v, same: true };
 
     fy = resolveFiscalYear_(fy);
-    var full = !log, ids = {}, by = {}, any = full;
+    var full = !log, ids = {}, by = {}, docs = {}, any = full;
     if (log) {
       var start = lastV === log.base ? 0 : -1;
       for (var i = 0; start === -1 && i < log.entries.length; i++) {
@@ -85,6 +88,7 @@ function pollChanges(token, fy, lastV) {
           if (e.fy !== "*" && e.fy !== fy) continue;
           any = true;
           if (e.by) by[e.by] = true;
+          if (e.doc) docs[e.doc] = true;
           if (e.ids === "*") full = true;
           else e.ids.forEach(function(id) { ids[id] = true; });
         }
@@ -106,6 +110,7 @@ function pollChanges(token, fy, lastV) {
       found[id] = true;
     }
     var res = { success: true, v: v, full: full, kpis: kpis, by: Object.keys(by) };
+    res.docs = full ? [SARDOC_SAR, SARDOC_CLT] : Object.keys(docs); // เอกสาร สรพ. ที่ข้อความเปลี่ยน (ทุกอย่างถือว่าเปลี่ยนเมื่อดึงทั้งปีงบใหม่)
     if (full) res.headings = viewHeadings_();
     else res.removed = Object.keys(ids).filter(function(id) { return !found[id]; }); // ถูกลบ หรือไม่มีสิทธิ์ดูแล้ว
     return res;

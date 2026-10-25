@@ -27,6 +27,11 @@ bash tests/run.sh t3 ui41    # เฉพาะที่ระบุ
 | `live5/data.json` | `harness5.js` | รูปแบบเดียวกับ live4 (ข้อมูลหลังจัดระเบียบ) |
 | `live7/data.json` | `harness7.js` | รูปแบบเดียวกับ live4 (ข้อมูลล่าสุด) |
 | `gsfont/*` | `lib/font.js` | ฟอนต์ Google Sans ให้ภาพหน้าจอเหมือนจริง (ไม่มีก็รันได้) |
+| `lib/docx.iife.js` | `ui47.js` | npm `docx@9.5.1` → `dist/index.iife.js` (ใช้แทน CDN ตอนเทสต์ Export Word) |
+| `lib/pptxgen.bundle.js` | `ui48.js` | npm `pptxgenjs@4.0.1` → `dist/pptxgen.bundle.js` (ใช้แทน CDN ตอนเทสต์ Export PowerPoint) |
+
+`live7/data.json` สร้างจากสเปรดชีตจริงได้ (ชีต `ปีงบ 2569`/`ปีงบ 2570` ตัดเหลือ 39 คอลัมน์ · `users` = `[ชื่อผู้ใช้, tier, หน่วย]` · `sync`/`tidylog`/`nso` เป็น `[]`) และ `live4/data.json` = `{"nso": []}` —
+พอสำหรับเทสต์ที่ใช้ `harness7` (t14, sar1, clt1, ui41–ui48)
 
 session ใหม่ (clone สด) จะไม่มีโฟลเดอร์นี้ — ขอไฟล์จากผู้ใช้ หรือสร้างใหม่จากสเปรดชีตจริงตามรูปแบบข้างบน
 (ตัดคอลัมน์ Password ออกเสมอ) ก่อนรัน

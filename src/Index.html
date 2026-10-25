@@ -339,6 +339,48 @@
       #progress-table-panel #progress-content-area { overflow: visible; }
     }
 
+    /* ---------- หน้าเอกสาร สรพ. (SAR) ---------- */
+    #sar-side { position: sticky; top: var(--tree-top, 70px); max-height: calc(100vh - var(--tree-top, 70px) - 10px); overflow-y: auto; }
+    #sar-main { background: #e8eeea; scroll-margin-top: var(--tree-top, 70px); }
+    #sar-scroll { overflow-x: auto; }
+    #sar-paper { background: #fff; margin: 0 auto; box-sizing: content-box; width: 277mm; padding: 10mm; box-shadow: 0 2px 14px rgba(16, 40, 24, 0.18); font-size: 12pt; color: #0f172a; line-height: 1.4; }
+    #sar-cat-list { max-height: 36vh; }
+    .sar-grid { display: grid; grid-template-columns: 45fr 55fr; gap: 12px; align-items: start; }
+    .sar-left, .sar-right { min-width: 0; }
+    .sar-box { margin-top: 3px; }
+    .sar-box.dirty .sar-pdca { border-color: #f59e0b; background: #fffbeb; }
+    .sar-pdca { width: 100%; min-height: 8em; resize: vertical; font-size: 12pt; line-height: 1.4; }
+    .sar-actions { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-top: 4px; }
+    .sar-stamp { font-size: 9.5pt; color: #64748b; }
+    .sar-remote { margin-bottom: 4px; align-items: flex-start; }
+    .sar-remote-text { display: block; margin-top: 3px; padding: 4px 8px; background: #fff; border: 1px dashed #f59e0b; border-radius: 4px; white-space: pre-line; max-height: 9em; overflow-y: auto; }
+    .sar-remote-actions { display: flex; gap: 4px; flex-wrap: wrap; }
+    .doc-tabs { display: flex; gap: 6px; margin: 0 0 10px; flex-wrap: wrap; }
+    .doc-tab { padding: 6px 14px; border: 1px solid var(--line, #cbd5e1); background: #fff; border-radius: 10px; font-weight: 700; cursor: pointer; color: #334155; font-size: 14px; }
+    .doc-tab.on { background: var(--primary-gradient, #166534); color: #fff; border-color: transparent; }
+    #clt-side { position: sticky; top: var(--tree-top, 70px); max-height: calc(100vh - var(--tree-top, 70px) - 10px); overflow-y: auto; }
+    #clt-main { min-height: 60vh; }
+    .clt-tree { max-height: 52vh; overflow-y: auto; border: 1px solid #cbd5e1; border-radius: 8px; padding: 6px 8px; font-size: 13px; }
+    .clt-head { font-weight: 700; color: #015c8b; margin: 2px 0 3px; }
+    .clt-link { padding: 2px 6px; border-radius: 6px; cursor: pointer; line-height: 1.35; }
+    .clt-link:hover { background: #e0f2fe; }
+    .clt-link.active { background: #dcfce7; font-weight: 700; }
+    .clt-group { margin: 3px 0; }
+    .clt-group-head { display: flex; gap: 6px; align-items: center; }
+    .clt-group-name { cursor: pointer; font-weight: 700; flex: 1; }
+    .clt-group > .clt-link { margin-left: 22px; }
+    .clt-ok { color: #16a34a; font-weight: 700; }
+    .clt-no { color: #94a3b8; }
+    .clt-title { margin: 2px 0 6px; color: #14532d; font-size: 18px; }
+    .clt-grid { border-collapse: collapse; width: 100%; margin-bottom: 6px; }
+    .clt-grid th, .clt-grid td { border: 1px solid #cbd5e1; padding: 3px; vertical-align: top; }
+    .clt-grid th { background: #dcfce7; color: #14532d; font-size: 13px; }
+    .clt-grid textarea { width: 100%; min-width: 150px; resize: vertical; font-size: 13.5px; }
+    @media (max-width: 1000px) {
+      #sar-side, #clt-side { position: static; max-height: none; }
+      #sar-side.collapsed #sar-controls, #clt-side.collapsed #clt-controls { display: none; }
+    }
+
     /* ---------- พิมพ์ / Export PDF ---------- */
     #print-root { display: none; }
     @media print {
@@ -690,6 +732,7 @@
     <div class="nav-item active" id="menu-home-btn" onclick="guardUnsaved(() => switchMenu('home'))">📊 หน้าแรก (Dashboard)</div>
     <div class="nav-item" id="menu-report-btn" onclick="guardUnsaved(() => switchMenu('report'))">📑 สรุปรายงาน</div>
     <div class="nav-item" id="menu-progress-btn" onclick="guardUnsaved(() => switchMenu('progress'))">📋 ติดตามงาน (Progress)</div>
+    <div class="nav-item" id="menu-sar-btn" style="display: none;" onclick="guardUnsaved(() => switchMenu('sar'))">🏛️ เอกสาร สรพ.</div>
     <div class="nav-spacer"></div>
     <div class="nav-actions">
       <div class="mode-switch" id="mode-switch" role="group" aria-label="รูปแบบการแสดงตัวชี้วัด">
@@ -741,6 +784,33 @@
         <div id="rp-scroll"><div id="rp-paper" class="landscape"></div></div>
         <div id="rp-more" class="rp-more"></div>
       </div>
+    </div>
+  </div>
+
+  <!-- 1.3c เอกสาร สรพ. (SAR Part I–IV): ตัวชี้วัด รพ. จัดแบบไฟล์ SAR + สรุป PDCA — หัวหน้าหน่วยขึ้นไป -->
+  <div id="page-sar" class="page-view">
+    <div class="doc-tabs" id="doc-tabs" style="display: none;">
+      <button type="button" class="doc-tab on" data-doc="sar" onclick="guardUnsaved(() => docSwitch('sar'))">📑 SAR Part I–IV</button>
+      <button type="button" class="doc-tab" data-doc="clt" onclick="guardUnsaved(() => docSwitch('clt'))">🩺 CLT profile ของ PCT</button>
+    </div>
+    <div class="report-grid" id="sar-view">
+      <div class="panel" id="sar-side">
+        <button type="button" class="btn btn-secondary btn-sm rp-toggle" onclick="document.getElementById('sar-side').classList.toggle('collapsed')">⚙️ ตัวเลือกเอกสาร (กดเพื่อเปิด/ปิด)</button>
+        <div id="sar-controls"></div>
+      </div>
+      <div class="panel" id="sar-main">
+        <div id="sar-pager-top"></div>
+        <div id="sar-scroll"><div id="sar-paper" class="landscape"></div></div>
+        <div id="sar-more" class="rp-more"></div>
+      </div>
+    </div>
+    <!-- CLT profile ของ PCT: ผังหัวข้อซ้าย · ตัวแก้ไขขวา -->
+    <div class="report-grid" id="clt-view" style="display: none;">
+      <div class="panel" id="clt-side">
+        <button type="button" class="btn btn-secondary btn-sm rp-toggle" onclick="document.getElementById('clt-side').classList.toggle('collapsed')">⚙️ หัวข้อ CLT (กดเพื่อเปิด/ปิด)</button>
+        <div id="clt-controls"></div>
+      </div>
+      <div class="panel" id="clt-main"><div id="clt-editor"><div class="empty-state">กำลังโหลด…</div></div></div>
     </div>
   </div>
 
@@ -1288,6 +1358,7 @@
       document.getElementById('user-info').innerText = '👤 ' + currentUser.username + ' (' + (TIER_LABELS[currentUser.tier] || currentUser.tier) + ')';
       document.getElementById('admin-settings-btn').style.display = currentUser.tier === 'admin' ? 'inline-block' : 'none';
       document.getElementById('btn-add-kpi').style.display = 'inline-block';
+      document.getElementById('menu-sar-btn').style.display = sarCanUse() ? '' : 'none';
       document.getElementById('pw-warning-bar').style.display = currentUser.mustChange ? 'flex' : 'none';
     }
 
@@ -1310,6 +1381,8 @@
       liveReset();
       tblResetView();
       rptReset();
+      sarReset(); cltReset(); docTab = 'sar';
+      document.getElementById('menu-sar-btn').style.display = 'none';
       resetTreeFilters(); // ตัวกรองสถานะ/ขอบเขต กลับเป็นค่าเริ่มต้น ไม่ให้ติดไปยังผู้ใช้คนถัดไป
       homeStale = false;
       document.getElementById('progress-filter').value = '';
@@ -1425,6 +1498,7 @@
           if (currentTab === 'home') renderList(); else homeStale = true;
           if (currentTab === 'progress') loadProgressSummary();
           if (currentTab === 'report') rptOpenPage();
+          if (currentTab === 'sar') sarOpenPage();
 
           // หลังเพิ่มตัวชี้วัดใหม่: ไปที่การ์ดนั้นแล้วเปิดโหมดแก้ไขทันที
           if (pendingSelectAfterLoad) {
@@ -1511,6 +1585,10 @@
         document.getElementById('menu-report-btn').classList.add('active');
         document.getElementById('page-report').classList.add('active');
         rptOpenPage();
+      } else if (tabName === 'sar') {
+        document.getElementById('menu-sar-btn').classList.add('active');
+        document.getElementById('page-sar').classList.add('active');
+        sarOpenPage();
       } else if (tabName === 'progress') {
         document.getElementById('menu-progress-btn').classList.add('active');
         document.getElementById('page-progress').classList.add('active');
@@ -1530,6 +1608,11 @@
 
     // ทำ fn ต่อเมื่อไม่มีงานค้าง ถ้ามีการแก้ไขที่ยังไม่บันทึกจะถามก่อน (บันทึก / ไม่บันทึก / กลับไปแก้ต่อ)
     function guardUnsaved(fn) {
+      const nDoc = docDirtyCount(); // ข้อความหน้าเอกสาร สรพ. (สรุป PDCA / CLT) ที่ยังไม่ได้บันทึก
+      if (nDoc > 0) {
+        showConfirm('มีข้อความเอกสาร สรพ. ที่ยังไม่ได้บันทึก ' + nDoc + ' รายการ\nต้องการออกโดยไม่บันทึกใช่หรือไม่?', () => { sar.drafts.clear(); clt.draft = null; guardUnsaved(fn); }, () => { renderFiscalYearSelect(); restoreTreeFilters(); });
+        return;
+      }
       if (editingId === null) { fn(); return; }
       if (!isDirty()) { exitEdit(); fn(); return; }
       pendingAfterUnsaved = fn;
@@ -1547,7 +1630,7 @@
     }
 
     window.addEventListener('beforeunload', function(e) {
-      if (isDirty()) { e.preventDefault(); e.returnValue = ''; }
+      if (isDirty() || docDirtyCount() > 0) { e.preventDefault(); e.returnValue = ''; }
     });
 
     // ===================== ตัวกรอง + ลำดับการแสดง =====================
@@ -3743,6 +3826,1136 @@
 
     window.addEventListener('afterprint', () => { document.getElementById('print-root').innerHTML = ''; });
 
+    // ===================== เอกสาร สรพ. (SAR / CLT) =====================
+    // หน้า "เอกสาร สรพ." สำหรับหัวหน้าหน่วยขึ้นไป (head / executive / admin) — ข้อมูลตัวชี้วัดมาจากปีงบที่เลือก แก้ตัวเลขไม่ได้ที่นี่
+    // SAR = ตัวชี้วัด รพ. Part I–IV (มุมมอง "รพ." เท่านั้น) จัดแบบไฟล์ SAR: ตารางเป้าหมาย+ผล 5 ปีของแต่ละหมวด แล้วตารางกราฟ | การวิเคราะห์ + สรุป PDCA ต่อตัวชี้วัด
+    //   สรุป PDCA เก็บฝั่งเซิร์ฟเวอร์ (ชีต SAR_Doc: getSarDoc / saveSarPdca) แยกจากช่อง "รายละเอียด/การวิเคราะห์" เดิม · Export เป็น .docx (ผอ./QMR/admin)
+    const SAR_SIZES = [10, 30, 50];
+    const SAR_PDCA_HEADS = 'ปัญหาที่พบ\n\nการพัฒนาที่ผ่านมา\n\nแผนการพัฒนา\n';
+    const SAR_NOTE_LINE = /^ตัวย่อยของตัวชี้วัด รพ\. \(SAR\)/; // หมายเหตุที่ระบบใส่ตอนนำเข้า NSO — ไม่ลงเอกสาร
+    const sar = { loaded: false, loading: false, refreshing: false, fy: null, pdca: {}, drafts: new Map(), remote: new Map(), unchecked: new Set(),
+      page: 1, size: 10, onlyMine: false, onlyTodo: false, controlsBuilt: false, deferred: false };
+
+    function sarReset() {
+      sar.loaded = false; sar.loading = false; sar.refreshing = false; sar.fy = null; sar.pdca = {};
+      sar.drafts.clear(); sar.remote.clear(); sar.unchecked = new Set(); sar.page = 1; sar.size = 10;
+      sar.onlyMine = false; sar.onlyTodo = false; sar.deferred = false;
+    }
+    function sarCanUse() { return !!currentUser && (currentUser.tier === 'head' || isPrivilegedUser()); }
+    function sarSaved(id) { return sar.pdca[id] || { text: '', rev: 0, at: '', by: '' }; }
+    function sarHasPdca(id) { return !!sarSaved(id).text.trim(); }
+    function sarDirtyIds() { return Array.from(sar.drafts.keys()); }
+    function sarDetails(k) { return String(k.templateDetails || '').split('\n').filter(l => !SAR_NOTE_LINE.test(l.trim())).join('\n').trim(); }
+
+    // ตัวชี้วัด Part I–IV ที่ผู้ใช้เห็นทั้งหมด (มุมมอง รพ.) เรียงแบบเดียวกับหน้าแรก/สรุปรายงาน · ไม่ขึ้นกับตัวกรองหน้าแรก
+    function sarAllPlacements() {
+      const order = new Map(globalDatabase.map((k, i) => [k.id, i]));
+      const placements = [];
+      globalDatabase.forEach(k => viewPlacements(k, 'hosp').forEach(p => placements.push(p)));
+      return arrangeBlocks(placements.sort((a, b) => comparePartNames(a.part, b.part) || compareCats(a.part, a.category, b.category) || order.get(a.id) - order.get(b.id)));
+    }
+    function sarChosen() { return sarAllPlacements().filter(p => !sar.unchecked.has(p.part + '||' + p.category)); }
+    function sarTreeOf(list) {
+      const tree = {};
+      list.forEach(k => { ((tree[k.part] = tree[k.part] || {})[k.category] = tree[k.part][k.category] || []).push(k); });
+      return tree;
+    }
+    function sarFlat(tree) {
+      const out = [];
+      Object.keys(tree).sort(comparePartNames).forEach(part => Object.keys(tree[part]).sort(catOrderOf(part)).forEach(cat => tree[part][cat].forEach(k => out.push(k))));
+      return out;
+    }
+    // ตัวที่อยู่หลายหมวด: การวิเคราะห์เต็มที่หมวดแรก หมวดอื่นชี้กลับ — id → [{ part, category, no }]
+    function sarPlacesOf(tree) {
+      const places = new Map();
+      sarFlat(tree).forEach(k => { if (!places.has(k.id)) places.set(k.id, []); places.get(k.id).push({ part: k.part, category: k.category, no: prNoLabel(k) }); });
+      return places;
+    }
+    function sarPreviewRows(chosen) {
+      return sarFlat(sarTreeOf(chosen)).filter(k => (!sar.onlyMine || k.canEditDetails) && (!sar.onlyTodo || !sarHasPdca(k.id)));
+    }
+
+    // ---------- แถบซ้าย ----------
+    function sarControlsHtml() {
+      return `<div class="pg-summary" id="sar-title"></div>
+        <div id="sar-progress"></div>
+        <div class="form-group"><label>แสดงในหน้านี้</label>
+          <label class="check-row"><input type="checkbox" id="sar-only-mine" onchange="sarSetFilter('onlyMine', this.checked)"> เฉพาะตัวชี้วัดที่ฉันแก้ได้</label>
+          <label class="check-row"><input type="checkbox" id="sar-only-todo" onchange="sarSetFilter('onlyTodo', this.checked)"> เฉพาะที่ยังไม่มีสรุป PDCA</label>
+        </div>
+        <div class="form-group"><label>หมวดที่จะอยู่ในเอกสาร</label>
+          <div class="rpt-bar">
+            <button type="button" class="btn btn-secondary btn-sm" onclick="sarSelectAll(true)">เลือกทั้งหมด</button>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="sarSelectAll(false)">ล้างทั้งหมด</button>
+            <span id="sar-count" class="hint" style="margin: 0 0 0 auto;"></span>
+          </div>
+          <div id="sar-cat-list" class="rpt-cat-list"></div>
+        </div>
+        <button type="button" class="btn btn-secondary" style="width: 100%; margin-bottom: 6px;" onclick="guardUnsaved(sarCopyPrev)">📋 คัดลอกสรุป PDCA จากปีงบก่อนหน้า (เป็นร่าง)</button>
+        <button type="button" class="btn btn-primary" id="sar-export-btn" style="width: 100%;" onclick="sarExportDocx()">📥 Export Word (.docx)</button>
+        <p class="hint" id="sar-hint" style="margin-top: 6px;"></p>`;
+    }
+
+    function sarRenderProgress() {
+      const uniq = uniqueById(sarAllPlacements());
+      const done = uniq.filter(k => sarHasPdca(k.id)).length;
+      const mine = uniq.filter(k => k.canEditDetails), mineDone = mine.filter(k => sarHasPdca(k.id)).length;
+      const bar = (a, b) => `<div class="pg-bar"><span style="width:${b ? Math.round(a / b * 100) : 0}%; background:#16a34a;"></span></div>`;
+      const units = {};
+      uniq.forEach(k => (pdfKpiDepts(k).length ? pdfKpiDepts(k) : ['(ไม่ระบุหน่วย)']).forEach(d => { const u = units[d] = units[d] || { n: 0, done: 0 }; u.n++; if (sarHasPdca(k.id)) u.done++; }));
+      const rows = Object.keys(units).sort((a, b) => (units[b].n - units[b].done) - (units[a].n - units[a].done) || a.localeCompare(b, 'th'))
+        .map(d => `<tr><td class="pr-left">${esc(d)}</td><td>${units[d].done}/${units[d].n}</td></tr>`).join('');
+      document.getElementById('sar-progress').innerHTML = `<div class="form-group"><label>ความคืบหน้าสรุป PDCA</label>
+        <div class="pg-part-head"><span>ทั้งหมด</span><span>${done} / ${uniq.length} ตัวชี้วัด</span></div>${bar(done, uniq.length)}
+        ${mine.length ? `<div class="pg-part-head" style="margin-top:6px;"><span>ที่ฉันแก้ได้</span><span>${mineDone} / ${mine.length}</span></div>${bar(mineDone, mine.length)}` : ''}
+        <details style="margin-top:6px;"><summary class="hint" style="cursor:pointer;">แยกตามหน่วยงาน (ทำแล้ว/ทั้งหมด)</summary>
+          <div style="max-height:200px; overflow-y:auto;"><table class="pr-table" style="font-size:12px; margin-top:4px;"><tbody>${rows}</tbody></table></div></details></div>`;
+    }
+
+    function sarRenderCats() {
+      const box = document.getElementById('sar-cat-list');
+      const keepScroll = box.scrollTop;
+      const groups = {};
+      sarAllPlacements().forEach(p => { (groups[p.part] = groups[p.part] || {})[p.category] = (groups[p.part][p.category] || 0) + 1; });
+      let html = '';
+      Object.keys(groups).sort(comparePartNames).forEach(part => {
+        const cats = Object.keys(groups[part]).sort(catOrderOf(part));
+        const on = cats.filter(c => !sar.unchecked.has(part + '||' + c)).length;
+        html += `<label class="check-row" style="font-weight:700; color:#015c8b;"><input type="checkbox" class="sar-part" data-part="${esc(part)}" data-on="${on}" data-n="${cats.length}"${on === cats.length ? ' checked' : ''} onchange="sarTogglePart(this)"> ${esc(partLabel(part))}</label>`;
+        cats.forEach(cat => {
+          html += `<label class="check-row" style="margin-left:22px;"><input type="checkbox" class="sar-cat" data-part="${esc(part)}" data-cat="${esc(cat)}"${sar.unchecked.has(part + '||' + cat) ? '' : ' checked'} onchange="sarToggleCat(this)"> ${esc(cat)} (${groups[part][cat]})</label>`;
+        });
+      });
+      box.innerHTML = html || '<div class="empty-state">ไม่มีตัวชี้วัด Part I–IV</div>';
+      box.querySelectorAll('.sar-part').forEach(c => { const on = +c.dataset.on, n = +c.dataset.n; c.indeterminate = on > 0 && on < n; });
+      box.scrollTop = keepScroll;
+      document.getElementById('sar-count').innerText = `เลือก ${uniqueById(sarChosen()).length} ตัวชี้วัด`;
+    }
+    function sarChoiceChanged() { sar.page = 1; sarRenderCats(); sarRender(); }
+    function sarSelectAll(on) {
+      sar.unchecked = new Set();
+      if (!on) sarAllPlacements().forEach(p => sar.unchecked.add(p.part + '||' + p.category));
+      sarChoiceChanged();
+    }
+    function sarTogglePart(el) {
+      sarAllPlacements().filter(p => p.part === el.dataset.part).forEach(p => { const key = p.part + '||' + p.category; if (el.checked) sar.unchecked.delete(key); else sar.unchecked.add(key); });
+      sarChoiceChanged();
+    }
+    function sarToggleCat(el) {
+      const key = el.dataset.part + '||' + el.dataset.cat;
+      if (el.checked) sar.unchecked.delete(key); else sar.unchecked.add(key);
+      sarChoiceChanged();
+    }
+    function sarSetFilter(name, on) { sar[name] = on; sar.page = 1; sarRender(); }
+
+    // ---------- เปิดหน้า / โหลดสรุป PDCA ----------
+    // เปิดหน้าเอกสาร สรพ. — แท็บ SAR (ทุกคนที่ใช้หน้านี้ได้) หรือ CLT (admin, ผอ./QMR, หัวหน้าหน่วย PCT)
+    function sarOpenPage() {
+      if (!sarCanUse()) { switchMenu('home'); return; }
+      if (docTab === 'clt' && !cltCanUse()) docTab = 'sar';
+      document.getElementById('doc-tabs').style.display = cltCanUse() ? '' : 'none';
+      document.getElementById('sar-view').style.display = docTab === 'sar' ? '' : 'none';
+      document.getElementById('clt-view').style.display = docTab === 'clt' ? '' : 'none';
+      document.querySelectorAll('#doc-tabs .doc-tab').forEach(b => b.classList.toggle('on', b.dataset.doc === docTab));
+      if (docTab === 'clt') cltOpenPage(); else sarOpenSar();
+    }
+    function docSwitch(tab) { docTab = tab === 'clt' && cltCanUse() ? 'clt' : 'sar'; sarOpenPage(); }
+    function docsChanged(docs) {
+      if (docs.indexOf('SAR') !== -1) sarDocsChanged();
+      if (docs.indexOf('CLT') !== -1) cltDocsChanged();
+    }
+    function docDirtyCount() { return sarDirtyIds().length + (cltDirty() ? 1 : 0); }
+
+    function sarOpenSar() {
+      if (!sar.controlsBuilt) { document.getElementById('sar-controls').innerHTML = sarControlsHtml(); sar.controlsBuilt = true; }
+      if (sar.fy !== selectedFy) { sar.loaded = false; sar.pdca = {}; sar.drafts.clear(); sar.remote.clear(); sar.page = 1; }
+      document.getElementById('sar-only-mine').checked = sar.onlyMine;
+      document.getElementById('sar-only-todo').checked = sar.onlyTodo;
+      document.getElementById('sar-export-btn').style.display = isPrivilegedUser() ? '' : 'none';
+      document.getElementById('sar-hint').innerText = isPrivilegedUser()
+        ? 'ตัวอย่างด้านขวาคือเอกสาร SAR ที่จะ Export (ตัวเลขแก้ได้ที่หน้าแรกเท่านั้น) · กรอกสรุป PDCA ใต้แต่ละตัวชี้วัดแล้วกด 💾 บันทึก'
+        : 'กรอกสรุป PDCA ใต้ตัวชี้วัดของหน่วยคุณแล้วกด 💾 บันทึก · การ Export รวมเล่มทำโดย ผอ./QMR/admin';
+      sarRenderCats();
+      if (sar.loaded) sarRender(); else sarLoad();
+    }
+
+    function sarSessionGone(res) {
+      if (res && res.message && String(res.message).indexOf('SESSION_EXPIRED') !== -1) { showLogin('เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่'); return true; }
+      return false;
+    }
+    function sarLoad() {
+      if (sar.loading) return;
+      const token = sessionToken, fy = selectedFy;
+      sar.loading = true;
+      showBusy('กำลังโหลดสรุป PDCA…');
+      google.script.run
+        .withSuccessHandler(unbusy((res) => {
+          sar.loading = false;
+          if (token !== sessionToken) return;
+          if (!res || !res.success) { if (!sarSessionGone(res)) showAlert('โหลดสรุป PDCA ไม่สำเร็จ', '❌', res ? res.message : ''); return; }
+          if (fy !== selectedFy) { if (currentTab === 'sar') sarOpenPage(); return; } // เปลี่ยนปีงบระหว่างรอ
+          sar.pdca = res.pdca; sar.fy = fy; sar.loaded = true;
+          if (currentTab === 'sar') sarRender();
+        }))
+        .withFailureHandler(unbusy((err) => { sar.loading = false; showAlert('เกิดข้อผิดพลาดเครือข่าย', '❌', String(err)); }))
+        .getSarDoc(token, fy);
+    }
+
+    // เครื่องอื่นบันทึกสรุป PDCA (อัปเดตอัตโนมัติ): ดึงใหม่เงียบๆ — ช่องที่กำลังแก้อยู่ไม่ถูกทับ แต่ขึ้นแถบเตือนให้เลือก
+    function sarDocsChanged() {
+      if (!sar.loaded || sar.refreshing || !sarCanUse()) return;
+      const token = sessionToken, fy = selectedFy;
+      sar.refreshing = true;
+      google.script.run
+        .withSuccessHandler((res) => {
+          sar.refreshing = false;
+          if (token !== sessionToken || fy !== selectedFy || !res || !res.success) return;
+          let changed = false;
+          const ids = new Set(Object.keys(sar.pdca).concat(Object.keys(res.pdca)));
+          ids.forEach(id => {
+            const mine = sar.pdca[id], theirs = res.pdca[id];
+            if ((mine ? mine.rev : 0) === (theirs ? theirs.rev : 0)) return;
+            if (sar.drafts.has(id)) { sar.remote.set(id, theirs || { text: '', rev: 0, at: '', by: '' }); sarPlaceRemote(id); return; }
+            changed = true;
+            if (theirs) sar.pdca[id] = theirs; else delete sar.pdca[id];
+          });
+          if (changed && currentTab === 'sar') sarRender(true);
+        })
+        .withFailureHandler(() => { sar.refreshing = false; })
+        .getSarDoc(token, fy);
+    }
+
+    // ---------- สรุป PDCA: แก้ / บันทึก ----------
+    function sarBox(id) { return document.getElementById('sar-box-' + id); }
+    // แถบเตือน "คนอื่นเพิ่งบันทึก" ใส่ในกล่องที่เปิดอยู่ทันที (ไม่วาดหน้าใหม่ — ผู้ใช้อาจกำลังพิมพ์อยู่)
+    function sarPlaceRemote(id) {
+      const box = sarBox(id), r = sar.remote.get(id);
+      if (!box || !r) return;
+      const old = box.querySelector('.sar-remote');
+      if (old) old.outerHTML = sarRemoteHtml(id, r); else box.insertAdjacentHTML('afterbegin', sarRemoteHtml(id, r));
+    }
+    function sarSyncBox(id) {
+      const box = sarBox(id);
+      if (!box) return;
+      const dirty = sar.drafts.has(id);
+      box.classList.toggle('dirty', dirty);
+      box.querySelector('.sar-save').disabled = !dirty;
+      box.querySelector('.sar-revert').style.display = dirty ? '' : 'none';
+    }
+    function sarInput(el) {
+      const id = el.dataset.id;
+      if (el.value === sarSaved(id).text) sar.drafts.delete(id); else sar.drafts.set(id, el.value);
+      sarSyncBox(id);
+    }
+    function sarSetText(id, text) {
+      const ta = sarBox(id) && sarBox(id).querySelector('.sar-pdca');
+      if (!ta) return;
+      ta.value = text; sarInput(ta); ta.focus();
+    }
+    function sarInsertHeads(id) { sarSetText(id, SAR_PDCA_HEADS); }
+    function sarFromDetails(id) {
+      const k = globalDatabase.find(x => x.id === id);
+      if (k) sarSetText(id, sarDetails(k));
+    }
+    function sarRevert(id) { sar.drafts.delete(id); sarRender(true); }
+
+    function sarSave(id, force) {
+      if (!sessionToken || !sarCanUse()) return;
+      const s = sarSaved(id), text = sar.drafts.has(id) ? sar.drafts.get(id) : s.text;
+      const token = sessionToken, fy = selectedFy;
+      showBusy('กำลังบันทึกสรุป PDCA…');
+      google.script.run
+        .withSuccessHandler(unbusy((res) => {
+          if (token !== sessionToken || fy !== selectedFy) return;
+          if (res && res.success) {
+            sar.pdca[id] = res.item; sar.drafts.delete(id); sar.remote.delete(id);
+            showToast(res.changed ? '✅ บันทึกสรุป PDCA แล้ว' : 'ไม่มีการเปลี่ยนแปลง');
+            sarRender(true);
+          } else if (res && res.conflict) {
+            sar.remote.set(id, res.current);
+            sarRender(true);
+            showAlert('มีคนอื่นบันทึกข้อความนี้ไปก่อน', '⚠️', res.message + '\nดูข้อความล่าสุดในกล่องเตือนใต้ตัวชี้วัด แล้วเลือกว่าจะใช้ของใคร');
+          } else if (!sarSessionGone(res)) showAlert('บันทึกสรุป PDCA ไม่สำเร็จ', '❌', res ? res.message : '');
+        }))
+        .withFailureHandler(unbusy((err) => showAlert('เกิดข้อผิดพลาดเครือข่าย', '❌', String(err))))
+        .saveSarPdca(token, fy, id, text, s.rev, !!force);
+    }
+
+    // choice: 'theirs' = ใช้ข้อความล่าสุด · 'mine' = แก้ต่อจากของฉัน (ถือว่าเห็นข้อความล่าสุดแล้ว) · 'force' = บันทึกทับ
+    function sarUseRemote(id, choice) {
+      const r = sar.remote.get(id);
+      if (!r) return;
+      if (choice === 'force') { sarSave(id, true); return; }
+      sar.pdca[id] = r; sar.remote.delete(id);
+      if (choice === 'theirs' || sar.drafts.get(id) === r.text) sar.drafts.delete(id);
+      sarRender(true);
+    }
+
+    function sarCopyPrev() {
+      showConfirm('คัดลอกสรุป PDCA จากปีงบก่อนหน้ามาเป็นร่างของปีงบ ' + selectedFy + ' ?\nคัดลอกเฉพาะตัวชี้วัดที่คุณแก้ได้ และที่ยังว่างในปีงบนี้ (ไม่ทับของที่กรอกแล้ว) · ตรวจและแก้ไขก่อนส่ง', () => {
+        const token = sessionToken, fy = selectedFy;
+        showBusy('กำลังคัดลอกสรุป PDCA…');
+        google.script.run
+          .withSuccessHandler(unbusy((res) => {
+            if (token !== sessionToken || fy !== selectedFy) return;
+            if (res && res.success) { showAlert(res.copied > 0 ? 'คัดลอกแล้ว' : 'ไม่มีอะไรให้คัดลอก', res.copied > 0 ? '✅' : 'ℹ️', res.message); sar.loaded = false; sarLoad(); }
+            else if (!sarSessionGone(res)) showAlert('คัดลอกไม่สำเร็จ', '⚠️', res ? res.message : '');
+          }))
+          .withFailureHandler(unbusy((err) => showAlert('เกิดข้อผิดพลาดเครือข่าย', '❌', String(err))))
+          .copySarPdcaFromPrevious(token, fy);
+      });
+    }
+
+    // ---------- ตัวอย่างเอกสาร ----------
+    function sarYearLabels() { return [selectedFy - 4, selectedFy - 3, selectedFy - 2, selectedFy - 1, selectedFy]; }
+    function sarHasResults(k) { return k.years.some(v => v !== null); }
+
+    function sarResultTable(kpis, yl) {
+      const w = [6, 42, 12, 8, 8, 8, 8, 8];
+      let h = `<table class="pr-table" style="font-size:10.5pt;"><colgroup>${w.map(x => `<col style="width:${x}%">`).join('')}</colgroup>
+        <thead><tr><th>ที่</th><th>ตัวชี้วัด</th><th>เป้าหมาย</th>${yl.map(y => `<th>${y}</th>`).join('')}</tr></thead><tbody>`;
+      kpis.forEach(k => {
+        const no = prNo(k), isSub = no.indexOf('.') !== -1;
+        h += `<tr><td${isSub ? '' : ' class="pr-main"'}>${no}</td><td class="pr-left${isSub ? ' pr-subkpi' : ' pr-main'}">${esc(k.name)}</td><td class="pr-target">${esc(k.target) || '-'}</td>${k.years.map(v => `<td>${prNum(v)}</td>`).join('')}</tr>`;
+      });
+      return h + '</tbody></table>';
+    }
+
+    function sarRemoteHtml(id, r) {
+      const btn = (c, label) => `<button type="button" class="btn btn-secondary btn-sm" data-id="${esc(id)}" onclick="sarUseRemote(this.dataset.id, '${c}')">${label}</button>`;
+      return `<div class="remote-banner sar-remote">⚠️ <span><b>${esc(r.by || 'ผู้ใช้อื่น')}</b> เพิ่งบันทึกข้อความนี้${r.at ? ' (' + esc(r.at) + ')' : ''} ระหว่างที่คุณกำลังแก้ — ข้อความล่าสุด:
+        <span class="sar-remote-text">${esc(r.text) || '(ว่าง)'}</span></span>
+        <span class="sar-remote-actions">${btn('theirs', 'ใช้ข้อความล่าสุด')}${btn('mine', 'แก้ต่อจากของฉัน')}${btn('force', 'บันทึกทับ')}</span></div>`;
+    }
+
+    function sarPdcaHtml(k) {
+      const id = k.id, s = sarSaved(id);
+      const stamp = s.at ? `แก้ไขล่าสุด ${esc(s.at)}${s.by ? ' โดย ' + esc(s.by) : ''}` : 'ยังไม่มีข้อมูล';
+      if (!k.canEditDetails) {
+        return `<div class="pr-text">${esc(s.text) || '-'}</div><div class="sar-stamp">${stamp} · 🔒 แก้ได้เฉพาะหัวหน้าหน่วยของตัวชี้วัดนี้, ผอ./QMR, admin</div>`;
+      }
+      const draft = sar.drafts.get(id), dirty = draft !== undefined, remote = sar.remote.get(id);
+      const idAttr = `data-id="${esc(id)}"`;
+      const small = (cls, fn, label, hide) => `<button type="button" class="btn btn-secondary btn-sm ${cls}" ${idAttr} onclick="${fn}(this.dataset.id)"${hide ? ' style="display:none"' : ''}>${label}</button>`;
+      return `<div class="sar-box${dirty ? ' dirty' : ''}" id="sar-box-${esc(id)}">${remote ? sarRemoteHtml(id, remote) : ''}
+        <textarea class="editable-input sar-pdca" rows="8" ${idAttr} oninput="sarInput(this)" placeholder="สรุปตาม PDCA ของตัวชี้วัดนี้ เช่น ปัญหาที่พบ → การพัฒนาที่ผ่านมา → แผนการพัฒนา">${esc(dirty ? draft : s.text)}</textarea>
+        <div class="sar-actions">
+          <button type="button" class="btn btn-primary btn-sm sar-save" ${idAttr} onclick="sarSave(this.dataset.id)"${dirty ? '' : ' disabled'}>💾 บันทึก</button>
+          ${small('sar-revert', 'sarRevert', '↩ ยกเลิกการแก้ไข', !dirty)}
+          ${small('sar-heads', 'sarInsertHeads', '➕ ใส่หัวข้อ')}
+          ${sarDetails(k) ? small('sar-from', 'sarFromDetails', '⬇ ดึงจากการวิเคราะห์เดิม') : ''}
+          <span class="sar-stamp">${stamp}</span>
+        </div></div>`;
+    }
+
+    function sarBlockHtml(k, pl, yl) {
+      const first = pl[0];
+      if (first.part !== k.part || first.category !== k.category) {
+        return `<div class="pr-block pr-ref"><div class="pr-kpi-title">${prNoLabel(k)} ${esc(k.name)}</div>
+          <div class="pr-note">🔗 เป็นตัวชี้วัดเดียวกับ ${esc(prPlaceText(first))} — การวิเคราะห์และสรุป PDCA ดูที่หมวดนั้น</div></div>`;
+      }
+      return `<div class="pr-block sar-block"><div class="sar-grid">
+        <div class="sar-left"><div class="pr-kpi-title">${prNoLabel(k)} ${esc(k.name)}</div>
+          <div class="pr-meta">เป้าหมาย: <b>${esc(k.target) || '-'}</b> · ปีงบประมาณ ${selectedFy}</div>
+          ${pl.length > 1 ? prPlacesNote(pl) : ''}
+          ${sarHasResults(k) ? `<div class="pr-chart">${generateSvgLineChart(k.years, k.target, yl)}</div>` : '<div class="pr-text">ยังไม่มีข้อมูลผลลัพธ์</div>'}</div>
+        <div class="sar-right"><div class="pr-label">รายละเอียด/การวิเคราะห์ตัวชี้วัด</div><div class="pr-text">${esc(sarDetails(k)) || '-'}</div>
+          <div class="pr-label">สรุป PDCA</div>${sarPdcaHtml(k)}</div></div></div>`;
+    }
+
+    // range = { from, to } ตามลำดับแถวที่ผ่านตัวกรอง · เลขข้อ/ตัวที่อยู่หลายหมวดคิดจากทุกหมวดที่เลือก (ตัวกรอง "แสดง" ไม่ทำให้เลขเปลี่ยน)
+    function sarBuildHtml(range) {
+      const chosen = sarChosen(), tree = sarTreeOf(chosen);
+      prNos = prNumbering(tree);
+      const places = sarPlacesOf(tree), yl = sarYearLabels();
+      const show = new Set(sarPreviewRows(chosen).slice(range.from, range.to).map(p => p.key));
+      let html = `<div class="pr-head"><div class="pr-hosp">โรงพยาบาลภูหลวง</div>
+        <div class="pr-sub">รายงานการประเมินตนเอง (SAR) ตอนที่ I–IV ปีงบประมาณ ${selectedFy}</div>
+        <div class="pr-info">จำนวน ${uniqueById(chosen).length} ตัวชี้วัด · ตัวอย่างบนจอ (ไฟล์ที่ Export ใช้ฟอนต์ TH SarabunPSK)</div></div>`;
+      Object.keys(tree).sort(comparePartNames).forEach(part => {
+        let partDone = false;
+        Object.keys(tree[part]).sort(catOrderOf(part)).forEach(cat => {
+          const kpis = tree[part][cat].filter(p => show.has(p.key));
+          if (kpis.length === 0) return;
+          if (!partDone) { html += `<div class="pr-part">${esc(partLabel(part))}</div>`; partDone = true; }
+          html += `<div class="pr-cat">${esc(cat)}</div><div class="pr-sub-title">เป้าหมายและผลทั้งปี</div>${sarResultTable(kpis, yl)}`;
+          html += kpis.map(k => sarBlockHtml(k, places.get(k.id), yl)).join('');
+        });
+      });
+      return html;
+    }
+
+    function sarPagerHtml(n, withSize) {
+      const pages = Math.max(1, Math.ceil(n / sar.size));
+      const from = n === 0 ? 0 : (sar.page - 1) * sar.size + 1, to = Math.min(n, sar.page * sar.size);
+      const nums = [];
+      for (let p = 1; p <= pages; p++) {
+        if (p === 1 || p === pages || Math.abs(p - sar.page) <= 2) nums.push(p);
+        else if (nums[nums.length - 1] !== '…') nums.push('…');
+      }
+      const btn = (label, p, disabled, active) => `<button type="button" class="page-btn${active ? ' active' : ''}" ${disabled ? 'disabled' : `onclick="sarGoPage(${p})"`}>${label}</button>`;
+      return `<div class="pager">
+        <span class="pager-info">แสดง ${from}–${to} จาก ${n} รายการ</span>
+        <span class="pager-buttons">
+          ${btn('«', 1, sar.page === 1)}${btn('‹', sar.page - 1, sar.page === 1)}
+          ${nums.map(p => p === '…' ? '<span class="page-gap">…</span>' : btn(p, p, false, p === sar.page)).join('')}
+          ${btn('›', sar.page + 1, sar.page === pages)}${btn('»', pages, sar.page === pages)}
+        </span>
+        ${withSize ? `<span class="pager-size">แสดงหน้าละ
+          <select class="editable-input" style="width:auto; display:inline-block; padding:2px 6px;" onchange="sarSetSize(this)">
+            ${SAR_SIZES.map(z => `<option value="${z}" ${z === sar.size ? 'selected' : ''}>${z}</option>`).join('')}
+          </select> ตัว</span>` : ''}
+      </div>`;
+    }
+    function sarGoPage(p) { sar.page = p; sarRender(); const m = document.getElementById('sar-main'); if (m) m.scrollIntoView({ block: 'start' }); }
+    function sarSetSize(sel) { sar.size = Number(sel.value) || 10; sar.page = 1; sarRender(); }
+
+    // keepScroll: อัปเดตอัตโนมัติ/หลังบันทึก — วาดหน้าเดิมใหม่ที่ตำแหน่งเลื่อนเดิม · กำลังพิมพ์ในช่อง PDCA อยู่: รอให้ออกจากช่องก่อน
+    function sarRender(keepScroll) {
+      if (currentTab !== 'sar' || !sar.loaded) return;
+      const ae = document.activeElement;
+      if (keepScroll && ae && ae.classList && ae.classList.contains('sar-pdca')) { sar.deferred = true; return; }
+      sar.deferred = false;
+      const y = window.scrollY;
+      const paper = document.getElementById('sar-paper'), more = document.getElementById('sar-more'), top = document.getElementById('sar-pager-top');
+      document.getElementById('sar-title').innerHTML = `📑 SAR Part I–IV · ปีงบประมาณ ${selectedFy}`;
+      sarRenderProgress();
+      const chosen = sarChosen(), rows = sarPreviewRows(chosen);
+      document.getElementById('sar-count').innerText = `เลือก ${uniqueById(chosen).length} ตัวชี้วัด`;
+      if (chosen.length === 0 || rows.length === 0) {
+        paper.innerHTML = `<div class="empty-state">${chosen.length === 0 ? 'ยังไม่ได้เลือกหมวด — ติ๊กหมวดทางซ้าย' : 'ไม่มีตัวชี้วัดตามตัวกรองที่เลือก'}</div>`;
+        more.innerHTML = ''; top.innerHTML = '';
+      } else {
+        sar.page = Math.min(Math.max(1, sar.page), Math.max(1, Math.ceil(rows.length / sar.size)));
+        paper.innerHTML = sarBuildHtml({ from: (sar.page - 1) * sar.size, to: sar.page * sar.size });
+        top.innerHTML = sarPagerHtml(rows.length, true);
+        more.innerHTML = sarPagerHtml(rows.length, false);
+      }
+      sarFit();
+      if (keepScroll) window.scrollTo(0, y);
+    }
+    function sarFit() {
+      const paper = document.getElementById('sar-paper'), wrap = document.getElementById('sar-scroll');
+      if (!paper || !wrap) return;
+      const px = 297 * 96 / 25.4, avail = wrap.clientWidth - 4;
+      paper.style.zoom = avail > 0 ? Math.max(0.25, Math.min(1, avail / px)) : 1;
+    }
+    window.addEventListener('resize', () => { if (currentTab === 'sar') sarFit(); });
+    document.addEventListener('focusout', (e) => {
+      if (sar.deferred && e.target && e.target.classList && e.target.classList.contains('sar-pdca')) setTimeout(() => sarRender(true), 0);
+    });
+
+    // ---------- Export Word (.docx) — สร้างในเบราว์เซอร์ (ไลบรารี docx โหลดจาก CDN ตอนกด Export) ----------
+    const SAR_DOCX_URL = 'https://cdn.jsdelivr.net/npm/docx@9.5.1/dist/index.iife.js';
+    const DOC_FONT = 'TH SarabunPSK';
+    function docLoadScript(url, globalName) {
+      if (window[globalName]) return Promise.resolve();
+      return new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = url;
+        s.onload = () => (window[globalName] ? resolve() : reject(new Error('โหลดไลบรารีสร้างไฟล์ไม่สมบูรณ์')));
+        s.onerror = () => { s.remove(); reject(new Error('โหลดไลบรารีสร้างไฟล์ไม่สำเร็จ — ตรวจสอบอินเทอร์เน็ตแล้วลองใหม่')); };
+        document.head.appendChild(s);
+      });
+    }
+    function docBusyText(msg) { const el = document.getElementById('busy-text'); if (el) el.innerText = msg; }
+    function docYield() { return new Promise(r => setTimeout(r, 0)); }
+    function docXml(s) { return String(s === null || s === undefined ? '' : s).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F￾￿]/g, ''); }
+    function downloadBlob(blob, name) {
+      const url = URL.createObjectURL(blob), a = document.createElement('a');
+      a.href = url; a.download = name; a.style.display = 'none';
+      document.body.appendChild(a); a.click();
+      setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 10000);
+    }
+
+    // กราฟเส้น (SVG ของหน้าเว็บ) → PNG 1200×460 สำหรับแปะในไฟล์ Word
+    function sarChartPng(k, yl) {
+      return new Promise((resolve, reject) => {
+        const svg = generateSvgLineChart(k.years, k.target, yl)
+          .replace(/^<svg [^>]*>/, '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 230" width="1200" height="460" font-family="Sarabun, \'Noto Sans Thai\', Tahoma, sans-serif">');
+        const img = new Image();
+        img.onload = () => {
+          const c = document.createElement('canvas');
+          c.width = 1200; c.height = 460;
+          const g = c.getContext('2d');
+          g.fillStyle = '#fff'; g.fillRect(0, 0, 1200, 460);
+          g.drawImage(img, 0, 0, 1200, 460);
+          c.toBlob(b => (b ? b.arrayBuffer().then(buf => resolve(new Uint8Array(buf))) : reject(new Error('แปลงกราฟไม่สำเร็จ'))), 'image/png');
+        };
+        img.onerror = () => reject(new Error('แปลงกราฟไม่สำเร็จ'));
+        img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+      });
+    }
+
+    async function sarExportDocx() {
+      if (!isPrivilegedUser() || !sar.loaded) return;
+      if (sarDirtyIds().length > 0) { showAlert('มีสรุป PDCA ที่ยังไม่ได้บันทึก', '⚠️', 'กรุณากด 💾 บันทึก หรือ ↩ ยกเลิกการแก้ไข ก่อน Export (ไฟล์ใช้เฉพาะข้อความที่บันทึกแล้ว)'); return; }
+      const chosen = sarChosen();
+      if (chosen.length === 0) { showAlert('ยังไม่ได้เลือกหมวด', '⚠️', 'กรุณาเลือกหมวดตัวชี้วัดอย่างน้อย 1 หมวด'); return; }
+      showBusy('กำลังสร้างไฟล์ Word…', 900000);
+      try {
+        await docLoadScript(SAR_DOCX_URL, 'docx');
+        const blob = await sarBuildDocx(chosen);
+        downloadBlob(blob, 'SAR_Part-I-IV_FY' + selectedFy + '.docx');
+        showToast('✅ สร้างไฟล์ Word แล้ว — ตรวจในโฟลเดอร์ดาวน์โหลด');
+      } catch (e) {
+        showAlert('สร้างไฟล์ Word ไม่สำเร็จ', '❌', String((e && e.message) || e));
+      } finally { hideBusy(); }
+    }
+
+    // เอกสาร A4 แนวนอน ฟอนต์ TH SarabunPSK เลขอารบิก: ต่อหมวด = ตารางเป้าหมาย+ผล 5 ปี แล้วตาราง (กราฟ | การวิเคราะห์ + สรุป PDCA)
+    async function sarBuildDocx(chosen) {
+      const D = window.docx;
+      const FONT = { ascii: DOC_FONT, hAnsi: DOC_FONT, cs: DOC_FONT, eastAsia: DOC_FONT };
+      const W = 15398, yl = sarYearLabels();
+      const tree = sarTreeOf(chosen);
+      prNos = prNumbering(tree);
+      const places = sarPlacesOf(tree);
+      const run = (text, o = {}) => new D.TextRun({ text: docXml(text), font: FONT, size: (o.size || 16) * 2, sizeComplexScript: true,
+        bold: !!o.bold, boldComplexScript: !!o.bold, italics: !!o.italics, color: o.color });
+      const para = (text, o = {}) => new D.Paragraph({ alignment: o.align, spacing: { before: o.before || 0, after: o.after === undefined ? 60 : o.after },
+        indent: o.indent ? { left: o.indent } : undefined, keepNext: !!o.keepNext, pageBreakBefore: !!o.pageBreak, shading: o.fill ? { type: D.ShadingType.CLEAR, fill: o.fill, color: 'auto' } : undefined,
+        border: o.underline ? { bottom: { style: D.BorderStyle.SINGLE, size: 8, color: '86EFAC', space: 1 } } : undefined,
+        children: [run(text, o)] });
+      const lines = (text, o = {}) => (String(text || '').trim() ? String(text).split('\n').map(l => para(l, Object.assign({ after: 20 }, o))) : [para('-', Object.assign({ after: 20 }, o))]);
+      const cell = (children, w, o = {}) => new D.TableCell({ width: { size: w, type: D.WidthType.DXA }, children: children.length ? children : [para('')],
+        shading: o.fill ? { type: D.ShadingType.CLEAR, fill: o.fill, color: 'auto' } : undefined, verticalAlign: o.valign || D.VerticalAlign.TOP,
+        margins: { top: 40, bottom: 40, left: 80, right: 80 } });
+      const numCell = (text, w, o = {}) => cell([para(text, Object.assign({ align: D.AlignmentType.CENTER, size: 14, after: 0 }, o))], w, o);
+
+      const wA = [800, 6598, 2000, 1200, 1200, 1200, 1200, 1200];
+      const resultTable = (kpis) => new D.Table({ width: { size: W, type: D.WidthType.DXA }, columnWidths: wA, layout: D.TableLayoutType.FIXED,
+        rows: [new D.TableRow({ tableHeader: true, cantSplit: true, children: ['ที่', 'ตัวชี้วัด', 'เป้าหมาย'].concat(yl.map(String)).map((t, i) => numCell(t, wA[i], { bold: true, fill: 'DCFCE7' })) })]
+          .concat(kpis.map(k => {
+            const no = prNo(k), sub = no.indexOf('.') !== -1;
+            return new D.TableRow({ cantSplit: true, children: [numCell(no, wA[0], { bold: !sub }),
+              cell([para(k.name, { size: 14, bold: !sub, after: 0, indent: sub ? 200 : 0 })], wA[1]), numCell(k.target || '-', wA[2], { bold: true, fill: 'FEF3C7' })]
+              .concat(k.years.map((v, i) => numCell(prNum(v), wA[3 + i]))) });
+          })) });
+
+      const wB = [6900, 8498];
+      const imgW = 440, imgH = Math.round(440 * 230 / 600);
+      let done = 0;
+      const total = uniqueById(chosen).filter(k => sarHasResults(k)).length;
+      const analysisRows = async (kpis, part, cat) => {
+        const rows = [new D.TableRow({ tableHeader: true, cantSplit: true, children: [
+          cell([para('ตัวชี้วัด/ผลลัพธ์ (แสดงกราฟ)', { bold: true, align: D.AlignmentType.CENTER, size: 14, after: 0 })], wB[0], { fill: 'DCFCE7' }),
+          cell([para('การวิเคราะห์ผลลัพธ์ตามตัวชี้วัดที่สำคัญและ PDCA (คำอธิบาย)', { bold: true, align: D.AlignmentType.CENTER, size: 14, after: 0 })], wB[1], { fill: 'DCFCE7' })] })];
+        for (const k of kpis) {
+          const pl = places.get(k.id), first = pl[0];
+          const title = para(prNoLabel(k) + ' ' + k.name, { bold: true, size: 15, color: '14532D', after: 40 });
+          if (first.part !== part || first.category !== cat) {
+            rows.push(new D.TableRow({ cantSplit: true, children: [cell([title], wB[0]), cell([para('ดูตัวชี้วัดเดียวกันที่ ' + prPlaceText(first), { size: 14, italics: true, color: '1E3A8A', after: 0 })], wB[1])] }));
+            continue;
+          }
+          const left = [title, para('เป้าหมาย: ' + (k.target || '-') + ' · ปีงบประมาณ ' + selectedFy, { size: 13, color: '475569', after: 60 })];
+          if (pl.length > 1) left.push(para('ตัวชี้วัดเดียวกันอยู่ ' + pl.length + ' หมวด: ' + pl.map(p => prPlaceText(p)).join(' · '), { size: 12, italics: true, color: '1E3A8A', after: 60 }));
+          if (sarHasResults(k)) {
+            if (++done % 5 === 0) { docBusyText('กำลังสร้างกราฟ ' + done + ' / ' + total + '…'); await docYield(); }
+            left.push(new D.Paragraph({ alignment: D.AlignmentType.CENTER, children: [new D.ImageRun({ type: 'png', data: await sarChartPng(k, yl), transformation: { width: imgW, height: imgH },
+              altText: { name: 'chart', title: k.name, description: 'กราฟผลลัพธ์ 5 ปี ' + k.name } })] }));
+          } else left.push(para('ยังไม่มีข้อมูลผลลัพธ์', { size: 14, italics: true, color: '64748B' }));
+          const right = [para('รายละเอียด/การวิเคราะห์ตัวชี้วัด', { bold: true, size: 14, color: '166534', after: 20 })].concat(lines(sarDetails(k), { size: 14 }))
+            .concat([para('สรุป PDCA', { bold: true, size: 14, color: '166534', before: 80, after: 20 })]).concat(lines(sarSaved(k.id).text, { size: 14 }));
+          rows.push(new D.TableRow({ cantSplit: true, children: [cell(left, wB[0]), cell(right, wB[1])] })); // ไม่ตัดแถวข้ามหน้า (แถวสูงเกิน 1 หน้า Word ตัดเอง)
+        }
+        return new D.Table({ width: { size: W, type: D.WidthType.DXA }, columnWidths: wB, layout: D.TableLayoutType.FIXED, rows: rows });
+      };
+
+      const children = [
+        para('รายงานการประเมินตนเอง (SAR)', { bold: true, size: 24, align: D.AlignmentType.CENTER, after: 40 }),
+        para('โรงพยาบาลภูหลวง', { bold: true, size: 20, align: D.AlignmentType.CENTER, after: 40 }),
+        para('ตอนที่ I–IV ปีงบประมาณ ' + selectedFy, { size: 18, align: D.AlignmentType.CENTER, after: 40 }),
+        para('จัดทำเมื่อ ' + new Date().toLocaleString('th-TH', { dateStyle: 'long', timeStyle: 'short' }) + ' · โดย ' + currentUser.username + ' · ' + uniqueById(chosen).length + ' ตัวชี้วัด', { size: 12, color: '64748B', align: D.AlignmentType.CENTER, after: 120 })
+      ];
+      let firstPart = true;
+      for (const part of Object.keys(tree).sort(comparePartNames)) {
+        children.push(para(partLabel(part), { bold: true, size: 18, color: 'FFFFFF', fill: '166534', pageBreak: !firstPart, keepNext: true, before: 120, after: 80 }));
+        firstPart = false;
+        for (const cat of Object.keys(tree[part]).sort(catOrderOf(part))) {
+          const kpis = tree[part][cat];
+          children.push(para(cat, { bold: true, size: 16, color: '166534', underline: true, keepNext: true, before: 160, after: 60 }));
+          children.push(para('เป้าหมายและผลทั้งปี', { bold: true, size: 14, color: '475569', keepNext: true }));
+          children.push(resultTable(kpis));
+          children.push(para('', { after: 60 }));
+          children.push(await analysisRows(kpis, part, cat));
+        }
+      }
+      docBusyText('กำลังรวมไฟล์ Word…');
+      await docYield();
+      const doc = new D.Document({
+        creator: 'KPI SAR', title: 'SAR Part I-IV ปีงบประมาณ ' + selectedFy,
+        styles: { default: { document: { run: { font: FONT, size: 32, sizeComplexScript: true } } } },
+        sections: [{
+          properties: { page: { size: { orientation: D.PageOrientation.LANDSCAPE, width: 11906, height: 16838 }, margin: { top: 720, bottom: 720, left: 720, right: 720 } } },
+          headers: { default: new D.Header({ children: [para('โรงพยาบาลภูหลวง · รายงานการประเมินตนเอง (SAR) ตอนที่ I–IV ปีงบประมาณ ' + selectedFy, { size: 11, color: '64748B', align: D.AlignmentType.RIGHT, after: 0 })] }) },
+          footers: { default: new D.Footer({ children: [new D.Paragraph({ alignment: D.AlignmentType.CENTER, children: [
+            new D.TextRun({ children: ['หน้า ', D.PageNumber.CURRENT, ' / ', D.PageNumber.TOTAL_PAGES], font: FONT, size: 22, sizeComplexScript: true })] })] }) },
+          children: children
+        }]
+      });
+      return D.Packer.toBlob(doc);
+    }
+
+    // ---------- CLT profile ของ PCT ----------
+    // ข้อความ CLT เก็บในชีต SAR_Doc (getCltDoc / saveCltItem) · รายการตัวชี้วัด PCT มาจากเซิร์ฟเวอร์ (ผอ./QMR เห็นหมวด PCT ฝั่งหน้าเว็บไม่ครบ)
+    // ใช้ได้: admin, ผอ./QMR, หัวหน้าหน่วย PCT · Export .pptx: ผอ./QMR/admin · รูป Process flowchart เว้นสไลด์ไว้ให้แปะเองหลัง Export
+    const CLT_OVERVIEW = [
+      { key: 'O|mission', title: 'พันธกิจ/ความมุ่งหมายของ CLT/PCT', type: 'text', hint: 'กลุ่มผู้ป่วยที่ดูแล เป้าหมายด้านผู้รับบริการ บุคลากร มาตรฐานวิชาชีพ และขอบเขตที่ส่งต่อ' },
+      { key: 'O|scope', title: 'ขอบเขตบริการ', type: 'text', hint: 'บริการที่ให้ (ส่งเสริม ป้องกัน รักษา ฟื้นฟู) และเครือข่าย' },
+      { key: 'O|clients', title: 'ผู้รับบริการและความต้องการ', type: 'table', cols: ['ผู้รับบริการ', 'ความต้องการ'] },
+      { key: 'O|focus', title: 'จุดเน้นของการพัฒนา', type: 'text', hint: 'ยุทธศาสตร์/จุดเน้นที่เชื่อมกับการพัฒนาของ PCT' },
+      { key: 'O|priority', title: 'กลุ่มผู้ป่วยสำคัญของ CLT/PCT', type: 'table', cols: ['กลุ่มโรค/ผู้ป่วย', 'High risk', 'High cost / Long LOS', 'High volume', 'New evidence / technology', 'Complex care'], hint: 'ให้คะแนน 1–5 ในแต่ละเกณฑ์', seedGroups: true },
+      { key: 'O|dims', title: 'ตัวชี้วัดตามมิติคุณภาพ (สร้างอัตโนมัติ)', type: 'dims' },
+      { key: 'O|risks', title: 'ความเสี่ยงและมาตรการป้องกัน', type: 'table', cols: ['ความเสี่ยง', 'ระดับความเสี่ยง', 'มาตรการป้องกัน', 'ผลการติดตาม/การควบคุม'] },
+      { key: 'O|process', title: 'คุณภาพของขั้นตอนต่างๆ ในกระบวนการดูแล', type: 'table', cols: ['กระบวนการ', 'โรค', 'มาตรการ/นวัตกรรม เพื่อให้เกิดคุณภาพ'] },
+      { key: 'O|qi', title: 'การพัฒนาคุณภาพ การวิจัย นวัตกรรม', type: 'table', cols: ['เรื่อง', 'เป้าหมาย', 'การพัฒนางานวิจัย/นวัตกรรม', 'ผลลัพธ์'] },
+      { key: 'O|plan', title: 'แผนการพัฒนาคุณภาพ การวิจัย นวัตกรรม', type: 'table', cols: ['แผนพัฒนา/การวิจัย/นวัตกรรม', 'กระบวนการ', 'กลุ่มเป้าหมาย'] }
+    ];
+    const CLT_DISEASE = [
+      { f: 'context', title: 'บริบท (Context)', type: 'text', hint: 'ลักษณะพื้นที่/ระยะทางส่งต่อ ระบบการดูแลที่มี ทีมที่รับผิดชอบ สถิติที่ผ่านมา' },
+      { f: 'challenge', title: 'ประเด็น/ความท้าทาย และความเสี่ยงสำคัญ', type: 'text', hint: 'ประเด็นท้าทายด้านการวินิจฉัย การรักษา ศักยภาพ · ตามด้วยความเสี่ยงสำคัญ (บรรทัดละข้อ)' },
+      { f: 'purpose', title: 'เป้าหมาย (Purpose)', type: 'text', hint: 'เป้าหมายหลักของการดูแลโรคนี้ เช่น ผู้ป่วยปลอดภัย เข้าถึงรวดเร็ว' },
+      { f: 'driver', title: 'ปัจจัยขับเคลื่อน (Driver Diagram)', type: 'table', cols: ['Primary driver', 'Secondary driver', 'Change idea / Intervention'] },
+      { f: 'flow', title: 'Process Flowchart', type: 'flow' },
+      { f: 'pm', title: 'การจัดการกระบวนการ (Process Management)', type: 'table', cols: ['กระบวนการ', 'ข้อกำหนดของกระบวนการ', 'ตัวชี้วัดของกระบวนการ / เป้าหมาย', 'การออกแบบกระบวนการ'] },
+      { f: 'results', title: 'ผลลัพธ์รายตัวชี้วัด', type: 'results' },
+      { f: 'plan', title: 'แผนพัฒนาต่อไป', type: 'text', hint: 'แผนพัฒนา/นวัตกรรมที่จะทำต่อ' }
+    ];
+    const CLT_DIMS = [['A', 'Access', 'การเข้าถึง'], ['B', 'Continuity', 'ความต่อเนื่อง'], ['C', 'Appropriate', 'ความเหมาะสม'], ['D', 'Effective', 'ประสิทธิผล'],
+      ['E', 'Efficient', 'ประสิทธิภาพ'], ['F', 'Safe', 'ความปลอดภัย'], ['G', 'People-centered', 'เน้นผู้ป่วย'], ['H', 'Health promotion', 'ส่งเสริมสุขภาพ']];
+    // ระบบเดามิติจากชื่อตัวชี้วัด (ข้อแรกที่ตรงชนะ ไม่ตรงเลย = ความเหมาะสม) — ผู้ใช้ปรับได้ที่หน้าผลลัพธ์ของตัวชี้วัด
+    const CLT_DIM_RULES = [
+      ['F', /เสียชีวิต|อัตราตาย|ภาวะแทรกซ้อน|อุบัติการณ์|คลาดเคลื่อน|ผิดพลาด|ไม่พึงประสงค์|ทรุดลง|ติดเชื้อ|ตกเลือด|รุนแรง|ฆ่าตัวตาย|ก่อความรุนแรง/],
+      ['H', /ส่งเสริม|ป้องกัน|คัดกรอง|วัคซีน|ฝากครรภ์|ปรับเปลี่ยนพฤติกรรม|รายใหม่|ค้นหา/],
+      ['G', /พึงพอใจ|ความรู้|ครอบครัว|Family meeting|เสริมพลัง|ให้ข้อมูล|ดูแลตนเอง/],
+      ['B', /เยี่ยมบ้าน|ติดตาม|ต่อเนื่อง|COC|ส่งต่อ|[Rr]efer|ขึ้นทะเบียน|ขาดนัด|[Rr]e.?admit|[Rr]e.?visit|ฟื้นฟู|ระยะกลาง|IMC/],
+      ['A', /เข้าถึง|รอคอย|Door to|ทันเวลา|[Oo]nset|ภายใน\s*[0-9]+\s*(นาที|ชม)|ครอบคลุม|EMS|Fast Track/],
+      ['E', /วันนอน|LOS|ค่าใช้จ่าย|ต้นทุน|ประสิทธิภาพ/],
+      ['D', /ควบคุม|ได้ดี|สำเร็จ|HbA1c|eGFR|ADL|Barthel|หาย|ลดลง|เพิ่มขึ้น/]
+    ];
+    const clt = { loaded: false, loading: false, refreshing: false, fy: null, items: {}, kpis: [], sel: 'O|mission', draft: null, remote: null, open: new Set(), controlsBuilt: false };
+    let docTab = 'sar';
+
+    function cltReset() {
+      clt.loaded = false; clt.loading = false; clt.refreshing = false; clt.fy = null; clt.items = {}; clt.kpis = [];
+      clt.sel = 'O|mission'; clt.draft = null; clt.remote = null; clt.open = new Set();
+    }
+    function cltCanUse() { return !!currentUser && (isPrivilegedUser() || (currentUser.tier === 'head' && (currentUser.depts || []).indexOf('PCT') !== -1)); }
+    function cltItem(key) { return clt.items[key] || { text: '', rev: 0, at: '', by: '' }; }
+    function cltHasText(key) { return !!cltItem(key).text.trim(); }
+    function cltGroups() {
+      const g = new Set();
+      clt.kpis.forEach(k => k.groups.forEach(x => g.add(x)));
+      return Array.from(g).sort((a, b) => compareCats('PCT', a, b));
+    }
+    function cltSelectedGroups() {
+      const all = cltGroups(), it = cltItem('S|groups').text;
+      if (!it) return all;
+      try { const pick = JSON.parse(it); return all.filter(g => pick.indexOf(g) !== -1); } catch (e) { return all; }
+    }
+    function cltKpisOf(group) {
+      return clt.kpis.filter(k => k.groups.indexOf(group) !== -1)
+        .sort((a, b) => ((a.order === null ? 1e9 : a.order) - (b.order === null ? 1e9 : b.order)) || a.row - b.row);
+    }
+    function cltDimOf(k) {
+      const v = cltItem('DIM|' + k.id).text;
+      if (/^[A-H]$/.test(v)) return v;
+      const hit = CLT_DIM_RULES.find(r => r[1].test(k.name));
+      return hit ? hit[0] : 'C';
+    }
+    function cltDimLabel(code) { const d = CLT_DIMS.find(x => x[0] === code); return d ? d[1] + ' (' + d[2] + ')' : code; }
+    function cltRows(raw) { try { const r = JSON.parse(raw || '[]'); return Array.isArray(r) ? r : []; } catch (e) { return []; } }
+    function cltSpecOf(key) {
+      const p = key.split('|');
+      if (p[0] === 'O') return CLT_OVERVIEW.find(s => s.key === key) || null;
+      if (p[0] === 'D' && p[2] === 'R') return { key: key, type: 'result', group: p[1], kpi: clt.kpis.find(k => k.id === p[3]) };
+      if (p[0] === 'D') { const s = CLT_DISEASE.find(x => x.f === p[2]); return s ? Object.assign({ key: key, group: p[1] }, s) : null; }
+      return null;
+    }
+    function cltTitleOf(key) {
+      const s = cltSpecOf(key);
+      if (!s) return key;
+      if (s.type === 'result') return (s.kpi ? s.kpi.name : s.key);
+      return (s.group ? s.group + ' › ' : '') + s.title;
+    }
+
+    // ---------- เปิดหน้า / โหลด ----------
+    function cltOpenPage() {
+      if (!cltCanUse()) { docSwitch('sar'); return; }
+      if (!clt.controlsBuilt) { document.getElementById('clt-controls').innerHTML = cltControlsHtml(); clt.controlsBuilt = true; }
+      if (clt.fy !== selectedFy) { clt.loaded = false; clt.items = {}; clt.kpis = []; clt.draft = null; clt.remote = null; clt.sel = 'O|mission'; clt.open = new Set(); }
+      document.getElementById('clt-export-btn').style.display = isPrivilegedUser() ? '' : 'none';
+      if (clt.loaded) cltRender(); else cltLoad();
+    }
+    function cltLoad() {
+      if (clt.loading) return;
+      const token = sessionToken, fy = selectedFy;
+      clt.loading = true;
+      showBusy('กำลังโหลดข้อมูล CLT…');
+      google.script.run
+        .withSuccessHandler(unbusy((res) => {
+          clt.loading = false;
+          if (token !== sessionToken) return;
+          if (!res || !res.success) { if (!sarSessionGone(res)) showAlert('โหลดข้อมูล CLT ไม่สำเร็จ', '❌', res ? res.message : ''); return; }
+          if (fy !== selectedFy) { if (currentTab === 'sar' && docTab === 'clt') cltOpenPage(); return; }
+          clt.items = res.items; clt.kpis = res.kpis; clt.fy = fy; clt.loaded = true;
+          if (currentTab === 'sar' && docTab === 'clt') cltRender();
+        }))
+        .withFailureHandler(unbusy((err) => { clt.loading = false; showAlert('เกิดข้อผิดพลาดเครือข่าย', '❌', String(err)); }))
+        .getCltDoc(token, fy);
+    }
+    function cltDocsChanged() {
+      if (!clt.loaded || clt.refreshing || !cltCanUse()) return;
+      const token = sessionToken, fy = selectedFy;
+      clt.refreshing = true;
+      google.script.run
+        .withSuccessHandler((res) => {
+          clt.refreshing = false;
+          if (token !== sessionToken || fy !== selectedFy || !res || !res.success) return;
+          const dk = clt.draft && clt.draft.key;
+          let changed = false;
+          const keys = new Set(Object.keys(clt.items).concat(Object.keys(res.items)));
+          keys.forEach(key => {
+            const mine = clt.items[key], theirs = res.items[key];
+            if ((mine ? mine.rev : 0) === (theirs ? theirs.rev : 0)) return;
+            if (key === dk && cltDirty()) { clt.remote = theirs || { text: '', rev: 0, at: '', by: '' }; return; }
+            changed = true;
+            if (theirs) clt.items[key] = theirs; else delete clt.items[key];
+          });
+          clt.kpis = res.kpis;
+          if ((changed || clt.remote) && currentTab === 'sar' && docTab === 'clt') cltRender(true);
+        })
+        .withFailureHandler(() => { clt.refreshing = false; })
+        .getCltDoc(token, fy);
+    }
+
+    // ---------- แถบซ้าย: ผังหัวข้อ ----------
+    function cltControlsHtml() {
+      return `<div class="pg-summary">🩺 CLT profile ของ PCT · ปีงบประมาณ <span id="clt-fy"></span></div>
+        <div id="clt-progress"></div>
+        <div id="clt-tree" class="clt-tree"></div>
+        <button type="button" class="btn btn-secondary" style="width: 100%; margin: 8px 0 6px;" onclick="guardUnsaved(cltCopyPrev)">📋 คัดลอกข้อความจากปีงบก่อนหน้า (เป็นร่าง)</button>
+        <button type="button" class="btn btn-primary" id="clt-export-btn" style="width: 100%;" onclick="cltExportPptx()">📥 Export PowerPoint (.pptx)</button>
+        <p class="hint" style="margin-top: 6px;">กรอกทีละหัวข้อทางซ้าย · ตัวเลข/กราฟของตัวชี้วัดมาจากระบบ (ปีงบนี้ย้อนหลัง 5 ปี) · Process Flowchart เว้นสไลด์ไว้ให้แปะรูปเองหลัง Export · การ Export รวมเล่มทำโดย ผอ./QMR/admin</p>`;
+    }
+    function cltSectionKeys(group) {
+      const keys = [];
+      CLT_DISEASE.forEach(s => {
+        if (s.type === 'text' || s.type === 'table') keys.push('D|' + group + '|' + s.f);
+        else if (s.type === 'results') cltKpisOf(group).forEach(k => keys.push('D|' + group + '|R|' + k.id));
+      });
+      return keys;
+    }
+    function cltTreeHtml() {
+      const sel = clt.sel, mark = key => (cltHasText(key) ? '<span class="clt-ok">✓</span>' : '<span class="clt-no">○</span>');
+      const link = (key, label, ok) => `<div class="clt-link${sel === key ? ' active' : ''}" data-key="${esc(key)}" onclick="cltSelect(this.dataset.key)">${ok === undefined ? '' : ok} ${label}</div>`;
+      let h = `<div class="clt-head">ภาพรวม PCT</div>`;
+      CLT_OVERVIEW.forEach(s => { h += link(s.key, esc(s.title), s.type === 'dims' ? '' : mark(s.key)); });
+      const picked = new Set(cltSelectedGroups());
+      h += `<div class="clt-head" style="margin-top:8px;">กลุ่มโรค <span class="hint" style="font-weight:400;">(ติ๊กเพื่อใส่ในเอกสาร)</span></div>`;
+      cltGroups().forEach(g => {
+        const keys = cltSectionKeys(g), done = keys.filter(cltHasText).length, open = clt.open.has(g);
+        h += `<div class="clt-group"><div class="clt-group-head"><input type="checkbox" data-g="${esc(g)}" ${picked.has(g) ? 'checked' : ''} onchange="cltPickGroup(this.dataset.g, this.checked)" title="ใส่กลุ่มโรคนี้ในเอกสาร">
+          <span class="clt-group-name" data-g="${esc(g)}" onclick="cltToggleGroup(this.dataset.g)">${open ? '▾' : '▸'} ${esc(g)}</span><span class="hint">${done}/${keys.length}</span></div>`;
+        if (open) {
+          CLT_DISEASE.forEach(s => {
+            if (s.type === 'results') {
+              cltKpisOf(g).forEach(k => { const key = 'D|' + g + '|R|' + k.id; h += link(key, '📈 ' + esc(prShort(k.name, 48)), mark(key)); });
+            } else { const key = 'D|' + g + '|' + s.f; h += link(key, esc(s.title), s.type === 'flow' ? '' : mark(key)); }
+          });
+        }
+        h += '</div>';
+      });
+      return h;
+    }
+    function cltToggleGroup(g) { if (clt.open.has(g)) clt.open.delete(g); else clt.open.add(g); cltRenderTree(); }
+    function cltRenderTree() {
+      const box = document.getElementById('clt-tree'), keep = box.scrollTop;
+      box.innerHTML = cltTreeHtml();
+      box.scrollTop = keep;
+    }
+    function cltRenderProgress() {
+      const groups = cltSelectedGroups();
+      let keys = CLT_OVERVIEW.filter(s => s.type === 'text' || s.type === 'table').map(s => s.key);
+      groups.forEach(g => { keys = keys.concat(cltSectionKeys(g)); });
+      const done = keys.filter(cltHasText).length;
+      document.getElementById('clt-progress').innerHTML = `<div class="form-group"><label>ความคืบหน้า (กลุ่มโรคที่เลือก ${groups.length} กลุ่ม)</label>
+        <div class="pg-part-head"><span>กรอกแล้ว</span><span>${done} / ${keys.length} หัวข้อ</span></div>
+        <div class="pg-bar"><span style="width:${keys.length ? Math.round(done / keys.length * 100) : 0}%; background:#16a34a;"></span></div></div>`;
+    }
+    function cltPickGroup(g, on) {
+      const cur = new Set(cltSelectedGroups());
+      if (on) cur.add(g); else cur.delete(g);
+      const list = cltGroups().filter(x => cur.has(x));
+      cltSaveRaw('S|groups', JSON.stringify(list), () => { cltRenderTree(); cltRenderProgress(); }, () => cltRenderTree());
+    }
+
+    // ---------- ตัวแก้ไขทางขวา ----------
+    function cltDirty() {
+      const d = clt.draft;
+      if (!d) return false;
+      const saved = cltItem(d.key).text;
+      return d.rows ? cltCleanRows(d.rows) !== saved : d.text !== saved;
+    }
+    function cltCleanRows(rows) {
+      const out = rows.map(r => r.map(c => String(c || '').trim())).filter(r => r.some(c => c));
+      return out.length ? JSON.stringify(out) : '';
+    }
+    function cltSelect(key) {
+      if (key === clt.sel) return;
+      const go = () => { clt.sel = key; clt.draft = null; clt.remote = null; cltRender(); };
+      if (cltDirty()) showConfirm('มีข้อความในหัวข้อนี้ที่ยังไม่ได้บันทึก\nออกโดยไม่บันทึกใช่หรือไม่?', go);
+      else go();
+    }
+    function cltRender(keepScroll) {
+      if (currentTab !== 'sar' || docTab !== 'clt' || !clt.loaded) return;
+      const ae = document.activeElement;
+      if (keepScroll && ae && ae.closest && ae.closest('#clt-editor')) { // กำลังพิมพ์: ไม่วาดตัวแก้ไขใหม่ — ใส่แถบเตือนเข้าไปแทน
+        cltRenderTree(); cltRenderProgress(); cltPlaceRemote(); return;
+      }
+      document.getElementById('clt-fy').innerText = selectedFy;
+      cltRenderTree(); cltRenderProgress();
+      const y = window.scrollY;
+      document.getElementById('clt-editor').innerHTML = cltEditorHtml();
+      if (keepScroll) window.scrollTo(0, y);
+    }
+    function cltPlaceRemote() {
+      const box = document.getElementById('clt-remote-slot');
+      if (box && clt.remote) box.innerHTML = cltRemoteHtml();
+    }
+    function cltRemoteHtml() {
+      const r = clt.remote;
+      const preview = r.text && /^\[/.test(r.text) ? cltRows(r.text).map(x => x.join(' | ')).join('\n') : r.text;
+      const btn = (c, label) => `<button type="button" class="btn btn-secondary btn-sm" onclick="cltUseRemote('${c}')">${label}</button>`;
+      return `<div class="remote-banner sar-remote">⚠️ <span><b>${esc(r.by || 'ผู้ใช้อื่น')}</b> เพิ่งบันทึกหัวข้อนี้${r.at ? ' (' + esc(r.at) + ')' : ''} ระหว่างที่คุณกำลังแก้ — ข้อความล่าสุด:
+        <span class="sar-remote-text">${esc(preview) || '(ว่าง)'}</span></span><span class="sar-remote-actions">${btn('theirs', 'ใช้ข้อความล่าสุด')}${btn('mine', 'แก้ต่อจากของฉัน')}${btn('force', 'บันทึกทับ')}</span></div>`;
+    }
+    function cltUseRemote(choice) {
+      const r = clt.remote, d = clt.draft;
+      if (!r || !d) return;
+      if (choice === 'force') { cltSave(true); return; }
+      clt.items[d.key] = r; clt.remote = null;
+      if (choice === 'theirs') clt.draft = null;
+      cltRender();
+    }
+
+    function cltStampHtml(key) { const it = cltItem(key); return `<span class="sar-stamp">${it.at ? 'แก้ไขล่าสุด ' + esc(it.at) + (it.by ? ' โดย ' + esc(it.by) : '') : 'ยังไม่มีข้อมูล'}</span>`; }
+    function cltActionsHtml(key, extra) {
+      const dirty = cltDirty();
+      return `<div class="sar-actions"><button type="button" class="btn btn-primary btn-sm" id="clt-save" onclick="cltSave()"${dirty ? '' : ' disabled'}>💾 บันทึก</button>
+        <button type="button" class="btn btn-secondary btn-sm" id="clt-revert" onclick="cltRevert()"${dirty ? '' : ' style="display:none"'}>↩ ยกเลิกการแก้ไข</button>${extra || ''}${cltStampHtml(key)}</div>`;
+    }
+    function cltEditorHtml() {
+      const key = clt.sel, s = cltSpecOf(key);
+      if (!s) return '<div class="empty-state">เลือกหัวข้อทางซ้าย</div>';
+      const head = `<h3 class="clt-title">${esc(cltTitleOf(key))}</h3>`;
+      if (s.type === 'dims') return head + cltDimsHtml();
+      if (s.type === 'flow') return head + `<div class="pr-note">🖼️ Process Flowchart ของโรคนี้ — ระบบเว้นสไลด์ไว้ในไฟล์ PowerPoint ที่ Export ให้แปะรูปเองหลังจากนั้น (อนาคตอาจเพิ่มตัววาด Flowchart ในเว็บ)</div>`;
+      const remote = `<div id="clt-remote-slot">${clt.remote && clt.draft && clt.draft.key === key ? cltRemoteHtml() : ''}</div>`;
+      if (s.type === 'text') {
+        const val = clt.draft && clt.draft.key === key ? clt.draft.text : cltItem(key).text;
+        return head + (s.hint ? `<p class="hint">${esc(s.hint)}</p>` : '') + remote +
+          `<textarea id="clt-text" class="editable-input sar-pdca" rows="14" oninput="cltInput(this)">${esc(val)}</textarea>` + cltActionsHtml(key);
+      }
+      if (s.type === 'table') {
+        const rows = clt.draft && clt.draft.key === key ? clt.draft.rows : cltRows(cltItem(key).text);
+        const grid = `<div style="overflow-x:auto;"><table class="clt-grid"><thead><tr>${s.cols.map(c => `<th>${esc(c)}</th>`).join('')}<th></th></tr></thead><tbody id="clt-grid-body">${cltGridRowsHtml(rows, s.cols.length)}</tbody></table></div>`;
+        const seed = s.seedGroups ? `<button type="button" class="btn btn-secondary btn-sm" onclick="cltSeedGroups()">➕ ใส่รายชื่อกลุ่มโรคที่เลือก</button>` : '';
+        return head + (s.hint ? `<p class="hint">${esc(s.hint)}</p>` : '') + remote + grid +
+          cltActionsHtml(key, `<button type="button" class="btn btn-secondary btn-sm" onclick="cltAddRow()">➕ เพิ่มแถว</button>${seed}`);
+      }
+      if (s.type === 'result') return head + cltResultHtml(s, remote);
+      return head;
+    }
+    function cltGridRowsHtml(rows, n) {
+      const list = rows.length ? rows : [Array(n).fill('')];
+      return list.map((r, i) => `<tr>${Array.from({ length: n }, (_, c) => `<td><textarea class="editable-input" rows="3" data-r="${i}" data-c="${c}" oninput="cltCell(this)">${esc(r[c] || '')}</textarea></td>`).join('')}
+        <td><button type="button" class="btn btn-secondary btn-sm" title="ลบแถวนี้" onclick="cltDelRow(${i})">🗑</button></td></tr>`).join('');
+    }
+    function cltResultHtml(s, remote) {
+      const k = s.kpi;
+      if (!k) return '<div class="empty-state">ไม่พบตัวชี้วัดนี้ในปีงบนี้</div>';
+      const yl = sarYearLabels(), key = s.key;
+      const val = clt.draft && clt.draft.key === key ? clt.draft.text : cltItem(key).text;
+      const dim = cltDimOf(k), fixed = /^[A-H]$/.test(cltItem('DIM|' + k.id).text);
+      return `<div class="pr-meta">เป้าหมาย: <b>${esc(k.target) || '-'}</b> · ผลทั้งปี ${yl.map((y, i) => y + ': <b>' + prNum(k.years[i]) + '</b>').join(' · ')}</div>
+        ${k.years.some(v => v !== null) ? `<div class="pr-chart" style="max-width:640px;">${generateSvgLineChart(k.years, k.target, yl)}</div>` : ''}
+        <div class="form-group"><label>มิติคุณภาพ ${fixed ? '' : '(ระบบเดาจากชื่อ — เลือกเพื่อกำหนดเอง)'}</label>
+          <select class="editable-input" style="width:auto;" data-id="${esc(k.id)}" onchange="cltSetDim(this.dataset.id, this.value)">${CLT_DIMS.map(d => `<option value="${d[0]}"${d[0] === dim ? ' selected' : ''}>${d[1]} (${d[2]})</option>`).join('')}</select></div>
+        <p class="hint">การพัฒนาที่ผ่านมา · ปัญหา/อุปสรรค · แผนการพัฒนา ของตัวชี้วัดนี้ (ขึ้นในสไลด์ผลลัพธ์ข้างกราฟ)</p>${remote}
+        <textarea id="clt-text" class="editable-input sar-pdca" rows="10" oninput="cltInput(this)">${esc(val)}</textarea>` +
+        cltActionsHtml(key, `<button type="button" class="btn btn-secondary btn-sm" onclick="cltInsertHeads()">➕ ใส่หัวข้อ</button>${k.details ? `<button type="button" class="btn btn-secondary btn-sm" onclick="cltFromDetails()">⬇ ดึงจากการวิเคราะห์เดิม</button>` : ''}`);
+    }
+    function cltDimsHtml() {
+      const groups = cltSelectedGroups();
+      let h = `<p class="hint">ตารางนี้ขึ้นในเอกสารอัตโนมัติ จากตัวชี้วัดของกลุ่มโรคที่เลือก — ปรับมิติของตัวชี้วัดแต่ละตัวได้ที่หน้า 📈 ผลลัพธ์ของตัวชี้วัดนั้น</p>
+        <div style="overflow-x:auto;"><table class="pr-table" style="font-size:11pt;"><thead><tr><th style="width:9%;">โรค</th>${CLT_DIMS.map(d => `<th>${d[1]}<br>${d[2]}</th>`).join('')}</tr></thead><tbody>`;
+      groups.forEach(g => {
+        const ks = cltKpisOf(g);
+        h += `<tr><td class="pr-left"><b>${esc(g)}</b></td>${CLT_DIMS.map(d => `<td class="pr-left" style="white-space:normal; vertical-align:top;">${ks.filter(k => cltDimOf(k) === d[0]).map(k => '- ' + esc(prShort(k.name, 70))).join('<br>')}</td>`).join('')}</tr>`;
+      });
+      return h + '</tbody></table></div>';
+    }
+
+    // ---------- แก้ไขข้อความ ----------
+    function cltSyncButtons() {
+      const dirty = cltDirty(), sv = document.getElementById('clt-save'), rv = document.getElementById('clt-revert');
+      if (sv) sv.disabled = !dirty;
+      if (rv) rv.style.display = dirty ? '' : 'none';
+    }
+    function cltInput(el) { clt.draft = { key: clt.sel, text: el.value }; cltSyncButtons(); }
+    function cltTableDraft() {
+      if (clt.draft && clt.draft.key === clt.sel && clt.draft.rows) return clt.draft.rows;
+      const rows = cltRows(cltItem(clt.sel).text).map(r => r.slice());
+      clt.draft = { key: clt.sel, rows: rows };
+      return rows;
+    }
+    function cltCell(el) {
+      const rows = cltTableDraft(), r = +el.dataset.r, c = +el.dataset.c, n = cltSpecOf(clt.sel).cols.length;
+      while (rows.length <= r) rows.push(Array(n).fill(''));
+      rows[r][c] = el.value;
+      cltSyncButtons();
+    }
+    function cltRegrid() { const s = cltSpecOf(clt.sel); document.getElementById('clt-grid-body').innerHTML = cltGridRowsHtml(clt.draft.rows, s.cols.length); cltSyncButtons(); }
+    function cltAddRow() { const rows = cltTableDraft(); const n = cltSpecOf(clt.sel).cols.length; if (rows.length === 0) rows.push(Array(n).fill('')); rows.push(Array(n).fill('')); cltRegrid(); }
+    function cltDelRow(i) { const rows = cltTableDraft(); rows.splice(i, 1); cltRegrid(); }
+    function cltSeedGroups() {
+      const rows = cltTableDraft().filter(r => r.some(c => String(c).trim()));
+      const have = new Set(rows.map(r => String(r[0]).trim()));
+      cltSelectedGroups().forEach(g => { if (!have.has(g)) rows.push([g, '', '', '', '', '']); });
+      clt.draft.rows = rows; cltRegrid();
+    }
+    function cltSetText(text) { const ta = document.getElementById('clt-text'); if (!ta) return; ta.value = text; cltInput(ta); ta.focus(); }
+    function cltInsertHeads() { cltSetText('การพัฒนาที่ผ่านมา\n\nปัญหา/อุปสรรค\n\nแผนการพัฒนา\n'); }
+    function cltFromDetails() { const s = cltSpecOf(clt.sel); if (s && s.kpi) cltSetText(s.kpi.details); }
+    function cltRevert() { clt.draft = null; cltRender(); }
+
+    // บันทึกค่าดิบของกุญแจ key ทันที (ใช้กับมิติ / เลือกกลุ่มโรค)
+    function cltSaveRaw(key, value, ok, fail, force) {
+      if (!sessionToken) return;
+      const token = sessionToken, fy = selectedFy;
+      showBusy('กำลังบันทึก…');
+      google.script.run
+        .withSuccessHandler(unbusy((res) => {
+          if (token !== sessionToken || fy !== selectedFy) return;
+          if (res && res.success) { clt.items[key] = res.item; if (ok) ok(res); return; }
+          if (res && res.conflict) clt.items[key] = res.current;
+          if (!sarSessionGone(res)) showAlert('บันทึกไม่สำเร็จ', '⚠️', res ? res.message : '');
+          if (fail) fail();
+        }))
+        .withFailureHandler(unbusy((err) => { showAlert('เกิดข้อผิดพลาดเครือข่าย', '❌', String(err)); if (fail) fail(); }))
+        .saveCltItem(token, fy, key, value, cltItem(key).rev, !!force);
+    }
+    function cltSetDim(id, code) {
+      cltSaveRaw('DIM|' + id, code, () => { showToast('✅ บันทึกมิติคุณภาพแล้ว'); cltRenderTree(); }, () => cltRender());
+    }
+    function cltSave(force) {
+      const d = clt.draft;
+      if (!d || !sessionToken) return;
+      const key = d.key, value = d.rows ? JSON.stringify(d.rows) : d.text;
+      const token = sessionToken, fy = selectedFy;
+      showBusy('กำลังบันทึก…');
+      google.script.run
+        .withSuccessHandler(unbusy((res) => {
+          if (token !== sessionToken || fy !== selectedFy) return;
+          if (res && res.success) {
+            clt.items[key] = res.item; clt.draft = null; clt.remote = null;
+            showToast(res.changed ? '✅ บันทึกแล้ว' : 'ไม่มีการเปลี่ยนแปลง');
+            cltRender(true);
+          } else if (res && res.conflict) {
+            clt.remote = res.current;
+            cltRender(true);
+            showAlert('มีคนอื่นบันทึกหัวข้อนี้ไปก่อน', '⚠️', res.message + '\nดูข้อความล่าสุดในกล่องเตือน แล้วเลือกว่าจะใช้ของใคร');
+          } else if (!sarSessionGone(res)) showAlert('บันทึกไม่สำเร็จ', '❌', res ? res.message : '');
+        }))
+        .withFailureHandler(unbusy((err) => showAlert('เกิดข้อผิดพลาดเครือข่าย', '❌', String(err))))
+        .saveCltItem(token, fy, key, value, cltItem(key).rev, !!force);
+    }
+    function cltCopyPrev() {
+      showConfirm('คัดลอกข้อความ CLT จากปีงบก่อนหน้ามาเป็นร่างของปีงบ ' + selectedFy + ' ?\nคัดลอกเฉพาะหัวข้อที่ยังว่างในปีงบนี้ (ไม่ทับของที่กรอกแล้ว) · ตรวจและแก้ไขก่อนส่ง', () => {
+        const token = sessionToken, fy = selectedFy;
+        showBusy('กำลังคัดลอก…');
+        google.script.run
+          .withSuccessHandler(unbusy((res) => {
+            if (token !== sessionToken || fy !== selectedFy) return;
+            if (res && res.success) { showAlert(res.copied > 0 ? 'คัดลอกแล้ว' : 'ไม่มีอะไรให้คัดลอก', res.copied > 0 ? '✅' : 'ℹ️', res.message); clt.loaded = false; clt.draft = null; clt.remote = null; cltLoad(); }
+            else if (!sarSessionGone(res)) showAlert('คัดลอกไม่สำเร็จ', '⚠️', res ? res.message : '');
+          }))
+          .withFailureHandler(unbusy((err) => showAlert('เกิดข้อผิดพลาดเครือข่าย', '❌', String(err))))
+          .copyCltFromPrevious(token, fy);
+      });
+    }
+
+    // ---------- Export PowerPoint (.pptx) ----------
+    const CLT_PPTX_URL = 'https://cdn.jsdelivr.net/npm/pptxgenjs@4.0.1/dist/pptxgen.bundle.js';
+    // หัวข้อข้อความที่ยังว่างของกลุ่มโรคที่เลือก (ใช้เตือนก่อน Export)
+    function cltMissing() {
+      const out = [];
+      CLT_OVERVIEW.forEach(s => { if ((s.type === 'text' || s.type === 'table') && !cltHasText(s.key)) out.push(s.title); });
+      cltSelectedGroups().forEach(g => CLT_DISEASE.forEach(s => {
+        if ((s.type === 'text' || s.type === 'table') && !cltHasText('D|' + g + '|' + s.f)) out.push(g + ' › ' + s.title);
+      }));
+      return out;
+    }
+    function cltExportPptx() {
+      if (!isPrivilegedUser() || !clt.loaded) return;
+      if (cltDirty()) { showAlert('มีข้อความที่ยังไม่ได้บันทึก', '⚠️', 'กรุณากด 💾 บันทึก หรือ ↩ ยกเลิกการแก้ไข ก่อน Export (ไฟล์ใช้เฉพาะข้อความที่บันทึกแล้ว)'); return; }
+      if (cltSelectedGroups().length === 0) { showAlert('ยังไม่ได้เลือกกลุ่มโรค', '⚠️', 'ติ๊กกลุ่มโรคที่จะใส่ในเอกสารทางซ้ายอย่างน้อย 1 กลุ่ม'); return; }
+      const go = async () => {
+        showBusy('กำลังสร้างไฟล์ PowerPoint…', 900000);
+        try {
+          await docLoadScript(CLT_PPTX_URL, 'PptxGenJS');
+          const blob = await cltBuildPptx();
+          downloadBlob(blob, 'CLT_PCT_FY' + selectedFy + '.pptx');
+          showToast('✅ สร้างไฟล์ PowerPoint แล้ว — ตรวจในโฟลเดอร์ดาวน์โหลด');
+        } catch (e) {
+          showAlert('สร้างไฟล์ PowerPoint ไม่สำเร็จ', '❌', String((e && e.message) || e));
+        } finally { hideBusy(); }
+      };
+      const miss = cltMissing();
+      if (miss.length > 0) showConfirm('ยังไม่ได้กรอก ' + miss.length + ' หัวข้อ (สไลด์ของหัวข้อที่ว่างจะไม่ขึ้นในไฟล์):\n' + miss.slice(0, 6).join('\n') + (miss.length > 6 ? '\n… และอีก ' + (miss.length - 6) + ' หัวข้อ' : '') + '\n\nต้องการ Export ต่อหรือไม่?', go);
+      else go();
+    }
+
+    // กราฟเส้นของ PowerPoint (แก้ข้อมูลในไฟล์ได้): ผลลัพธ์ 5 ปี + เส้นเป้าหมาย (ถ้าเป้าหมายมีตัวเลข)
+    async function cltBuildPptx() {
+      const P = new window.PptxGenJS(), F = DOC_FONT, yl = sarYearLabels().map(String);
+      P.layout = 'LAYOUT_WIDE'; // 13.33 x 7.5 นิ้ว
+      P.title = 'CLT profile ของ PCT โรงพยาบาลภูหลวง ปีงบประมาณ ' + selectedFy; P.author = currentUser.username;
+      P.defineSlideMaster({ title: 'CLT', background: { color: 'FFFFFF' },
+        objects: [{ rect: { x: 0, y: 0, w: 13.33, h: 0.14, fill: { color: '166534' } } },
+          { text: { text: 'โรงพยาบาลภูหลวง · CLT/PCT Profile ปีงบประมาณ ' + selectedFy, options: { x: 0.4, y: 7.05, w: 9, h: 0.32, fontFace: F, fontSize: 12, color: '64748B' } } }],
+        slideNumber: { x: 12.2, y: 7.05, w: 0.8, h: 0.32, fontFace: F, fontSize: 12, color: '64748B', align: 'right' } });
+      const slide = (title) => {
+        const s = P.addSlide({ masterName: 'CLT' });
+        if (title) s.addText(docXml(title), { x: 0.4, y: 0.25, w: 12.5, h: 0.75, fontFace: F, fontSize: 28, bold: true, color: '14532D', valign: 'middle', fit: 'shrink' });
+        return s;
+      };
+      const BORDER = { type: 'solid', pt: 0.75, color: '94A3B8' };
+      const est = (text, wIn, pt) => { // จำนวนบรรทัดโดยประมาณ (ตัวอักษรไทยกว้างเฉลี่ย ~0.4 em)
+        const cpl = Math.max(4, Math.floor(wIn * 72 / (pt * 0.4)));
+        return String(text || '').split('\n').reduce((n, p) => n + Math.max(1, Math.ceil(p.length / cpl)), 0);
+      };
+      // ข้อความยาว: แบ่งเป็นหลายสไลด์ตามย่อหน้า (สไลด์ละไม่เกิน ~ budget บรรทัด) ขนาดตัวอักษรลดตามความยาว
+      const textSlides = (title, blocks) => { // blocks = [{ label, text }]
+        const pt = 20, w = 12.4, budget = 17;
+        let cur = [], used = 0, part = 0;
+        const flush = () => {
+          if (!cur.length) return;
+          const s = slide(title + (part > 0 ? ' (ต่อ)' : ''));
+          let y = 1.1;
+          cur.forEach(b => {
+            if (b.label) { s.addText(docXml(b.label), { x: 0.5, y: y, w: w, h: 0.4, fontFace: F, fontSize: 20, bold: true, color: '166534' }); y += 0.45; }
+            const h = Math.max(0.5, b.lines * pt * 1.3 / 72 + 0.1);
+            s.addText(docXml(b.text), { x: 0.5, y: y, w: w, h: h, fontFace: F, fontSize: pt, color: '0F172A', valign: 'top', margin: 4 });
+            y += h + 0.15;
+          });
+          part++; cur = []; used = 0;
+        };
+        blocks.forEach(b => {
+          const paras = String(b.text || '').split('\n');
+          let chunk = [], lines = 0, first = true;
+          const push = () => { if (!chunk.length) return; if (used + lines + (b.label && first ? 2 : 0) > budget) flush(); cur.push({ label: first ? b.label : (b.label ? b.label + ' (ต่อ)' : ''), text: chunk.join('\n'), lines: lines }); used += lines + (b.label ? 2 : 0); first = false; chunk = []; lines = 0; };
+          paras.forEach(p => { const n = est(p, w, pt); if (lines + n > budget - (b.label ? 2 : 0) && chunk.length) push(); chunk.push(p); lines += n; });
+          push();
+        });
+        flush();
+      };
+      // ตาราง: แบ่งแถวลงหลายสไลด์ให้พอดีความสูง (หัวตารางซ้ำ) — widths รวม 12.4 นิ้ว
+      const tableSlides = (title, cols, rows, widths, pt) => {
+        pt = pt || 16;
+        const hdr = cols.map(c => ({ text: docXml(c), options: { bold: true, fill: { color: 'DCFCE7' }, color: '14532D', align: 'center', valign: 'middle', fontFace: F, fontSize: pt, border: BORDER } }));
+        const rowH = r => Math.max.apply(null, r.map((c, i) => est(c, widths[i] - 0.2, pt))) * pt * 1.25 / 72 + 0.14;
+        const avail = 5.75 - (Math.max.apply(null, cols.map((c, i) => est(c, widths[i] - 0.2, pt))) * pt * 1.25 / 72 + 0.14);
+        let page = [], used = 0, part = 0;
+        const flush = () => {
+          if (!page.length) return;
+          const s = slide(title + (part > 0 ? ' (ต่อ)' : ''));
+          s.addTable([hdr].concat(page.map(r => r.map((c, i) => ({ text: docXml(c), options: { fontFace: F, fontSize: pt, color: '0F172A', valign: 'top', align: i === 0 ? 'left' : 'left', border: BORDER } })))),
+            { x: 0.45, y: 1.1, w: 12.4, colW: widths, margin: [0.04, 0.08, 0.04, 0.08], autoPage: false });
+          part++; page = []; used = 0;
+        };
+        rows.forEach(r => { const h = rowH(r); if (used + h > avail && page.length) flush(); page.push(r); used += h; });
+        flush();
+      };
+      const evenW = n => Array(n).fill(12.4 / n);
+      const num = v => (v === null || v === undefined ? null : v);
+      const targetNum = t => { const m = String(t || '').match(/-?\d+(\.\d+)?/); return m ? parseFloat(m[0]) : null; };
+
+      // ---- ปก
+      const cover = slide('');
+      cover.addText('โรงพยาบาลภูหลวง', { x: 0.5, y: 2.0, w: 12.3, h: 0.9, fontFace: F, fontSize: 40, bold: true, color: '14532D', align: 'center' });
+      cover.addText('ภาพรวมของ PCT (PCT Profile)', { x: 0.5, y: 3.0, w: 12.3, h: 0.8, fontFace: F, fontSize: 34, bold: true, color: '0F172A', align: 'center' });
+      cover.addText('ปีงบประมาณ ' + selectedFy, { x: 0.5, y: 3.9, w: 12.3, h: 0.6, fontFace: F, fontSize: 26, color: '475569', align: 'center' });
+
+      // ---- ภาพรวม PCT
+      const O = key => cltItem('O|' + key).text;
+      const ovText = (key, title) => { if (O(key).trim()) textSlides(title, [{ text: O(key) }]); };
+      ovText('mission', 'พันธกิจ/ความมุ่งหมายของ CLT/PCT');
+      ovText('scope', 'ขอบเขตบริการ');
+      const tbl = (key, title, widths, pt) => { const rows = cltRows(O(key)); if (rows.length) tableSlides(title, CLT_OVERVIEW.find(s => s.key === 'O|' + key).cols, rows, widths, pt); };
+      tbl('clients', 'ผู้รับบริการและความต้องการ', [4.2, 8.2]);
+      ovText('focus', 'จุดเน้นของการพัฒนา');
+      tbl('priority', 'กลุ่มผู้ป่วยสำคัญของ CLT/PCT', [3.6, 1.76, 1.76, 1.76, 1.76, 1.76]);
+      const groups = cltSelectedGroups();
+      {
+        const cols = ['โรค'].concat(CLT_DIMS.map(d => d[1] + ' ' + d[2]));
+        const rows = groups.map(g => [g].concat(CLT_DIMS.map(d => cltKpisOf(g).filter(k => cltDimOf(k) === d[0]).map(k => '- ' + k.name).join('\n'))));
+        tableSlides('ตัวชี้วัดของ CLT/PCT ตามมิติคุณภาพ', cols, rows, [1.2].concat(Array(8).fill(1.4)), 11);
+      }
+      tbl('risks', 'ความเสี่ยงและมาตรการป้องกัน', [3.4, 1.4, 4.2, 3.4]);
+      tbl('process', 'คุณภาพของขั้นตอนต่างๆ ในกระบวนการดูแล', [2.6, 2.4, 7.4]);
+      tbl('qi', 'การพัฒนาคุณภาพ การวิจัย นวัตกรรม', [3.0, 3.0, 3.4, 3.0]);
+      tbl('plan', 'แผนการพัฒนาคุณภาพ การวิจัย นวัตกรรม', [5.0, 4.4, 3.0]);
+
+      // ---- รายโรค
+      let nSlides = 0;
+      for (const g of groups) {
+        docBusyText('กำลังสร้างสไลด์ ' + g + '…'); await docYield();
+        const D = f => cltItem('D|' + g + '|' + f).text, ks = cltKpisOf(g);
+        const sec = slide('');
+        sec.addText(docXml(g), { x: 0.5, y: 2.6, w: 12.3, h: 1.0, fontFace: F, fontSize: 38, bold: true, color: '14532D', align: 'center' });
+        sec.addText('ข้อมูลคุณภาพของแต่ละโรค (Clinical Tracer) · ' + ks.length + ' ตัวชี้วัด', { x: 0.5, y: 3.7, w: 12.3, h: 0.6, fontFace: F, fontSize: 22, color: '475569', align: 'center' });
+        const ctx = [];
+        if (D('context').trim()) ctx.push({ label: 'บริบท (Context)', text: D('context') });
+        if (D('challenge').trim()) ctx.push({ label: 'ประเด็น/ความท้าทาย และความเสี่ยงสำคัญ', text: D('challenge') });
+        if (ctx.length) textSlides(g + ' · บริบทและประเด็นท้าทาย', ctx);
+        // Driver diagram: เป้าหมาย + ปัจจัยขับเคลื่อน + ตัวชี้วัด
+        const drv = cltRows(D('driver'));
+        if (D('purpose').trim() || drv.length) {
+          if (D('purpose').trim()) textSlides(g + ' · เป้าหมาย (Purpose)', [{ text: D('purpose') }]);
+          if (drv.length) tableSlides(g + ' · ปัจจัยขับเคลื่อน (Driver Diagram)', ['Primary driver', 'Secondary driver', 'Change idea / Intervention'], drv, [3.4, 4.0, 5.0]);
+        }
+        const fl = slide(g + ' · Process Flowchart ของการดูแลผู้ป่วย');
+        fl.addText('(แทรกรูป Process Flowchart ที่นี่)', { x: 0.5, y: 3.0, w: 12.3, h: 1.0, fontFace: F, fontSize: 24, color: '94A3B8', align: 'center', italic: true });
+        const pm = cltRows(D('pm'));
+        if (pm.length) tableSlides(g + ' · การจัดการกระบวนการ (Process Management)', ['กระบวนการ', 'ข้อกำหนดของกระบวนการ', 'ตัวชี้วัดของกระบวนการ / เป้าหมาย', 'การออกแบบกระบวนการ'], pm, [2.2, 3.2, 3.2, 3.8], 15);
+        // ผลลัพธ์รายตัวชี้วัด
+        for (const k of ks) {
+          const s = slide('ผลลัพธ์และการพัฒนาที่ผ่านมา · ' + g);
+          const tv = targetNum(k.target), hasData = k.years.some(v => v !== null);
+          s.addText(docXml(k.name) + '\nเป้าหมาย: ' + docXml(k.target || '-'), { x: 0.5, y: 1.0, w: 12.3, h: 0.8, fontFace: F, fontSize: 18, bold: true, color: '0F172A', valign: 'top' });
+          if (hasData) {
+            const series = [{ name: 'ผลลัพธ์', labels: yl, values: k.years.map(num) }];
+            if (tv !== null) series.push({ name: 'เป้าหมาย ' + (k.target || ''), labels: yl, values: yl.map(() => tv) });
+            s.addChart(P.charts.LINE, series, { x: 0.5, y: 1.85, w: 7.2, h: 4.9, chartColors: ['0284C7', 'F43F5E'], lineSize: 3, lineDataSymbolSize: 9,
+              showLegend: true, legendPos: 'b', legendFontFace: F, legendFontSize: 14, showValue: true, dataLabelFontFace: F, dataLabelFontSize: 14, dataLabelPosition: 't',
+              catAxisLabelFontFace: F, catAxisLabelFontSize: 14, valAxisLabelFontFace: F, valAxisLabelFontSize: 13, valGridLine: { color: 'E2E8F0', size: 0.75 }, displayBlanksAs: 'gap' });
+          } else s.addText('ยังไม่มีข้อมูลผลลัพธ์', { x: 0.5, y: 3.5, w: 7.2, h: 0.8, fontFace: F, fontSize: 20, italic: true, color: '94A3B8', align: 'center' });
+          const note = cltItem('D|' + g + '|R|' + k.id).text.trim();
+          if (note) {
+            const pt = note.length > 900 ? 14 : note.length > 500 ? 16 : 18;
+            s.addText(docXml(note), { x: 7.9, y: 1.85, w: 4.95, h: 4.9, fontFace: F, fontSize: pt, color: '0F172A', valign: 'top', margin: 6, fill: { color: 'F0FDF4' }, line: { color: 'BBF7D0', width: 1 }, fit: 'shrink' });
+          }
+          if (++nSlides % 10 === 0) { docBusyText('กำลังสร้างสไลด์ผลลัพธ์ ' + nSlides + '…'); await docYield(); }
+        }
+        if (D('plan').trim()) textSlides(g + ' · แผนพัฒนาต่อไป', [{ text: D('plan') }]);
+      }
+      docBusyText('กำลังรวมไฟล์ PowerPoint…'); await docYield();
+      return P.write({ outputType: 'blob' });
+    }
+
     // ===================== แจ้งเตือน / ยืนยัน =====================
     function showAlert(title, icon, message) {
       if (message && message.toString().indexOf('SESSION_EXPIRED') !== -1) {
@@ -3911,6 +5124,7 @@
     function liveApply(res) {
       dataV = res.v;
       if (res.same) return;
+      if (res.docs && res.docs.length) docsChanged(res.docs); // ข้อความเอกสาร สรพ. ที่เครื่องอื่นบันทึก
       const before = liveListSig();
       const idx = new Map(globalDatabase.map((k, i) => [k.id, i]));
       const changed = [], seen = new Set();
@@ -3955,6 +5169,7 @@
     function liveRefreshPages() {
       if (currentTab === 'progress') loadProgressSummary();
       if (currentTab === 'report' && typeof rptRenderPreview === 'function') rptRenderPreview(true);
+      if (currentTab === 'sar') { sarRenderCats(); sarRender(true); }
     }
 
     function liveNotice(n, changed, by) {
