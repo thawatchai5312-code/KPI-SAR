@@ -8,7 +8,7 @@ set -uo pipefail
 DIR="$(cd "$(dirname "$0")" && pwd)"
 SERVER="t3 t4 t5 t6 t7 t8 t9 t11 t13 t14 n3 tidy4 merge2 pct2 sub1 v3 v4 v5"
 UI="ui18 ui20 ui23 ui24 ui25 ui26 ui27 ui28 ui31 ui32 ui33 ui34 ui35 ui35b ui36 ui37 ui38 ui39 ui40 ui41 ui42 ui43 ui44 ui45 ui46"
-TOUR="ui40 ui45" # เทสต์ที่ต้องเห็นป๊อปอัประบบสอน (ตัวอื่นปิดไว้ผ่าน TOUR_HIDE_V1)
+TOUR="ui40" # เทสต์ที่ต้องเห็นป๊อปอัประบบสอน (ตัวอื่นปิดไว้ผ่าน TOUR_HIDE_V1)
 
 if [[ ! -f "$DIR/fixtures/db.json" ]]; then
   echo "ไม่พบ tests/fixtures/ — ดู tests/README.md" >&2; exit 2
