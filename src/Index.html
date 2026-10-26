@@ -438,6 +438,7 @@
     .lnk-add { border-color: #86efac; background: #f0fdf4; color: #15803d; font-weight: 700; margin-top: 3px; }
     .lnk-add:hover { background: #dcfce7; }
     .lnk-empty { color: #94a3b8; font-size: 12.5px; }
+    .doc-links { background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 10px; padding: 6px 10px; margin: 3px 0 6px; font-family: inherit; }
     .lnk-cell .lnk-item { padding: 0; font-size: 12.5px; flex-wrap: nowrap; }
     .lnk-cell .lnk-a { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
     .lnk-cell .lnk-btn { flex: none; }
@@ -4382,6 +4383,7 @@
           ${pl.length > 1 ? prPlacesNote(pl) : ''}
           ${sarHasResults(k) ? `<div class="pr-chart">${generateSvgLineChart(k.years, k.target, yl)}</div>` : '<div class="pr-text">ยังไม่มีข้อมูลผลลัพธ์</div>'}</div>
         <div class="sar-right"><div class="pr-label">รายละเอียด/การวิเคราะห์ตัวชี้วัด <span class="sar-noexport">(ไม่แสดงในเอกสารที่ Export — สำหรับให้หัวหน้าดูข้อมูล)</span></div><div class="pr-text">${esc(sarDetails(k)) || '-'}</div>
+          <div class="pr-label">📎 เอกสารแนบ <span class="sar-noexport">(ไม่แสดงในเอกสารที่ Export)</span></div><div class="doc-links" data-links-ro="${esc(k.id)}">${linkRoBodyHtml(k.id)}</div>
           <div class="pr-label">การวิเคราะห์ผลลัพธ์ตามตัวชี้วัดที่สำคัญและ PDCA (คำอธิบาย)</div>${sarPdcaHtml(k)}</div></div></div>`;
     }
 
@@ -5110,6 +5112,7 @@
       const dim = cltDimOf(k), fixed = /^[A-H]$/.test(cltItem('DIM|' + k.id).text);
       return `<div class="pr-meta">เป้าหมาย: <b>${esc(k.target) || '-'}</b> · ผลทั้งปี ${yl.map((y, i) => y + ': <b>' + prNum(k.years[i]) + '</b>').join(' · ')}</div>
         ${k.years.some(v => v !== null) ? `<div class="pr-chart" style="max-width:640px;">${generateSvgLineChart(k.years, k.target, yl)}</div>` : ''}
+        <div class="form-group"><label>📎 เอกสารแนบ <span class="sar-noexport">(ไม่แสดงในไฟล์ที่ Export)</span></label><div class="doc-links" data-links-ro="${esc(k.id)}">${linkRoBodyHtml(k.id)}</div></div>
         <div class="form-group"><label>มิติคุณภาพ ${fixed ? '' : '(ระบบเดาจากชื่อ — เลือกเพื่อกำหนดเอง)'}</label>
           <select class="editable-input" style="width:auto;" data-id="${esc(k.id)}" onchange="cltSetDim(this.dataset.id, this.value)">${CLT_DIMS.map(d => `<option value="${d[0]}"${d[0] === dim ? ' selected' : ''}>${d[1]} (${d[2]})</option>`).join('')}</select></div>
         <p class="hint">การพัฒนาที่ผ่านมา · ปัญหา/อุปสรรค · แผนการพัฒนา ของตัวชี้วัดนี้ (ขึ้นในสไลด์ผลลัพธ์ข้างกราฟ)</p>${remote}
@@ -5445,12 +5448,12 @@
         .getKpiLinks(token, fy);
     }
 
-    function linkItemHtml(l, kpi, compact) {
+    function linkItemHtml(l, kpi, compact, ro) {
       const url = linkUrlOk(l.url) ? l.url : '', title = esc(l.title);
       const a = url ? `<a class="lnk-a" href="${esc(url)}" target="_blank" rel="noopener noreferrer" title="เปิดเอกสารใน Google Drive: ${title}">📄 ${title}</a>` : `<span class="lnk-a">📄 ${title}</span>`;
       const others = l.ids.length + l.hidden - 1;
       const meta = compact ? '' : `<span class="lnk-meta">${esc(l.createdBy)}${l.createdAt ? ' · ' + esc(l.createdAt) : ''}${others > 0 ? ' · ใช้ร่วมกับอีก ' + others + ' ตัวชี้วัด' : ''}</span>`;
-      const acts = l.canEdit ? `<button type="button" class="lnk-btn" data-kid="${esc(kpi.id)}" data-lid="${esc(l.id)}" title="แก้ไขลิงก์ / ตัวชี้วัดที่ผูก" aria-label="แก้ไขลิงก์" onclick="linkEditBtn(this)">✏️</button><button type="button" class="lnk-btn" data-lid="${esc(l.id)}" title="ลบลิงก์" aria-label="ลบลิงก์" onclick="linkDeleteBtn(this)">🗑️</button>` : '';
+      const acts = !ro && l.canEdit ? `<button type="button" class="lnk-btn" data-kid="${esc(kpi.id)}" data-lid="${esc(l.id)}" title="แก้ไขลิงก์ / ตัวชี้วัดที่ผูก" aria-label="แก้ไขลิงก์" onclick="linkEditBtn(this)">✏️</button><button type="button" class="lnk-btn" data-lid="${esc(l.id)}" title="ลบลิงก์" aria-label="ลบลิงก์" onclick="linkDeleteBtn(this)">🗑️</button>` : '';
       const note = !compact && l.note ? `<div class="lnk-note">${esc(l.note)}</div>` : '';
       return `<div class="lnk-item">${a}${meta}${acts}${note}</div>`;
     }
@@ -5468,6 +5471,14 @@
       if (compact && addBtn) h += `<div>${addBtn}</div>`;
       return h;
     }
+    // หน้าเอกสาร สรพ. (SAR/CLT): ดูอย่างเดียว — ไม่มีปุ่มแนบ/แก้/ลบ (แนบหรือแก้ที่หน้าแรก) · ไม่ใส่ในไฟล์ Export
+    function linkRoBodyHtml(id) {
+      if (kpiLinks.failed && !kpiLinks.loaded) return '<span class="lnk-empty">โหลดเอกสารแนบไม่สำเร็จ</span>';
+      if (!kpiLinks.loaded) return '<span class="lnk-empty">กำลังโหลด…</span>';
+      const items = kpiLinks.byId.get(id) || [];
+      return (items.length ? items.map(l => linkItemHtml(l, null, false, true)).join('') : '<span class="lnk-empty">ไม่มีเอกสารแนบ</span>') +
+        '<div class="lnk-meta">แนบหรือแก้ลิงก์ได้ที่หน้าแรก (การ์ด/ตารางของตัวชี้วัด)</div>';
+    }
     // อัปเดตกล่อง/เซลล์ที่วาดอยู่แล้วในที่เดิม (ลิงก์เปลี่ยนจากเครื่องนี้หรือเครื่องอื่น)
     function linksRefreshDom() {
       const byId = new Map(globalDatabase.map(k => [k.id, k]));
@@ -5475,6 +5486,7 @@
         const k = byId.get(el.dataset.linksFor);
         if (k) el.innerHTML = linkBodyHtml(k, el.dataset.compact === '1');
       });
+      document.querySelectorAll('[data-links-ro]').forEach(el => { el.innerHTML = linkRoBodyHtml(el.dataset.linksRo); });
       if (typeof refreshClamps === 'function') refreshClamps();
     }
     function linkAddBtn(btn) { linkOpenModal(btn.dataset.kid, null); }
@@ -5655,7 +5667,7 @@
           if (token !== sessionToken) return;
           if (res && res.success) { lkClose(); showToast(res.changed ? '✅ บันทึกลิงก์เอกสารแล้ว' : 'ไม่มีการเปลี่ยนแปลง'); linksLoad(); return; }
           if (res && res.conflict) { showConfirm(res.message + '\n\nบันทึกทับการแก้ไขของคนอื่นหรือไม่?', () => lkConfirmGo(true), () => { lkEl('modal-link-confirm').style.display = 'flex'; }); return; }
-          showAlert('บันทึกลิงก์ไม่สำเร็จ', '❌', res ? res.message : 'ไม่ทราบสาเหตุ');
+          showAlert('บันทึกลิงก์ไม่สำเร็จ', '❌', res ? res.message : 'ไม่ทราบสาเหตุ'); linksLoad(); // สิทธิ์อาจเปลี่ยนไปแล้ว → แสดงปุ่มตามสิทธิ์ล่าสุด
         }))
         .withFailureHandler(unbusy((err) => { lk.saving = false; showAlert('เกิดข้อผิดพลาดเครือข่าย', '❌', String(err)); }))
         .saveKpiLink(token, fy, payload);
@@ -5882,10 +5894,12 @@
       const before = liveListSig();
       const idx = new Map(globalDatabase.map((k, i) => [k.id, i]));
       const changed = [], seen = new Set();
+      let linkPerm = !!res.full; // สิทธิ์แก้ตัวชี้วัดเปลี่ยน (เปลี่ยนผู้รับผิดชอบ/หน่วยงาน) → ปุ่มแก้/ลบในเอกสารแนบต้องตามสิทธิ์ใหม่
       (res.kpis || []).forEach(k => {
         seen.add(k.id);
         const i = idx.get(k.id);
         if (i !== undefined && liveSig(globalDatabase[i]) === liveSig(k)) return;
+        if (i === undefined || globalDatabase[i].canEditDetails !== k.canEditDetails) linkPerm = true;
         if (k.id === editingId) { liveMarkRemote(k); return; } // ไม่แตะการ์ดที่กำลังแก้ — ขึ้นแถบเตือนแทน
         if (i === undefined) globalDatabase.push(k); else globalDatabase[i] = k;
         changed.push(k);
@@ -5893,6 +5907,7 @@
       const removed = (res.full ? globalDatabase.map(k => k.id).filter(id => !seen.has(id)) : (res.removed || []).filter(id => idx.has(id)))
         .filter(id => { if (id !== editingId) return true; liveMarkRemote({ id: id, removed: true }); return false; });
       if (res.full && res.headings) unitHeadings = res.headings;
+      if ((linkPerm || removed.length) && kpiLinks.loaded) linksLoad();
       if (changed.length === 0 && removed.length === 0) return;
       if (removed.length) {
         const gone = new Set(removed);

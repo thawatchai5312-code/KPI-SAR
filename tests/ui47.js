@@ -45,13 +45,13 @@ async function open(b,user,opts={}){
    tables:document.querySelectorAll('#sar-paper table.pr-table').length,ths:[...document.querySelectorAll('#sar-paper table.pr-table')[0].querySelectorAll('th')].map(e=>e.textContent),
    monthly:/ต\.ค\./.test(document.getElementById('sar-paper').textContent)&&/ผลลัพธ์รายเดือน/.test(document.getElementById('sar-paper').textContent),owner:/ผู้รับผิดชอบ/.test(document.getElementById('sar-paper').textContent),
    charts:document.querySelectorAll('#sar-paper .pr-chart svg').length,info:document.querySelector('#sar-pager-top .pager-info').textContent,
-   cats:document.querySelectorAll('#sar-cat-list .sar-cat').length,total:uniqueById(sarChosen()).length,hdrs:[...document.querySelectorAll('#sar-paper .pr-label')].slice(0,2).map(e=>e.textContent),
+   cats:document.querySelectorAll('#sar-cat-list .sar-cat').length,total:uniqueById(sarChosen()).length,hdrs:[...document.querySelectorAll('#sar-paper .pr-label')].slice(0,3).map(e=>e.textContent),
    arabic:!/[๐-๙]/.test(document.getElementById('sar-paper').textContent)}));
  console.log(JSON.stringify({parts:s1.parts,blocks:s1.blocks,tables:s1.tables,cats:s1.cats,total:s1.total,info:s1.info}));
  assert(s1.loaded&&s1.fy===fy&&s1.parts[0]==='Part I'&&s1.blocks>0&&s1.blocks<=10&&s1.charts>0,JSON.stringify(s1));
  assert.deepStrictEqual(s1.ths,['ที่','ตัวชี้วัด','เป้าหมาย','2566','2567','2568','2569','2570'],'5-year table only');
  assert(!s1.monthly&&!s1.owner,'no monthly table / owner in SAR');assert(s1.arabic,'arabic digits');
- assert.deepStrictEqual(s1.hdrs,['รายละเอียด/การวิเคราะห์ตัวชี้วัด (ไม่แสดงในเอกสารที่ Export — สำหรับให้หัวหน้าดูข้อมูล)','การวิเคราะห์ผลลัพธ์ตามตัวชี้วัดที่สำคัญและ PDCA (คำอธิบาย)']);
+ assert.deepStrictEqual(s1.hdrs,['รายละเอียด/การวิเคราะห์ตัวชี้วัด (ไม่แสดงในเอกสารที่ Export — สำหรับให้หัวหน้าดูข้อมูล)','📎 เอกสารแนบ (ไม่แสดงในเอกสารที่ Export)','การวิเคราะห์ผลลัพธ์ตามตัวชี้วัดที่สำคัญและ PDCA (คำอธิบาย)']);
  assert(s1.total>200&&s1.cats>20,JSON.stringify(s1));
  await pg.screenshot({path:OUT+'/sar-1-page.png'});
  // เป็นมุมมอง รพ. เสมอ แม้หน้าแรกอยู่มุมมองอื่น/ตัวกรองอื่น
