@@ -421,6 +421,65 @@
       #sar-side.collapsed #sar-controls, #clt-side.collapsed #clt-controls { display: none; }
     }
 
+    /* ---------- เอกสารแนบ (ลิงก์ Drive) ---------- */
+    .card-right .info-card.lnk-card { background: #f0f9ff; border-color: #bae6fd; min-height: 3.6em; }
+    .card-right .info-card.lnk-card .info-card-title { color: #075985; }
+    .card-right .info-card.lnk-card.clipped::after { background: linear-gradient(rgba(240,249,255,0), #f0f9ff); opacity: 1; }
+    .lnk-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 3px; }
+    .lnk-head .info-card-title { margin: 0; }
+    .lnk-head .lnk-add { margin-top: 0; }
+    .lnk-item { display: flex; flex-wrap: wrap; align-items: baseline; gap: 1px 6px; font-size: 13px; padding: 2px 0; text-align: left; }
+    .lnk-a { color: #0369a1; font-weight: 600; text-decoration: none; overflow-wrap: anywhere; }
+    a.lnk-a:hover { text-decoration: underline; }
+    .lnk-meta { color: #64748b; font-size: 11.5px; }
+    .lnk-note { flex-basis: 100%; color: #475569; font-size: 12px; white-space: pre-line; }
+    .lnk-btn { border: 1px solid #94a3b8; background: #fff; border-radius: 6px; font-size: 11.5px; padding: 0 6px; cursor: pointer; color: #334155; line-height: 1.7; }
+    .lnk-btn:hover { background: #e0f2fe; }
+    .lnk-add { border-color: #86efac; background: #f0fdf4; color: #15803d; font-weight: 700; margin-top: 3px; }
+    .lnk-add:hover { background: #dcfce7; }
+    .lnk-empty { color: #94a3b8; font-size: 12.5px; }
+    .lnk-cell .lnk-item { padding: 0; font-size: 12.5px; flex-wrap: nowrap; }
+    .lnk-cell .lnk-a { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+    .lnk-cell .lnk-btn { flex: none; }
+    .lk-modal { max-width: 560px; max-height: calc(100vh - 30px); display: flex; flex-direction: column; }
+    .lk-modal .modal-body { overflow-y: auto; }
+    .lk-modal .modal-header { background: linear-gradient(135deg, #0369a1, #0ea5e9); }
+    .lk-modal input[type=text] { width: 100%; padding: 8px 10px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 14px; }
+    .lk-modal input[type=text]:focus { outline: none; border-color: #0284c7; }
+    .lk-msg { font-size: 12px; margin-top: 3px; min-height: 1.2em; color: #64748b; }
+    .lk-msg.ok { color: #15803d; }
+    .lk-msg.bad { color: #b91c1c; }
+    .lk-err { color: #b91c1c; font-weight: 700; font-size: 13px; margin-top: 4px; }
+    .lk-sel { width: 100%; display: flex; justify-content: space-between; align-items: center; gap: 8px; text-align: left; border: 1.5px solid #94a3b8; background: #fff; border-radius: 10px; padding: 9px 12px; font-size: 14px; font-weight: 600; color: #0f172a; cursor: pointer; }
+    .lk-sel:hover, .lk-sel.open { border-color: #0284c7; background: #f0f9ff; }
+    .lk-sel .lk-badge { flex: none; background: #0284c7; color: #fff; border-radius: 999px; padding: 0 10px; font-size: 12.5px; }
+    .lk-pop { position: fixed; z-index: 2500; display: flex; flex-direction: column; background: #fff; border: 1px solid #cbd5e1; border-radius: 12px; box-shadow: 0 12px 32px rgba(15, 23, 42, .28); overflow: hidden; text-align: left; box-sizing: border-box; }
+    .lk-pop[hidden] { display: none; }
+    .lk-pop-head { padding: 8px; border-bottom: 1px solid #e2e8f0; background: #f8fafc; display: flex; flex-direction: column; gap: 6px; flex: none; }
+    .lk-tools { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 12.5px; color: #475569; }
+    .lk-tools button { border: 1px solid #94a3b8; background: #fff; border-radius: 999px; padding: 1px 10px; font-size: 12.5px; cursor: pointer; color: #334155; }
+    .lk-tools button:hover { background: #e0f2fe; }
+    .lk-tools label { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; font-weight: 600; margin: 0; }
+    .lk-list { overflow-y: auto; flex: 1; padding: 4px 6px 6px; min-height: 80px; }
+    .lk-grp { position: sticky; top: 0; z-index: 1; background: #e0f2fe; color: #075985; font-weight: 700; font-size: 12px; padding: 4px 8px; border-radius: 6px; margin: 4px 0 2px; }
+    .lk-row { display: flex; align-items: flex-start; gap: 8px; padding: 6px 8px; border-radius: 8px; cursor: pointer; font-size: 13px; line-height: 1.35; text-align: left; border: 1px solid transparent; margin: 0 !important; font-weight: 400 !important; }
+    .lk-row:hover { background: #f0f9ff; }
+    .lk-row.on { background: #dcfce7; border-color: #86efac; }
+    .lk-row input { flex: none; margin-top: 2px; accent-color: #16a34a; width: 16px; height: 16px; }
+    .lk-name { font-weight: 600; color: #0f172a; display: block; }
+    .lk-sub { display: block; font-size: 11.5px; color: #64748b; }
+    .lk-more { display: block; width: 100%; margin: 6px 0; padding: 6px; border: 1px dashed #94a3b8; border-radius: 8px; background: #fff; color: #0369a1; font-weight: 600; cursor: pointer; font-size: 12.5px; }
+    .lk-pop-foot { padding: 8px; border-top: 1px solid #e2e8f0; background: #f8fafc; display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; flex: none; }
+    .lk-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; max-height: 130px; overflow-y: auto; }
+    .lk-chip { display: inline-flex; align-items: center; gap: 5px; max-width: 100%; background: #dcfce7; color: #14532d; border: 1px solid #86efac; border-radius: 999px; padding: 2px 6px 2px 10px; font-size: 12.5px; }
+    .lk-chip > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 380px; }
+    .lk-chip b { cursor: pointer; color: #b91c1c; padding: 0 3px; }
+    .lk-chip.lock { background: #f1f5f9; color: #475569; border-color: #cbd5e1; padding-right: 10px; }
+    .lk-ask { font-size: 15px; font-weight: 700; color: #0f172a; text-align: center; margin: 10px 0; }
+    .lk-confirm-list { max-height: 240px; overflow-y: auto; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 6px 12px; text-align: left; font-size: 13px; line-height: 1.5; }
+    .lk-confirm-list div { padding: 2px 0; border-bottom: 1px dashed #e2e8f0; }
+    .lk-confirm-list div:last-child { border-bottom: 0; }
+
     /* ---------- พิมพ์ / Export PDF ---------- */
     #print-root { display: none; }
     @media print {
@@ -1078,6 +1137,54 @@
     </div>
   </div>
 
+  <div id="modal-link" class="modal-overlay">
+    <div class="modal-card lk-modal">
+      <div class="modal-header" id="lk-head">📎 แนบลิงก์เอกสาร (Google Drive)</div>
+      <div class="modal-body">
+        <div class="form-group"><label for="lk-title">ชื่อเอกสาร</label><input type="text" id="lk-title" maxlength="200" placeholder="เช่น รายงานผลตัวชี้วัด รอบ 6 เดือน"></div>
+        <div class="form-group"><label for="lk-url">ลิงก์ Google Drive / Docs</label><input type="text" id="lk-url" autocomplete="off" placeholder="วางลิงก์ที่คัดลอกจาก Drive (https://drive.google.com/…)" oninput="lkUrlCheck()"><div class="lk-msg" id="lk-url-msg"></div></div>
+        <div class="form-group"><label for="lk-note">หมายเหตุ (ไม่บังคับ)</label><input type="text" id="lk-note" maxlength="500" placeholder="เช่น ข้อมูลเดือน ต.ค.–มี.ค. · หน้า 5–8"></div>
+        <div class="form-group" style="margin-bottom:0;">
+          <label>ตัวชี้วัดที่เอกสารนี้กล่าวถึง <span class="hint" style="margin:0;">(เลือกได้หลายตัว — ไฟล์เดียวใช้กับทุกตัวที่เลือก)</span></label>
+          <button type="button" class="lk-sel" id="lk-sel-btn" onclick="lkPickToggle()"><span id="lk-sel-text">กดเพื่อเลือกตัวชี้วัด…</span><span class="lk-badge" id="lk-sel-badge">0</span></button>
+          <div class="lk-chips" id="lk-chips"></div>
+          <div class="hint" id="lk-hidden-note" style="display:none;"></div>
+        </div>
+        <div class="lk-err" id="lk-err"></div>
+      </div>
+      <div class="modal-footer" style="display:flex; justify-content:space-between; gap:8px;">
+        <button class="btn btn-secondary" onclick="lkClose()">ยกเลิก</button>
+        <button class="btn btn-primary" id="lk-save-btn" onclick="lkSave()">💾 บันทึก</button>
+      </div>
+    </div>
+  </div>
+  <div id="lk-pop" class="lk-pop" hidden role="listbox" aria-label="เลือกตัวชี้วัด">
+    <div class="lk-pop-head">
+      <input type="text" id="lk-q" autocomplete="off" placeholder="🔍 ค้นหาชื่อตัวชี้วัด / หมวด…" oninput="lkSearch(this.value)">
+      <div class="lk-tools">
+        <button type="button" onclick="lkSelectShown(true)">☑ เลือกทั้งหมดที่ค้นเจอ</button>
+        <button type="button" onclick="lkSelectShown(false)">☐ ล้างที่ค้นเจอ</button>
+        <label><input type="checkbox" id="lk-only" onchange="lkOnlySel(this.checked)"> เฉพาะที่เลือก</label>
+      </div>
+    </div>
+    <div class="lk-list" id="lk-list"></div>
+    <div class="lk-pop-foot"><span id="lk-pop-count"></span><button type="button" class="btn btn-primary btn-sm" onclick="lkPickClose()">เสร็จ</button></div>
+  </div>
+  <div id="modal-link-confirm" class="modal-overlay" style="z-index: 1100;">
+    <div class="modal-card" style="max-width: 520px;">
+      <div class="modal-header" style="background: linear-gradient(135deg, #0369a1, #0ea5e9);">ตรวจสอบก่อนบันทึก</div>
+      <div class="modal-body">
+        <div id="lkc-doc" style="font-size:14px; text-align:left;"></div>
+        <div class="lk-ask">เลือกตัวชี้วัดครบทุกตัวที่เอกสารนี้กล่าวถึงแล้วหรือยัง?</div>
+        <div class="lk-confirm-list" id="lkc-list"></div>
+      </div>
+      <div class="modal-footer" style="display:flex; justify-content:space-between; gap:8px;">
+        <button class="btn btn-secondary" onclick="lkConfirmBack()">← กลับไปเพิ่มตัวชี้วัด</button>
+        <button class="btn btn-primary" onclick="lkConfirmGo(false)">✔ ครบแล้ว บันทึก</button>
+      </div>
+    </div>
+  </div>
+
   <div id="modal-alert" class="modal-overlay">
     <div class="modal-card" style="max-width: 360px;">
       <div class="modal-header" id="alert-title">การแจ้งเตือน</div>
@@ -1441,6 +1548,7 @@
       globalProgressData = [];
       tourReset();
       liveReset();
+      linksReset();
       tblResetView();
       rptReset();
       sarReset(); cltReset(); docTab = 'sar';
@@ -1571,6 +1679,7 @@
 
           // เข้าระบบครั้งแรก: ให้เลือกปีงบก่อนเข้าใช้งาน ป้องกันหลงปี (หลังจากนั้นใช้ตัวเลือกปีงบบนแถบนำทางตามปกติ)
           if (!quiet) showFiscalYearPicker();
+          linksLoad(); // เอกสารแนบโหลดแยกหลังข้อมูลตัวชี้วัด (ไม่ทำให้หน้าแรกช้า)
           if (afterLoad) afterLoad();
         }))
         .withFailureHandler(busyWrap((err) => {
@@ -2468,6 +2577,9 @@
                 ${ed ? (canDet ? `<textarea id="ed-source" class="editable-input" rows="6" placeholder="นิยาม · ตัวตั้ง (A) / ตัวหาร (B) · สูตรคำนวณ · แหล่งข้อมูล / วิธีเก็บข้อมูล">${esc(kpi.dataSource)}</textarea>` : lockWrap(`<textarea id="ed-source" class="editable-input" rows="6" readonly>${esc(kpi.dataSource)}</textarea>`, whyNoDetails()))
                      : `<p>${esc(kpi.dataSource) || 'ไม่ระบุที่มาข้อมูล'}</p>`}
                 ${ed && !canDet ? `<div class="hint">${esc(whyNoDetails())}</div>` : ''}
+              </div>
+              <div class="info-card clip-box lnk-card">
+                <div class="lnk-body" data-links-for="${esc(kpi.id)}">${linkBodyHtml(kpi, false)}</div>
               </div>
               <div class="info-card owner-box" style="border-left: 5px solid var(--primary-color);">
                 <div class="info-card-title">👤 ผู้รับผิดชอบดูแล</div>
@@ -4037,6 +4149,7 @@
     function docsChanged(docs) {
       if (docs.indexOf('SAR') !== -1) sarDocsChanged();
       if (docs.indexOf('CLT') !== -1) cltDocsChanged();
+      if (docs.indexOf('LINKS') !== -1) linksLoad();
     }
     function docDirtyCount() { return sarDirtyIds().length + (cltDirty() ? 1 : 0); }
 
@@ -5295,6 +5408,259 @@
       return P.write({ outputType: 'blob' });
     }
 
+    // ===================== เอกสารแนบ (ลิงก์ Drive) =====================
+    // ลิงก์ Google Drive/Docs ที่ผูกกับตัวชี้วัด (1 ลิงก์ผูกได้หลายตัว) เก็บในชีต KPI_Links แยกจากชีตปีงบ — โหลดแยกหลังข้อมูลตัวชี้วัด
+    // แสดงในกล่อง "เอกสารแนบ" ของการ์ดและคอลัมน์ในมุมมองตาราง · อัปเดตในที่เดิมผ่าน data-links-for (ไม่วาดการ์ดใหม่ ไม่แตะการ์ดที่กำลังแก้)
+    // แนบ/แก้/ลบได้เฉพาะตัวชี้วัดที่แก้รายละเอียดได้ (เซิร์ฟเวอร์ตรวจสิทธิ์ทุกครั้ง) · ตัวไฟล์อยู่ใน Drive การเปิดดูเป็นไปตามสิทธิ์แชร์ของไฟล์
+    const LINK_HOSTS = ['https:\/\/drive.google.com\/', 'https:\/\/docs.google.com\/'];
+    const kpiLinks = { loaded: false, failed: false, fy: null, list: [], byId: new Map(), seq: 0 };
+    function linkUrlOk(u) {
+      u = String(u || '').trim();
+      return u.length <= 1000 && !/\s/.test(u) && LINK_HOSTS.some(h => u.indexOf(h) === 0 && u.length > h.length);
+    }
+    function linksReset() {
+      kpiLinks.loaded = false; kpiLinks.failed = false; kpiLinks.fy = null; kpiLinks.list = []; kpiLinks.byId = new Map(); kpiLinks.seq++;
+      lkClose();
+    }
+    function linksLoad() {
+      if (!sessionToken) return;
+      const seq = ++kpiLinks.seq, token = sessionToken, fy = selectedFy;
+      if (kpiLinks.fy !== fy) { kpiLinks.loaded = false; kpiLinks.list = []; kpiLinks.byId = new Map(); }
+      google.script.run
+        .withSuccessHandler((res) => {
+          if (seq !== kpiLinks.seq || token !== sessionToken || fy !== selectedFy) return;
+          if (!res || !res.success) {
+            if (res && res.message && String(res.message).indexOf('SESSION_EXPIRED') !== -1) { showLogin('เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่'); return; }
+            kpiLinks.failed = true; linksRefreshDom(); return;
+          }
+          kpiLinks.fy = fy; kpiLinks.loaded = true; kpiLinks.failed = false; kpiLinks.list = res.links || [];
+          kpiLinks.byId = new Map();
+          kpiLinks.list.slice().reverse().forEach(l => l.ids.forEach(id => { // ใหม่ล่าสุดขึ้นก่อน
+            if (!kpiLinks.byId.has(id)) kpiLinks.byId.set(id, []);
+            kpiLinks.byId.get(id).push(l);
+          }));
+          linksRefreshDom();
+        })
+        .withFailureHandler(() => { if (seq === kpiLinks.seq) { kpiLinks.failed = true; linksRefreshDom(); } })
+        .getKpiLinks(token, fy);
+    }
+
+    function linkItemHtml(l, kpi, compact) {
+      const url = linkUrlOk(l.url) ? l.url : '', title = esc(l.title);
+      const a = url ? `<a class="lnk-a" href="${esc(url)}" target="_blank" rel="noopener noreferrer" title="เปิดเอกสารใน Google Drive: ${title}">📄 ${title}</a>` : `<span class="lnk-a">📄 ${title}</span>`;
+      const others = l.ids.length + l.hidden - 1;
+      const meta = compact ? '' : `<span class="lnk-meta">${esc(l.createdBy)}${l.createdAt ? ' · ' + esc(l.createdAt) : ''}${others > 0 ? ' · ใช้ร่วมกับอีก ' + others + ' ตัวชี้วัด' : ''}</span>`;
+      const acts = l.canEdit ? `<button type="button" class="lnk-btn" data-kid="${esc(kpi.id)}" data-lid="${esc(l.id)}" title="แก้ไขลิงก์ / ตัวชี้วัดที่ผูก" aria-label="แก้ไขลิงก์" onclick="linkEditBtn(this)">✏️</button><button type="button" class="lnk-btn" data-lid="${esc(l.id)}" title="ลบลิงก์" aria-label="ลบลิงก์" onclick="linkDeleteBtn(this)">🗑️</button>` : '';
+      const note = !compact && l.note ? `<div class="lnk-note">${esc(l.note)}</div>` : '';
+      return `<div class="lnk-item">${a}${meta}${acts}${note}</div>`;
+    }
+    // compact = เซลล์ในตาราง (ปุ่มแนบอยู่ท้ายเซลล์) · ไม่ใช่ = กล่องในการ์ด (หัวกล่อง + ปุ่มแนบอยู่บรรทัดบน เพราะกล่องถูกตัดความสูงตอนย่อ ปุ่มต้องไม่ถูกซ่อน)
+    function linkBodyHtml(kpi, compact) {
+      const addBtn = kpi.canEditDetails ? `<button type="button" class="lnk-btn lnk-add" data-kid="${esc(kpi.id)}" title="วางลิงก์ Google Drive ของเอกสาร แล้วเลือกตัวชี้วัดที่เอกสารนี้กล่าวถึง" onclick="linkAddBtn(this)">＋ แนบลิงก์</button>` : '';
+      const head = compact ? '' : `<div class="lnk-head"><div class="info-card-title">📎 เอกสารแนบ</div>${addBtn}</div>`;
+      if (kpiLinks.failed && !kpiLinks.loaded) return head + `<span class="lnk-empty">โหลดเอกสารแนบไม่สำเร็จ</span> <button type="button" class="lnk-btn" onclick="linksLoad()">ลองใหม่</button>`;
+      if (!kpiLinks.loaded) return head + '<span class="lnk-empty">กำลังโหลด…</span>';
+      const items = kpiLinks.byId.get(kpi.id) || [];
+      const shown = compact ? items.slice(0, 3) : items;
+      let h = head + shown.map(l => linkItemHtml(l, kpi, compact)).join('');
+      if (compact && items.length > shown.length) h += `<div class="lnk-meta">…และอีก ${items.length - shown.length} ลิงก์ (ดูทั้งหมดในมุมมองการ์ด)</div>`;
+      if (!items.length) h += `<span class="lnk-empty">${kpi.canEditDetails ? 'ยังไม่มีเอกสารแนบ' : 'ไม่มีเอกสารแนบ'}</span>`;
+      if (compact && addBtn) h += `<div>${addBtn}</div>`;
+      return h;
+    }
+    // อัปเดตกล่อง/เซลล์ที่วาดอยู่แล้วในที่เดิม (ลิงก์เปลี่ยนจากเครื่องนี้หรือเครื่องอื่น)
+    function linksRefreshDom() {
+      const byId = new Map(globalDatabase.map(k => [k.id, k]));
+      document.querySelectorAll('[data-links-for]').forEach(el => {
+        const k = byId.get(el.dataset.linksFor);
+        if (k) el.innerHTML = linkBodyHtml(k, el.dataset.compact === '1');
+      });
+      if (typeof refreshClamps === 'function') refreshClamps();
+    }
+    function linkAddBtn(btn) { linkOpenModal(btn.dataset.kid, null); }
+    function linkEditBtn(btn) { linkOpenModal(btn.dataset.kid, btn.dataset.lid); }
+
+    function linkDeleteBtn(btn) {
+      const l = kpiLinks.list.find(x => x.id === btn.dataset.lid);
+      if (!l) return;
+      const mineN = l.editableIds.length, otherN = l.ids.length - mineN + l.hidden;
+      const msg = otherN > 0
+        ? 'ลบลิงก์ "' + l.title + '" ออกจากตัวชี้วัดของคุณ ' + mineN + ' ตัว?\n(ตัวชี้วัดอื่นอีก ' + otherN + ' ตัวที่คุณไม่มีสิทธิ์แก้ จะยังมีลิงก์นี้อยู่)'
+        : 'ลบลิงก์ "' + l.title + '" ออกจากตัวชี้วัด ' + mineN + ' ตัว?';
+      showConfirm(msg, () => linkDeleteGo(l.id, l.rev, false));
+    }
+    function linkDeleteGo(id, rev, force) {
+      const token = sessionToken;
+      showBusy('กำลังลบลิงก์…');
+      google.script.run
+        .withSuccessHandler(unbusy((res) => {
+          if (token !== sessionToken) return;
+          if (res && res.success) { showToast('🗑️ ลบลิงก์แล้ว'); linksLoad(); return; }
+          if (res && res.conflict) { showConfirm(res.message + '\n\nลบทับการแก้ไขของคนอื่นหรือไม่?', () => linkDeleteGo(id, rev, true), () => linksLoad()); return; }
+          showAlert('ลบลิงก์ไม่สำเร็จ', '❌', res ? res.message : 'ไม่ทราบสาเหตุ'); linksLoad();
+        }))
+        .withFailureHandler(unbusy((err) => showAlert('เกิดข้อผิดพลาดเครือข่าย', '❌', String(err))))
+        .deleteKpiLink(token, selectedFy, id, rev, !!force);
+    }
+
+    // ---------- หน้าต่างแนบ/แก้ลิงก์ ----------
+    const lk = { kid: null, linkId: null, rev: null, sel: new Set(), locked: [], hidden: 0, pool: [], q: '', limit: 200, only: false, open: false, saving: false };
+    const lkEl = (id) => document.getElementById(id);
+    function lkByIdMap() { return new Map(globalDatabase.map(k => [k.id, k])); }
+    function lkSub(k) { const c = kpiCats(k)[0] || {}; return [partLabel(c.part), c.category].filter(Boolean).join(' › '); }
+
+    function linkOpenModal(kid, linkId) {
+      const kpi = globalDatabase.find(k => k.id === kid);
+      const link = linkId ? kpiLinks.list.find(l => l.id === linkId) : null;
+      if (linkId && !link) { showToast('ไม่พบลิงก์นี้แล้ว (อาจถูกลบไปแล้ว)'); return; }
+      if (!link && !(kpi && kpi.canEditDetails)) return;
+      const seen = new Set();
+      lk.pool = globalDatabase.filter(k => k.canEditDetails && !seen.has(k.id) && seen.add(k.id));
+      lk.pool = lk.pool.filter(k => k.mine).concat(lk.pool.filter(k => !k.mine)); // ของฉันขึ้นก่อน
+      lk.kid = kid; lk.linkId = link ? link.id : null; lk.rev = link ? link.rev : null;
+      lk.sel = new Set(link ? link.editableIds : [kid]);
+      lk.locked = link ? link.ids.filter(id => link.editableIds.indexOf(id) === -1) : [];
+      lk.hidden = link ? link.hidden : 0;
+      lk.q = ''; lk.limit = 200; lk.only = false; lk.saving = false;
+      lkEl('lk-head').innerText = link ? '✏️ แก้ไขลิงก์เอกสาร' : '📎 แนบลิงก์เอกสาร (Google Drive)';
+      lkEl('lk-title').value = link ? link.title : '';
+      lkEl('lk-url').value = link ? link.url : '';
+      lkEl('lk-note').value = link ? link.note : '';
+      lkEl('lk-err').innerText = '';
+      lkEl('lk-only').checked = false;
+      lkEl('modal-link').style.display = 'flex';
+      lkRenderChips(); lkUrlCheck();
+      setTimeout(() => lkEl(link ? 'lk-title' : 'lk-url').focus(), 50);
+    }
+    function lkClose() {
+      lkPickClose();
+      ['modal-link', 'modal-link-confirm'].forEach(id => { const e = lkEl(id); if (e) e.style.display = 'none'; });
+      lk.saving = false;
+    }
+    function lkUrlCheck() {
+      const v = lkEl('lk-url').value.trim(), m = lkEl('lk-url-msg');
+      if (!v) { m.className = 'lk-msg'; m.innerText = 'คัดลอกลิงก์จาก Google Drive (แชร์ → คัดลอกลิงก์) แล้ววางที่นี่'; return false; }
+      const ok = linkUrlOk(v);
+      m.className = 'lk-msg ' + (ok ? 'ok' : 'bad');
+      m.innerText = ok ? '✅ ลิงก์ถูกต้อง · ผู้ที่จะเปิดไฟล์ต้องมีสิทธิ์ในไฟล์นั้นใน Drive' : '⚠️ ต้องเป็นลิงก์ของ Google Drive หรือ Google Docs (ขึ้นต้นด้วย https:\/\/drive.google.com\/ หรือ https:\/\/docs.google.com\/)';
+      return ok;
+    }
+
+    // ---------- เลือกตัวชี้วัด (dropdown) ----------
+    function lkRenderChips() {
+      const byId = lkByIdMap(), nameOf = (id) => (byId.get(id) || {}).name || id;
+      const ids = lk.pool.filter(k => lk.sel.has(k.id)).map(k => k.id).concat(Array.from(lk.sel).filter(id => !lk.pool.some(k => k.id === id)));
+      const chip = (id, locked) => `<span class="lk-chip${locked ? ' lock' : ''}" title="${esc(nameOf(id))}${locked ? ' (คุณไม่มีสิทธิ์แก้ตัวชี้วัดนี้ — คงเดิม)' : ''}"><span>${locked ? '🔒 ' : '✓ '}${esc(nameOf(id))}</span>${locked ? '' : `<b role="button" data-id="${esc(id)}" title="เอาออก" aria-label="เอาออก">✕</b>`}</span>`;
+      lkEl('lk-chips').innerHTML = ids.map(id => chip(id, false)).join('') + lk.locked.map(id => chip(id, true)).join('');
+      const n = lk.sel.size;
+      lkEl('lk-sel-text').innerText = n ? 'เลือกแล้ว — กดเพื่อเพิ่ม / เอาออก' : 'กดเพื่อเลือกตัวชี้วัด…';
+      lkEl('lk-sel-badge').innerText = n + ' ตัว';
+      const hn = lkEl('lk-hidden-note');
+      hn.style.display = lk.hidden > 0 ? '' : 'none';
+      hn.innerText = lk.hidden > 0 ? 'ลิงก์นี้ยังผูกกับตัวชี้วัดอื่นอีก ' + lk.hidden + ' ตัวที่คุณมองไม่เห็น (คงเดิม)' : '';
+      const pc = lkEl('lk-pop-count'); if (pc) pc.innerText = 'เลือกแล้ว ' + n + ' ตัว';
+    }
+    function lkMatches() {
+      const q = lk.q.trim().toLowerCase();
+      return lk.pool.filter(k => (!lk.only || lk.sel.has(k.id)) && (!q || (k.name + ' ' + kpiCats(k).map(c => partLabel(c.part) + ' ' + c.category).join(' ')).toLowerCase().indexOf(q) !== -1));
+    }
+    function lkRenderList() {
+      const m = lkMatches();
+      let shown = 0;
+      const row = (k) => { shown++; const on = lk.sel.has(k.id); return `<label class="lk-row${on ? ' on' : ''}" data-id="${esc(k.id)}"><input type="checkbox" ${on ? 'checked' : ''}><span><span class="lk-name">${esc(k.name)}</span><span class="lk-sub">${esc(lkSub(k))}</span></span></label>`; };
+      const grp = (label, arr) => arr.length ? `<div class="lk-grp">${label} (${arr.length})</div>` + arr.slice(0, Math.max(0, lk.limit - shown)).map(row).join('') : '';
+      let h = grp('★ ตัวชี้วัดของฉัน', m.filter(k => k.mine)) + grp('ตัวชี้วัดอื่นที่คุณแก้ได้', m.filter(k => !k.mine));
+      if (m.length > shown) h += `<button type="button" class="lk-more" onclick="lkMore()">แสดงเพิ่ม (เหลืออีก ${m.length - shown} ตัว) — หรือพิมพ์ค้นหาให้แคบลง</button>`;
+      if (!m.length) h = `<div class="lnk-empty" style="padding:10px;">${lk.pool.length ? 'ไม่พบตัวชี้วัดที่ตรงกับคำค้น' : 'ไม่มีตัวชี้วัดที่คุณแก้รายละเอียดได้'}</div>`;
+      lkEl('lk-list').innerHTML = h;
+      lkEl('lk-pop-count').innerText = 'เลือกแล้ว ' + lk.sel.size + ' ตัว';
+    }
+    function lkMore() { lk.limit += 200; lkRenderList(); }
+    function lkSearch(v) { lk.q = v; lk.limit = 200; lkRenderList(); }
+    function lkOnlySel(on) { lk.only = !!on; lk.limit = 200; lkRenderList(); }
+    function lkSelectShown(on) {
+      lkMatches().forEach(k => { if (on) lk.sel.add(k.id); else lk.sel.delete(k.id); });
+      lkRenderList(); lkRenderChips();
+    }
+    function lkPickToggle() { if (lk.open) lkPickClose(); else lkPickOpen(); }
+    function lkPickOpen() {
+      lk.open = true;
+      lkEl('lk-pop').hidden = false;
+      lkEl('lk-sel-btn').classList.add('open');
+      lkEl('lk-q').value = lk.q;
+      lkRenderList(); lkPickPlace();
+      setTimeout(() => lkEl('lk-q').focus(), 30);
+    }
+    function lkPickClose() {
+      lk.open = false;
+      const p = lkEl('lk-pop'); if (p) p.hidden = true;
+      const b = lkEl('lk-sel-btn'); if (b) b.classList.remove('open');
+    }
+    function lkPickPlace() {
+      if (!lk.open) return;
+      const b = lkEl('lk-sel-btn').getBoundingClientRect(), pop = lkEl('lk-pop'), vh = window.innerHeight, vw = window.innerWidth;
+      const w = Math.min(Math.max(b.width, 340), vw - 16), below = vh - b.bottom - 12, above = b.top - 12, useBelow = below >= 300 || below >= above;
+      pop.style.width = w + 'px';
+      pop.style.left = Math.max(8, Math.min(b.left, vw - w - 8)) + 'px';
+      pop.style.maxHeight = Math.max(220, Math.min(480, useBelow ? below : above)) + 'px';
+      if (useBelow) { pop.style.top = (b.bottom + 4) + 'px'; pop.style.bottom = 'auto'; }
+      else { pop.style.top = 'auto'; pop.style.bottom = (vh - b.top + 4) + 'px'; }
+    }
+    document.addEventListener('change', (e) => {
+      const row = e.target && e.target.closest ? e.target.closest('#lk-list .lk-row') : null;
+      if (!row) return;
+      const id = row.dataset.id;
+      if (e.target.checked) lk.sel.add(id); else lk.sel.delete(id);
+      row.classList.toggle('on', e.target.checked);
+      lkRenderChips();
+      lkEl('lk-pop-count').innerText = 'เลือกแล้ว ' + lk.sel.size + ' ตัว';
+      if (lk.only) lkRenderList();
+    });
+    document.addEventListener('click', (e) => {
+      const x = e.target && e.target.closest ? e.target.closest('#lk-chips b') : null;
+      if (x) { lk.sel.delete(x.dataset.id); lkRenderChips(); if (lk.open) lkRenderList(); return; }
+      if (lk.open && e.target.closest && !e.target.closest('#lk-pop') && !e.target.closest('#lk-sel-btn')) lkPickClose();
+    });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && lk.open) { lkPickClose(); e.stopPropagation(); } }, true);
+    ['scroll', 'resize'].forEach(ev => window.addEventListener(ev, () => { if (lk.open) lkPickPlace(); }, true));
+
+    // ---------- บันทึก: ถามยืนยันว่าเลือกครบหรือยังก่อนเสมอ ----------
+    const lkArabic = (t) => String(t).split('').map(ch => { const i = '\u0e50\u0e51\u0e52\u0e53\u0e54\u0e55\u0e56\u0e57\u0e58\u0e59'.indexOf(ch); return i === -1 ? ch : String(i); }).join(''); // เลขไทย → อารบิก (เซิร์ฟเวอร์เก็บเป็นอารบิก)
+    function lkErr(msg, focusId) { lkEl('lk-err').innerText = msg; if (focusId) lkEl(focusId).focus(); return false; }
+    function lkSave() {
+      lkEl('lk-err').innerText = '';
+      const title = lkEl('lk-title').value.trim();
+      if (!title) return lkErr('กรุณาใส่ชื่อเอกสาร', 'lk-title');
+      if (!lkUrlCheck()) return lkErr('กรุณาวางลิงก์ Google Drive / Docs ให้ถูกต้อง', 'lk-url');
+      if (!lk.sel.size) { lkErr('กรุณาเลือกตัวชี้วัดอย่างน้อย 1 ตัว'); setTimeout(lkPickOpen, 0); return false; } // เปิดหลังคลิกนี้จบ (ไม่งั้นตัวจับคลิกนอก dropdown ปิดทันที)
+      lkPickClose();
+      const byId = lkByIdMap(), nameOf = (id) => (byId.get(id) || {}).name || id;
+      const ids = lk.pool.filter(k => lk.sel.has(k.id)).map(k => k.id).concat(Array.from(lk.sel).filter(id => !lk.pool.some(k => k.id === id)));
+      lkEl('lkc-doc').innerHTML = '📄 <b>' + esc(lkArabic(title)) + '</b><br>จะผูกกับตัวชี้วัด <b>' + (ids.length + lk.locked.length) + '</b> ตัว:';
+      lkEl('lkc-list').innerHTML = ids.map((id, i) => `<div>${i + 1}. ${esc(nameOf(id))}</div>`).join('') + lk.locked.map(id => `<div>🔒 ${esc(nameOf(id))} <span class="lnk-meta">(คงเดิม)</span></div>`).join('');
+      lkEl('modal-link-confirm').style.display = 'flex';
+      return true;
+    }
+    function lkConfirmBack() { lkEl('modal-link-confirm').style.display = 'none'; setTimeout(lkPickOpen, 0); }
+    function lkConfirmGo(force) {
+      if (lk.saving) return;
+      lk.saving = true;
+      const token = sessionToken, fy = selectedFy;
+      const payload = { id: lk.linkId, title: lkEl('lk-title').value.trim(), url: lkEl('lk-url').value.trim(), note: lkEl('lk-note').value.trim(), ids: Array.from(lk.sel), baseRev: lk.rev, force: !!force };
+      lkEl('modal-link-confirm').style.display = 'none';
+      showBusy('กำลังบันทึกลิงก์เอกสาร…');
+      google.script.run
+        .withSuccessHandler(unbusy((res) => {
+          lk.saving = false;
+          if (token !== sessionToken) return;
+          if (res && res.success) { lkClose(); showToast(res.changed ? '✅ บันทึกลิงก์เอกสารแล้ว' : 'ไม่มีการเปลี่ยนแปลง'); linksLoad(); return; }
+          if (res && res.conflict) { showConfirm(res.message + '\n\nบันทึกทับการแก้ไขของคนอื่นหรือไม่?', () => lkConfirmGo(true), () => { lkEl('modal-link-confirm').style.display = 'flex'; }); return; }
+          showAlert('บันทึกลิงก์ไม่สำเร็จ', '❌', res ? res.message : 'ไม่ทราบสาเหตุ');
+        }))
+        .withFailureHandler(unbusy((err) => { lk.saving = false; showAlert('เกิดข้อผิดพลาดเครือข่าย', '❌', String(err)); }))
+        .saveKpiLink(token, fy, payload);
+    }
+
     // ===================== แจ้งเตือน / ยืนยัน =====================
     // ---------- ติดตั้งแอป (ทางลัดเข้าหน้าเว็บ) ----------
     // หน้านี้อยู่ใน iframe ของ Apps Script จึงสั่งติดตั้งเองไม่ได้ — ปุ่มแสดงวิธีติดตั้งตามเครื่อง/เบราว์เซอร์ที่ใช้อยู่
@@ -5682,7 +6048,7 @@
       for (let i = 0; i < 12; i++) c.push({ k: 'm' + i, g: 'monthly', w: 68 });
       c.push({ k: 'sum', g: 'monthly', w: 96 });
       c.push({ k: 'sm', g: 'settings', w: 100 }, { k: 'fq', g: 'settings', w: 92 }, { k: 'lv', g: 'settings', w: 120 });
-      c.push({ k: 'det', g: 'text', w: 300 }, { k: 'src', g: 'text', w: 300 });
+      c.push({ k: 'det', g: 'text', w: 300 }, { k: 'src', g: 'text', w: 300 }, { k: 'lnk', g: 'text', w: 190 });
       c.push({ k: 'own', g: 'people', w: 130 }, { k: 'dep', g: 'people', w: 100 });
       c.push({ k: 'cat', g: 'cats', w: 200 }, { k: 'par', g: 'cats', w: 170 });
       c.push({ k: 'edt', g: 'history', w: 150 }, { k: 'viw', g: 'history', w: 150 });
@@ -5727,14 +6093,14 @@
     // ---------- ส่วนหัว ----------
     function tblHeadHtml() {
       const yl = [selectedFy - 4, selectedFy - 3, selectedFy - 2, selectedFy - 1, selectedFy];
-      const lab = { sum: 'สรุป', sm: 'วิธีสรุป', fq: 'ความถี่', lv: 'ระดับ', det: 'รายละเอียด / การวิเคราะห์', src: 'ที่มา / สูตรคำนวณ', own: 'ผู้รับผิดชอบ', dep: 'หน่วยงาน', cat: 'หมวดที่แสดง', par: 'ตัวชี้วัดแม่', edt: '✏️ แก้ไขล่าสุด', viw: '👁️ เข้าดูล่าสุด' };
+      const lab = { sum: 'สรุป', sm: 'วิธีสรุป', fq: 'ความถี่', lv: 'ระดับ', det: 'รายละเอียด / การวิเคราะห์', src: 'ที่มา / สูตรคำนวณ', lnk: '📎 เอกสารแนบ', own: 'ผู้รับผิดชอบ', dep: 'หน่วยงาน', cat: 'หมวดที่แสดง', par: 'ตัวชี้วัดแม่', edt: '✏️ แก้ไขล่าสุด', viw: '👁️ เข้าดูล่าสุด' };
       yl.forEach((y, i) => { lab['y' + i] = y; });
       thMonthsNames.forEach((m, i) => { lab['m' + i] = m; });
       const g = (key, span, text, cls) => `<th class="${cls || ''}" data-g="${key}" colspan="${span}">${text}</th>`;
       const top = (k, text) => `<th class="c-${k} tbl-top2" rowspan="2">${text}</th>`;
       const r1 = `<tr class="tbl-h1">${top('no', 'ข้อ')}${top('name', 'ชื่อตัวชี้วัด')}${top('st', 'สถานะ')}${top('tg', '🎯 เป้าหมาย')}` +
         g('annual', 5, '📅 ผลทั้งปี (ปีงบประมาณ)') + g('monthly', 13, '📊 ผลรายเดือน ปีงบประมาณ ' + selectedFy, 'grp-month') + g('settings', 3, '⚙️ ตั้งค่า') +
-        g('text', 2, '📝 ข้อความ') + g('people', 2, '👤 ผู้รับผิดชอบ') + g('cats', 2, '🗂️ หมวด') + g('history', 2, '🕘 ประวัติ') + top('act', 'จัดการ') + '</tr>';
+        g('text', 3, '📝 ข้อความ') + g('people', 2, '👤 ผู้รับผิดชอบ') + g('cats', 2, '🗂️ หมวด') + g('history', 2, '🕘 ประวัติ') + top('act', 'จัดการ') + '</tr>';
       const r2 = '<tr class="tbl-h2">' + TBL_COLS.filter(c => lab[c.k] !== undefined).map(c => `<th class="c-${c.k}${c.g === 'monthly' ? ' grp-month' : ''}" data-g="${c.g}">${lab[c.k]}</th>`).join('') + '</tr>';
       return r1 + r2;
     }
@@ -5779,6 +6145,7 @@
       c.lv = canDet && priv ? { h: tblPrevHtml('levels', data) + tblLongBtn('levels') } : Object.assign({ h: `<span title="ทุกระดับ: ${esc((kpi.levels || [kpi.level]).join(', '))}">${lvTxt}</span>` }, canDet ? {} : lockD_);
       c.det = canDet ? { h: tblPrevHtml('details', data) + tblLongBtn('details') } : Object.assign({ h: clamp(kpi.templateDetails, 'ไม่มีข้อมูลรายละเอียดเพิ่มเติม') }, lockD_);
       c.src = canDet ? { h: tblPrevHtml('source', data) + tblLongBtn('source') } : Object.assign({ h: clamp(kpi.dataSource, 'ไม่ระบุที่มาข้อมูล') }, lockD_);
+      c.lnk = { h: `<div class="lnk-cell" data-links-for="${esc(kpi.id)}" data-compact="1">${linkBodyHtml(kpi, true)}</div>` };
       c.own = canDet ? { h: `<input type="text" id="ed-owner" class="editable-input tbl-in" value="${esc(kpi.owner)}" title="คั่นหลายคนด้วย /">` } : Object.assign({ h: clamp(kpi.owner) }, lockD_);
       c.dep = canDet ? { h: `<input type="text" id="ed-dept" class="editable-input tbl-in" value="${esc(kpi.department)}">` } : Object.assign({ h: clamp(kpi.department) }, lockD_);
       c.cat = canDet ? { h: tblPrevHtml('cats', data) + tblLongBtn('cats') } : { h: clamp(kpiCats(kpi).map(x => partLabel(x.part) + ' › ' + x.category).join('\n') + (kpiCats(kpi).length > 1 ? '' : '')) , at: kpiCats(kpi).length > 1 ? ' title="ตัวชี้วัดเดียวกัน แก้ที่หมวดไหนก็เปลี่ยนทุกหมวด"' : '' };
