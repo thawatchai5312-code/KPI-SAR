@@ -395,6 +395,11 @@
     .clt-drv-head b { color: #14532d; white-space: nowrap; padding-top: 6px; }
     .clt-drv-head textarea { flex: 1; font-weight: 600; resize: vertical; }
     .clt-drv-pk { margin-bottom: 8px; }
+    .install-btn-login { position: absolute; top: calc(14px + env(safe-area-inset-top, 0px)); right: max(14px, env(safe-area-inset-right, 0px)); z-index: 2; }
+    .inst-steps { margin: 6px 0 0; padding-left: 1.4em; display: grid; gap: 5px; text-align: left; font-size: 14px; }
+    .inst-link { display: flex; gap: 6px; margin-top: 10px; }
+    .inst-link input { flex: 1; min-width: 0; font-size: 12px; padding: 6px 8px; border: 1px solid #cbd5e1; border-radius: 6px; }
+    .inst-other summary { cursor: pointer; font-weight: 600; font-size: 13.5px; margin-top: 12px; }
     .doc-draft { background: #fef9c3; color: #854d0e; border: 1px solid #fde68a; border-radius: 8px; padding: 1px 8px; font-weight: 600; }
     .clt-draft { color: #ca8a04; font-weight: 700; }
     .clt-kcell { min-width: 130px; }
@@ -740,6 +745,7 @@
 <body>
 
   <div id="app-login-screen" class="modal-overlay" style="display: flex;">
+    <button class="btn-icon install-btn install-btn-login" onclick="installOpen()" title="ติดตั้งเป็นแอป / ทางลัดบนหน้าจอ">📲 ติดตั้งแอป</button>
     <div class="login-box" id="login-box-content" style="animation: fadeIn 0.6s ease;"></div>
   </div>
 
@@ -749,6 +755,7 @@
     <div class="header-actions" id="user-bar" style="display: none;">
       <span id="user-info"></span>
       <button class="btn-icon" id="admin-settings-btn" style="display: none;" onclick="guardUnsaved(openSettings)">⚙️ ตั้งค่า</button>
+      <button class="btn-icon install-btn" onclick="installOpen()" title="ติดตั้งเป็นแอป / ทางลัดบนหน้าจอ">📲 ติดตั้งแอป</button>
       <button class="btn-icon" id="tour-btn" onclick="guardUnsaved(tourStart)" title="ดูขั้นตอนการใช้งานทีละขั้น">🎓 แนะนำการใช้งาน</button>
       <button class="btn-icon" onclick="guardUnsaved(() => openChangePassword(false))">🔑 เปลี่ยนรหัสผ่าน</button>
       <button class="btn-icon" onclick="guardUnsaved(logout)">🚪 ออกจากระบบ</button>
@@ -1047,6 +1054,26 @@
         <button class="btn btn-secondary" onclick="resolveUnsaved('stay')">↩️ กลับไปแก้ต่อ</button>
         <button class="btn btn-danger" onclick="resolveUnsaved('discard')">ไม่บันทึก</button>
         <button class="btn btn-primary" onclick="resolveUnsaved('save')">💾 บันทึกแล้วไปต่อ</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modal-install" class="modal-overlay">
+    <div class="modal-card" style="max-width: 460px;">
+      <div class="modal-header">📲 ติดตั้งแอป (ทางลัดเข้าระบบ)</div>
+      <div class="modal-body" style="padding: 16px 18px; font-size: 14px; line-height: 1.6; max-height: 70vh; overflow-y: auto;">
+        <p>ติดตั้งแล้วจะมีไอคอนบนหน้าจอ กดเปิดระบบได้เลยโดยไม่ต้องหาลิงก์ (ใช้ชื่อผู้ใช้และรหัสผ่านเดิม)</p>
+        <p style="margin-top: 8px;"><b id="install-env"></b></p>
+        <div id="install-main"></div>
+        <div class="inst-link">
+          <input type="text" id="install-link" readonly onclick="this.select()" aria-label="ลิงก์เข้าระบบ">
+          <button type="button" class="btn btn-secondary btn-sm" onclick="installCopy()">📋 คัดลอกลิงก์</button>
+        </div>
+        <p class="hint" id="install-copy-msg" style="margin-top: 4px; min-height: 1.2em;"></p>
+        <details class="inst-other"><summary>วิธีของเครื่อง/เบราว์เซอร์อื่น</summary><div id="install-others"></div></details>
+      </div>
+      <div class="modal-footer" style="text-align: center;">
+        <button class="btn btn-primary" style="min-width: 100px;" onclick="document.getElementById('modal-install').style.display='none'">ปิด</button>
       </div>
     </div>
   </div>
@@ -5269,6 +5296,55 @@
     }
 
     // ===================== แจ้งเตือน / ยืนยัน =====================
+    // ---------- ติดตั้งแอป (ทางลัดเข้าหน้าเว็บ) ----------
+    // หน้านี้อยู่ใน iframe ของ Apps Script จึงสั่งติดตั้งเองไม่ได้ — ปุ่มแสดงวิธีติดตั้งตามเครื่อง/เบราว์เซอร์ที่ใช้อยู่
+    const INSTALL_LINK = 'https:\/\/script.google.com\/macros\/s\/AKfycbzuT2u3T3x8aa97LafoiXMtgSPzYlXMbXJ8UPLF_JXZjzdcleH6xGXMcEk4KQb7xTtaDQ\/exec';
+    const INSTALL_STEPS = {
+      ios: ['แตะปุ่ม <b>แชร์</b> ⬆️ ของ Safari (แถบล่างจอ)', 'เลื่อนรายการลงแล้วแตะ <b>เพิ่มไปยังหน้าจอโฮม</b>', 'แตะ <b>เพิ่ม</b> มุมขวาบน — ไอคอนจะอยู่บนหน้าจอโฮม'],
+      android: ['แตะเมนู <b>⋮</b> มุมขวาบนของ Chrome', 'แตะ <b>เพิ่มลงในหน้าจอหลัก</b> (หรือ <b>ติดตั้งแอป</b>)', 'แตะ <b>ติดตั้ง</b> หรือ <b>เพิ่ม</b> — ไอคอนจะอยู่บนหน้าจอหลัก'],
+      chrome: ['คลิกเมนู <b>⋮</b> มุมขวาบนของ Chrome', 'เลือก <b>แคสต์ บันทึก และแชร์</b> → <b>ติดตั้งหน้าเว็บเป็นแอป</b>', 'กด <b>ติดตั้ง</b> — แอปจะอยู่ในเมนู Start / Launchpad'],
+      edge: ['คลิกเมนู <b>⋯</b> มุมขวาบนของ Edge', 'เลือก <b>แอป</b> → <b>ติดตั้งไซต์นี้เป็นแอป</b>', 'กด <b>ติดตั้ง</b>'],
+      safari: ['เมนู <b>ไฟล์</b> ของ Safari → <b>เพิ่มไปยัง Dock</b>'],
+      other: ['เบราว์เซอร์นี้อาจไม่มีเมนูติดตั้งเป็นแอป — แนะนำให้ใช้ Chrome หรือ Edge', 'หรือกดบุ๊กมาร์ก (Ctrl+D) เก็บลิงก์ไว้']
+    };
+    const INSTALL_NAMES = { ios: '📱 iPhone / iPad (Safari)', android: '📱 Android (Chrome)', chrome: '💻 คอมพิวเตอร์ (Chrome)', edge: '💻 คอมพิวเตอร์ (Edge)', safari: '💻 Mac (Safari)', other: '🌐 เบราว์เซอร์อื่น' };
+    function installEnv() {
+      const ua = navigator.userAgent || '', has = t => ua.indexOf(t) !== -1;
+      const ios = /iPhone|iPad|iPod/.test(ua) || (has('Macintosh') && navigator.maxTouchPoints > 1), android = has('Android');
+      const app = has('Line/') ? 'LINE' : /FBAN|FBAV|FB_IAB/.test(ua) ? 'Facebook' : has('Instagram') ? 'Instagram' : has('MicroMessenger') ? 'WeChat' : '';
+      const edge = has('Edg/'), firefox = has('Firefox') || has('FxiOS'), chrome = !edge && (has('Chrome/') || has('CriOS')) && !has('OPR/');
+      const key = app ? 'app' : ios ? 'ios' : android ? 'android' : edge ? 'edge' : chrome ? 'chrome' : (!firefox && has('Safari/')) ? 'safari' : 'other';
+      return { key: key, app: app, ios: ios, android: android };
+    }
+    function installStandalone() { try { return (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true; } catch (e) { return false; } }
+    function installStepsHtml(k) { return '<ol class="inst-steps">' + INSTALL_STEPS[k].map(t => '<li>' + t + '</li>').join('') + '</ol>'; }
+    function installOpen() {
+      const env = installEnv();
+      document.getElementById('install-env').innerText = env.app ? '⚠️ ตอนนี้เปิดอยู่ในแอป ' + env.app : 'เครื่องที่ใช้อยู่: ' + INSTALL_NAMES[env.key];
+      let main;
+      if (env.app) {
+        const link = env.app === 'LINE' ? INSTALL_LINK + '?openExternalBrowser=1' : INSTALL_LINK;
+        main = '<p style="margin-top: 6px;">ใน ' + env.app + ' ติดตั้งเป็นแอปไม่ได้ ให้เปิดในเบราว์เซอร์ก่อน (' + (env.ios ? 'Safari' : 'Chrome') + ') แล้วกดปุ่มนี้อีกครั้ง</p>'
+          + '<p style="margin-top: 8px;"><a class="btn btn-accent btn-sm" href="' + link + '" target="_blank" rel="noopener">🌐 เปิดในเบราว์เซอร์</a></p>'
+          + '<p class="hint" style="margin-top: 6px;">ถ้าปุ่มไม่ทำงาน ให้กด 📋 คัดลอกลิงก์ แล้วเปิดในเบราว์เซอร์เอง</p>';
+      } else main = installStepsHtml(env.key);
+      document.getElementById('install-main').innerHTML = main;
+      document.getElementById('install-others').innerHTML = Object.keys(INSTALL_STEPS).filter(k => k !== env.key).map(k => '<p style="margin-top: 8px;"><b>' + INSTALL_NAMES[k] + '</b></p>' + installStepsHtml(k)).join('');
+      document.getElementById('install-link').value = INSTALL_LINK;
+      document.getElementById('install-copy-msg').innerText = '';
+      document.getElementById('modal-install').style.display = 'flex';
+    }
+    function installCopy() {
+      const input = document.getElementById('install-link'), msg = document.getElementById('install-copy-msg');
+      const fallback = () => { input.focus(); input.select(); msg.innerText = 'เลือกลิงก์ไว้แล้ว — กดคัดลอก (Ctrl+C) เอง'; };
+      try {
+        if (!navigator.clipboard || !navigator.clipboard.writeText) { fallback(); return; }
+        navigator.clipboard.writeText(INSTALL_LINK).then(() => { msg.innerText = '✅ คัดลอกลิงก์แล้ว'; }, fallback);
+      } catch (e) { fallback(); }
+    }
+    function installInit() { if (installStandalone()) document.querySelectorAll('.install-btn').forEach(b => { b.style.display = 'none'; }); }
+    setTimeout(installInit, 0);
+
     function showAlert(title, icon, message) {
       if (message && message.toString().indexOf('SESSION_EXPIRED') !== -1) {
         showLogin('เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่');

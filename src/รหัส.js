@@ -19,12 +19,15 @@ const NURSING_SYNC_ENABLED = false;
 const NURSING_SYNC_PAUSED_MESSAGE = "ปิดการซิงค์ข้อมูลจากระบบฝ่ายการพยาบาลชั่วคราว";
 
 function doGet() {
-  return HtmlService.createTemplateFromFile('Index')
+  var out = HtmlService.createTemplateFromFile('Index')
       .evaluate()
       .setTitle('ระบบจัดการตัวชี้วัดโรงพยาบาล')
       .addMetaTag('viewport', 'width=device-width, initial-scale=1')
       .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+  try { out.setFaviconUrl(APP_ICON_URL); } catch (e) { console.error("ตั้งไอคอนเว็บไม่สำเร็จ: " + e); } // ไอคอนแท็บเบราว์เซอร์/ทางลัดบนมือถือ (ไฟล์ใน repo: assets/icon-192.png)
+  return out;
 }
+var APP_ICON_URL = "https://raw.githubusercontent.com/thawatchai5312-code/KPI-SAR/claude/apps-script-auto-deploy-nhxswh/assets/icon-192.png";
 
 function cleanValue_(val) {
   if (val === "" || val === undefined || val === null) return null;
