@@ -117,7 +117,7 @@ async function open(b,user){
  // ---- 5. Export PowerPoint (มีหัวข้อที่ยังว่าง → ถามก่อน)
  assert(await pg.evaluate(()=>getComputedStyle(document.getElementById('clt-export-btn')).display!=='none'));
  await pg.click('#clt-export-btn');await pg.waitForSelector('#modal-confirm',{state:'visible'});assert(/ยังไม่ได้กรอก \d+ หัวข้อ/.test(await pg.textContent('#confirm-message')));
- const [dl]=await Promise.all([pg.waitForEvent('download',{timeout:240000}),pg.click('#modal-confirm .btn-danger')]);
+ const [dl]=await Promise.all([pg.waitForEvent('download',{timeout:240000}),(async()=>{await pg.click('#modal-confirm .btn-danger');await pg.waitForSelector('#modal-xp',{state:'visible',timeout:240000});await pg.click('#xp-confirm')})()]);
  const file=OUT+'/'+dl.suggestedFilename();await dl.saveAs(file);assert(dl.suggestedFilename()==='CLT_PCT_FY2570.pptx');
  const list=execFileSync('unzip',['-Z1',file]).toString().split('\n');
  const slides=list.filter(x=>/^ppt\/slides\/slide\d+\.xml$/.test(x)),charts=list.filter(x=>/^ppt\/charts\/chart\d+\.xml$/.test(x));

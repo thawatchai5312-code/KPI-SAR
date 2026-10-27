@@ -5,7 +5,7 @@
   <title>ระบบจัดการตัวชี้วัดคุณภาพ โรงพยาบาลภูหลวง</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400..700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400..700&family=Sarabun:wght@400;700&display=swap" rel="stylesheet">
 
   <style>
     :root {
@@ -480,6 +480,40 @@
     .lk-confirm-list { max-height: 240px; overflow-y: auto; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 6px 12px; text-align: left; font-size: 13px; line-height: 1.5; }
     .lk-confirm-list div { padding: 2px 0; border-bottom: 1px dashed #e2e8f0; }
     .lk-confirm-list div:last-child { border-bottom: 0; }
+
+    /* ---------- ตัวอย่างก่อน Export (Word / PowerPoint) ---------- */
+    #modal-xp { padding: 8px; }
+    .xp-card { background: #fff; width: min(1240px, 100%); height: calc(100vh - 16px); border-radius: var(--radius-large); display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 15px 35px rgba(0,0,0,0.35); }
+    .xp-head { background: var(--primary-gradient); color: #fff; padding: 12px 18px; flex: none; }
+    .xp-head h3 { font-size: 16px; font-weight: 700; }
+    .xp-meta { font-size: 12.5px; margin-top: 2px; opacity: .95; }
+    .xp-warn { background: #fef9c3; color: #854d0e; border-bottom: 1px solid #fde68a; padding: 6px 18px; font-size: 13px; font-weight: 600; flex: none; white-space: pre-line; }
+    .xp-note { background: #f8fafc; color: #64748b; border-bottom: 1px solid #e2e8f0; padding: 6px 18px; font-size: 12px; flex: none; }
+    .xp-bar { display: flex; align-items: center; justify-content: space-between; gap: 6px 14px; flex-wrap: wrap; padding: 6px 18px; border-bottom: 1px solid #e2e8f0; font-size: 13px; font-weight: 600; color: #334155; flex: none; }
+    .xp-bar button { border: 1px solid #94a3b8; background: #fff; border-radius: 8px; padding: 2px 12px; cursor: pointer; font-weight: 700; }
+    .xp-bar button:disabled { opacity: .4; cursor: default; }
+    .xp-body { flex: 1; overflow: auto; background: #94a3b8; padding: 14px; }
+    .xp-foot { display: flex; justify-content: space-between; gap: 8px; padding: 10px 18px; border-top: 1px solid #e2e8f0; background: #f8fafc; flex: none; }
+    .xp-cap { text-align: center; color: #f1f5f9; font-size: 12.5px; font-weight: 700; margin: 0 auto 4px; }
+    .xp-slide-wrap, .xp-paper-wrap { position: relative; overflow: hidden; margin: 0 auto 16px; background: #fff; box-shadow: 0 4px 14px rgba(0,0,0,.35); }
+    .xp-slide { position: absolute; left: 0; top: 0; transform-origin: 0 0; overflow: hidden; background: #fff; }
+    .xp-slide > div, .xp-slide > table, .xp-slide > img { position: absolute; box-sizing: border-box; }
+    .xp-box { display: flex; flex-direction: column; overflow: visible; }
+    .xp-tx { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.25; }
+    .xp-slide table { table-layout: fixed; border-collapse: collapse; }
+    .xp-slide td { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.25; }
+    .xp-paper { position: absolute; left: 0; top: 0; width: 1123px; box-sizing: border-box; padding: 48px; transform-origin: 0 0; color: #0f172a; line-height: 1.3; text-align: left; }
+    .xp-slide, .xp-slide *, .xp-paper, .xp-paper * { font-family: 'Sarabun', 'TH SarabunPSK', 'Noto Sans Thai', Tahoma, sans-serif !important; }
+    .xp-tbl { border-collapse: collapse; table-layout: fixed; width: 100%; }
+    .xp-tbl td, .xp-tbl th { border: 0.5pt solid #000; padding: 2.7px 5.3px; vertical-align: top; font-size: 14pt; }
+    .xp-tbl th { background: #DCFCE7; text-align: center; font-weight: 700; }
+    .xp-tbl td.c { text-align: center; }
+    .xp-pg-head { text-align: right; font-size: 11pt; color: #64748b; margin-bottom: 6px; }
+    .xp-pg-foot { text-align: center; font-size: 11pt; color: #94a3b8; margin-top: 14px; }
+    .xp-part { background: #166534; color: #fff; font-weight: 700; font-size: 18pt; padding: 3px 8px; margin: 8px 0 5px; }
+    .xp-cat { color: #166534; font-weight: 700; font-size: 16pt; border-bottom: 1pt solid #86efac; margin: 11px 0 4px; }
+    .xp-sub { color: #475569; font-weight: 700; font-size: 14pt; margin-bottom: 2px; }
+    .xp-gap { height: 4px; }
 
     /* ---------- พิมพ์ / Export PDF ---------- */
     #print-root { display: none; }
@@ -1186,6 +1220,24 @@
     </div>
   </div>
 
+  <div id="modal-xp" class="modal-overlay">
+    <div class="xp-card">
+      <div class="xp-head"><h3 id="xp-title"></h3><div class="xp-meta" id="xp-meta"></div></div>
+      <div class="xp-warn" id="xp-warn" style="display:none;"></div>
+      <div class="xp-note" id="xp-note"></div>
+      <div class="xp-bar">
+        <span><button type="button" id="xp-prev" onclick="xpGo(-1)">◀</button> <span id="xp-pg"></span> <button type="button" id="xp-next" onclick="xpGo(1)">▶</button></span>
+        <span id="xp-range"></span>
+        <span>แสดงหน้าละ <select id="xp-size" onchange="xpSize(this.value)"></select> <span id="xp-unit"></span></span>
+      </div>
+      <div class="xp-body" id="xp-body"></div>
+      <div class="xp-foot">
+        <button class="btn btn-secondary" onclick="xpClose()">ยกเลิก (ไม่ดาวน์โหลด)</button>
+        <button class="btn btn-primary" id="xp-confirm" onclick="xpConfirm()">📥 ยืนยันดาวน์โหลด</button>
+      </div>
+    </div>
+  </div>
+
   <div id="modal-alert" class="modal-overlay">
     <div class="modal-card" style="max-width: 360px;">
       <div class="modal-header" id="alert-title">การแจ้งเตือน</div>
@@ -1550,6 +1602,7 @@
       tourReset();
       liveReset();
       linksReset();
+      xpClose();
       tblResetView();
       rptReset();
       sarReset(); cltReset(); docTab = 'sar';
@@ -4524,9 +4577,10 @@
         showBusy('กำลังสร้างไฟล์ Word…', 900000);
         try {
           await docLoadScript(SAR_DOCX_URL, 'docx');
-          const blob = await sarBuildDocx(chosen);
-          downloadBlob(blob, 'SAR_Part-I-IV_FY' + selectedFy + '.docx');
-          showToast('✅ สร้างไฟล์ Word แล้ว — ตรวจในโฟลเดอร์ดาวน์โหลด');
+          const pv = { cats: [], cover: [], header: '', total: 0 };
+          const blob = await sarBuildDocx(chosen, pv);
+          xpOpen({ kind: 'docx', blob: blob, name: 'SAR_Part-I-IV_FY' + selectedFy + '.docx', model: pv,
+            warn: nDraft > 0 ? 'มีการวิเคราะห์และ PDCA ที่ยังเป็นร่างจากปีงบก่อน (ยังไม่ได้ตรวจ) ' + nDraft + ' ตัวชี้วัด — ข้อความร่างอยู่ในไฟล์ด้วย' : '' });
         } catch (e) {
           showAlert('สร้างไฟล์ Word ไม่สำเร็จ', '❌', String((e && e.message) || e));
         } finally { hideBusy(); }
@@ -4537,7 +4591,7 @@
     }
 
     // เอกสาร A4 แนวนอน ฟอนต์ TH SarabunPSK เลขอารบิก: ต่อหมวด = ตารางเป้าหมาย+ผล 5 ปี แล้วตาราง (กราฟ | การวิเคราะห์ + สรุป PDCA)
-    async function sarBuildDocx(chosen) {
+    async function sarBuildDocx(chosen, pv) { // pv = ที่เก็บเนื้อหาสำหรับหน้าต่างตัวอย่าง (ไม่ส่ง = ไม่จด)
       const D = window.docx;
       const FONT = { ascii: DOC_FONT, hAnsi: DOC_FONT, cs: DOC_FONT, eastAsia: DOC_FONT };
       const W = 15398, yl = sarYearLabels();
@@ -4570,7 +4624,7 @@
       const imgW = 440, imgH = Math.round(440 * 230 / 600);
       let done = 0;
       const total = uniqueById(chosen).filter(k => sarHasResults(k)).length;
-      const analysisRows = async (kpis, part, cat) => {
+      const analysisRows = async (kpis, part, cat, pvCat) => {
         const rows = [new D.TableRow({ tableHeader: true, cantSplit: true, children: [
           cell([para('ตัวชี้วัด/ผลลัพธ์ (แสดงกราฟ)', { bold: true, align: D.AlignmentType.CENTER, size: 14, after: 0 })], wB[0], { fill: 'DCFCE7' }),
           cell([para('การวิเคราะห์ผลลัพธ์ตามตัวชี้วัดที่สำคัญและ PDCA (คำอธิบาย)', { bold: true, align: D.AlignmentType.CENTER, size: 14, after: 0 })], wB[1], { fill: 'DCFCE7' })] })];
@@ -4579,6 +4633,7 @@
           const title = para(prNoLabel(k) + ' ' + k.name, { bold: true, size: 15, color: '14532D', after: 40 });
           if (first.part !== part || first.category !== cat) {
             rows.push(new D.TableRow({ cantSplit: true, children: [cell([title], wB[0]), cell([para('ดูตัวชี้วัดเดียวกันที่ ' + prPlaceText(first), { size: 14, italics: true, color: '1E3A8A', after: 0 })], wB[1])] }));
+            if (pvCat) pvCat.rows.push({ title: prNoLabel(k) + ' ' + k.name, ref: 'ดูตัวชี้วัดเดียวกันที่ ' + prPlaceText(first) });
             continue;
           }
           const left = [title, para('เป้าหมาย: ' + (k.target || '-') + ' · ปีงบประมาณ ' + selectedFy, { size: 13, color: '475569', after: 60 })];
@@ -4589,17 +4644,25 @@
               altText: { name: 'chart', title: k.name, description: 'กราฟผลลัพธ์ 5 ปี ' + k.name } })] }));
           } else left.push(para('ยังไม่มีข้อมูลผลลัพธ์', { size: 14, italics: true, color: '64748B' }));
           const right = lines(sarSaved(k.id).text, { size: 14 }); // เฉพาะข้อความวิเคราะห์/PDCA ที่กรอก (รายละเอียด/การวิเคราะห์เดิมไม่ลงเอกสาร)
+          if (pvCat) pvCat.rows.push({ title: prNoLabel(k) + ' ' + k.name, target: 'เป้าหมาย: ' + (k.target || '-') + ' · ปีงบประมาณ ' + selectedFy,
+            places: pl.length > 1 ? 'ตัวชี้วัดเดียวกันอยู่ ' + pl.length + ' หมวด: ' + pl.map(p => prPlaceText(p)).join(' · ') : '',
+            svg: sarHasResults(k) ? generateSvgLineChart(k.years, k.target, yl) : '', text: String(sarSaved(k.id).text || '').trim() });
           rows.push(new D.TableRow({ cantSplit: true, children: [cell(left, wB[0]), cell(right, wB[1])] })); // ไม่ตัดแถวข้ามหน้า (แถวสูงเกิน 1 หน้า Word ตัดเอง)
         }
         return new D.Table({ width: { size: W, type: D.WidthType.DXA }, columnWidths: wB, layout: D.TableLayoutType.FIXED, rows: rows });
       };
 
+      const madeLine = 'จัดทำเมื่อ ' + new Date().toLocaleString('th-TH', { dateStyle: 'long', timeStyle: 'short' }) + ' · โดย ' + currentUser.username + ' · ' + uniqueById(chosen).length + ' ตัวชี้วัด';
       const children = [
         para('รายงานการประเมินตนเอง (SAR)', { bold: true, size: 24, align: D.AlignmentType.CENTER, after: 40 }),
         para('โรงพยาบาลภูหลวง', { bold: true, size: 20, align: D.AlignmentType.CENTER, after: 40 }),
         para('ตอนที่ I–IV ปีงบประมาณ ' + selectedFy, { size: 18, align: D.AlignmentType.CENTER, after: 40 }),
-        para('จัดทำเมื่อ ' + new Date().toLocaleString('th-TH', { dateStyle: 'long', timeStyle: 'short' }) + ' · โดย ' + currentUser.username + ' · ' + uniqueById(chosen).length + ' ตัวชี้วัด', { size: 12, color: '64748B', align: D.AlignmentType.CENTER, after: 120 })
+        para(madeLine, { size: 12, color: '64748B', align: D.AlignmentType.CENTER, after: 120 })
       ];
+      if (pv) {
+        pv.header = 'โรงพยาบาลภูหลวง · รายงานการประเมินตนเอง (SAR) ตอนที่ I–IV ปีงบประมาณ ' + selectedFy;
+        pv.cover = ['รายงานการประเมินตนเอง (SAR)', 'โรงพยาบาลภูหลวง', 'ตอนที่ I–IV ปีงบประมาณ ' + selectedFy, madeLine];
+      }
       let firstPart = true;
       for (const part of Object.keys(tree).sort(comparePartNames)) {
         children.push(para(partLabel(part), { bold: true, size: 18, color: 'FFFFFF', fill: '166534', pageBreak: !firstPart, keepNext: true, before: 120, after: 80 }));
@@ -4610,7 +4673,10 @@
           children.push(para('เป้าหมายและผลทั้งปี', { bold: true, size: 14, color: '475569', keepNext: true }));
           children.push(resultTable(kpis));
           children.push(para('', { after: 60 }));
-          children.push(await analysisRows(kpis, part, cat));
+          const pvCat = pv ? { part: partLabel(part), cat: cat, partStart: !pv.cats.length || pv.cats[pv.cats.length - 1].part !== partLabel(part), rows: [],
+            results: kpis.map(k => { const no = prNo(k); return { no: no, sub: no.indexOf('.') !== -1, name: k.name, target: k.target || '-', years: k.years.map(v => prNum(v)) }; }) } : null;
+          if (pvCat) { pv.cats.push(pvCat); pv.total += kpis.length; }
+          children.push(await analysisRows(kpis, part, cat, pvCat));
         }
       }
       docBusyText('กำลังรวมไฟล์ Word…');
@@ -5252,9 +5318,10 @@
         showBusy('กำลังสร้างไฟล์ PowerPoint…', 900000);
         try {
           await docLoadScript(CLT_PPTX_URL, 'PptxGenJS');
-          const blob = await cltBuildPptx();
-          downloadBlob(blob, 'CLT_PCT_FY' + selectedFy + '.pptx');
-          showToast('✅ สร้างไฟล์ PowerPoint แล้ว — ตรวจในโฟลเดอร์ดาวน์โหลด');
+          const pv = { slides: [], footer: '' };
+          const blob = await cltBuildPptx(pv);
+          xpOpen({ kind: 'pptx', blob: blob, name: 'CLT_PCT_FY' + selectedFy + '.pptx', model: pv,
+            warn: [miss.length > 0 ? 'ยังไม่ได้กรอก ' + miss.length + ' หัวข้อ (สไลด์ของหัวข้อที่ว่างไม่ขึ้นในไฟล์)' : '', drafts.length > 0 ? 'ยังเป็นร่างจากปีงบก่อน (ยังไม่ได้ตรวจ) ' + drafts.length + ' หัวข้อ — ข้อความร่างอยู่ในไฟล์ด้วย' : ''].filter(Boolean).join('\n') });
         } catch (e) {
           showAlert('สร้างไฟล์ PowerPoint ไม่สำเร็จ', '❌', String((e && e.message) || e));
         } finally { hideBusy(); }
@@ -5267,7 +5334,7 @@
     }
 
     // กราฟของ PowerPoint เป็นรูป PNG ของกราฟเดียวกับหน้าเว็บ/ไฟล์ Word (ผลลัพธ์ 5 ปี + เส้นเป้าหมาย) — แก้ข้อมูลในไฟล์ไม่ได้
-    async function cltBuildPptx() {
+    async function cltBuildPptx(pv) { // pv = ที่เก็บสไลด์สำหรับหน้าต่างตัวอย่าง (ไม่ส่ง = ไม่จด)
       const P = new window.PptxGenJS(), F = DOC_FONT, yl = sarYearLabels().map(String);
       P.layout = 'LAYOUT_WIDE'; // 13.33 x 7.5 นิ้ว
       P.title = 'CLT profile ของ PCT โรงพยาบาลภูหลวง ปีงบประมาณ ' + selectedFy; P.author = currentUser.username;
@@ -5275,8 +5342,9 @@
         objects: [{ rect: { x: 0, y: 0, w: 13.33, h: 0.14, fill: { color: '166534' } } },
           { text: { text: 'โรงพยาบาลภูหลวง · CLT/PCT Profile ปีงบประมาณ ' + selectedFy, options: { x: 0.4, y: 7.05, w: 9, h: 0.32, fontFace: F, fontSize: 12, color: '64748B' } } }],
         slideNumber: { x: 12.2, y: 7.05, w: 0.8, h: 0.32, fontFace: F, fontSize: 12, color: '64748B', align: 'right' } });
+      if (pv) pv.footer = 'โรงพยาบาลภูหลวง · CLT/PCT Profile ปีงบประมาณ ' + selectedFy;
       const slide = (title) => {
-        const s = P.addSlide({ masterName: 'CLT' });
+        const s = xpRecSlide(P.addSlide({ masterName: 'CLT' }), pv);
         if (title) s.addText(docXml(title), { x: 0.4, y: 0.25, w: 12.5, h: 0.75, fontFace: F, fontSize: 28, bold: true, color: '14532D', valign: 'middle', fit: 'shrink' });
         return s;
       };
@@ -5671,6 +5739,167 @@
         }))
         .withFailureHandler(unbusy((err) => { lk.saving = false; showAlert('เกิดข้อผิดพลาดเครือข่าย', '❌', String(err)); }))
         .saveKpiLink(token, fy, payload);
+    }
+
+    // ===================== ตัวอย่างก่อน Export (Word / PowerPoint) =====================
+    // สร้างไฟล์จริงด้วยโค้ดเดิม แต่ยังไม่ดาวน์โหลด — ระหว่างสร้างจดเนื้อหาทุกหน้า/สไลด์ไว้ (sarBuildDocx / cltBuildPptx รับ pv)
+    // แล้ววาดตัวอย่างจากที่จดไว้ในหน้าต่างเต็มจอ · กด "ยืนยันดาวน์โหลด" = ดาวน์โหลดไฟล์ที่สร้างไว้แล้วทันที (ไม่สร้างซ้ำ) · "ยกเลิก" = ทิ้ง
+    // Word: หน้ากระดาษ A4 กว้าง 1123px หน่วยตามไฟล์ (twips/15 = px, ขนาดอักษร pt) · PowerPoint: สไลด์ 960x540 หน่วยจุด (1 นิ้ว = 72) · ย่อ/ขยายด้วย transform
+    const xp = { kind: '', blob: null, name: '', model: null, page: 1, size: 10, total: 0, flat: [] };
+    const xpEl = (id) => document.getElementById(id);
+    function xpRecSlide(raw, pv) {
+      if (!pv) return raw;
+      const sl = { items: [] };
+      pv.slides.push(sl);
+      return {
+        addText(text, o) { sl.items.push({ t: 'text', text: String(text), o: Object.assign({}, o) }); return raw.addText(text, o); },
+        addTable(rows, o) { sl.items.push({ t: 'table', rows: rows.map(r => r.map(c => ({ text: String(c.text), options: Object.assign({}, c.options) }))), o: Object.assign({}, o) }); return raw.addTable(rows, o); },
+        addImage(o) { sl.items.push({ t: 'image', o: Object.assign({}, o) }); return raw.addImage(o); }
+      };
+    }
+    function xpOpen(o) {
+      xp.kind = o.kind; xp.blob = o.blob; xp.name = o.name; xp.model = o.model; xp.page = 1; xp.size = 10;
+      const word = o.kind === 'docx';
+      xp.flat = [];
+      if (word) o.model.cats.forEach((c, ci) => c.results.forEach((_, i) => xp.flat.push({ c: ci, i: i })));
+      xp.total = word ? xp.flat.length : o.model.slides.length;
+      xpEl('xp-title').innerText = '👁️ ตัวอย่างก่อน Export · ' + (word ? 'Word (SAR Part I–IV)' : 'PowerPoint (CLT profile ของ PCT)');
+      xpEl('xp-meta').innerText = o.name + ' · ' + Math.max(1, Math.round(o.blob.size / 1024)) + ' KB · ' + (word ? xp.total + ' ตัวชี้วัด' : xp.total + ' สไลด์');
+      const w = xpEl('xp-warn'); w.style.display = o.warn ? '' : 'none'; w.innerText = o.warn ? '⚠️ ' + o.warn : '';
+      xpEl('xp-note').innerText = word
+        ? 'ตัวอย่างแสดงเนื้อหาตามที่อยู่ในไฟล์ · Word เป็นผู้ตัดหน้าและใส่เลขหน้าเอง จึงอาจตัดหน้าต่างจากตัวอย่างเล็กน้อย · ฟอนต์ในไฟล์คือ TH SarabunPSK'
+        : 'ตัวอย่างแสดงตำแหน่งข้อความ/ตาราง/กราฟตามที่อยู่ในสไลด์ · ข้อความที่ PowerPoint ย่อให้พอดีกล่องจะใกล้เคียงแต่ไม่เป๊ะ · ฟอนต์ในไฟล์คือ TH SarabunPSK';
+      const sizes = word ? [10, 20, 50] : [10, 20];
+      xpEl('xp-size').innerHTML = sizes.map(n => `<option value="${n}"${n === xp.size ? ' selected' : ''}>${n}</option>`).join('');
+      xpEl('xp-unit').innerText = word ? 'ตัวชี้วัด' : 'สไลด์';
+      xpEl('modal-xp').style.display = 'flex';
+      xpRender();
+    }
+    function xpClose() {
+      const m = xpEl('modal-xp'); if (m) m.style.display = 'none';
+      xp.blob = null; xp.model = null; xp.flat = []; xp.total = 0;
+      const b = xpEl('xp-body'); if (b) b.innerHTML = '';
+    }
+    function xpConfirm() {
+      if (!xp.blob) return;
+      const kind = xp.kind;
+      downloadBlob(xp.blob, xp.name);
+      xpClose();
+      showToast(kind === 'pptx' ? '✅ ดาวน์โหลดไฟล์ PowerPoint แล้ว — ตรวจในโฟลเดอร์ดาวน์โหลด' : '✅ ดาวน์โหลดไฟล์ Word แล้ว — ตรวจในโฟลเดอร์ดาวน์โหลด');
+    }
+    function xpGo(d) { xp.page += d; xpRender(); }
+    function xpSize(v) { xp.size = Number(v) || 10; xp.page = 1; xpRender(); }
+    function xpRender() {
+      if (!xp.model) return;
+      const pages = Math.max(1, Math.ceil(xp.total / xp.size));
+      xp.page = Math.min(Math.max(1, xp.page), pages);
+      const from = (xp.page - 1) * xp.size, to = Math.min(xp.total, from + xp.size);
+      xpEl('xp-body').innerHTML = xp.kind === 'docx' ? xpWordHtml(from, to) : xpPptxHtml(from, to);
+      xpEl('xp-pg').innerText = 'หน้า ' + xp.page + ' / ' + pages;
+      xpEl('xp-range').innerText = (xp.kind === 'docx' ? 'ตัวชี้วัด ' : 'สไลด์ ') + (xp.total ? from + 1 : 0) + '–' + to + ' จาก ' + xp.total;
+      xpEl('xp-prev').disabled = xp.page <= 1; xpEl('xp-next').disabled = xp.page >= pages;
+      xpEl('xp-body').scrollTop = 0;
+      xpLayout();
+    }
+    // ย่อ/ขยายหน้ากระดาษ-สไลด์ให้พอดีความกว้างหน้าต่าง · ข้อความกล่องที่สั่งย่อให้พอดี (fit: shrink) ลดขนาดจนพอดีความสูง
+    function xpLayout() {
+      const body = xpEl('xp-body');
+      if (!body || !xp.model) return;
+      const avail = Math.max(280, body.clientWidth - 28);
+      body.querySelectorAll('.xp-slide-wrap').forEach(w => {
+        const k = Math.min(1.3, avail / 960);
+        w.style.width = (960 * k) + 'px'; w.style.height = (540 * k) + 'px'; w.firstElementChild.style.transform = 'scale(' + k + ')';
+      });
+      body.querySelectorAll('[data-fit]').forEach(box => {
+        const tx = box.firstElementChild, room = Number(box.dataset.room);
+        let fs = parseFloat(tx.style.fontSize), n = 0;
+        while (tx.offsetHeight > room + 1 && fs > 8 && n++ < 30) { fs *= 0.93; tx.style.fontSize = fs + 'px'; }
+      });
+      body.querySelectorAll('.xp-paper-wrap').forEach(w => {
+        const k = Math.min(1.3, avail / 1123), p = w.firstElementChild;
+        p.style.transform = 'scale(' + k + ')';
+        w.style.width = (1123 * k) + 'px'; w.style.height = (p.offsetHeight * k) + 'px';
+      });
+    }
+    window.addEventListener('resize', () => { if (xp.model) xpLayout(); });
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { if (xp.model) xpLayout(); });
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape' || !xp.model) return;
+      const top = ['modal-confirm', 'modal-alert'].some(id => { const m = xpEl(id); return m && m.style.display === 'flex'; });
+      if (!top) xpClose();
+    });
+
+    // ---------- Word ----------
+    function xpWordHtml(from, to) {
+      const m = xp.model, px = (t) => Math.round(t / 15 * 10) / 10, yl = sarYearLabels();
+      const wA = [800, 6598, 2000, 1200, 1200, 1200, 1200, 1200], wB = [6900, 8498];
+      const cols = (w) => '<colgroup>' + w.map(x => `<col style="width:${px(x)}px">`).join('') + '</colgroup>';
+      const groups = [];
+      xp.flat.slice(from, to).forEach(f => { const g = groups[groups.length - 1]; if (g && g.c === f.c) g.is.push(f.i); else groups.push({ c: f.c, is: [f.i] }); });
+      let h = '<div class="xp-cap">ตัวอย่างหน้า ' + xp.page + '</div><div class="xp-paper-wrap"><div class="xp-paper"><div class="xp-pg-head">' + esc(m.header) + '</div>';
+      if (from === 0) {
+        h += '<div style="text-align:center;margin-bottom:6px;"><div style="font-size:24pt;font-weight:700;">' + esc(m.cover[0]) + '</div><div style="font-size:20pt;font-weight:700;">' + esc(m.cover[1]) +
+          '</div><div style="font-size:18pt;">' + esc(m.cover[2]) + '</div><div style="font-size:12pt;color:#64748b;">' + esc(m.cover[3]) + '</div></div>';
+      }
+      groups.forEach(g => {
+        const cat = m.cats[g.c], head = g.is[0] === 0;
+        if (cat.partStart && head) h += `<div class="xp-part">${esc(cat.part)}</div>`;
+        h += `<div class="xp-cat">${esc(cat.cat)}${head ? '' : ' (ต่อ)'}</div><div class="xp-sub">เป้าหมายและผลทั้งปี</div>`;
+        h += '<table class="xp-tbl">' + cols(wA) + '<thead><tr>' + ['ที่', 'ตัวชี้วัด', 'เป้าหมาย'].concat(yl.map(String)).map(t => `<th style="font-size:14pt;">${esc(t)}</th>`).join('') + '</tr></thead><tbody>' +
+          g.is.map(i => { const r = cat.results[i];
+            return `<tr><td class="c"${r.sub ? '' : ' style="font-weight:700;"'}>${esc(r.no)}</td><td style="${r.sub ? 'padding-left:' + (5.3 + 13.3) + 'px;' : 'font-weight:700;'}">${esc(r.name)}</td><td class="c" style="font-weight:700;background:#FEF3C7;">${esc(r.target)}</td>` +
+              r.years.map(v => `<td class="c">${esc(v)}</td>`).join('') + '</tr>'; }).join('') + '</tbody></table><div class="xp-gap"></div>';
+        h += '<table class="xp-tbl">' + cols(wB) + '<thead><tr><th>ตัวชี้วัด/ผลลัพธ์ (แสดงกราฟ)</th><th>การวิเคราะห์ผลลัพธ์ตามตัวชี้วัดที่สำคัญและ PDCA (คำอธิบาย)</th></tr></thead><tbody>' +
+          g.is.map(i => { const r = cat.rows[i];
+            if (r.ref) return `<tr><td><div style="font-size:15pt;font-weight:700;color:#14532D;">${esc(r.title)}</div></td><td><div style="font-size:14pt;font-style:italic;color:#1E3A8A;">${esc(r.ref)}</div></td></tr>`;
+            const chart = r.svg ? '<div style="text-align:center;">' + r.svg.replace(/^<svg [^>]*>/, '<svg viewBox="0 0 600 230" width="440" height="169">') + '</div>' : '<div style="font-size:14pt;font-style:italic;color:#64748b;">ยังไม่มีข้อมูลผลลัพธ์</div>';
+            return `<tr><td><div style="font-size:15pt;font-weight:700;color:#14532D;">${esc(r.title)}</div><div style="font-size:13pt;color:#475569;margin-bottom:3px;">${esc(r.target)}</div>` +
+              (r.places ? `<div style="font-size:12pt;font-style:italic;color:#1E3A8A;margin-bottom:3px;">${esc(r.places)}</div>` : '') + chart + `</td><td><div style="font-size:14pt;white-space:pre-wrap;">${esc(r.text || '-')}</div></td></tr>`; }).join('') + '</tbody></table>';
+      });
+      return h + '<div class="xp-pg-foot">ตัวอย่างเนื้อหา · เลขหน้าและการตัดหน้าเป็นไปตาม Word</div></div></div>';
+    }
+
+    // ---------- PowerPoint ----------
+    function xpPptxHtml(from, to) {
+      let h = '';
+      for (let n = from; n < to; n++) h += xpSlideHtml(xp.model.slides[n], n + 1);
+      return h;
+    }
+    const xpColor = (c) => (c ? '#' + String(c).replace(/^#/, '') : '');
+    function xpSlideHtml(sl, n) {
+      let h = `<div class="xp-cap">สไลด์ ${n} / ${xp.total}</div><div class="xp-slide-wrap"><div class="xp-slide" style="width:960px;height:540px;">`;
+      h += '<div style="left:0;top:0;width:960px;height:10px;background:#166534;"></div>'; // แถบเขียวบนสุดของแม่แบบ
+      h += `<div style="left:28.8px;top:507.6px;width:648px;height:23px;font-size:12px;color:#64748B;">${esc(xp.model.footer)}</div>`;
+      h += `<div style="left:878.4px;top:507.6px;width:57.6px;height:23px;font-size:12px;color:#64748B;text-align:right;">${n}</div>`;
+      sl.items.forEach(it => { h += it.t === 'text' ? xpTextHtml(it) : it.t === 'table' ? xpTableHtml(it) : xpImageHtml(it); });
+      return h + '</div></div>';
+    }
+    function xpTextHtml(it) {
+      const o = it.o, fs = o.fontSize || 18;
+      const pad = o.margin === undefined ? [3.6, 7.2, 3.6, 7.2] : (Array.isArray(o.margin) ? o.margin : [o.margin, o.margin, o.margin, o.margin]);
+      const jc = o.valign === 'middle' ? 'center' : o.valign === 'bottom' ? 'flex-end' : 'flex-start';
+      const st = `left:${o.x * 72}px;top:${o.y * 72}px;width:${o.w * 72}px;height:${o.h * 72}px;justify-content:${jc};padding:${pad[0]}px ${pad[1]}px ${pad[2]}px ${pad[3]}px;` +
+        (o.fill && o.fill.color ? `background:${xpColor(o.fill.color)};` : '') + (o.line && o.line.color ? `border:${o.line.width || 1}px solid ${xpColor(o.line.color)};` : '');
+      const tx = `font-size:${fs}px;color:${xpColor(o.color) || '#000'};text-align:${o.align || 'left'};${o.bold ? 'font-weight:700;' : ''}${o.italic ? 'font-style:italic;' : ''}`;
+      const fit = o.fit === 'shrink' ? ` data-fit="1" data-room="${o.h * 72 - pad[0] - pad[2]}"` : '';
+      return `<div class="xp-box" style="${st}"${fit}><div class="xp-tx" style="${tx}">${esc(it.text)}</div></div>`;
+    }
+    function xpTableHtml(it) {
+      const o = it.o, m = o.margin || [0.04, 0.08, 0.04, 0.08], pad = m.map(v => v * 72);
+      let h = `<table style="left:${o.x * 72}px;top:${o.y * 72}px;width:${o.w * 72}px;"><colgroup>${(o.colW || []).map(c => `<col style="width:${c * 72}px">`).join('')}</colgroup><tbody>`;
+      it.rows.forEach(r => {
+        h += '<tr>' + r.map(c => {
+          const p = c.options || {}, b = p.border || {};
+          return `<td${p.colspan ? ` colspan="${p.colspan}"` : ''} style="padding:${pad[0]}px ${pad[1]}px ${pad[2]}px ${pad[3]}px;font-size:${p.fontSize || 16}px;color:${xpColor(p.color) || '#000'};text-align:${p.align || 'left'};vertical-align:${p.valign === 'middle' ? 'middle' : 'top'};` +
+            (p.fill && p.fill.color ? `background:${xpColor(p.fill.color)};` : '') + (p.bold ? 'font-weight:700;' : '') + (b.color ? `border:${b.pt || 0.75}px solid ${xpColor(b.color)};` : '') + `">${esc(c.text)}</td>`;
+        }).join('') + '</tr>';
+      });
+      return h + '</tbody></table>';
+    }
+    function xpImageHtml(it) {
+      const o = it.o;
+      if (String(o.data || '').indexOf('image/png;base64,') !== 0) return '';
+      return `<img alt="" style="left:${o.x * 72}px;top:${o.y * 72}px;width:${o.w * 72}px;height:${o.h * 72}px;" src="data:${o.data}">`;
     }
 
     // ===================== แจ้งเตือน / ยืนยัน =====================

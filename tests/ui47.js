@@ -160,7 +160,7 @@ async function open(b,user,opts={}){
 
  // ---- 7. Export Word (.docx)
  assert(await pg.evaluate(()=>getComputedStyle(document.getElementById('sar-export-btn')).display!=='none'),'admin sees export');
- const t0=Date.now();const [dl]=await Promise.all([pg.waitForEvent('download',{timeout:240000}),pg.click('#sar-export-btn')]);console.log('export ms',Date.now()-t0);
+ const t0=Date.now();const [dl]=await Promise.all([pg.waitForEvent('download',{timeout:240000}),(async()=>{await pg.click('#sar-export-btn');await pg.waitForSelector('#modal-xp',{state:'visible',timeout:240000});await pg.click('#xp-confirm')})()]);console.log('export ms',Date.now()-t0);
  const file=OUT+'/'+dl.suggestedFilename();await dl.saveAs(file);
  assert(dl.suggestedFilename()==='SAR_Part-I-IV_FY2570.docx',dl.suggestedFilename());
  const xml=execFileSync('unzip',['-p',file,'word/document.xml'],{maxBuffer:1<<29}).toString('utf8');

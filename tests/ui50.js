@@ -122,7 +122,7 @@ async function open(b,user){
  await pg.screenshot({path:OUT+'/ui50-driver.png',fullPage:true});
  // 8) Export PowerPoint: Driver 2 สไลด์ (แถว Purpose + ตัวชี้วัด 6 คอลัมน์) + Process Management รวมแถวอัตโนมัติและแถวเอง
  await pg.click('#clt-export-btn');await pg.waitForSelector('#modal-confirm',{state:'visible'});
- const [dl]=await Promise.all([pg.waitForEvent('download',{timeout:240000}),pg.click('#modal-confirm .btn-danger')]);
+ const [dl]=await Promise.all([pg.waitForEvent('download',{timeout:240000}),(async()=>{await pg.click('#modal-confirm .btn-danger');await pg.waitForSelector('#modal-xp',{state:'visible',timeout:240000});await pg.click('#xp-confirm')})()]);
  const file=OUT+'/ui50.pptx';await dl.saveAs(file);
  const list=execFileSync('unzip',['-Z1',file]).toString().split('\n').filter(f=>/^ppt\/slides\/slide\d+\.xml$/.test(f));
  const all=list.map(f=>execFileSync('unzip',['-p',file,f],{maxBuffer:1<<28}).toString('utf8'));
