@@ -260,6 +260,23 @@ function saveKpi(token, fy, item) {
     // ล็อกตลอดช่วงอ่าน-แก้-เขียน: ถ้ามีคนลบ/เพิ่มแถวพร้อมกัน เลขแถวจะไม่เลื่อนจนเขียนทับตัวอื่น
     lock = LockService.getScriptLock();
     lock.waitLock(30000);
+    var res = saveKpiCore_(user, fy, item);
+    if (res.success) {
+      var before = res._old, after = res._fresh;
+      delete res._old; delete res._fresh;
+      if (res.changed) res.docs = kpiAfterSave_(user, resolveFiscalYear_(fy), item, before, after);
+    }
+    return res;
+  } catch (error) {
+    return { success: false, message: "เกิดข้อผิดพลาด: " + error.toString() };
+  } finally {
+    if (lock) lock.releaseLock();
+  }
+}
+
+/** แกนของ saveKpi: บันทึกตัวชี้วัด 1 ตัวใน 1 ปีงบ (เรียกภายใต้ script lock เท่านั้น · ไม่ตรวจ token) — ส่งต่อปีถัดไป (kpiForward_) เรียกซ้ำด้วยสิทธิ์ของผู้ใช้คนเดิม */
+function saveKpiCore_(user, fy, item) {
+  {
     var privileged = isPrivileged_(user);
     fy = resolveFiscalYear_(fy);
     var sheet = getFiscalSheet_(fy);
@@ -463,12 +480,9 @@ function saveKpi(token, fy, item) {
       success: true,
       changed: changed,
       message: changed ? "บันทึกข้อมูลปีงบ " + fy + " เรียบร้อยแล้ว" : "ไม่มีการเปลี่ยนแปลง",
-      kpi: decorateKpi_(user, fy, fresh, getAnnualSources_(fy))
+      kpi: decorateKpi_(user, fy, fresh, getAnnualSources_(fy)),
+      _old: old, _fresh: fresh
     };
-  } catch (error) {
-    return { success: false, message: "เกิดข้อผิดพลาด: " + error.toString() };
-  } finally {
-    if (lock) lock.releaseLock();
   }
 }
 
@@ -624,7 +638,11 @@ function addIndicator(token, fy, newItem) {
     }
     touchUser_(user, "edit");
     bumpDataVersion_(fy, [newId], user);
-    return { success: true, message: "เพิ่มตัวชี้วัดในปีงบ " + fy + " เรียบร้อยแล้ว", newId: newId };
+    var fwd = [];
+    if (newItem.forward) {
+      fwdLaterYears_(fy).forEach(function(ty) { fwd.push(fwdAddToYear_(user, ty, fy, newRow, newId, cats, privileged)); });
+    }
+    return { success: true, message: "เพิ่มตัวชี้วัดในปีงบ " + fy + " เรียบร้อยแล้ว", newId: newId, forward: fwd };
   } catch (error) {
     return { success: false, message: "เกิดข้อผิดพลาด: " + error.toString() };
   } finally {

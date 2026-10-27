@@ -835,6 +835,10 @@
       #tour-tip.tip-top { top: 8px !important; bottom: auto; }
     }
   
+    .fwd-chk { display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px; font-weight: 600; color: #166534; background: #f0fdf4; border: 1px solid #86efac; border-radius: 8px; padding: 3px 8px; cursor: pointer; white-space: nowrap; }
+    .fwd-chk input { margin: 0; }
+    .tbl-fwd { display: block; margin-top: 3px; font-size: 10.5px; line-height: 1.2; font-weight: 600; color: #166534; cursor: pointer; }
+    .tbl-fwd input { margin: 0 2px 0 0; vertical-align: middle; }
     .rn-tabs { display: flex; gap: 6px; margin-bottom: 10px; }
     .rn-tab { border: 1px solid #cbd5e1; background: #f8fafc; border-radius: 8px 8px 0 0; padding: 6px 18px; font-family: inherit; font-size: 13px; cursor: pointer; }
     .rn-tab.on { background: #2563eb; color: #fff; border-color: #2563eb; font-weight: 600; }
@@ -1138,6 +1142,7 @@
       </div>
       <div class="modal-footer">
         <button class="btn btn-secondary" onclick="document.getElementById('modal-add-kpi').style.display='none'">ยกเลิก</button>
+        <label class="fwd-chk" id="add-kpi-fwd-box" style="display: none;" title="เพิ่มตัวชี้วัดนี้ในปีงบถัดไปด้วย (รหัสเดียวกัน ไม่มีผลรายเดือน)"><input type="checkbox" id="add-kpi-fwd" checked> <span id="add-kpi-fwd-text">☑ เพิ่มในปีงบถัดไปด้วย</span></label>
         <button class="btn btn-primary" onclick="submitAddKpi()">💾 บันทึกข้อมูล</button>
       </div>
     </div>
@@ -2584,6 +2589,7 @@
         actions = `<button class="btn btn-primary btn-sm" onclick="saveKpiEdit()">💾 บันทึกข้อมูล</button>
           <button class="btn btn-secondary btn-sm" onclick="cancelEdit()">ยกเลิก</button>
           ${priv ? '<button class="btn btn-danger btn-sm" onclick="requestDeleteKpi()">🗑️ ลบตัวชี้วัด</button>' : ''}
+          ${fwdBoxHtml(kpi, false)}
           <span class="dirty-mark" id="dirty-mark">● ยังไม่ได้บันทึก</span>`;
       } else if (kpi.canEditResults || kpi.canEditDetails) {
         actions = `<button class="btn btn-accent btn-sm" onclick="startEditFromCard(this)">✏️ แก้ไข</button>`;
@@ -2853,6 +2859,40 @@
     }
 
     // ฟอร์มปัจจุบัน → ข้อมูลที่จะส่งบันทึก (เฉพาะส่วนที่ผู้ใช้มีสิทธิ์แก้)
+    // ===================== ใช้กับปีงบถัดไปด้วย =====================
+    // ติ๊กไว้ให้เสมอทุกครั้งที่เปิดแก้: ส่งเฉพาะช่องที่เปลี่ยนในครั้งนี้ไปทุกปีงบที่ใหม่กว่า (ฝั่งเซิร์ฟเวอร์: Forward.js — จับคู่ด้วยรหัส ตรวจสิทธิ์ปีนั้นซ้ำ)
+    function fwdLaterYears() { return (fiscalYears || []).map(Number).filter(y => y > selectedFy).sort((a, b) => a - b); }
+    function fwdBoxHtml(kpi, compact) {
+      const later = fwdLaterYears();
+      if (later.length === 0 || !(kpi.canEditDetails || isPrivilegedUser())) return '';
+      const yrs = later.join(', ');
+      if (compact) return `<label class="tbl-fwd" title="ส่งช่องที่แก้ในครั้งนี้ไปปีงบ ${yrs} ด้วย"><input type="checkbox" id="ed-fwd" checked>→ ${yrs}</label>`;
+      return `<label class="fwd-chk" title="ส่งเฉพาะช่องที่แก้ในครั้งนี้ (ชื่อ เป้าหมาย หมวด ผู้รับผิดชอบ หน่วยงาน ที่มา/สูตร ระดับ ฯลฯ) ไปปีงบ ${yrs} โดยจับคู่ด้วยรหัสตัวชี้วัด · ไม่ส่งผลรายเดือนและการวิเคราะห์"><input type="checkbox" id="ed-fwd" checked> ☑ ใช้กับปีงบถัดไปด้วย (${yrs})</label>`;
+    }
+    function fwdChecked() { const el = document.getElementById('ed-fwd'); return !!(el && el.checked); }
+
+    // สรุปผลหลังบันทึก: ข้อความ + มีเรื่องที่ต้องบอกผู้ใช้ (ข้ามปี/ชน) หรือไม่
+    function fwdSummary(docs) {
+      const lines = []; let warn = false;
+      ((docs && docs.forward) || []).forEach(f => {
+        if (f.ok && f.fields && f.fields.length) lines.push('ส่งไปปีงบ ' + f.fy + ' แล้ว: ' + f.fields.join(', '));
+        else if (f.ok && f.message) { lines.push('ปีงบ ' + f.fy + ': ' + f.message); warn = true; }
+        else if (!f.ok) { lines.push('ปีงบ ' + f.fy + ': ข้าม — ' + f.message); warn = true; }
+        if (f.ok && f.fields && f.fields.length && f.message) { lines.push('ปีงบ ' + f.fy + ': ' + f.message); warn = true; }
+      });
+      ((docs && docs.clt) || []).forEach(c => {
+        if (c.moved || c.excluded) lines.push('ย้ายข้อมูล CLT ปีงบ ' + c.fy + ' จากกลุ่ม ' + c.from + ' → ' + c.to);
+        if (c.conflict) { lines.push('CLT ปีงบ ' + c.fy + ': กลุ่ม ' + c.to + ' มีข้อความของตัวชี้วัดนี้อยู่แล้ว คงของกลุ่มใหม่ไว้ (ข้อความเดิมยังอยู่ในกลุ่ม ' + c.from + ')'); warn = true; }
+      });
+      return { text: lines.join('\n'), warn: warn };
+    }
+    function showFwdResult(docs) {
+      const r = fwdSummary(docs);
+      if (!r.text) return false;
+      if (r.warn) showAlert('ผลการส่งต่อปีงบถัดไป / เอกสาร สรพ.', '⚠️', r.text); else showToast('✅ ' + r.text.replace(/\n/g, ' · '));
+      return true;
+    }
+
     function collectDraft() {
       const kpi = editingKpi();
       if (!kpi) return {};
@@ -2966,6 +3006,10 @@
       let payload = draft;
       if (forceLatest) { payload = conflictMergeDraft(draft, forceLatest); payload.force = true; }
       else payload.baseRev = editBaseRev;
+      const fwd = fwdChecked();
+      if (fwd) payload.forward = true;
+      const catsChanged = draft.cats !== undefined && draft.cats.map(c => c.part + '||' + c.category).join('\n') !== kpiCats(kpi).map(c => c.part + '||' + c.category).join('\n');
+      const send = () => {
       savingKpi = true;
       setCardBusy(true);
       showBusy('กำลังบันทึกข้อมูล…');
@@ -2993,7 +3037,7 @@
           if (listStale || parentMoved || kpiCats(res.kpi).map(c => c.part + '||' + c.category).join('\n') !== oldCatKeys) renderList(); else rerenderCard(res.kpi.id);
           renderTree();
           if (currentTab === 'progress') loadProgressSummary();
-          showToast(res.changed ? '✅ ' + res.message : 'ℹ️ ' + res.message);
+          if (!(res.changed && showFwdResult(res.docs))) showToast(res.changed ? '✅ ' + res.message : 'ℹ️ ' + res.message);
           if (afterSave) afterSave();
         }))
         .withFailureHandler(unbusy((err) => {
@@ -3003,6 +3047,22 @@
           fail();
         }))
         .saveKpi(reqToken, reqFy, payload);
+      };
+      // หมวดเปลี่ยน: ถามก่อนถ้ากระทบข้อความในเอกสาร สรพ. (CLT ย้ายตามกลุ่มโรค / PDCA ไม่ขึ้นใน SAR) — เช็กไม่สำเร็จก็บันทึกตามปกติ
+      if (!catsChanged) { send(); return; }
+      showBusy('กำลังตรวจผลกระทบต่อเอกสาร สรพ.…');
+      google.script.run
+        .withSuccessHandler(unbusy((res) => {
+          const lines = [];
+          if (res && res.success) {
+            res.impact.pdca.forEach(y => lines.push('• SAR ปีงบ ' + y + ': ตัวชี้วัดนี้มีสรุป PDCA แต่จะไม่อยู่ใน Part I–IV อีก → ไม่ขึ้นในเอกสาร SAR (ข้อความยังเก็บไว้ ย้ายกลับแล้วจะกลับมา)'));
+            res.impact.clt.forEach(c => lines.push('• CLT ปีงบ ' + c.fy + ': ข้อความ' + (c.excluded ? '/การติ๊กไม่เอา' : '') + 'ของตัวชี้วัดนี้ในกลุ่ม ' + c.from + ' จะย้ายไปกลุ่ม ' + c.to));
+          }
+          if (lines.length === 0) { send(); return; }
+          showConfirm('การแก้หมวดนี้กระทบเอกสาร สรพ.\n' + lines.join('\n') + '\n\nบันทึกต่อหรือไม่?', send, fail);
+        }))
+        .withFailureHandler(unbusy(() => send()))
+        .kpiDocImpact(reqToken, reqFy, reqId, draft.cats, fwd);
     }
 
     function requestDeleteKpi() {
@@ -3031,6 +3091,10 @@
         return;
       }
       document.getElementById('modal-add-kpi').style.display = 'flex';
+      const addLater = fwdLaterYears();
+      document.getElementById('add-kpi-fwd-box').style.display = addLater.length ? 'inline-flex' : 'none';
+      document.getElementById('add-kpi-fwd').checked = true;
+      document.getElementById('add-kpi-fwd-text').textContent = '☑ เพิ่มในปีงบถัดไปด้วย (' + addLater.join(', ') + ')';
       ['add-kpi-name', 'add-kpi-target', 'add-kpi-source', 'add-kpi-owner', 'add-kpi-dept'].forEach(id => { document.getElementById(id).value = ''; });
       if (!isPrivilegedUser()) {
         // staff / หัวหน้าหน่วย: ใส่ตัวเองเป็นผู้รับผิดชอบ และหน่วยงานของตัวเองให้ก่อน (แก้ได้)
@@ -3154,11 +3218,13 @@
       newItem.part = all[0].part;
       newItem.category = all[0].category;
       document.getElementById('modal-add-kpi').style.display = 'none';
+      newItem.forward = fwdLaterYears().length > 0 && document.getElementById('add-kpi-fwd').checked;
       showBusy('กำลังเพิ่มตัวชี้วัด…');
       google.script.run
         .withSuccessHandler(unbusy((res) => {
           if (!res.success) { showAlert('ข้อผิดพลาด', '❌', res.message); return; }
-          showToast('✅ เพิ่มตัวชี้วัดเรียบร้อยแล้ว');
+          const fl = (res.forward || []).map(f => f.ok ? 'เพิ่มในปีงบ ' + f.fy + ' แล้ว' : 'ปีงบ ' + f.fy + ': ข้าม — ' + f.message);
+          if ((res.forward || []).some(f => !f.ok)) showAlert('เพิ่มตัวชี้วัดแล้ว แต่บางปีงบถูกข้าม', '⚠️', fl.join('\n')); else showToast('✅ เพิ่มตัวชี้วัดเรียบร้อยแล้ว' + (fl.length ? ' · ' + fl.join(' · ') : ''));
           pendingSelectAfterLoad = { id: res.newId, edit: true };
           switchMenu('home');
           fetchAllDataFromServer(true);
@@ -6601,7 +6667,7 @@
       let act;
       if (ed) {
         act = `<div class="tbl-acts"><button class="btn btn-primary btn-sm" onclick="saveKpiEdit()" title="บันทึกข้อมูล" aria-label="บันทึกข้อมูล">💾</button><button class="btn btn-secondary btn-sm" onclick="cancelEdit()" title="ยกเลิกการแก้ไข" aria-label="ยกเลิกการแก้ไข">✖</button>` +
-          (priv ? '<button class="btn btn-danger btn-sm" onclick="requestDeleteKpi()" title="ลบตัวชี้วัด" aria-label="ลบตัวชี้วัด">🗑️</button>' : '') + '</div><span class="dirty-mark" id="dirty-mark">● ยังไม่ได้บันทึก</span>';
+          (priv ? '<button class="btn btn-danger btn-sm" onclick="requestDeleteKpi()" title="ลบตัวชี้วัด" aria-label="ลบตัวชี้วัด">🗑️</button>' : '') + '</div>' + fwdBoxHtml(kpi, true) + '<span class="dirty-mark" id="dirty-mark">● ยังไม่ได้บันทึก</span>';
         if (canDet) {
           const parts = kpiCats(kpi).map(x => catRowHtml(x, !priv && isCorePart(x.part))).join('');
           act += `<div class="tbl-hold" hidden>
