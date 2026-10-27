@@ -3365,7 +3365,7 @@
         h += '<div class="rn-row">'
           + '<label>หมวดหลัก<select id="rn-part" onchange="rnPick(\'part\', this.value)">' + inv.parts.map(p => '<option value="' + esc(p.part) + '"' + (p.part === rn.part ? ' selected' : '') + '>' + esc(p.part) + (p.core ? ' (หมวดมาตรฐาน)' : '') + '</option>').join('') + '</select></label>'
           + '<label>หมวดย่อยเดิม<select id="rn-from" onchange="rnPick(\'from\', this.value)"><option value="">— เลือก —</option>'
-          + (part ? part.cats.map(c => '<option value="' + esc(c.name) + '"' + (c.locked ? ' disabled' : '') + (c.name === rn.from ? ' selected' : '') + '>' + esc(c.name) + (c.locked ? ' (เปลี่ยนไม่ได้)' : '') + ' · ' + inv.years.map(fy => fy + ':' + c.years[fy]).join(' ') + '</option>').join('') : '')
+          + (part ? part.cats.map(c => '<option value="' + esc(c.name) + '"' + (c.locked ? ' disabled' : '') + (c.name === rn.from ? ' selected' : '') + '>' + esc(c.name) + (c.locked ? ' (เปลี่ยนไม่ได้)' : '') + ' (' + inv.years.map(fy => 'ปีงบ ' + fy + ': ' + c.years[fy] + ' ตัว').join(' · ') + ')</option>').join('') : '')
           + '</select></label>'
           + '<label>ชื่อใหม่<input type="text" id="rn-to" maxlength="80" value="' + esc(rn.to) + '" oninput="rnPick(\'to\', this.value)" list="rn-cat-names" placeholder="พิมพ์ชื่อใหม่ (ถ้าซ้ำหมวดที่มีอยู่ = รวมกัน)"></label>'
           + '<datalist id="rn-cat-names">' + (part ? part.cats.map(c => '<option value="' + esc(c.name) + '"></option>').join('') : '') + '</datalist>'
@@ -3384,7 +3384,7 @@
         const unm = inv.units.filter(u => !u.locked && u.users === 0 && inv.years.some(fy => u.years[fy] > 0));
         if (unm.length) {
           h += '<div class="rn-box"><b>ชื่อหน่วยในตัวชี้วัดที่ไม่มีผู้ใช้อยู่ในหน่วยนี้เลย (' + unm.length + ')</b> — อาจสะกดต่างจากชื่อหน่วยของผู้ใช้ หรือยังไม่มีผู้ใช้ · ถ้าเป็นชื่อซ้ำซ้อน กดรวมเข้ากับหน่วยที่ถูกต้องได้<table class="rn-unm">'
-            + unm.map(u => '<tr><td>' + esc(u.name) + '</td><td>ตัวชี้วัด ' + inv.years.map(fy => fy + ':' + u.years[fy]).join(' ') + '</td><td><button class="btn btn-secondary rn-merge" data-unit="' + esc(u.name) + '" onclick="rnMergeFrom(this.dataset.unit)">🔀 รวมเข้าหน่วยอื่น</button></td></tr>').join('')
+            + unm.map(u => '<tr><td>' + esc(u.name) + '</td><td>ตัวชี้วัด ' + inv.years.map(fy => 'ปีงบ ' + fy + ': ' + u.years[fy] + ' ตัว').join(' · ') + '</td><td><button class="btn btn-secondary rn-merge" data-unit="' + esc(u.name) + '" onclick="rnMergeFrom(this.dataset.unit)">🔀 รวมเข้าหน่วยอื่น</button></td></tr>').join('')
             + '</table></div>';
         }
       }
