@@ -90,7 +90,7 @@ function nsoMapRow_(row) {
   if (up.isQa) levels.push("QA-หน่วยงาน");
   if (owners.length > 0) levels.push("รายบุคคล");
   levels = sortLevels_(levels);
-  var category = nsoStr_(row[3]) || partLabel || "ทั่วไป";
+  var category = renameCat_(up.unit, nsoStr_(row[3]) || partLabel || "ทั่วไป"); // ชื่อหมวดที่เปลี่ยนแล้ว (Rename.js)
   var cats = [{ part: up.unit, category: category }];
   // NSO เป็นสังกัดซ้อน: ตัวชี้วัดของหอผู้ป่วยอยู่ในหมวดของหอนั้น ไม่ต้องมีหมวด NSO ซ้ำ
   // หน่วยอื่นที่ร่วมรับผิดชอบ: แถว QA (Part ลงท้าย QA / VIP / IC / ภาพรวม) → หมวด QA ของหน่วยนั้น · แถวปกติ → หมวดของหน่วยนั้น (จัดหมวดย่อยตอนจัดระเบียบ)

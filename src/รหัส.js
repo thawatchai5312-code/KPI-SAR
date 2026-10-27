@@ -107,7 +107,7 @@ function getAllData(token, requestedFy) {
       allData.push(decorateKpi_(user, fy, kpi, sources));
     }
     // ลำดับหมวดย่อยในมุมมองหน่วยงาน: หัวข้อของหน่วยตามลำดับในไฟล์ NSO
-    return { success: true, data: allData, fy: fy, currentFy: currentFy, years: years, headings: viewHeadings_(), dataV: dataV };
+    return { success: true, data: allData, fy: fy, currentFy: currentFy, years: years, headings: viewHeadings_(), pctGroups: renamePctGroups_(), unitRenames: renameUnitMapForClient_(), dataV: dataV };
   } catch(e) {
     return { success: false, message: e.toString() };
   }

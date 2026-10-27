@@ -111,7 +111,7 @@ function pollChanges(token, fy, lastV) {
     }
     var res = { success: true, v: v, full: full, kpis: kpis, by: Object.keys(by) };
     res.docs = full ? [SARDOC_SAR, SARDOC_CLT, KPILINK_DOC] : Object.keys(docs); // เอกสาร สรพ. ที่ข้อความเปลี่ยน (ทุกอย่างถือว่าเปลี่ยนเมื่อดึงทั้งปีงบใหม่)
-    if (full) res.headings = viewHeadings_();
+    if (full) { res.headings = viewHeadings_(); res.pctGroups = renamePctGroups_(); res.unitRenames = renameUnitMapForClient_(); }
     else res.removed = Object.keys(ids).filter(function(id) { return !found[id]; }); // ถูกลบ หรือไม่มีสิทธิ์ดูแล้ว
     return res;
   } catch (e) {

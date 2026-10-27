@@ -79,12 +79,16 @@ var VIEW_PCT_KEYWORDS = [[/STEMI/i, "STEMI"], [/Stroke|หลอดเลือ�
   [/ไม่คาดคิด|เสียชีวิต/i, "การเสียชีวิตโดยไม่คาดคิด"], [/[Rr]e.?visit|[Rr]e.?admit/i, "ทบทวนผู้ป่วย Revisit / Re-admit"], [/ทรุดลง/i, "ทบทวนผู้ป่วยอาการทรุดลง"],
   [/พลัดตก/i, "พลัดตกหกล้ม"], [/ระบุตัว/i, "ระบุตัวผู้ป่วยผิดพลาด"], [/เลือด/i, "ให้เลือดผิดคนผิดหมู่"], [/[Mm]ed|ยา/i, "Med error"], [/[Ee]thic|จริยธรรม|สิทธิ/i, "จริยธรรมและสิทธิผู้ป่วย"]];
 
+/** หน่วยสนับสนุน (ไม่ใช่งานดูแลผู้ป่วยโดยตรง) — นับชื่อเดิมของหน่วยที่เปลี่ยนชื่อแล้วด้วย */
+function viewIsSupportUnit_(unit) {
+  return renameUnitSources_(unit).some(function(n) { return !!VIEW_SUPPORT_UNITS[n]; });
+}
 function viewIsQaPart_(part) { return / QA$/.test((part || "").toString()); }
 function viewUnitOfQaPart_(part) { return (part || "").toString().replace(/ QA$/, ""); }
 /** หน่วยงานเจ้าของหมวด: "ER QA" → ER · "ภาพรวมฝ่ายการพยาบาล QA" → NSO · อื่นๆ = ชื่อหมวดเอง */
 function viewDeptOfPart_(part) {
   var u = viewUnitOfQaPart_(part);
-  return u === VIEW_NSO_OVERALL ? NSO_UNIT : u;
+  return u === VIEW_NSO_OVERALL ? NSO_UNIT : renameUnit_(u);
 }
 
 /** ขั้นตอนการดูแลของตัวชี้วัด (ชื่อหมวดย่อย) จากชื่อ → หมวด HA → ชนิดหน่วยงาน */
@@ -96,7 +100,7 @@ function viewStageOf_(name, cats, unit) {
     var c = core[k].category.replace(/\s+/g, "");
     for (i = 0; i < VIEW_HA_STAGE.length; i++) if (VIEW_HA_STAGE[i][0].test(c)) return VIEW_STAGES[VIEW_HA_STAGE[i][1]];
   }
-  return VIEW_STAGES[VIEW_SUPPORT_UNITS[unit] ? 12 : 4];
+  return VIEW_STAGES[viewIsSupportUnit_(unit) ? 12 : 4];
 }
 
 /** หัวข้อของหน่วย (จากไฟล์ NSO) ที่ใกล้ที่สุดกับชื่อตัวชี้วัด — ไม่มี = "" */
@@ -115,7 +119,7 @@ function viewHeadingOf_(name, headings) {
 /** หมวดย่อยมาตรฐานของหน่วย u สำหรับตัวชี้วัด (ตัว รพ./ตัวที่เพิ่มเอง): หัวข้อของหน่วยที่ใกล้สุด หรือขั้นตอนการดูแล */
 function viewSubcatFor_(unit, name, cats, ctx) {
   var heading = viewHeadingOf_(name, ctx && ctx.headings ? ctx.headings[unit] : null);
-  return heading || viewStageOf_(name, cats, unit);
+  return renameCat_(unit, heading || viewStageOf_(name, cats, unit));
 }
 
 function viewDimLabel_(text, name) {
@@ -123,10 +127,11 @@ function viewDimLabel_(text, name) {
 }
 
 function viewPctGroupOf_(id, name, ctx) {
-  if (ctx && ctx.pctGroup && ctx.pctGroup[id]) return ctx.pctGroup[id];
-  if (VIEW_PCT_EXTRA[id]) return VIEW_PCT_EXTRA[id];
-  for (var i = 0; i < VIEW_PCT_KEYWORDS.length; i++) if (VIEW_PCT_KEYWORDS[i][0].test(name)) return VIEW_PCT_KEYWORDS[i][1];
-  return "ทบทวนผู้ป่วยอาการทรุดลง";
+  var g = "ทบทวนผู้ป่วยอาการทรุดลง", i;
+  if (ctx && ctx.pctGroup && ctx.pctGroup[id]) g = ctx.pctGroup[id];
+  else if (VIEW_PCT_EXTRA[id]) g = VIEW_PCT_EXTRA[id];
+  else for (i = 0; i < VIEW_PCT_KEYWORDS.length; i++) if (VIEW_PCT_KEYWORDS[i][0].test(name)) { g = VIEW_PCT_KEYWORDS[i][1]; break; }
+  return renameCat_(PCT_UNIT, g); // ชื่อกลุ่มโรคปัจจุบัน (ตารางเปลี่ยนชื่อ — Rename.js)
 }
 
 /** หมวดย่อยที่ระบบตั้งให้เอง (เดิม) — เปลี่ยนเป็นหมวดตามกติกาใหม่ได้ · ชื่อที่ผู้ใช้ตั้งเองไม่แตะ */
@@ -152,12 +157,13 @@ function viewPlaceRow_(id, name, cats, ctx) {
   cats.forEach(function(c) { if (isCorePart_(c.part)) add(c.part, c.category); });
   (ctx.origins && ctx.origins[id] || []).forEach(function(o) {
     var up = nsoUnitOfPart_(o.part), unit = up.unit;
-    unit = TIDY_UNIT_ALIAS[unit] || unit;
+    unit = renameUnit_(TIDY_UNIT_ALIAS[unit] || unit);
     if (up.isQa || VIEW_QA_UNITS[unit] || unit === NSO_UNIT) {
-      add((unit === NSO_UNIT ? VIEW_NSO_OVERALL : unit) + VIEW_QA_SUFFIX, viewDimLabel_(o.category, name));
+      var qaPart = (unit === NSO_UNIT ? VIEW_NSO_OVERALL : unit) + VIEW_QA_SUFFIX;
+      add(qaPart, renameCat_(qaPart, viewDimLabel_(o.category, name)));
       derived[unit] = 1;
     } else {
-      add(unit, tidyAscii_((o.category || "").toString().replace(/\s+/g, " ").trim()) || viewStageOf_(name, cats, unit));
+      add(unit, renameCat_(unit, tidyAscii_((o.category || "").toString().replace(/\s+/g, " ").trim()) || viewStageOf_(name, cats, unit)));
       derived[unit] = 1;
     }
   });
@@ -170,7 +176,7 @@ function viewPlaceRow_(id, name, cats, ctx) {
     if (isCorePart_(c.part) || c.part === NSO_UNIT || derived[c.part]) return;
     if (viewIsQaPart_(c.part)) {          // หมวด QA ที่ตั้งเอง (ไม่ได้มาจากไฟล์ NSO): คงไว้ จัดชื่อมิติให้ตรงมาตรฐาน
       if (derived[viewUnitOfQaPart_(c.part)]) return;
-      add(c.part, viewDimLabel_(c.category, name));
+      add(c.part, renameCat_(c.part, viewDimLabel_(c.category, name)));
       return;
     }
     add(c.part, viewIsAutoCategory_(c.category, c.part) ? viewSubcatFor_(c.part, name, cats, ctx) : c.category);
@@ -218,6 +224,7 @@ function viewContext_() {
       }
     });
   }
+  ctx.headings = renameHeadings_(ctx.headings); // หัวข้อของหน่วยใช้ชื่อหน่วย/หมวดปัจจุบัน
   // ตัวชี้วัดของ PCT: จากไฟล์ (ตัวใหม่ / ตัวที่รวม / ตัวย่อยของหอ) → กลุ่มโรค
   if (typeof PCT_ROWS !== "undefined") {
     PCT_ROWS.forEach(function(e) {
@@ -260,11 +267,11 @@ var VIEW_HEADINGS_PROP = "VIEW_HEADINGS_V1";
 /** หัวข้อของแต่ละหน่วยจากไฟล์ NSO ตามลำดับในไฟล์ (เก็บใน Script Properties ตอนจัดระเบียบ — ไม่ต้องเปิดไฟล์ NSO ทุกครั้ง) */
 function viewHeadings_() {
   var raw = PropertiesService.getScriptProperties().getProperty(VIEW_HEADINGS_PROP);
-  if (raw) { try { return JSON.parse(raw); } catch (e) {} }
+  if (raw) { try { return renameHeadings_(JSON.parse(raw)); } catch (e) {} }
   var headings = {};
   try { headings = viewContext_().headings; } catch (e) { headings = {}; }
   viewSaveHeadings_(headings);
-  return headings;
+  return renameHeadings_(headings);
 }
 function viewSaveHeadings_(headings) {
   if (!headings || Object.keys(headings).length === 0) return; // อ่านไฟล์ NSO ไม่ได้ — ไม่จำค่าว่าง
@@ -314,7 +321,7 @@ function viewFillPlaceholders_(cats, name) {
  */
 function viewBindCats_(cats, depts, opts) {
   var out = cats.slice();
-  var has = function(part) { return out.some(function(c) { return c.part === part; }); };
+  var has = function(part) { return out.some(function(c) { return renamePart_(c.part) === part; }); };
   if (opts.qa === false) {
     var kept = out.filter(function(c) { return !viewIsQaPart_(c.part); });
     if (kept.length) out = kept;

@@ -117,7 +117,7 @@ function parseDepts_(text) {
   var out = [];
   if (!text) return out;
   text.toString().replace(/TB clinic/g, "TB").split(/[\/\s,]+/).forEach(function(part) {
-    var d = DEPT_ALIASES[part.trim()] || part.trim();
+    var d = renameUnit_(DEPT_ALIASES[part.trim()] || part.trim()); // ชื่อหน่วยที่เปลี่ยนแล้ว (Rename.js)
     if (d && out.indexOf(d) === -1) out.push(d);
   });
   return out;
