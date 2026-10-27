@@ -834,7 +834,22 @@
       #tour-tip { left: 8px !important; right: 8px; top: auto !important; bottom: 8px; width: auto; max-width: none; }
       #tour-tip.tip-top { top: 8px !important; bottom: auto; }
     }
-  </style>
+  
+    .rn-tabs { display: flex; gap: 6px; margin-bottom: 10px; }
+    .rn-tab { border: 1px solid #cbd5e1; background: #f8fafc; border-radius: 8px 8px 0 0; padding: 6px 18px; font-family: inherit; font-size: 13px; cursor: pointer; }
+    .rn-tab.on { background: #2563eb; color: #fff; border-color: #2563eb; font-weight: 600; }
+    .rn-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 10px; }
+    .rn-row label { display: flex; flex-direction: column; font-size: 12px; color: #475569; gap: 3px; }
+    .rn-row select, .rn-row input[type=text] { min-width: 220px; padding: 6px 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-family: inherit; font-size: 13px; }
+    .rn-years { display: flex; gap: 12px; flex-wrap: wrap; font-size: 13px; margin-bottom: 10px; }
+    .rn-years label { display: inline-flex; flex-direction: row; align-items: center; gap: 4px; color: #1e293b; }
+    .rn-box { border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 10px; margin-bottom: 8px; font-size: 13px; }
+    .rn-box.err { border-color: #fca5a5; background: #fef2f2; color: #991b1b; }
+    .rn-box.warn { border-color: #fcd34d; background: #fffbeb; color: #92400e; }
+    .rn-box.ok { border-color: #86efac; background: #f0fdf4; color: #166534; }
+    .rn-unm { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .rn-unm td { padding: 3px 6px; border-bottom: 1px solid #f1f5f9; text-align: left; }
+</style>
 </head>
 <body>
 
@@ -1002,6 +1017,7 @@
           <button class="btn btn-secondary" onclick="generateAccounts()">👥 สร้างบัญชีจากผู้รับผิดชอบที่ยังไม่มีบัญชี</button>
           <button class="btn btn-accent" onclick="openNsoImport()">📥 นำเข้า/อัปเดตตัวชี้วัดฝ่ายการพยาบาล (NSO)</button>
           <button class="btn btn-accent" onclick="openTidy()">🧹 จัดระเบียบข้อมูล</button>
+          <button class="btn btn-accent" onclick="openRename()">✏️ เปลี่ยนชื่อ</button>
           <button class="btn btn-accent" onclick="openPct()">📥 นำเข้าตัวชี้วัด PCT</button>
         </div>
         <div id="settings-users-list"></div>
@@ -1023,6 +1039,23 @@
       <div class="modal-footer" style="display: flex; justify-content: space-between;">
         <button class="btn btn-secondary" onclick="document.getElementById('modal-pct').style.display='none'">ปิด</button>
         <button class="btn btn-primary" id="pct-commit-btn" onclick="confirmPct()" disabled>📥 เริ่มนำเข้า</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modal-rename" class="modal-overlay">
+    <div class="modal-card" style="max-width: 860px; width: 95%;">
+      <div class="modal-header">✏️ เปลี่ยนชื่อหมวด / หน่วยงาน</div>
+      <div class="modal-body" style="max-height: 72vh; overflow-y: auto;">
+        <div class="rn-tabs">
+          <button class="rn-tab" id="rn-tab-cat" onclick="rnTab('cat')">หมวด</button>
+          <button class="rn-tab" id="rn-tab-unit" onclick="rnTab('unit')">หน่วยงาน</button>
+        </div>
+        <div id="rn-body"><div class="empty-state">กำลังโหลด...</div></div>
+      </div>
+      <div class="modal-footer" style="display: flex; justify-content: space-between;">
+        <button class="btn btn-secondary" onclick="document.getElementById('modal-rename').style.display='none'">ปิด</button>
+        <button class="btn btn-primary" id="rn-commit-btn" onclick="rnConfirm()" disabled>✏️ เปลี่ยนชื่อ</button>
       </div>
     </div>
   </div>
@@ -1707,6 +1740,8 @@
           dataV = res.dataV !== undefined ? res.dataV : 0; // อัปเดตอัตโนมัติ: นับการเปลี่ยนแปลงต่อจากรุ่นนี้
           remoteEdit = null; liveDeferred = false;
           unitHeadings = res.headings || {};
+          if (res.pctGroups) PCT_GROUPS = res.pctGroups;
+          UNIT_RENAMES = res.unitRenames || {};
           selectedFy = res.fy;
           currentFy = res.currentFy;
           fiscalYears = res.years;
@@ -2043,13 +2078,14 @@
     const CARE_STAGES = ['การเข้าถึงบริการ', 'การคัดกรองและคัดแยก', 'การประเมินและวินิจฉัย', 'การวางแผนการดูแล', 'การดูแลรักษา',
       'ความปลอดภัยและความเสี่ยง', 'การให้ข้อมูลและเสริมพลัง', 'การฟื้นฟูสภาพ', 'การดูแลต่อเนื่อง',
       'การส่งเสริมสุขภาพและป้องกันโรค', 'ความพึงพอใจและข้อร้องเรียน', 'บุคลากรและการพัฒนา', 'การบริหารจัดการและประสิทธิภาพ'];
-    const PCT_GROUPS = ['STEMI', 'Stroke', 'การดูแลระยะกลาง (IMC)', 'Sepsis', 'DM', 'HT', 'CKD', 'TB', 'PPH',
+    let PCT_GROUPS = ['STEMI', 'Stroke', 'การดูแลระยะกลาง (IMC)', 'Sepsis', 'DM', 'HT', 'CKD', 'TB', 'PPH',
       'จิตเวช ซึมเศร้า/ฆ่าตัวตาย', 'จิตเวช SMIV', 'Head injury', 'Palliative care', 'วินิจฉัยคลาดเคลื่อน (9 มาตรฐาน)',
       'การคัดแยกผู้ป่วย (9 มาตรฐาน)', 'ทบทวนผู้ป่วยอาการทรุดลง', 'การเสียชีวิตโดยไม่คาดคิด', 'ทบทวนผู้ป่วย Revisit / Re-admit',
       'พลัดตกหกล้ม', 'ระบุตัวผู้ป่วยผิดพลาด', 'ให้เลือดผิดคนผิดหมู่', 'Med error', 'จริยธรรมและสิทธิผู้ป่วย'];
     const QA_DIMS = ['มิติที่ 1 ด้านประสิทธิผลตามพันธกิจ', 'มิติที่ 2 ด้านคุณภาพการให้บริการ', 'มิติที่ 3 ด้านประสิทธิภาพของการปฏิบัติงาน',
       'มิติที่ 4 ด้านการพัฒนาองค์กร', 'มิติที่ 5 ด้านการดูแลรายโรคและงานเฉพาะ'];
     let unitHeadings = {};
+    let UNIT_RENAMES = {}; // ชื่อหน่วยเดิม → ชื่อใหม่ (ตั้งโดย admin ใน ✏️ เปลี่ยนชื่อ)
     function catRank(part, cat) {
       if (isCorePart(part)) return 0;
       if (part === 'PCT') { const g = PCT_GROUPS.indexOf(cat); if (g !== -1) return g; }
@@ -3273,6 +3309,170 @@
       });
     }
 
+    // ===================== เปลี่ยนชื่อหมวด / หน่วยงาน (admin) =====================
+    // ตัวอย่างก่อนเสมอ (ยังไม่เขียน) → ยืนยัน → เขียนจริง · ทางเซิร์ฟเวอร์: Rename.js
+    const rn = { inv: null, tab: 'cat', part: '', from: '', to: '', years: new Set(), preview: null, busy: false };
+
+    function openRename() {
+      if (!currentUser || currentUser.tier !== 'admin') return;
+      document.getElementById('modal-rename').style.display = 'flex';
+      document.getElementById('rn-commit-btn').disabled = true;
+      document.getElementById('rn-body').innerHTML = '<div class="empty-state">กำลังโหลดรายการหมวดและหน่วยงาน...</div>';
+      rn.preview = null; rn.from = ''; rn.to = '';
+      rnLoadInventory(null);
+    }
+
+    function rnLoadInventory(done) {
+      showBusy('กำลังโหลดรายการหมวดและหน่วยงาน…');
+      google.script.run
+        .withSuccessHandler(unbusy((res) => {
+          if (!res.success) { document.getElementById('rn-body').innerHTML = '<div class="empty-state">' + esc(res.message) + '</div>'; return; }
+          rn.inv = res.inventory;
+          if (!rn.part || !rn.inv.parts.some(p => p.part === rn.part)) rn.part = (rn.inv.parts.find(p => p.part === 'PCT') || rn.inv.parts[0] || {}).part || '';
+          rnTab(rn.tab);
+          if (done) done();
+        }))
+        .withFailureHandler(unbusy((err) => { document.getElementById('rn-body').innerHTML = '<div class="empty-state">' + esc(err.toString()) + '</div>'; }))
+        .renameInfo(sessionToken);
+    }
+
+    function rnTab(t) {
+      rn.tab = t; rn.preview = null; rn.from = ''; rn.to = '';
+      document.getElementById('rn-tab-cat').classList.toggle('on', t === 'cat');
+      document.getElementById('rn-tab-unit').classList.toggle('on', t === 'unit');
+      document.getElementById('rn-commit-btn').disabled = true;
+      if (t === 'cat') rnSetYearsDefault();
+      rnRender();
+    }
+
+    function rnCatInfo() {
+      const p = rn.inv.parts.find(x => x.part === rn.part);
+      return p ? p.cats.find(c => c.name === rn.from) : null;
+    }
+
+    // ปีงบที่เลือกไว้เริ่มต้น = ทุกปีงบที่มีหมวดนี้
+    function rnSetYearsDefault() {
+      const c = rn.tab === 'cat' ? rnCatInfo() : null;
+      rn.years = new Set(rn.inv.years.filter(fy => !c || c.years[fy] > 0));
+    }
+
+    function rnRender() {
+      const inv = rn.inv, body = document.getElementById('rn-body');
+      if (!inv) return;
+      let h = '';
+      if (rn.tab === 'cat') {
+        const part = inv.parts.find(p => p.part === rn.part);
+        h += '<div class="rn-row">'
+          + '<label>หมวดหลัก<select id="rn-part" onchange="rnPick(\'part\', this.value)">' + inv.parts.map(p => '<option value="' + esc(p.part) + '"' + (p.part === rn.part ? ' selected' : '') + '>' + esc(p.part) + (p.core ? ' (หมวดมาตรฐาน)' : '') + '</option>').join('') + '</select></label>'
+          + '<label>หมวดย่อยเดิม<select id="rn-from" onchange="rnPick(\'from\', this.value)"><option value="">— เลือก —</option>'
+          + (part ? part.cats.map(c => '<option value="' + esc(c.name) + '"' + (c.locked ? ' disabled' : '') + (c.name === rn.from ? ' selected' : '') + '>' + esc(c.name) + (c.locked ? ' (เปลี่ยนไม่ได้)' : '') + ' · ' + inv.years.map(fy => fy + ':' + c.years[fy]).join(' ') + '</option>').join('') : '')
+          + '</select></label>'
+          + '<label>ชื่อใหม่<input type="text" id="rn-to" maxlength="80" value="' + esc(rn.to) + '" oninput="rnPick(\'to\', this.value)" list="rn-cat-names" placeholder="พิมพ์ชื่อใหม่ (ถ้าซ้ำหมวดที่มีอยู่ = รวมกัน)"></label>'
+          + '<datalist id="rn-cat-names">' + (part ? part.cats.map(c => '<option value="' + esc(c.name) + '"></option>').join('') : '') + '</datalist>'
+          + '</div>';
+        h += '<div class="rn-years"><b>ปีงบที่จะเปลี่ยน:</b> ' + inv.years.map(fy => '<label><input type="checkbox" ' + (rn.years.has(fy) ? 'checked ' : '') + 'onchange="rnYear(' + fy + ', this.checked)"> ' + fy + '</label>').join('') + '</div>';
+        if (part && part.core) h += '<div class="rn-box warn">⚠️ หมวดของ Part I–IV เป็นชื่อมาตรฐาน HA และเป็นหัวข้อในเอกสาร SAR — ตรวจให้แน่ใจก่อนเปลี่ยน</div>';
+      } else {
+        const locked = inv.lockedUnits || [];
+        h += '<div class="rn-row">'
+          + '<label>หน่วยงานเดิม<select id="rn-from" onchange="rnPick(\'from\', this.value)"><option value="">— เลือก —</option>'
+          + inv.units.map(u => '<option value="' + esc(u.name) + '"' + (u.locked ? ' disabled' : '') + (u.name === rn.from ? ' selected' : '') + '>' + esc(u.name) + (u.locked ? ' (ล็อก เปลี่ยนไม่ได้)' : '') + ' · ผู้ใช้ ' + u.users + '</option>').join('') + '</select></label>'
+          + '<label>ชื่อใหม่ (ไม่มีเว้นวรรค , / |)<input type="text" id="rn-to" style="min-width: 320px;" maxlength="30" value="' + esc(rn.to) + '" oninput="rnPick(\'to\', this.value)" list="rn-unit-names" placeholder="ถ้าซ้ำหน่วยที่มีอยู่ = รวมเป็นหน่วยเดียว"></label>'
+          + '<datalist id="rn-unit-names">' + inv.units.map(u => '<option value="' + esc(u.name) + '"></option>').join('') + '</datalist>'
+          + '</div>';
+        h += '<div class="rn-box">ℹ️ การเปลี่ยนชื่อหน่วยงานทำกับ <b>ทุกปีงบเสมอ</b> (ชื่อหน่วยผูกกับสิทธิ์ของผู้ใช้และการจัดระเบียบข้อมูล ถ้าเปลี่ยนไม่ครบทุกปีสิทธิ์จะไม่ตรงกัน) · หน่วยที่ล็อก: ' + esc(locked.join(', ')) + ' (มีโค้ดเฉพาะผูกกับชื่อ)</div>';
+        const unm = inv.units.filter(u => !u.locked && u.users === 0 && inv.years.some(fy => u.years[fy] > 0));
+        if (unm.length) {
+          h += '<div class="rn-box"><b>ชื่อหน่วยในตัวชี้วัดที่ไม่มีผู้ใช้อยู่ในหน่วยนี้เลย (' + unm.length + ')</b> — อาจสะกดต่างจากชื่อหน่วยของผู้ใช้ หรือยังไม่มีผู้ใช้ · ถ้าเป็นชื่อซ้ำซ้อน กดรวมเข้ากับหน่วยที่ถูกต้องได้<table class="rn-unm">'
+            + unm.map(u => '<tr><td>' + esc(u.name) + '</td><td>ตัวชี้วัด ' + inv.years.map(fy => fy + ':' + u.years[fy]).join(' ') + '</td><td><button class="btn btn-secondary rn-merge" data-unit="' + esc(u.name) + '" onclick="rnMergeFrom(this.dataset.unit)">🔀 รวมเข้าหน่วยอื่น</button></td></tr>').join('')
+            + '</table></div>';
+        }
+      }
+      h += '<div style="margin:6px 0 10px;"><button class="btn btn-accent" id="rn-preview-btn" onclick="rnPreview()">🔍 ตรวจสอบ / ดูตัวอย่าง (ยังไม่เขียนข้อมูล)</button></div>';
+      h += '<div id="rn-result"></div>';
+      body.innerHTML = h;
+      if (rn.preview) rnRenderPreview(rn.preview);
+    }
+
+    function rnPick(k, v) {
+      rn[k] = v;
+      if (k === 'part') { rn.from = ''; rn.years = new Set(rn.inv.years); rnRender(); }
+      if (k === 'from' && rn.tab === 'cat') { rnSetYearsDefault(); rnRender(); }
+      if (k === 'from' && rn.tab === 'unit') rnRender();
+      rnInvalidate();
+    }
+    function rnYear(fy, on) { if (on) rn.years.add(fy); else rn.years.delete(fy); rnInvalidate(); }
+    function rnInvalidate() {
+      rn.preview = null;
+      document.getElementById('rn-commit-btn').disabled = true;
+      const r = document.getElementById('rn-result'); if (r) r.innerHTML = '';
+    }
+    function rnMergeFrom(name) {
+      rn.from = name; rn.to = ''; rn.preview = null; rnRender();
+      const t = document.getElementById('rn-to'); if (t) t.focus();
+    }
+
+    function rnRequest() {
+      return { kind: rn.tab, part: rn.tab === 'cat' ? rn.part : '', from: rn.from, to: rn.to.trim(), years: rn.inv.years.filter(fy => rn.years.has(fy)) };
+    }
+
+    function rnPreview() {
+      const req = rnRequest();
+      showBusy('กำลังตรวจสอบ…');
+      google.script.run
+        .withSuccessHandler(unbusy((res) => {
+          if (!res.success) { document.getElementById('rn-result').innerHTML = '<div class="rn-box err">' + esc(res.message) + '</div>'; return; }
+          rn.preview = res.preview;
+          rnRenderPreview(res.preview);
+          document.getElementById('rn-commit-btn').disabled = !res.preview.canCommit;
+        }))
+        .withFailureHandler(unbusy((err) => { document.getElementById('rn-result').innerHTML = '<div class="rn-box err">' + esc(err.toString()) + '</div>'; }))
+        .renamePreview(sessionToken, req);
+    }
+
+    function rnRenderPreview(p) {
+      let h = '';
+      p.errors.forEach(e => { h += '<div class="rn-box err">❌ ' + esc(e) + '</div>'; });
+      p.warnings.forEach(w => { h += '<div class="rn-box warn">⚠️ ' + esc(w) + '</div>'; });
+      if (p.canCommit) {
+        h += '<div class="rn-box ok"><b>' + (p.kind === 'unit' ? 'หน่วย ' : 'หมวด ' + esc(p.part) + ' › ') + esc(p.from) + '  →  ' + esc(p.to) + '</b>' + (p.merge ? ' (รวมเป็นหน่วย/หมวดเดียว)' : '') + '</div>';
+        p.years.forEach(y => {
+          h += '<div class="rn-box"><b>ปีงบ ' + y.fy + '</b> — แก้ ' + y.count + ' ตัวชี้วัด' + (y.samples.length ? '<br><span class="hint">' + y.samples.map(s => esc(s.id + ' ' + s.name)).join('<br>') + (y.count > y.samples.length ? '<br>…' : '') + '</span>' : '') + '</div>';
+        });
+        if (p.usersCount) h += '<div class="rn-box"><b>ผู้ใช้ที่ชื่อหน่วยเปลี่ยนตาม ' + p.usersCount + ' คน</b><br><span class="hint">' + p.users.map(u => esc(u.username) + ' (' + esc(u.tier) + ')').join(', ') + (p.usersCount > p.users.length ? ' …' : '') + '</span></div>';
+        if (p.clt) {
+          h += '<div class="rn-box"><b>เอกสาร CLT</b> — ' + (p.clt.years.map(c => 'ปีงบ ' + c.fy + ': ' + (c.ticks ? 'ย้ายรายการติ๊ก' : 'ไม่มีรายการติ๊ก') + ' · ตัวชี้วัดที่ไม่เอา ' + c.excluded + ' · หัวข้อข้อความ ' + c.keys).join('<br>') || 'ไม่มีข้อมูล')
+            + (p.clt.conflicts.length ? '<br><span class="hint">ข้อความที่ชนกัน (คงของชื่อใหม่ไว้): ' + p.clt.conflicts.map(esc).join(', ') + '</span>' : '') + '</div>';
+        }
+      }
+      document.getElementById('rn-result').innerHTML = h;
+    }
+
+    function rnConfirm() {
+      const p = rn.preview;
+      if (!p || !p.canCommit) return;
+      const total = p.years.reduce((a, y) => a + y.count, 0);
+      showConfirm('เปลี่ยนชื่อ ' + (p.kind === 'unit' ? 'หน่วย ' : 'หมวด ' + p.part + ' › ') + p.from + ' → ' + p.to + '\nแก้ตัวชี้วัด ' + total + ' รายการ' + (p.kind === 'unit' ? ' + ผู้ใช้ ' + p.usersCount + ' คน' : '') + (p.merge ? '\n(รวมกับที่มีอยู่แล้ว)' : '') + '\nระบบสำรองชีตไว้ก่อน และบันทึกค่าเดิมใน Tidy_Log', () => {
+        const btn = document.getElementById('rn-commit-btn');
+        btn.disabled = true;
+        showBusy('กำลังเปลี่ยนชื่อ…', 420000);
+        google.script.run
+          .withSuccessHandler(unbusy((res) => {
+            if (!res.success) { document.getElementById('rn-result').innerHTML = '<div class="rn-box err">' + esc(res.message) + '</div>'; btn.disabled = false; return; }
+            const w = res.wrote || {};
+            const done = '<div class="rn-box ok"><b>✅ เปลี่ยนชื่อเรียบร้อย</b> — ' + esc(p.from) + ' → ' + esc(p.to)
+              + (w.years ? '<br>' + Object.keys(w.years).map(fy => 'ปีงบ ' + fy + ' แก้ ' + w.years[fy] + ' ตัว').join(' · ') : '')
+              + (res.usersNote ? '<br>' + esc(res.usersNote) : '') + '</div>';
+            rn.from = ''; rn.to = ''; rn.preview = null;
+            fetchAllDataFromServer(true);
+            loadSettingsUsers();
+            rnLoadInventory(() => { document.getElementById('rn-result').innerHTML = done; });
+          }))
+          .withFailureHandler(unbusy((err) => { document.getElementById('rn-result').innerHTML = '<div class="rn-box err">' + esc(err.toString()) + '</div>'; btn.disabled = false; }))
+          .renameCommit(sessionToken, rnRequest());
+      });
+    }
+
     function openNsoImport() {
       if (!currentUser || currentUser.tier !== 'admin') return;
       document.getElementById('modal-nso').style.display = 'flex';
@@ -3650,7 +3850,7 @@
     // จำค่าส่วนนี้ตามผู้ใช้ที่ล็อกอิน (เก็บฝั่งเซิร์ฟเวอร์: getReportPrefs / saveReportPrefs)
     const PDF_DEPT_ALIASES = { 'จิิตเวช': 'จิตเวช', 'งานIC': 'IC', 'ICWN': 'IC', 'ทีมบริหารความเสี่ยง(RM)': 'RM', 'แพทย์แผนไทย': 'แผนไทย', 'ฝ่ายการพยาบาล': 'NSO', 'ฝ่ายการ': 'NSO' };
     function pdfKpiDepts(k) {
-      return String(k.department || '').replace(/TB clinic/g, 'TB').split(/[\/\s,]+/).map(d => PDF_DEPT_ALIASES[d.trim()] || d.trim()).filter(Boolean);
+      return String(k.department || '').replace(/TB clinic/g, 'TB').split(/[\/\s,]+/).map(d => { d = PDF_DEPT_ALIASES[d.trim()] || d.trim(); return UNIT_RENAMES[d] || d; }).filter(Boolean);
     }
 
     const RPT_SIZES = [10, 30, 50]; // ตัวอย่างบนจอแสดงทีละ 10/30/50 ตัวชี้วัด แบ่งหน้าเหมือนหน้าแรก (ตอน Export ใส่ครบทุกตัว)
@@ -6136,6 +6336,8 @@
       const removed = (res.full ? globalDatabase.map(k => k.id).filter(id => !seen.has(id)) : (res.removed || []).filter(id => idx.has(id)))
         .filter(id => { if (id !== editingId) return true; liveMarkRemote({ id: id, removed: true }); return false; });
       if (res.full && res.headings) unitHeadings = res.headings;
+      if (res.full && res.pctGroups) PCT_GROUPS = res.pctGroups;
+      if (res.full && res.unitRenames) UNIT_RENAMES = res.unitRenames;
       if ((linkPerm || removed.length) && kpiLinks.loaded) linksLoad();
       if (changed.length === 0 && removed.length === 0) return;
       if (removed.length) {
