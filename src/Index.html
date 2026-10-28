@@ -2607,7 +2607,7 @@
         const idx = [0, 1, 2, 3, 4, 5].map(i => start + i);
         return `<tr>${idx.map(i => `<th style="background:#fffbeb;">${thMonthsNames[i]}</th>`).join('')}</tr>` +
           `<tr>${idx.map(i => canRes
-            ? `<td style="padding:0;"><input type="number" step="any" id="ed-m${i}" class="editable-input cell-input" value="${kpi.months[i] !== null ? kpi.months[i] : ''}"></td>`
+            ? `<td style="padding:0;"><input type="text" inputmode="decimal" autocomplete="off" id="ed-m${i}" class="editable-input cell-input" title="${NO_CASE_HINT}" value="${kpi.months[i] !== null ? kpi.months[i] : ''}"></td>`
             : `<td ${ed ? `class="locked-cell" data-reason="${esc(whyNoResults())}"` : ''}>${kpi.months[i] !== null ? kpi.months[i] : '-'}</td>`).join('')}</tr>`;
       }).join('');
 
@@ -2660,6 +2660,7 @@
               ${ed && priv ? `<div class="form-group" style="margin: 6px 0 0;"><label>ความถี่การเก็บข้อมูล (ระบบเช็กผลเฉพาะรอบที่ถึงกำหนด)</label><select id="ed-frequency" class="editable-input" style="width:auto;">${FREQUENCIES.map(m => `<option value="${m}" ${m === (kpi.frequency || 'รายเดือน') ? 'selected' : ''}>${m}</option>`).join('')}</select></div>` : ''}
               ${ed && priv ? `<div class="form-group" style="margin: 6px 0 0;"><label>วิธีสรุปผลรายเดือน</label><select id="ed-summary" class="editable-input" style="width:auto;">${SUMMARY_METHODS.map(m => `<option value="${m}" ${m === (kpi.summaryMethod || 'เฉลี่ย') ? 'selected' : ''}>${m}</option>`).join('')}</select></div>` : ''}
               <div class="hint">สรุปรายเดือน (${esc(kpi.summaryMethod || 'เฉลี่ย')}): <b>${calculateMonthlySummary(kpi.months, kpi.summaryMethod)}</b></div>
+              ${canRes ? `<div class="hint">${NO_CASE_HINT}</div>` : ''}
               ${ed && !kpi.canEditResults ? '<div class="hint">ไม่มีสิทธิ์แก้ไขผลของตัวชี้วัดนี้ในปีงบนี้</div>' : ''}
             </div>
             <div class="card-right"><div class="card-right-inner">
@@ -2846,6 +2847,17 @@
       return globalDatabase.find(k => k.id === editingId) || null;
     }
 
+    // ผลรายเดือน: ตัวเลข / "-" = เดือนนั้นไม่มีเคส (ไม่นับในค่าเฉลี่ย แต่นับว่ากรอกแล้ว) / ว่าง = ยังไม่กรอก
+    const NO_CASE_HINT = 'พิมพ์ - ถ้าเดือนนั้นไม่มีเคส (ไม่นับในค่าเฉลี่ย) · พิมพ์ 0 เมื่อผลลัพธ์เป็นศูนย์จริง · เว้นว่างถ้ายังไม่มีผล';
+    function monthText(el) { return el ? String(el.value).trim() : ''; }
+    function monthIsDash(t) { return /^(-|NA|N\/A)$/i.test(t); }
+    function monthIsBad(t) { return t !== '' && !monthIsDash(t) && !/^-?\d+(\.\d+)?$/.test(t); }
+    function getMonthVal(id) {
+      const t = monthText(document.getElementById(id));
+      if (t === '') return null;
+      if (monthIsDash(t)) return '-';
+      return monthIsBad(t) ? null : Number(t);
+    }
     function getNum(id) {
       const el = document.getElementById(id);
       if (!el || el.value === '') return null;
@@ -2899,7 +2911,7 @@
       const p = { id: kpi.id };
       if (kpi.canEditResults) {
         p.years = [0, 1, 2, 3, 4].map(i => getNum('ed-y' + i));
-        p.months = Array.from({ length: 12 }, (_, i) => getNum('ed-m' + i));
+        p.months = Array.from({ length: 12 }, (_, i) => getMonthVal('ed-m' + i));
       }
       if (kpi.canEditDetails) {
         p.templateDetails = getVal('ed-details');
@@ -2989,6 +3001,13 @@
       if (draft.name !== undefined && draft.name.trim() === '') {
         showAlert('ข้อมูลไม่ครบ', '⚠️', 'กรุณาระบุชื่อตัวชี้วัด');
         fail(); return;
+      }
+      if (draft.months !== undefined) {
+        const badM = draft.months.findIndex((_, i) => monthIsBad(monthText(document.getElementById('ed-m' + i))));
+        if (badM !== -1) {
+          showAlert('ผลรายเดือนไม่ถูกต้อง', '⚠️', 'ผลเดือน ' + thMonthsNames[badM] + ' กรอกได้เฉพาะตัวเลข หรือ - (เดือนนั้นไม่มีเคส) หรือเว้นว่าง');
+          fail(); return;
+        }
       }
       if (draft.levels !== undefined && draft.levels.length === 0) {
         showAlert('ข้อมูลไม่ครบ', '⚠️', 'กรุณาเลือกระดับตัวชี้วัดอย่างน้อย 1 ระดับ');
@@ -3679,7 +3698,7 @@
     // วิธีสรุปผลรายเดือนที่ผู้ดูแลกำหนดต่อตัวชี้วัด: เฉลี่ย / ผลรวม / เดือนล่าสุด (ที่มีข้อมูล)
     const SUMMARY_METHODS = ['เฉลี่ย', 'ผลรวม', 'เดือนล่าสุด'];
     function calculateMonthlySummary(mArray, method) {
-      const validValues = mArray.filter(v => v !== null);
+      const validValues = mArray.filter(v => typeof v === 'number'); // "-" (ไม่มีเคส) และช่องว่าง ไม่นับ
       if (validValues.length === 0) return '-';
       if (method === 'ผลรวม') return String(Math.round(validValues.reduce((a, b) => a + b, 0) * 100) / 100);
       if (method === 'เดือนล่าสุด') return String(validValues[validValues.length - 1]);
@@ -4151,7 +4170,7 @@
     }
     window.addEventListener('resize', () => { if (currentTab === 'report') rptFit(); });
 
-    function prNum(v) { return v !== null && v !== undefined ? Math.round(v * 100) / 100 : '-'; }
+    function prNum(v) { return typeof v === 'number' ? Math.round(v * 100) / 100 : '-'; }
     function prShort(text, n) { return text.length > n ? text.substring(0, n - 1) + '…' : text; }
 
     // เลขข้อในรายงาน: รันต่อเนื่องทั้งเล่มตามลำดับที่พิมพ์ (ไม่เริ่ม 1 ใหม่ทุกหมวด) — ตัวหลัก 1…N
@@ -6649,7 +6668,7 @@
       c.st = { h: `<span class="st-badge ${stt.level}" style="margin:0;" title="${esc(stt.reasons.join(' · '))}">${stt.icon} ${stt.label}</span>` };
       c.tg = canDet ? { h: `<input type="text" id="ed-target" class="editable-input tbl-in" value="${esc(kpi.target)}">` } : Object.assign({ h: esc(kpi.target) || '-' }, lockD_);
       kpi.years.forEach((v, i) => { c['y' + i] = canRes ? { h: yearInputHtml(kpi, i, v), num0: 1 } : Object.assign({ h: v !== null ? v : '-' }, lockR_); });
-      kpi.months.forEach((v, i) => { c['m' + i] = canRes ? { h: `<input type="number" step="any" id="ed-m${i}" class="editable-input cell-input" value="${v !== null ? v : ''}">`, num0: 1 } : Object.assign({ h: v !== null ? v : '-' }, lockR_); });
+      kpi.months.forEach((v, i) => { c['m' + i] = canRes ? { h: `<input type="text" inputmode="decimal" autocomplete="off" id="ed-m${i}" class="editable-input cell-input" title="${NO_CASE_HINT}" value="${v !== null ? v : ''}">`, num0: 1 } : Object.assign({ h: v !== null ? v : '-' }, lockR_); });
       c.sum = { h: `${calculateMonthlySummary(kpi.months, kpi.summaryMethod)}<div class="hint" style="margin:0;">${esc(kpi.summaryMethod || 'เฉลี่ย')}</div>` };
       c.sm = ed && priv ? { h: `<select id="ed-summary" class="editable-input tbl-in">${SUMMARY_METHODS.map(m => `<option value="${m}" ${m === (kpi.summaryMethod || 'เฉลี่ย') ? 'selected' : ''}>${m}</option>`).join('')}</select>` } : { h: esc(kpi.summaryMethod || 'เฉลี่ย') };
       c.fq = ed && priv ? { h: `<select id="ed-frequency" class="editable-input tbl-in">${FREQUENCIES.map(m => `<option value="${m}" ${m === (kpi.frequency || 'รายเดือน') ? 'selected' : ''}>${m}</option>`).join('')}</select>` } : { h: esc(kpi.frequency || 'รายเดือน') };

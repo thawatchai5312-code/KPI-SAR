@@ -38,6 +38,20 @@ function cleanValue_(val) {
   return Number(val);
 }
 
+/** ผลรายเดือนจากชีต: "-" = เดือนนั้นไม่มีเคส (ไม่นับในค่าเฉลี่ย แต่นับว่ากรอกแล้ว) · NA/ว่าง/ข้อความอื่น = null เหมือนเดิม */
+function cleanMonth_(val) {
+  if (typeof val === "string" && val.trim() === "-") return NO_CASE_;
+  return cleanValue_(val);
+}
+
+/** ผลรายเดือนจากหน้าเว็บ: ตัวเลข / "-" (หรือ NA, N/A → เก็บเป็น "-") / ว่าง → null */
+function monthOrNull_(v) {
+  if (typeof v === "string" && ["-", "NA", "N/A"].indexOf(v.trim().toUpperCase()) !== -1) return NO_CASE_;
+  return numberOrNull_(v);
+}
+
+var NO_CASE_ = "-";
+
 function rowToKpi_(row) {
   var part = row[2] ? row[2].toString().trim() : "ทั่วไป";
   var category = row[3] ? row[3].toString().trim() : "ทั่วไป";
@@ -55,9 +69,9 @@ function rowToKpi_(row) {
       cleanValue_(row[6]), cleanValue_(row[7]), cleanValue_(row[8]), cleanValue_(row[9]), cleanValue_(row[10])
     ],
     months: [
-      cleanValue_(row[11]), cleanValue_(row[12]), cleanValue_(row[13]), cleanValue_(row[14]),
-      cleanValue_(row[15]), cleanValue_(row[16]), cleanValue_(row[17]), cleanValue_(row[18]),
-      cleanValue_(row[19]), cleanValue_(row[20]), cleanValue_(row[21]), cleanValue_(row[22])
+      cleanMonth_(row[11]), cleanMonth_(row[12]), cleanMonth_(row[13]), cleanMonth_(row[14]),
+      cleanMonth_(row[15]), cleanMonth_(row[16]), cleanMonth_(row[17]), cleanMonth_(row[18]),
+      cleanMonth_(row[19]), cleanMonth_(row[20]), cleanMonth_(row[21]), cleanMonth_(row[22])
     ],
     templateDetails: row[23] ? row[23].toString().trim() : "",
     dataSource: row[24] ? row[24].toString().trim() : "",
@@ -386,7 +400,7 @@ function saveKpiCore_(user, fy, item) {
       }
       var newMonths = [];
       for (var m = 0; m < 12; m++) {
-        newMonths.push(item.months ? numberOrNull_(item.months[m]) : old.months[m]);
+        newMonths.push(item.months ? monthOrNull_(item.months[m]) : old.months[m]);
       }
       if (newYears.join("|") !== old.years.join("|") || newMonths.join("|") !== old.months.join("|")) changed = true;
       sheet.getRange(row, ANNUAL_FIRST_COL, 1, 17).setValues([newYears.concat(newMonths)]);
