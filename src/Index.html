@@ -835,7 +835,7 @@
       #tour-tip.tip-top { top: 8px !important; bottom: auto; }
     }
   
-    .kpi-table tr.kpi-row { scroll-margin-top: 80px; } /* เลื่อนไปหาแถวแล้วไม่ให้หัวตารางที่ตรึงไว้บัง */
+    .tbl-wrap::after { content: ''; display: block; height: calc(100vh - 140px); } /* เว้นที่ท้ายตาราง ให้แถวสุดท้ายก็เลื่อนขึ้นมาบนสุดได้ (tblScrollToRow) */
     .fwd-chk { display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px; font-weight: 600; color: #166534; background: #f0fdf4; border: 1px solid #86efac; border-radius: 8px; padding: 3px 8px; cursor: pointer; white-space: nowrap; }
     .fwd-chk input { margin: 0; }
     .tbl-fwd { display: block; margin-top: 3px; font-size: 10.5px; line-height: 1.2; font-weight: 600; color: #166534; cursor: pointer; }
@@ -2382,7 +2382,8 @@
       if (listMode === 'table') tblEnsureRendered(k.key);
       const card = document.getElementById('card-' + cssId(k.key));
       if (card) {
-        card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        if (listMode === 'table') tblScrollToRow(k.key); // ตาราง: เลื่อนแถวขึ้นบนสุดใต้หัวตาราง (ไม่ใช้ scrollIntoView แบบ smooth เพราะเลื่อนทั้งหน้าและตาราง แล้วคลาดตำแหน่ง)
+        else card.scrollIntoView({ behavior: 'smooth', block: 'start' });
         card.classList.remove('flash');
         void card.offsetWidth;
         card.classList.add('flash');
@@ -6777,6 +6778,22 @@
       }, 30);
     }
     // แถวที่ยังไม่ได้วาด (เช่น กดชื่อในรายการซ้าย/เปิดแก้ไข/ระบบสอน) → วาดต่อจนถึงแถวนั้นก่อน
+    // เลื่อนตารางให้แถวของตัวชี้วัดอยู่บนสุดใต้แถวหัวตารางที่ตรึงไว้ (เลื่อนทันที แล้วจัดตำแหน่งซ้ำเมื่อความสูงแถวนิ่งแล้ว — เช่น แถวที่เพิ่งเข้าโหมดแก้ไขสูงขึ้น)
+    function tblScrollToRow(key) {
+      const wrap = document.getElementById('tbl-wrap');
+      if (!wrap) return;
+      const place = () => {
+        const row = document.getElementById('card-' + cssId(key)), th = wrap.querySelector('thead');
+        if (!row) return;
+        const d = row.getBoundingClientRect().top - wrap.getBoundingClientRect().top - (th ? th.getBoundingClientRect().height : 64) - 2;
+        if (Math.abs(d) > 1) wrap.scrollTop += d;
+      };
+      place();
+      requestAnimationFrame(place);
+      setTimeout(place, 250);
+      setTimeout(place, 700);
+    }
+
     // แถวนี้อยู่ในตารางที่วาดอยู่ (วาดแล้ว หรือรอวาดทีละชุด) หรือไม่
     function tblHasRow(key) {
       return !!document.getElementById('card-' + cssId(key)) || tblPending.some(it => it.key === key);
