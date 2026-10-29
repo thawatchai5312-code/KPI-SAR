@@ -6591,7 +6591,7 @@
     const TBL_GROUPS = [['annual', 'ผลทั้งปี'], ['monthly', 'ผลรายเดือน'], ['settings', 'ตั้งค่า'], ['text', 'รายละเอียด'], ['people', 'ผู้รับผิดชอบ'], ['cats', 'หมวด/ตัวแม่'], ['history', 'ประวัติ']];
     // เริ่มต้นทุกครั้งที่ล็อกอิน: ตาราง + ซ่อน 3 กลุ่ม (ตั้งค่า/ประวัติ/หมวด-ตัวแม่) ผู้ใช้กดแสดงเองได้ในรอบที่ใช้งาน ไม่จำข้ามการล็อกอิน
     const TBL_DEFAULT_HIDE = ['settings', 'history', 'cats'];
-    const TBL_DEFAULT_HIDE_LEAD = ['monthly', 'text']; // head/executive/admin ซ่อนเพิ่ม: ผลรายเดือน + รายละเอียด (เหลือแสดงเฉพาะผลทั้งปี + ผู้รับผิดชอบ)
+    const TBL_DEFAULT_HIDE_LEAD = ['monthly', 'text']; // executive/admin ซ่อนเพิ่ม: ผลรายเดือน + รายละเอียด (เหลือแสดงเฉพาะผลทั้งปี + ผู้รับผิดชอบ) · หัวหน้า (head) แสดงผลรายเดือน + รายละเอียดด้วย
     const tblHide = new Set(TBL_DEFAULT_HIDE);
     const TBL_COLS = (() => {
       const c = [{ k: 'no', w: 48 }, { k: 'name', w: 270 }, { k: 'st', w: 108 }, { k: 'tg', w: 90 }];
@@ -6614,7 +6614,7 @@
     // ค่าเริ่มต้นตาม Tier: เจ้าหน้าที่ (staff) เริ่มที่การ์ด · หัวหน้าหน่วย/ผู้บริหาร/ผู้ดูแลระบบ เริ่มที่ตาราง
     function defaultListMode() { return currentUser && currentUser.tier === 'staff' ? 'card' : 'table'; }
     function tblResetView() {
-      listMode = defaultListMode(); tblHide.clear(); TBL_DEFAULT_HIDE.concat(currentUser && currentUser.tier !== 'staff' ? TBL_DEFAULT_HIDE_LEAD : []).forEach(g => tblHide.add(g)); updateModeSwitch();
+      listMode = defaultListMode(); tblHide.clear(); TBL_DEFAULT_HIDE.concat(currentUser && (currentUser.tier === 'admin' || currentUser.tier === 'executive') ? TBL_DEFAULT_HIDE_LEAD : []).forEach(g => tblHide.add(g)); updateModeSwitch();
     }
 
     // ---------- สลับการ์ด / ตาราง ----------
