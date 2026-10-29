@@ -2813,7 +2813,12 @@
     // การ์ดที่ "กำลังอ่าน" = ใบแรกที่ขอบล่างยังพ้นแถบหัวที่ติดด้านบนลงมาเกิน 80px (การ์ดที่โผล่แค่ขอบใต้แถบหัวไม่นับ)
     function currentCardKey() {
       const top = parseFloat(getComputedStyle(document.getElementById('panel-tree')).top) || 0;
-      const card = Array.from(document.querySelectorAll(CARD_SEL)).find(c => visibleCards.has(c.dataset.key) && c.getBoundingClientRect().bottom > top + 80);
+      let limit = top + 80;
+      if (listMode === 'table') { // ตาราง: แถวที่ถูกหัวตารางที่ตรึงไว้บังอยู่ ไม่นับว่าเป็นแถวบนสุด (ไม่งั้นแถบซ้ายไฮไลต์ตัวก่อนหน้าตัวที่กด)
+        const ths = document.querySelectorAll('#kpi-table thead th');
+        if (ths.length) limit = Math.max(...Array.from(ths, t => t.getBoundingClientRect().bottom)) + 6;
+      }
+      const card = Array.from(document.querySelectorAll(CARD_SEL)).find(c => visibleCards.has(c.dataset.key) && c.getBoundingClientRect().bottom > limit);
       return card ? card.dataset.key : undefined;
     }
 
