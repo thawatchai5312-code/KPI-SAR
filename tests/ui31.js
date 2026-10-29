@@ -1,7 +1,7 @@
 const {chromium}=require('playwright');
 const fs=require('fs');const h=require('./harness2');const C=h.ctx;const assert=require('assert');
 const ff=require('./lib/font');
-const html=fs.readFileSync(require('path').join(__dirname,'../src/Index.html'),'utf8').replace("let listMode = 'table';","let listMode = 'card';").replace("listMode = 'table'; tblHide.clear(); TBL_DEFAULT_HIDE","listMode = 'card'; tblHide.clear(); TBL_DEFAULT_HIDE").replace('</head>','<style>'+ff('thai')+ff('latin')+'</style></head>');
+const html=fs.readFileSync(require('path').join(__dirname,'../src/Index.html'),'utf8').replace("let listMode = 'table';","let listMode = 'card';").replace("listMode = defaultListMode(); tblHide.clear(); TBL_DEFAULT_HIDE","listMode = 'card'; tblHide.clear(); TBL_DEFAULT_HIDE").replace('</head>','<style>'+ff('thai')+ff('latin')+'</style></head>');
 const U=h.sheets.Users.d; const setPw=(name,pw)=>{const r=U.find(x=>x[0]===name); r[1]=C.hashPassword_(pw); r[4]='FALSE'};
 const upd=(name,tier,depts)=>{const r=U.find(x=>x[0]===name); r[2]=tier; r[3]=depts};
 (async()=>{

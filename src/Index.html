@@ -835,6 +835,7 @@
       #tour-tip.tip-top { top: 8px !important; bottom: auto; }
     }
   
+    .kpi-table tr.kpi-row { scroll-margin-top: 80px; } /* เลื่อนไปหาแถวแล้วไม่ให้หัวตารางที่ตรึงไว้บัง */
     .fwd-chk { display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px; font-weight: 600; color: #166534; background: #f0fdf4; border: 1px solid #86efac; border-radius: 8px; padding: 3px 8px; cursor: pointer; white-space: nowrap; }
     .fwd-chk input { margin: 0; }
     .tbl-fwd { display: block; margin-top: 3px; font-size: 10.5px; line-height: 1.2; font-weight: 600; color: #166534; cursor: pointer; }
@@ -1124,7 +1125,7 @@
         <div class="form-group">
           <label>หมวดตามระดับ</label>
           <div id="add-kpi-level-cats" class="level-cats"></div>
-          <div class="hint">🏥 SAR → หมวด รพ. Part I–IV › หมวด HA · 🩺 QA-หน่วยงาน → QA ของหน่วย › มิติที่ 1–5 · 🏷️ หน่วยงาน/รายบุคคล → หน่วยงาน › หัวข้อของหน่วย — ช่องที่เว้นว่าง ระบบเลือกหมวดย่อยให้ตามชื่อตัวชี้วัด</div>
+          <div class="hint" id="add-kpi-lvl-hint"></div>
         </div>
         <div class="form-group">
           <label>แสดงในหมวดอื่นด้วย (ไม่บังคับ — เช่น PCT › กลุ่มโรค หรือหมวดที่ตั้งเอง)</label>
@@ -1340,7 +1341,7 @@
     let globalDatabase = [];
     const CARD_SEL = '.kpi-card, tr.kpi-row';           // การ์ด (มุมมองการ์ด) หรือแถว (มุมมองตาราง) ของตัวชี้วัด
     const EDITING_SEL = '.kpi-card.editing, tr.kpi-row.editing';
-    let listMode = 'table';                              // 'table' (ค่าเริ่มต้นเสมอทุกครั้งที่ล็อกอิน) | 'card' (สลับได้ระหว่างใช้งาน)
+    let listMode = 'table';                              // ค่าเริ่มต้นตาม Tier ทุกครั้งที่ล็อกอิน (defaultListMode: staff = 'card' อื่น ๆ = 'table') · สลับได้ระหว่างใช้งาน ไม่จำข้ามการล็อกอิน
     let currentTab = 'home';
     let selectedKpiId = null;
 
@@ -1586,6 +1587,7 @@
           isAppUnlocked = true;
           applyUserUi();
           applyDefaultFilters();
+          tblResetView(); // มุมมองเริ่มต้นตาม Tier (staff = การ์ด)
 
           if (currentUser.mustChange) {
             document.getElementById('login-box-content').innerHTML = `
@@ -2341,9 +2343,11 @@
       const cards = () => uniqueById(getOrderedKpis()); // การ์ด: ตัวชี้วัดละใบเดียวในมุมมองนี้
       let list = cards();
       let idx = list.findIndex(k => k.id === id);
+      let relisted = false; // ล้างตัวกรอง/สลับมุมมอง → รายการ (การ์ด/ตาราง) ที่วาดอยู่เป็นของเดิม ต้องวาดใหม่
       if (idx === -1) {
         // ตัวที่ต้องการถูกตัวกรองซ่อนอยู่ (เช่น มาจากหน้าติดตามงาน) → ล้างตัวกรองก่อน
         resetTreeFilters();
+        relisted = true;
         list = cards();
         idx = list.findIndex(k => k.id === id);
       }
@@ -2352,6 +2356,7 @@
         const v = VIEWS.find(x => uniqueById(getOrderedKpis(false, x)).some(k => k.id === id));
         if (!v) return;
         treeView = v;
+        relisted = true;
         list = cards();
         idx = list.findIndex(k => k.id === id);
         if (idx === -1) return;
@@ -2366,7 +2371,8 @@
       openCats.add(focusP.part + '||' + focusP.category);
       suppressTreeSyncUntil = Date.now() + 1500; // ระหว่างเลื่อนจอไปหาการ์ด ไม่ให้แถบซ้ายกระโดดตามการ์ดที่ผ่าน
       const page = listMode === 'table' ? currentPage : Math.floor(idx / pageSize) + 1; // ตาราง: ทุกแถวอยู่ในหน้าเดียว
-      if (page !== currentPage || (listMode !== 'table' && !document.getElementById('card-' + cssId(k.key)))) {
+      const rowMissing = listMode === 'table' ? !tblHasRow(k.key) : !document.getElementById('card-' + cssId(k.key));
+      if (relisted || page !== currentPage || rowMissing) {
         currentPage = page;
         renderList();
       }
@@ -2545,6 +2551,12 @@
         const last = box.querySelector('.cat-row:last-child .cat-part');
         if (last) { last.placeholder = 'Part I–IV'; last.focus(); }
         notes.push('ระดับ SAR: เลือกหมวด Part I–IV และกรอกหมวด HA');
+      }
+      // ไม่เหลือระดับ SAR / QA-หน่วยงาน (ระดับโรงพยาบาล) แล้ว → หมวด Part I–IV ที่ผูกกับระดับนั้นเอาออกด้วย (ถ้ายังมีหมวดอื่นเหลือ)
+      if (!on && (lv === 'SAR' || lv === 'QA-หน่วยงาน') && !hasHospitalLevel(checkedLevels('ed-level-cb'))) {
+        const all = Array.from(box.querySelectorAll('.cat-row'));
+        const core = all.filter(r => isCorePart(r.querySelector('.cat-part').value.trim()));
+        if (core.length && core.length < all.length) { core.forEach(r => r.remove()); notes.push('เอาหมวด Part I–IV ออกแล้ว (ไม่มีระดับ SAR / QA-หน่วยงาน)'); }
       }
       if (notes.length) showToast(notes.join(' · '));
       onEditInput();
@@ -3166,6 +3178,13 @@
           <input type="text" class="editable-input lvc-cat" data-key="${esc(k)}" data-part="${esc(u)}" list="cat-options-dyn" onfocus="fillCatOptions(this)" placeholder="(เว้นว่าง = ระบบเลือกหัวข้อ/ขั้นตอนให้)" value="${esc(val(k, ''))}"></div>`;
       });
       box.innerHTML = html || '<div class="hint" style="margin:0;">เลือกระดับตัวชี้วัดก่อน</div>';
+      // คำอธิบายใต้ช่อง: แสดงเฉพาะระดับที่ติ๊กอยู่ (ไม่ติ๊กอะไรเลย = แสดงครบให้ดูว่าแต่ละระดับใช้หมวดอะไร)
+      const hints = [];
+      if (hasLv('SAR')) hints.push('🏥 SAR → หมวด รพ. Part I–IV › หมวด HA');
+      if (hasLv('QA-หน่วยงาน')) hints.push('🩺 QA-หน่วยงาน → QA ของหน่วย › มิติที่ 1–5');
+      if (hasLv('หน่วยงาน') || hasLv('รายบุคคล')) hints.push('🏷️ ' + (hasLv('หน่วยงาน') && hasLv('รายบุคคล') ? 'หน่วยงาน/รายบุคคล' : (hasLv('หน่วยงาน') ? 'หน่วยงาน' : 'รายบุคคล')) + ' → หน่วยงาน › หัวข้อของหน่วย');
+      const hintBox = document.getElementById('add-kpi-lvl-hint');
+      if (hintBox) hintBox.textContent = (hints.length ? hints.join(' · ') + ' — ' : '🏥 SAR → หมวด รพ. Part I–IV › หมวด HA · 🩺 QA-หน่วยงาน → QA ของหน่วย › มิติที่ 1–5 · 🏷️ หน่วยงาน/รายบุคคล → หน่วยงาน › หัวข้อของหน่วย — ') + 'ช่องที่เว้นว่าง ระบบเลือกหมวดย่อยให้ตามชื่อตัวชี้วัด';
     }
 
     // ตัวเลือกหมวดย่อยตามหมวดหลักของแถว: Part I–IV = หมวด HA ที่มีอยู่ · QA = มิติ 1–5 · PCT = กลุ่มโรค · หน่วยงาน = หัวข้อของหน่วย + ขั้นตอนการดูแล + ที่มีอยู่
@@ -6591,8 +6610,10 @@
       document.querySelectorAll('#mode-switch button').forEach(b => b.classList.toggle('on', b.dataset.mode === listMode));
     }
     // กลับสู่ค่าเริ่มต้น (ตอนล็อกอินใหม่/ออกจากระบบ)
+    // ค่าเริ่มต้นตาม Tier: เจ้าหน้าที่ (staff) เริ่มที่การ์ด · หัวหน้าหน่วย/ผู้บริหาร/ผู้ดูแลระบบ เริ่มที่ตาราง
+    function defaultListMode() { return currentUser && currentUser.tier === 'staff' ? 'card' : 'table'; }
     function tblResetView() {
-      listMode = 'table'; tblHide.clear(); TBL_DEFAULT_HIDE.forEach(g => tblHide.add(g)); updateModeSwitch();
+      listMode = defaultListMode(); tblHide.clear(); TBL_DEFAULT_HIDE.forEach(g => tblHide.add(g)); updateModeSwitch();
     }
 
     // ---------- สลับการ์ด / ตาราง ----------
@@ -6755,6 +6776,11 @@
       }, 30);
     }
     // แถวที่ยังไม่ได้วาด (เช่น กดชื่อในรายการซ้าย/เปิดแก้ไข/ระบบสอน) → วาดต่อจนถึงแถวนั้นก่อน
+    // แถวนี้อยู่ในตารางที่วาดอยู่ (วาดแล้ว หรือรอวาดทีละชุด) หรือไม่
+    function tblHasRow(key) {
+      return !!document.getElementById('card-' + cssId(key)) || tblPending.some(it => it.key === key);
+    }
+
     function tblEnsureRendered(key) {
       if (document.getElementById('card-' + cssId(key))) return;
       const i = tblPending.findIndex(it => it.key === key);
@@ -6923,6 +6949,23 @@
       if (!tourVisible(btn)) row.scrollIntoView({ block: 'center' });
       return tourFirst('tr.kpi-row[data-id="' + p.id + '"] .c-act .btn');
     }
+    // มุมมองที่ใช้สอน: เจ้าหน้าที่ (staff) สอนบนการ์ด · อื่น ๆ สอนบนตาราง
+    const tourMode = () => (currentUser && currentUser.tier === 'staff' ? 'card' : 'table');
+    // การ์ดของตัวชี้วัดที่จะใช้สอนแก้ไข (อยู่นอกหน้าที่แสดงอยู่ = พาไปหน้านั้นก่อน)
+    function tourCardEl() {
+      const p = tourEditPlacement();
+      if (!p) return null;
+      if (!document.getElementById('card-' + cssId(p.key))) goToKpi(p.id, p.key);
+      return document.getElementById('card-' + cssId(p.key));
+    }
+    function tourCardBtn() {
+      const card = tourCardEl();
+      if (!card) return null;
+      const btn = card.querySelector('.kpi-card-actions .btn');
+      if (!tourVisible(btn)) card.scrollIntoView({ block: 'center' });
+      return tourVisible(btn) ? btn : null;
+    }
+    const tourCardMonths = () => { const e = document.getElementById('ed-m0'); const w = e && e.closest('.data-table-wrapper'); return tourVisible(w) ? w : null; };
     const tourEditKpi = () => { const p = tourEditPlacement(); return p ? globalDatabase.find(k => k.id === p.id) : null; };
     const tourCanDet = () => { const k = tourEditKpi(); return !!(k && k.canEditDetails); };
     const tourCanRes = () => { const k = tourEditKpi(); return !!(k && k.canEditResults); };
@@ -6945,40 +6988,63 @@
         { page: 'home', target: () => tourFirst('#tree-filterbar .fb-group:nth-child(2)'), title: 'สถานะ: ไล่จากเรื่องด่วน',
           html: () => '<p>ปุ่มสถานะเป็นแบบไล่ระดับ:</p><ul><li>🔴 <b>ต้องแก้ไข</b> เห็นเฉพาะแดง</li><li>🟡 <b>รอติดตาม</b> เห็นแดง + เหลือง</li><li>🟢 <b>ครบถ้วน</b> เห็นทั้ง 3 สี (ค่าตั้งต้น)</li></ul><p>ใช้ไล่ทำงานเรื่องเร่งด่วนก่อน</p>' },
         { page: 'home', target: () => tourFirst('#accordion-tree-container'), title: 'รายการหมวดและตัวชี้วัด',
-          html: () => '<p>กดหัวหมวดเพื่อกางดู กดชื่อตัวชี้วัดเพื่อเลื่อนตารางไปที่แถวนั้น จุดสีหน้าชื่อคือสถานะ</p><ul><li>เลข <b>3.</b> = ลำดับในหมวด · <b>3.1</b> = ตัวชี้วัดย่อยของข้อ 3</li><li>🔗 = ตัวชี้วัดนี้อยู่หลายหมวด</li></ul><p>กด <b>ย่อทั้งหมด</b> เพื่อปิดทุกหมวดในครั้งเดียว</p>' },
-        { page: 'home', when: () => uniqueById(getOrderedKpis()).length > 0, target: () => tourFirst('#kpi-list-area .tbl-wrap'), title: 'ตารางตัวชี้วัด',
+          html: () => '<p>กดหัวหมวดเพื่อกางดู กดชื่อตัวชี้วัดเพื่อเลื่อน' + (tourMode() === 'card' ? 'ไปที่การ์ดนั้น' : 'ตารางไปที่แถวนั้น') + ' จุดสีหน้าชื่อคือสถานะ</p><ul><li>เลข <b>3.</b> = ลำดับในหมวด · <b>3.1</b> = ตัวชี้วัดย่อยของข้อ 3</li><li>🔗 = ตัวชี้วัดนี้อยู่หลายหมวด</li></ul><p>กด <b>ย่อทั้งหมด</b> เพื่อปิดทุกหมวดในครั้งเดียว</p>' },
+        { page: 'home', mode: 'table', when: () => uniqueById(getOrderedKpis()).length > 0, target: () => tourFirst('#kpi-list-area .tbl-wrap'), title: 'ตารางตัวชี้วัด',
           html: () => '<p>หน้าแรกเป็น <b>ตาราง</b> แถวละ 1 ตัวชี้วัด มีหัวหมวดคั่น เหมือนแผ่นงาน Google Sheet:</p><ul><li><b>หัวตาราง</b> และคอลัมน์ <b>ข้อ / ชื่อตัวชี้วัด</b> ตรึงไว้ เลื่อนซ้าย-ขวา/ลงแล้วยังเห็น · คอลัมน์ <b>จัดการ</b> ตรึงทางขวา</li><li>ป้าย <b>สถานะ</b> 🔴 ต้องแก้ไข · 🟡 รอติดตาม · 🟢 ครบถ้วน (เอาเมาส์ชี้ดูเหตุผล)</li><li>ตามด้วย เป้าหมาย ผลทั้งปี 5 ปีงบ ผลรายเดือน สรุป ฯลฯ — กดข้อความยาวเพื่อดูเต็ม/ย่อ</li></ul>' },
-        { page: 'home', when: () => uniqueById(getOrderedKpis()).length > 0, target: () => tourFirst('#kpi-list-area .tbl-groups'), title: 'ซ่อน/แสดงกลุ่มคอลัมน์',
+        { page: 'home', mode: 'table', when: () => uniqueById(getOrderedKpis()).length > 0, target: () => tourFirst('#kpi-list-area .tbl-groups'), title: 'ซ่อน/แสดงกลุ่มคอลัมน์',
           html: () => '<p>ตารางมีคอลัมน์มาก จึงจัดเป็นกลุ่ม กดปุ่มเพื่อ <b>แสดง/ซ่อน</b> ทีละกลุ่ม:</p><ul><li>เริ่มต้นแสดงผลทั้งปี ผลรายเดือน รายละเอียด ผู้รับผิดชอบ</li><li>กลุ่ม <b>ตั้งค่า · ประวัติ · หมวด/ตัวแม่</b> ซ่อนไว้ก่อน กดแสดงเมื่อต้องการดู</li><li>ทุกครั้งที่ล็อกอินใหม่ ตารางกลับมาเริ่มที่ค่านี้</li></ul><p>(ระหว่างการสอน ระบบแสดงครบทุกกลุ่มชั่วคราว)</p>' },
-        { page: 'home', when: () => !!tourEditKpi(), target: () => tourRowBtn(), title: 'กรอกผลและแก้ไข',
+        { page: 'home', mode: 'table', when: () => !!tourEditKpi(), target: () => tourRowBtn(), title: 'กรอกผลและแก้ไข',
           html: () => '<p>กด <b>✏️ แก้ไข</b> ที่แถวที่คุณแก้ได้ ช่องที่มีสิทธิ์จะกลายเป็นช่องกรอกในตารางเลย (กด Tab ไปช่องถัดไปได้) แล้วกด <b>💾</b> ที่คอลัมน์จัดการ</p><p>ขั้นถัดไประบบจะ <b>เปิดโหมดแก้ไขจริง</b> ของแถวนี้ให้ดูทีละช่อง (ในการสอนจะไม่บันทึกอะไร)</p>' },
         // ---- โหมดแก้ไข (ctx 'edit': ระบบเปิดโหมดแก้ไขของแถวที่แก้ได้แถวแรก และปิดให้เองเมื่อจบส่วนนี้โดยไม่บันทึก) ----
-        { page: 'home', ctx: 'edit', when: () => !!tourEditKpi(), target: () => tourFirst('tr.kpi-row.editing .c-name'), title: 'โหมดแก้ไข: ชื่อตัวชี้วัด',
+        { page: 'home', mode: 'table', ctx: 'edit', when: () => !!tourEditKpi(), target: () => tourFirst('tr.kpi-row.editing .c-name'), title: 'โหมดแก้ไข: ชื่อตัวชี้วัด',
           html: () => '<p>นี่คือโหมดแก้ไขจริงของแถวนี้ ช่องที่แก้ได้จะเป็นกล่องกรอก ช่องที่ล็อกเป็นสีเทา (เอาเมาส์ชี้ช่องที่ล็อกเพื่อดูเหตุผล)</p><ul><li><b>ชื่อตัวชี้วัด</b> แก้ได้ในช่องนี้ (เฉพาะผู้ที่มีสิทธิ์แก้รายละเอียด)</li><li>คอลัมน์ <b>จัดการ</b> ด้านขวา: 💾 บันทึก · ✖ ยกเลิก</li></ul>' },
-        { page: 'home', ctx: 'edit', when: () => tourCanDet(), target: () => tourFirst('#ed-target'), title: 'ค่าเป้าหมาย',
+        { page: 'home', mode: 'table', ctx: 'edit', when: () => tourCanDet(), target: () => tourFirst('#ed-target'), title: 'ค่าเป้าหมาย',
           html: () => '<p>พิมพ์ค่าเป้าหมายพร้อมเครื่องหมาย เช่น <b>≥ 80 %</b> หรือ <b>100%</b> ระบบใช้วาดเส้นเป้าหมายสีแดงในกราฟ (มุมมองการ์ด)</p>' },
-        { page: 'home', ctx: 'edit', when: () => !!tourEditKpi(), target: () => tourCell('y0', 'y4'), title: 'ผลทั้งปี (5 ปีงบ)',
+        { page: 'home', mode: 'table', ctx: 'edit', when: () => !!tourEditKpi(), target: () => tourCell('y0', 'y4'), title: 'ผลทั้งปี (5 ปีงบ)',
           html: () => '<p>ผลรวมทั้งปีของปีงบนี้และย้อนหลัง 4 ปี กรอกเป็นตัวเลข</p><ul><li>ช่องที่มีไอคอนล็อก = ผลปีที่ผ่านมาที่อ้างอิงจากชีตต้นทาง แก้ได้เฉพาะ admin / ผอ. / QMR</li><li>ผลของปีงบอื่นที่ตรงกัน ระบบอัปเดตให้ทุกชีตเอง</li></ul>' },
-        { page: 'home', ctx: 'edit', when: () => tourCanRes(), target: () => tourCell('m0', 'm5'), title: 'ผลรายเดือน',
+        { page: 'home', mode: 'table', ctx: 'edit', when: () => tourCanRes(), target: () => tourCell('m0', 'm5'), title: 'ผลรายเดือน',
           html: () => '<p>กรอกผลของแต่ละเดือน ต.ค.–ก.ย. (เลื่อนตารางไปทางขวาเพื่อดูเดือนที่เหลือ) เว้นว่างถ้ายังไม่มีผล</p><ul><li>ผลมักกรอกย้อนหลัง 1 เดือน ระบบเช็กถึง <b>เดือนที่แล้ว</b></li><li>ท้ายเดือน ก.ย. มีช่อง <b>สรุป</b> คำนวณให้เอง (เฉลี่ย / ผลรวม / เดือนล่าสุด)</li></ul>' },
-        { page: 'home', ctx: 'edit', when: () => isPrivilegedUser() && !!tourEditKpi(), target: () => tourCell('sm', 'fq'), title: 'ความถี่และวิธีสรุปผล (ผู้บริหาร)',
+        { page: 'home', mode: 'table', ctx: 'edit', when: () => isPrivilegedUser() && !!tourEditKpi(), target: () => tourCell('sm', 'fq'), title: 'ความถี่และวิธีสรุปผล (ผู้บริหาร)',
           html: () => '<ul><li><b>วิธีสรุปผลรายเดือน</b> เฉลี่ย / ผลรวม / เดือนล่าสุด</li><li><b>ความถี่การเก็บข้อมูล</b> รายเดือน / รายไตรมาส / ครึ่งปี / รายปี ระบบเช็กผลเฉพาะรอบที่ถึงกำหนด</li></ul><p>คอลัมน์กลุ่ม "ตั้งค่า" ช่องนี้ผู้บริหารและผู้ดูแลระบบแก้ได้</p>' },
-        { page: 'home', ctx: 'edit', when: () => tourCanDet(), target: () => tourCell('det'), title: 'รายละเอียด / การวิเคราะห์',
+        { page: 'home', mode: 'table', ctx: 'edit', when: () => tourCanDet(), target: () => tourCell('det'), title: 'รายละเอียด / การวิเคราะห์',
           html: () => '<p>เขียน <b>ผลการวิเคราะห์</b>: แนวโน้มของผล สาเหตุ ปัญหา/อุปสรรค และแนวทางพัฒนา</p><ul><li>กด <b>✎ แก้ไข</b> ในช่องนี้ จะเปิดหน้าต่างกลางจอให้พิมพ์ กด <b>ตกลง</b> ค่าจะกลับมารอที่แถว (ยังไม่บันทึกจนกว่าจะกด 💾)</li><li>ทุกปีงบใหม่ ต้องแก้ข้อความช่องนี้หรือช่องที่มาข้อมูลอย่างน้อย 1 ครั้ง ระบบจึงนับว่า "อัปเดตการวิเคราะห์" แล้ว</li></ul>' },
-        { page: 'home', ctx: 'edit', when: () => tourCanDet(), target: () => tourCell('src'), title: 'ที่มาแหล่งข้อมูล / สูตรคำนวณ',
+        { page: 'home', mode: 'table', ctx: 'edit', when: () => tourCanDet(), target: () => tourCell('src'), title: 'ที่มาแหล่งข้อมูล / สูตรคำนวณ',
           html: () => '<p>ใส่ <b>นิยาม</b> · ตัวตั้ง (A) / ตัวหาร (B) · <b>สูตรคำนวณ</b> · แหล่งข้อมูลและวิธีเก็บ (กด ✎ แก้ไข เหมือนช่องก่อนหน้า)</p><p>ถ้าเว้นว่าง ตัวชี้วัดจะขึ้นสถานะ 🟡 "ยังไม่ระบุที่มาข้อมูล/สูตร"</p>' },
-        { page: 'home', ctx: 'edit', when: () => tourCanDet(), target: () => tourCell('own', 'dep'), title: 'ผู้รับผิดชอบและหน่วยงาน',
+        { page: 'home', mode: 'table', ctx: 'edit', when: () => tourCanDet(), target: () => tourCell('own', 'dep'), title: 'ผู้รับผิดชอบและหน่วยงาน',
           html: () => '<ul><li><b>ผู้รับผิดชอบ</b> พิมพ์ชื่อผู้ใช้ภาษาไทย คั่นหลายคนด้วย <b>/</b> คนที่มีชื่อในช่องนี้จะเห็นและแก้ตัวชี้วัดนี้ได้</li><li><b>หน่วยงาน</b> คั่นหลายหน่วยด้วย / ระบบเพิ่มหมวดของหน่วยให้อัตโนมัติ</li></ul>' },
-        { page: 'home', ctx: 'edit', when: () => tourCanDet(), target: () => tourCell('cat'), title: 'หมวดที่แสดง',
+        { page: 'home', mode: 'table', ctx: 'edit', when: () => tourCanDet(), target: () => tourCell('cat'), title: 'หมวดที่แสดง',
           html: () => '<p>ตัวชี้วัดเดียวกันแสดงได้หลายหมวด แก้ที่ไหนก็เปลี่ยนทุกหมวด (คอลัมน์กลุ่ม "หมวด") กด <b>✎ แก้ไข</b> เพื่อเปิดหน้าต่างจัดการหมวด ป้ายหน้าแถวบอกชนิด:</p><ul><li>🏥 <b>รพ.</b> Part I–IV (เพิ่ม/เอาออกได้เฉพาะ admin / ผอ. / QMR)</li><li>🩺 <b>QA</b> "&lt;หน่วย&gt; QA" › มิติที่ 1–5</li><li>🏷️ <b>หน่วยงาน</b> ชื่อหน่วย › หัวข้อ</li></ul><p>กด <b>➕ เพิ่มหมวด</b> เพื่อเพิ่มแถว (เว้นหมวดย่อยว่าง ระบบเลือกให้ตอนบันทึก)</p>' },
-        { page: 'home', ctx: 'edit', when: () => tourCanDet(), target: () => tourCell('par'), title: 'ตั้งเป็นตัวชี้วัดย่อย',
+        { page: 'home', mode: 'table', ctx: 'edit', when: () => tourCanDet(), target: () => tourCell('par'), title: 'ตั้งเป็นตัวชี้วัดย่อย',
           html: () => '<p>ถ้าตัวนี้เป็นส่วนย่อยของอีกตัว เลือกตัวแม่ที่นี่ (กด ✎ แก้ไข) ตัวย่อยจะได้เลขต่อจากตัวแม่ เช่น <b>4.1, 4.2</b> (ซ้อนได้อีก 1 ชั้น เช่น 4.1.1) และแสดงเยื้องใต้ตัวแม่</p><p>เลือกได้เฉพาะตัวที่อยู่หมวดเดียวกัน</p>' },
-        { page: 'home', ctx: 'edit', when: () => isPrivilegedUser() && tourCanDet(), target: () => tourCell('lv'), title: 'ระดับตัวชี้วัด (ผู้บริหาร)',
+        { page: 'home', mode: 'table', ctx: 'edit', when: () => isPrivilegedUser() && tourCanDet(), target: () => tourCell('lv'), title: 'ระดับตัวชี้วัด (ผู้บริหาร)',
           html: () => '<p>กด ✎ แก้ไข แล้วติ๊กได้หลายระดับ (แสดงระดับสูงสุด) หมวดผูกกับระดับ:</p><ul><li><b>SAR</b> ต้องอยู่ใน Part I–IV</li><li><b>QA-หน่วยงาน</b> ติ๊กแล้วแถวหมวด "&lt;หน่วย&gt; QA" เพิ่มให้ทันที</li><li><b>หน่วยงาน / รายบุคคล</b> ผูกกับหมวดของหน่วย</li></ul>' },
-        { page: 'home', ctx: 'edit', when: () => !!tourEditKpi(), target: () => tourFirst('tr.kpi-row.editing .tbl-acts'), title: 'บันทึกหรือยกเลิก',
+        { page: 'home', mode: 'table', ctx: 'edit', when: () => !!tourEditKpi(), target: () => tourFirst('tr.kpi-row.editing .tbl-acts'), title: 'บันทึกหรือยกเลิก',
           html: () => '<ul><li><b>💾</b> บันทึกทุกช่องที่แก้ในครั้งเดียว และลงเวลา/ชื่อผู้แก้ให้เอง</li><li><b>✖</b> ยกเลิก ทิ้งสิ่งที่แก้</li><li><b>🗑️</b> ลบตัวชี้วัด (เฉพาะผู้บริหาร)</li><li>เอาเมาส์ชี้ปุ่มเพื่อดูชื่อปุ่ม · ถ้าข้อมูลไม่ครบ ระบบเตือนก่อนบันทึก และเตือนถ้าลืมกดบันทึกตอนเปลี่ยนหน้า</li></ul><p>ตอนนี้เป็นการสอน จึงยังไม่ได้บันทึกอะไร — ขั้นต่อไประบบจะปิดโหมดแก้ไขให้เอง</p>' },
+        // ---- มุมมองการ์ด (เจ้าหน้าที่ staff เริ่มที่การ์ด: สอนบนการ์ดที่ใช้งานจริง) ----
+        { page: 'home', mode: 'card', when: () => uniqueById(getOrderedKpis()).length > 0, target: () => tourFirst('#kpi-list-area .kpi-card'), title: 'การ์ดตัวชี้วัด',
+          html: () => '<p>หน้าแรกเป็น <b>การ์ด</b> ใบละ 1 ตัวชี้วัด:</p><ul><li><b>บน</b> ชื่อตัวชี้วัด สถานะ 🔴🟡🟢 (เอาเมาส์ชี้ดูเหตุผล) ป้ายหมวด ระดับ ปีงบ และผู้แก้ล่าสุด</li><li><b>ซ้าย</b> ค่าเป้าหมาย กราฟผล 5 ปีงบ ผลทั้งปี และผลรายเดือน</li><li><b>ขวา</b> รายละเอียด/การวิเคราะห์ ที่มา/สูตร เอกสารแนบ และผู้รับผิดชอบ</li></ul><p>ข้อความยาวถูกตัดไว้ กด <b>▼ อ่านเพิ่ม</b> เพื่อดูเต็ม</p>' },
+        { page: 'home', mode: 'card', when: () => uniqueById(getOrderedKpis()).length > 0, target: () => tourFirst('#kpi-list-area .pager'), title: 'แบ่งหน้าและซ่อนกราฟ',
+          html: () => '<p>ตัวเลือก <b>จำนวนต่อหน้า</b> (10 / 20 / 50 ตัว) และเลขหน้า อยู่ด้านบนรายการ</p><ul><li>ปุ่ม <b>🙈 ซ่อนกราฟ</b> ซ่อนกราฟทุกการ์ดให้การ์ดสั้นลง (กด 📈 แสดงกราฟ เพื่อเปิดกลับ)</li><li>กดชื่อตัวชี้วัดในแถบซ้าย เพื่อเลื่อนมาที่การ์ดนั้น</li></ul>' },
+        { page: 'home', mode: 'card', when: () => !!tourEditKpi(), target: () => tourCardBtn(), title: 'กรอกผลและแก้ไข',
+          html: () => '<p>กด <b>✏️ แก้ไข</b> ที่การ์ดที่คุณแก้ได้ ช่องที่มีสิทธิ์จะกลายเป็นช่องกรอกในการ์ดเลย แล้วกด <b>💾 บันทึกข้อมูล</b></p><p>ขั้นถัดไประบบจะ <b>เปิดโหมดแก้ไขจริง</b> ของการ์ดนี้ให้ดู (ยังไม่บันทึกอะไร) และปิดให้เองเมื่อจบส่วนนี้</p>' },
+        { page: 'home', mode: 'card', ctx: 'edit', when: () => !!tourEditKpi(), target: () => tourFirst('.kpi-card.editing .kpi-card-title'), title: 'โหมดแก้ไข: ชื่อตัวชี้วัด',
+          html: () => '<p>นี่คือโหมดแก้ไขจริงของการ์ดนี้ ช่องที่แก้ได้เป็นกล่องกรอก ช่องที่ล็อกเป็นสีเทา (เอาเมาส์ชี้ช่องที่ล็อกเพื่อดูเหตุผล)</p><ul><li><b>ชื่อตัวชี้วัด</b> แก้ได้ในช่องนี้ (เฉพาะผู้ที่มีสิทธิ์แก้รายละเอียด)</li><li>ถ้าไม่มีสิทธิ์แก้ช่องไหน ช่องนั้นดูได้อย่างเดียว</li></ul>' },
+        { page: 'home', mode: 'card', ctx: 'edit', when: () => tourCanDet(), target: () => tourFirst('#ed-target'), title: 'ค่าเป้าหมาย',
+          html: () => '<p>พิมพ์ค่าเป้าหมายพร้อมเครื่องหมาย เช่น <b>≥ 80 %</b> หรือ <b>100%</b> ระบบใช้วาดเส้นเป้าหมายสีแดงในกราฟ (มุมมองการ์ด)</p>' },
+        { page: 'home', mode: 'card', ctx: 'edit', when: () => !!tourEditKpi(), target: () => tourFirst('.kpi-card.editing .card-left .data-table-wrapper'), title: 'ผลทั้งปี (5 ปีงบ)',
+          html: () => '<p>ผลรวมทั้งปีของปีงบนี้และย้อนหลัง 4 ปี กรอกเป็นตัวเลข</p><ul><li>ช่องสีเทา/ไอคอนล็อก = ผลปีที่ผ่านมาที่อ้างอิงจากชีตต้นทาง แก้ได้เฉพาะ admin / ผอ. / QMR</li><li>ผลของปีงบอื่นที่ตรงกัน ระบบอัปเดตให้เอง</li></ul>' },
+        { page: 'home', mode: 'card', ctx: 'edit', when: () => tourCanRes(), target: () => tourCardMonths(), title: 'ผลรายเดือน',
+          html: () => '<p>กรอกผลของแต่ละเดือน ต.ค.–ก.ย. · เว้นว่างถ้ายังไม่มีผล</p><ul><li>ผลมักกรอกย้อนหลัง 1 เดือน ระบบเช็กถึง <b>เดือนที่แล้ว</b></li><li><b>พิมพ์ -</b> ถ้าเดือนนั้น<b>ไม่มีเคส</b> (ไม่นับในค่าเฉลี่ย แต่นับว่ากรอกแล้ว) · <b>พิมพ์ 0</b> เมื่อผลลัพธ์เป็นศูนย์จริง</li><li>ใต้ตารางมีช่อง <b>สรุปรายเดือน</b> คำนวณให้เอง</li></ul>' },
+        { page: 'home', mode: 'card', ctx: 'edit', when: () => tourCanDet(), target: () => tourGroup('#ed-details'), title: 'รายละเอียด / การวิเคราะห์',
+          html: () => '<p>เขียน <b>ผลการวิเคราะห์</b>: แนวโน้มของผล สาเหตุ ปัญหา/อุปสรรค และแนวทางพัฒนา พิมพ์ในกล่องนี้ได้เลย</p><p>ต้องอัปเดตทุกปีงบ ถ้ายังไม่เขียน ตัวชี้วัดจะขึ้น 🔴/🟡 (ผ่อนผันถึงสิ้นเดือน ธ.ค.)</p>' },
+        { page: 'home', mode: 'card', ctx: 'edit', when: () => tourCanDet(), target: () => tourGroup('#ed-source'), title: 'ที่มาแหล่งข้อมูล / สูตรคำนวณ',
+          html: () => '<p>ใส่ <b>นิยาม</b> · ตัวตั้ง (A) / ตัวหาร (B) · <b>สูตรคำนวณ</b> · แหล่งข้อมูลและวิธีเก็บ</p><p>ถ้าเว้นว่าง ตัวชี้วัดจะขึ้นสถานะ 🟡 "ยังไม่ระบุที่มาข้อมูล/สูตร"</p>' },
+        { page: 'home', mode: 'card', ctx: 'edit', when: () => tourCanDet(), target: () => tourFirst('.kpi-card.editing .owner-box'), title: 'ผู้รับผิดชอบ หน่วยงาน และหมวด',
+          html: () => '<ul><li><b>ผู้รับผิดชอบ</b> พิมพ์ชื่อผู้ใช้ภาษาไทย คั่นหลายคนด้วย <b>/</b> คนที่มีชื่อในช่องนี้จะเห็นและแก้ตัวชี้วัดนี้ได้</li><li><b>หน่วยงาน</b> คั่นหลายหน่วยด้วย / ระบบเพิ่มหมวดของหน่วยให้อัตโนมัติ</li><li><b>หมวดที่แสดง</b> ตัวชี้วัดเดียวกันแสดงได้หลายหมวด แก้ที่ไหนก็เปลี่ยนทุกที่ · <b>ตัวชี้วัดแม่</b> ตั้งเป็นตัวย่อย ได้เลขต่อจากตัวแม่ เช่น 4.1</li></ul>' },
+        { page: 'home', mode: 'card', ctx: 'edit', when: () => !!tourEditKpi(), target: () => tourFirst('.kpi-card.editing .kpi-card-actions'), title: 'บันทึกหรือยกเลิก',
+          html: () => '<ul><li><b>💾 บันทึกข้อมูล</b> บันทึกทุกช่องที่แก้ในครั้งเดียว และลงเวลา/ชื่อผู้แก้ให้เอง</li><li><b>ยกเลิก</b> ทิ้งสิ่งที่แก้</li><li>ถ้าข้อมูลไม่ครบ ระบบเตือนก่อนบันทึก และเตือนถ้าลืมกดบันทึกตอนเปลี่ยนหน้า</li></ul><p>ตอนนี้เป็นการสอน จึงยังไม่ได้บันทึกอะไร — ขั้นต่อไประบบจะปิดโหมดแก้ไขให้เอง</p>' },
         { page: 'home', target: () => tourFirst('.nav-actions'), title: 'การ์ด/ตาราง / เพิ่มตัวชี้วัด',
-          html: () => '<ul><li><b>🗂️ การ์ด / 📋 ตาราง</b> สลับรูปแบบแสดงตัวชี้วัด ตารางแก้ได้ทีละแถวเหมือน Google Sheet ซ่อน/แสดงกลุ่มคอลัมน์ได้ (ทุกครั้งที่ล็อกอินเริ่มที่ตาราง และซ่อนคอลัมน์ ตั้งค่า/ประวัติ/หมวด ไว้ก่อน) · ปุ่ม 🙈 ซ่อนกราฟ อยู่ข้างตัวเลือกจำนวนต่อหน้า ในมุมมองการ์ด</li><li><b>➕ เพิ่มตัวชี้วัดใหม่</b> ขั้นถัดไปจะเปิดหน้าต่างให้ดูทีละช่อง</li></ul>' },
+          html: () => '<ul><li><b>🗂️ การ์ด / 📋 ตาราง</b> สลับรูปแบบแสดงตัวชี้วัด ตารางแก้ได้ทีละแถวเหมือน Google Sheet ซ่อน/แสดงกลุ่มคอลัมน์ได้ ' + (tourMode() === 'card' ? '(เจ้าหน้าที่เริ่มที่การ์ดทุกครั้งที่ล็อกอิน · สลับเป็นตารางได้เอง)' : '(ทุกครั้งที่ล็อกอินเริ่มที่ตาราง และซ่อนคอลัมน์ ตั้งค่า/ประวัติ/หมวด ไว้ก่อน)') + ' · ปุ่ม 🙈 ซ่อนกราฟ อยู่ข้างตัวเลือกจำนวนต่อหน้า ในมุมมองการ์ด</li><li><b>➕ เพิ่มตัวชี้วัดใหม่</b> ขั้นถัดไปจะเปิดหน้าต่างให้ดูทีละช่อง</li></ul>' },
         // ---- เพิ่มตัวชี้วัดใหม่ (ctx 'add': ระบบเปิดหน้าต่างเพิ่มตัวชี้วัดและปิดให้เองโดยไม่บันทึก) ----
         { page: 'home', ctx: 'add', when: tourAddOk, target: () => tourFirst('#modal-add-kpi .modal-card'), title: 'เพิ่มตัวชี้วัดใหม่',
           html: () => '<p>ระบบเปิดหน้าต่างเพิ่มตัวชี้วัดให้ดูช่องจริง (ยังไม่บันทึก)</p><ul><li>เจ้าหน้าที่และหัวหน้าเพิ่มได้เฉพาะ <b>ปีงบปัจจุบัน</b> ระบบใส่ชื่อผู้เพิ่มเป็นผู้รับผิดชอบให้เสมอ</li><li>ปีงบถัดไปจะคัดลอกตัวชี้วัดตามจากปีล่าสุดเอง</li></ul>' },
@@ -7034,11 +7100,12 @@
     // ---------- เดินขั้นตอน ----------
     function tourStart() {
       if (tourState.active || !isAppUnlocked) return;
-      // การสอนอธิบายบนตาราง: สลับเป็นตาราง + แสดงครบทุกกลุ่มคอลัมน์ชั่วคราว แล้วคืนค่าเดิมตอนจบ
+      // การสอนอธิบายบนมุมมองตาม Tier (staff = การ์ด · อื่น ๆ = ตาราง): สลับเป็นมุมมองนั้น + ตารางแสดงครบทุกกลุ่มคอลัมน์ชั่วคราว แล้วคืนค่าเดิมตอนจบ
+      const tm = tourMode();
       tourState.saveView = { mode: listMode, hide: Array.from(tblHide) };
-      listMode = 'table'; tblHide.clear(); updateModeSwitch();
+      listMode = tm; tblHide.clear(); updateModeSwitch();
       if (currentTab === 'home') renderList();
-      tourState.steps = tourSteps().filter(s => !s.when || s.when());
+      tourState.steps = tourSteps().filter(s => (!s.mode || s.mode === tm) && (!s.when || s.when()));
       tourState.active = true;
       if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); // ไม่ให้ Enter/Space ไปกดปุ่มบนหน้าจอที่อยู่ใต้การสอน
       tourState.token++;
@@ -7077,9 +7144,10 @@
       if (ctx === 'edit') {
         const p = tourEditPlacement();
         if (!p) return false;
+        if (listMode === 'card' && !document.getElementById('card-' + cssId(p.key))) goToKpi(p.id, p.key);
         startEditNow(p.id, p.key);
-        const erow = document.querySelector('tr.kpi-row.editing');
-        if (erow) erow.scrollIntoView({ block: 'center' });
+        const erow = document.querySelector(EDITING_SEL);
+        if (erow) erow.scrollIntoView({ block: listMode === 'card' ? 'start' : 'center' });
         tourState.ctx = 'edit';
         return editingId === p.id;
       }

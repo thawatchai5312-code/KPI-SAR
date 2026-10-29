@@ -1,7 +1,7 @@
 // concurrent use: busy overlay, auto-update every 10 s (corner notice), editing-card banner, conflict dialog (reload / force-merge / stay)
 const {chromium}=require('playwright');
 const fs=require('fs');const h=require('./harness7');const C=h.ctx;const assert=require('assert');
-const html=fs.readFileSync(require('path').join(__dirname,'../src/Index.html'),'utf8').replace("let listMode = 'table';","let listMode = 'card';").replace("listMode = 'table'; tblHide.clear(); TBL_DEFAULT_HIDE","listMode = 'card'; tblHide.clear(); TBL_DEFAULT_HIDE");
+const html=fs.readFileSync(require('path').join(__dirname,'../src/Index.html'),'utf8').replace("let listMode = 'table';","let listMode = 'card';").replace("listMode = defaultListMode(); tblHide.clear(); TBL_DEFAULT_HIDE","listMode = 'card'; tblHide.clear(); TBL_DEFAULT_HIDE");
 const U=h.sheets.Users.d;const pick=(tier,dept)=>U.find(r=>r[2]===tier&&(!dept||new RegExp('(^|,)'+dept+'(,|$)').test(r[3])));
 const st=pick('staff','ER'),ad=pick('admin');[st,ad].forEach(r=>{r[1]=C.hashPassword_('pw123456');r[4]='FALSE'});
 const tS=C.createSession_(st[0],st[1]),tA=C.createSession_(ad[0],ad[1]);

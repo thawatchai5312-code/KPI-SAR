@@ -1,7 +1,7 @@
 // scope filter (ของฉัน / หน่วยของฉัน / ทั้งหมด) shared across home / report / progress, defaults by role, counts
 const {chromium}=require('playwright');
 const fs=require('fs');const h=require('./harness5');const C=h.ctx;const assert=require('assert');
-const html=fs.readFileSync(require('path').join(__dirname,'../src/Index.html'),'utf8').replace("let listMode = 'table';","let listMode = 'card';").replace("listMode = 'table'; tblHide.clear(); TBL_DEFAULT_HIDE","listMode = 'card'; tblHide.clear(); TBL_DEFAULT_HIDE");
+const html=fs.readFileSync(require('path').join(__dirname,'../src/Index.html'),'utf8').replace("let listMode = 'table';","let listMode = 'card';").replace("listMode = defaultListMode(); tblHide.clear(); TBL_DEFAULT_HIDE","listMode = 'card'; tblHide.clear(); TBL_DEFAULT_HIDE");
 const U=h.sheets.Users.d; const setPw=(n,p)=>{const r=U.find(x=>x[0]===n);r[1]=C.hashPassword_(p);r[4]='FALSE'};
 (async()=>{
  C.PropertiesService.getScriptProperties().setProperty('HEAD_SEED_V1','done');

@@ -1,6 +1,6 @@
 const {chromium}=require('playwright');
 const fs=require('fs');const h=require('./harness5');const C=h.ctx;const assert=require('assert');
-const html=fs.readFileSync(require('path').join(__dirname,'../src/Index.html'),'utf8').replace("let listMode = 'table';","let listMode = 'card';").replace("listMode = 'table'; tblHide.clear(); TBL_DEFAULT_HIDE","listMode = 'card'; tblHide.clear(); TBL_DEFAULT_HIDE");
+const html=fs.readFileSync(require('path').join(__dirname,'../src/Index.html'),'utf8').replace("let listMode = 'table';","let listMode = 'card';").replace("listMode = defaultListMode(); tblHide.clear(); TBL_DEFAULT_HIDE","listMode = 'card'; tblHide.clear(); TBL_DEFAULT_HIDE");
 const U=h.sheets.Users.d; const a=U.find(x=>x[0]==='Admin'); a[1]=C.hashPassword_('pw123456'); a[4]='FALSE';
 const S=h.sheets['ปีงบ 2570'];const row=id=>C.rowToKpi_(S.d.find(r=>r[0]===id));const show=k=>k.cats.map(c=>c.part+'›'+c.category).join(' ; ')+' ['+k.levels+'] dept='+k.department;
 // fixtures for cases 4/5: SAR-only KPIs with Part placement only (one with dept ER, one without dept)

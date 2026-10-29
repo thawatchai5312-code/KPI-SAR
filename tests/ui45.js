@@ -36,7 +36,7 @@ const srv=(t,id)=>C.getAllData(t,2570).data.find(k=>k.id===id);
  // nothing is remembered: another browser / new login of the same account starts from the defaults again
  let A2=await mk();await login(A2,ad[0]);await A2.waitForTimeout(400);
  assert(await A2.evaluate(()=>listMode==='table'&&!!document.getElementById('kpi-table')&&getComputedStyle(document.querySelector('td.c-m0')).display!=='none'&&getComputedStyle(document.querySelector('td.c-sm')).display==='none'),'no memory: defaults again');
- let S=await mk();await login(S,st[0]);assert(await S.evaluate(()=>listMode==='table'&&!!document.getElementById('kpi-table')),'first-time user sees table');
+ let S=await mk();await login(S,st[0]);assert(await S.evaluate(()=>listMode==='card'&&document.querySelectorAll('.kpi-card').length>0&&!document.getElementById('kpi-table')),'staff starts on cards (tier default)');
  await A.click('.tbl-chip[data-g=monthly]');await A.waitForTimeout(200);
  await A.click('.tbl-chip[data-g=settings]');assert(await A.evaluate(()=>getComputedStyle(document.querySelector('td.c-sm')).display!=='none'),'user can show a hidden group');await A.click('.tbl-chip[data-g=settings]');
 
