@@ -44,7 +44,8 @@ r=C.addIndicator(tA,2570,{name:'live test kpi',target:'',years:[null,null,null,n
 p=C.pollChanges(tA,2570,vb);assert(p.kpis.length===1&&p.kpis[0].id===nid&&p.removed.length===0,'add incremental');
 r=C.deleteIndicator(tA,2570,'ทดสอบสด',nid);assert(r.success);p=C.pollChanges(tA,2570,p.v);assert(p.kpis.length===0&&p.removed[0]===nid,'delete → removed');
 // invisible change → removed for staff (not visible)
-const sIds=new Set(C.getAllData(tS,2570).data.map(x=>x.id));const hid=C.getAllData(tA,2570).data.find(k=>!sIds.has(k.id));
+r=C.addIndicator(tA,2570,{name:'invisible kpi',target:'',years:[null,null,null,null,null],months:Array(12).fill(null),levels:['รายบุคคล'],owner:'ไม่มีใคร',cats:[{part:'ทดสอบลับ',category:'หมวดลับ'}]});assert(r.success,r.message);
+const sIds=new Set(C.getAllData(tS,2570).data.map(x=>x.id));const hid=C.getAllData(tA,2570).data.find(k=>!sIds.has(k.id));assert(hid,'invisible kpi exists');
 vb=C.pollChanges(tS,2570,-1).v;r=C.saveKpi(tA,2570,{id:hid.id,target:'zz',baseRev:hid.rev});assert(r.success);
 p=C.pollChanges(tS,2570,vb);assert(p.kpis.length===0&&p.removed[0]===hid.id,'not visible → removed (client ignores unknown ids)');
 // users change → full

@@ -255,6 +255,7 @@
     .kpi-row.expanded .tbl-clamp { display: block; -webkit-line-clamp: unset; }
     .tbl-name.sub { padding-left: 14px; font-weight: 500; }
     .tbl-in { width: 100%; padding: 4px 6px; font-size: 13px; }
+    .tbl-fill { display: block; box-sizing: border-box; height: 100%; min-height: 62px; resize: none; line-height: 1.35; font-family: inherit; } /* ช่องผู้รับผิดชอบ/หน่วยงานในตาราง: เต็มช่องและขึ้นบรรทัดใหม่ได้ */
     .kpi-table td .cell-input { padding: 6px 3px !important; }
     .kpi-table td select.tbl-in { padding: 4px 2px; }
     .kpi-table .tbl-cat td { background: var(--primary-gradient); padding: 0; border: 0; overflow: visible; }
@@ -3715,6 +3716,9 @@
       const it = e.target.closest && e.target.closest('#ac-pop .ac-item');
       if (it) { e.preventDefault(); acPick(it.dataset.v); }
     });
+    document.addEventListener('keydown', e => { // ช่องในตารางเป็น textarea: Enter ไม่ขึ้นบรรทัดใหม่ (ค่าเป็นบรรทัดเดียว)
+      if (e.key === 'Enter' && e.target && AC_FIELDS[e.target.id] && e.target.tagName === 'TEXTAREA') e.preventDefault();
+    });
     document.addEventListener('keydown', e => {
       const pop = document.getElementById('ac-pop');
       if (!pop || pop.style.display !== 'block' || !acInput) return;
@@ -6791,8 +6795,8 @@
       c.det = canDet ? { h: tblPrevHtml('details', data) + tblLongBtn('details') } : Object.assign({ h: clamp(kpi.templateDetails, 'ไม่มีข้อมูลรายละเอียดเพิ่มเติม') }, lockD_);
       c.src = canDet ? { h: tblPrevHtml('source', data) + tblLongBtn('source') } : Object.assign({ h: clamp(kpi.dataSource, 'ไม่ระบุที่มาข้อมูล') }, lockD_);
       c.lnk = { h: `<div class="lnk-cell" data-links-for="${esc(kpi.id)}" data-compact="1">${linkBodyHtml(kpi, true)}</div>` };
-      c.own = canDet ? { h: `<input type="text" id="ed-owner" class="editable-input tbl-in" value="${esc(kpi.owner)}" title="คั่นหลายคนด้วย /">` } : Object.assign({ h: clamp(kpi.owner) }, lockD_);
-      c.dep = canDet ? { h: `<input type="text" id="ed-dept" class="editable-input tbl-in" value="${esc(kpi.department)}">` } : Object.assign({ h: clamp(kpi.department) }, lockD_);
+      c.own = canDet ? { h: `<textarea id="ed-owner" class="editable-input tbl-in tbl-fill" rows="3" title="คั่นหลายคนด้วย /">${esc(kpi.owner)}</textarea>` } : Object.assign({ h: clamp(kpi.owner) }, lockD_);
+      c.dep = canDet ? { h: `<textarea id="ed-dept" class="editable-input tbl-in tbl-fill" rows="3">${esc(kpi.department)}</textarea>` } : Object.assign({ h: clamp(kpi.department) }, lockD_);
       c.cat = canDet ? { h: tblPrevHtml('cats', data) + tblLongBtn('cats') } : { h: clamp(kpiCats(kpi).map(x => partLabel(x.part) + ' › ' + x.category).join('\n') + (kpiCats(kpi).length > 1 ? '' : '')) , at: kpiCats(kpi).length > 1 ? ' title="ตัวชี้วัดเดียวกัน แก้ที่หมวดไหนก็เปลี่ยนทุกหมวด"' : '' };
       c.par = canDet ? { h: tblPrevHtml('parent', data) + tblLongBtn('parent') } : { h: clamp(kpi.parentId && globalDatabase.some(x => x.id === kpi.parentId) ? '↳ ' + parentLabel(kpi) : '', '-') };
       c.edt = { h: stampText(kpi.editedAt, kpi.editedBy) };

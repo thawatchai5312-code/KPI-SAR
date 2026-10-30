@@ -34,7 +34,7 @@ async function open(b,user){
   const pg=await open(br,who);
   const r=await pg.evaluate(()=>({mode:listMode,on:document.querySelector('#mode-switch .on').dataset.mode,table:!!document.getElementById('kpi-table'),cards:document.querySelectorAll('.kpi-card').length,hidden:[...tblHide].join()}));
   assert.strictEqual(r.mode,want,who[2]+' '+JSON.stringify(r));assert.strictEqual(r.on,want);
-  if(want==='card')assert(r.cards>0&&!r.table,JSON.stringify(r));else{assert(r.table&&r.cards===0,JSON.stringify(r));assert.strictEqual(r.hidden,'settings,history,cats')}
+  if(want==='card')assert(r.cards>0&&!r.table,JSON.stringify(r));else{assert(r.table&&r.cards===0,JSON.stringify(r));assert.strictEqual(r.hidden,who===hd?'settings,history,cats':'settings,history,cats,monthly,text')}
   if(who===st){ // สลับเป็นตารางเองได้ · ออกจากระบบแล้วเข้าใหม่ → กลับเป็นค่าเริ่มต้น
    await pg.evaluate(()=>setListMode('table'));await pg.waitForSelector('#kpi-table');
    await pg.evaluate(()=>showLogin());await pg.waitForSelector('#login-username',{state:'visible'});

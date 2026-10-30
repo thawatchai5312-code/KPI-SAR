@@ -38,7 +38,7 @@ async function open(b,user){
  const st=await pg.evaluate(()=>{expectedMonthIdx=()=>1;const base={frequency:'รายเดือน',years:[null,null,null,null,null],templateDetails:'x',analysisUpdatedAt:'1',dataSource:'y'};const mk=(m0,m1)=>Object.assign({},base,{months:[m0,m1,null,null,null,null,null,null,null,null,null,null]});return [kpiStatus(mk(5,null)).level,kpiStatus(mk(5,'-')).level,kpiStatus(mk('-','-')).level,kpiStatus(mk(null,null)).level,kpiStatus(Object.assign(mk('-',null),{frequency:'รายไตรมาส'})).level]});
  assert.strictEqual(st[0],'red');assert.strictEqual(st[1],'green');assert.strictEqual(st[2],'green');assert.strictEqual(st[3],'red');
  // ===== แถวตาราง: พิมพ์ - ในช่องรายเดือน =====
- await pg.evaluate(id=>{startEditNow(id)},kp.id);await pg.waitForSelector('#ed-m0');
+ await pg.evaluate(id=>{tblHide.delete('monthly');tblHide.delete('text');renderList();startEditNow(id)},kp.id);await pg.waitForSelector('#ed-m0');
  assert.strictEqual(await pg.getAttribute('#ed-m0','type'),'text');
  await pg.fill('#ed-m0','80');await pg.fill('#ed-m1','-');await pg.fill('#ed-m2','0');await pg.fill('#ed-m3','NA');
  await pg.evaluate(()=>saveKpiEdit());await pg.waitForFunction(()=>!savingKpi&&editingId===null,null,{timeout:60000});

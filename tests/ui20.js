@@ -19,11 +19,11 @@ const html=fs.readFileSync(require('path').join(__dirname,'../src/Index.html'),'
  const total=pg=>pg.evaluate(()=>getOrderedKpis().length);
 
  // server-side: staff adds a KPI that is SAR + personal and lives in Part I and a personal category
- const st=h.ctx.authenticateUser('มานี','secret99');
+ const st=h.ctx.authenticateUser('คนใหม่','secret99');
  const base={years:[null,null,null,null,null],months:Array(12).fill(null)};
- let r=h.ctx.addIndicator(st.token,2570,{...base,name:'ตัวชี้วัดสองหมวด',target:'> 80',levels:['รายบุคคล','SAR'],department:'ทดสอบ',cats:[{part:'Part I',category:'I-9 ทดสอบ'},{part:'หมวดมานี',category:'งานส่วนตัว'}]}); assert(r.success,JSON.stringify(r)); const id=r.newId;
- let pg=await mkpage(); await login(pg,'มานี','secret99');
- const placements=await pg.evaluate(id=>placementsOf(globalDatabase.find(k=>k.id===id)).map(k=>k.part+'›'+k.category),id); console.log('placements',placements); assert(placements.length===2);
+ let r=h.ctx.addIndicator(st.token,2570,{...base,name:'ตัวชี้วัดสองหมวด',target:'> 80',levels:['รายบุคคล','SAR'],cats:[{part:'Part I',category:'I-9 ทดสอบ'},{part:'หมวดมานี',category:'งานส่วนตัว'}]}); assert(r.success,JSON.stringify(r)); const id=r.newId;
+ let pg=await mkpage(); await login(pg,'คนใหม่','secret99');
+ const placements=await pg.evaluate(id=>placementsOf(globalDatabase.find(k=>k.id===id)).map(k=>k.part+'›'+k.category),id); console.log('placements',placements); assert(placements.length===2,JSON.stringify(placements));
  await pg.evaluate(()=>{pageSize=50;currentPage=1;renderList();});
  // one card per view (hosp / unit), tree links with 🔗
  for(const v of ['hosp','unit']){ await pg.evaluate(v=>{treeView=v;currentPage=1;renderTree();renderList();},v); await pg.waitForTimeout(250);
@@ -51,6 +51,7 @@ const html=fs.readFileSync(require('path').join(__dirname,'../src/Index.html'),'
  console.log('count line after:',(await pg.innerText('#tree-count')).replace(/\n/g,' '));
  await pg.screenshot({path:'ui20-multi.png'});
  // cursor + lock tooltip: locked past-year result cells (source sheet)
+ await pg.close(); pg=await mkpage(); await login(pg,'มานี','secret99');
  await pg.evaluate(()=>{const s=document.getElementById('fy-select'); s.value='2570'; onFiscalYearChange(s);}); await pg.waitForTimeout(800);
  await pg.evaluate(()=>{const k=globalDatabase.find(k=>k.canEditResults&&k.lockedYears&&k.lockedYears.some(Boolean))||globalDatabase.find(k=>k.mine); treeView=VIEWS.find(v=>viewPlacements(k,v).length); renderTree(); renderList(); startEditNow(k.id);}); await pg.waitForTimeout(300);
  await pg.locator('.lock-wrap input').first().scrollIntoViewIfNeeded(); await pg.waitForTimeout(1200); const box=await pg.locator('.lock-wrap input').first().boundingBox(); await pg.evaluate(()=>{window.__ev=[];['mouseover','mouseout','scroll'].forEach(t=>document.addEventListener(t,e=>window.__ev.push(t+':'+(e.target.className||e.target.nodeName)+'>'+(e.relatedTarget&&(e.relatedTarget.className||e.relatedTarget.nodeName))),true));}); await pg.mouse.move(box.x+box.width/2-3,box.y+box.height/2); await pg.mouse.move(box.x+box.width/2,box.y+box.height/2); await pg.waitForTimeout(300); console.log('events',await pg.evaluate(()=>window.__ev.slice(0,12)), box);

@@ -20,7 +20,7 @@ const srv=(t,id)=>C.getAllData(t,2570).data.find(k=>k.id===id);
  // ---- 1. default card, switch, rows == cards list, memory per account
  let A=await mk();await login(A,ad[0]);
  assert(await A.evaluate(()=>listMode==='table'&&!!document.getElementById('kpi-table')&&document.querySelectorAll('.kpi-card').length===0&&document.querySelector('#mode-switch .on').dataset.mode==='table'),'default is table');
- {const dflt=await A.evaluate(()=>['sm','fq','lv','edt','viw','cat','par','det','src','own','y0','m0','sum'].map(k=>[k,getComputedStyle(document.querySelector('td.c-'+k)).display==='none']));const hidden=dflt.filter(x=>x[1]).map(x=>x[0]).join();assert(hidden==='sm,fq,lv,edt,viw,cat,par',hidden);assert(await A.evaluate(()=>[...document.querySelectorAll('.tbl-chip')].map(c=>c.dataset.g+':'+c.classList.contains('on')).join())==='annual:true,monthly:true,settings:false,text:true,people:true,cats:false,history:false');}
+ {const dflt=await A.evaluate(()=>['sm','fq','lv','edt','viw','cat','par','det','src','own','y0','m0','sum'].map(k=>[k,getComputedStyle(document.querySelector('td.c-'+k)).display==='none']));const hidden=dflt.filter(x=>x[1]).map(x=>x[0]).join();assert(hidden==='sm,fq,lv,edt,viw,cat,par,det,src,m0,sum',hidden);assert(await A.evaluate(()=>[...document.querySelectorAll('.tbl-chip')].map(c=>c.dataset.g+':'+c.classList.contains('on')).join())==='annual:true,monthly:false,settings:false,text:false,people:true,cats:false,history:false');}
  await A.click('#mode-switch button[data-mode=card]');await A.waitForSelector('.kpi-card');assert(await A.isVisible('#btn-toggle-chart'),'chart button in card pager');
  await A.click('#mode-switch button[data-mode=table]');await A.waitForSelector('#kpi-table');
  await A.waitForFunction(()=>tblPending.length===0,null,{timeout:20000});
@@ -29,15 +29,15 @@ const srv=(t,id)=>C.getAllData(t,2570).data.find(k=>k.id===id);
  assert(['2566','2570','ต.ค.','ก.ย.','สรุป','วิธีสรุป','ความถี่','ระดับ','รายละเอียด / การวิเคราะห์','ที่มา / สูตรคำนวณ','ผู้รับผิดชอบ','หน่วยงาน','หมวดที่แสดง','ตัวชี้วัดแม่','แก้ไขล่าสุด','เข้าดูล่าสุด'].every(t=>info.ths.includes(t)),info.ths);
  console.log('table rows',info.rows,'cats',info.cats);
  // column groups hide/show + remembered
+ await A.click('.tbl-chip[data-g=monthly]');await A.waitForTimeout(200); // admin: monthly hidden by default → show first
  const w0=await A.evaluate(()=>document.getElementById('kpi-table').offsetWidth);
  await A.click('.tbl-chip[data-g=monthly]');await A.waitForTimeout(200);
  const hid=await A.evaluate(()=>({disp:getComputedStyle(document.querySelector('td.c-m0')).display,w:document.getElementById('kpi-table').offsetWidth,on:document.querySelector('.tbl-chip[data-g=monthly]').classList.contains('on')}));
  assert(hid.disp==='none'&&hid.w===w0-(12*68+96)&&!hid.on,JSON.stringify(hid)+' '+w0);
  // nothing is remembered: another browser / new login of the same account starts from the defaults again
  let A2=await mk();await login(A2,ad[0]);await A2.waitForTimeout(400);
- assert(await A2.evaluate(()=>listMode==='table'&&!!document.getElementById('kpi-table')&&getComputedStyle(document.querySelector('td.c-m0')).display!=='none'&&getComputedStyle(document.querySelector('td.c-sm')).display==='none'),'no memory: defaults again');
+ assert(await A2.evaluate(()=>listMode==='table'&&!!document.getElementById('kpi-table')&&getComputedStyle(document.querySelector('td.c-m0')).display==='none'&&getComputedStyle(document.querySelector('td.c-sm')).display==='none'),'no memory: defaults again');
  let S=await mk();await login(S,st[0]);assert(await S.evaluate(()=>listMode==='card'&&document.querySelectorAll('.kpi-card').length>0&&!document.getElementById('kpi-table')),'staff starts on cards (tier default)');
- await A.click('.tbl-chip[data-g=monthly]');await A.waitForTimeout(200);
  await A.click('.tbl-chip[data-g=settings]');assert(await A.evaluate(()=>getComputedStyle(document.querySelector('td.c-sm')).display!=='none'),'user can show a hidden group');await A.click('.tbl-chip[data-g=settings]');
 
  // ---- 2. staff: permissions in table
@@ -122,15 +122,15 @@ const srv=(t,id)=>C.getAllData(t,2570).data.find(k=>k.id===id);
  // ---- 6. tour explains the TABLE first: from cards it switches to the table with all column groups shown, then restores the user's view
  await A.click('#mode-switch button[data-mode=table]');await A.waitForSelector('#kpi-table');
  await A.evaluate(()=>{tblResetView();renderList()});await A.waitForTimeout(300);
- assert(await A.evaluate(()=>tblHide.size===3));
+ assert(await A.evaluate(()=>tblHide.size===5));
  await A.click('#mode-switch button[data-mode=card]');await A.waitForSelector('.kpi-card');
  await A.click('#tour-btn');await A.waitForSelector('#tour-tip .tour-title');await A.waitForTimeout(400);
  assert(await A.evaluate(()=>listMode==='table'&&!!document.getElementById('kpi-table')&&tblHide.size===0&&getComputedStyle(document.querySelector('td.c-sm')).display!=='none'),'tour shows table with all groups');
  await A.click('#tour-tip .tour-end');await A.waitForTimeout(500);
- assert(await A.evaluate(()=>listMode==='card'&&document.querySelectorAll('.kpi-card').length>0&&tblHide.size===3),'view restored after tour');
+ assert(await A.evaluate(()=>listMode==='card'&&document.querySelectorAll('.kpi-card').length>0&&tblHide.size===5),'view restored after tour');
  await A.click('#mode-switch button[data-mode=table]');await A.waitForSelector('#kpi-table');await A.waitForTimeout(300);
  await A.click('#tour-btn');await A.waitForSelector('#tour-tip .tour-title');await A.click('#tour-tip .tour-end');await A.waitForTimeout(500);
- assert(await A.evaluate(()=>listMode==='table'&&tblHide.size===3&&getComputedStyle(document.querySelector('td.c-sm')).display==='none'),'table defaults restored after tour');
+ assert(await A.evaluate(()=>listMode==='table'&&tblHide.size===5&&getComputedStyle(document.querySelector('td.c-sm')).display==='none'),'table defaults restored after tour');
 
  // ---- 7. goToKpi from tree: row inside viewport + flash; FY change keeps table
  const T=await A.evaluate(()=>uniqueById(getOrderedKpis())[120].id);
