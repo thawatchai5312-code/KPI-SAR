@@ -20,7 +20,10 @@ const dir=C.getDirectory(ts);assert(dir.success&&dir.users.includes(st[0])&&want
 // หัวหน้า QMR / QA
 const hd=U.find(r=>r[2]==='head');hd[1]=C.hashPassword_('pw123456');hd[4]='FALSE';
 const all=C.getAllData(tA,2570).data;
-const sar=all.find(k=>(k.levels||[]).includes('SAR')),qa=all.find(k=>(k.levels||[]).includes('QA-หน่วยงาน')&&!(k.levels||[]).includes('SAR'));
+// ถอดชื่อหัวหน้าทดสอบออกจากผู้รับผิดชอบทุกตัวก่อน (กันหน่วยอัตโนมัติจากข้อมูลจริงปนเข้ามา) แล้วคืนตอนท้าย
+const ownBackup=[];Y.slice(1).forEach(r=>{if(C.parseOwners_(r[25]).indexOf(hd[0])!==-1){ownBackup.push([r,r[25]]);r[25]='ไม่มีใคร'}});
+const all2=C.getAllData(tA,2570).data;
+const sar=all2.find(k=>(k.levels||[]).includes('SAR')),autoH=[],qa=all2.find(k=>(k.levels||[]).includes('QA-หน่วยงาน')&&!(k.levels||[]).includes('SAR')&&!C.parseDepts_(k.department).some(d=>autoH.includes(d))&&C.parseOwners_(k.owner).indexOf(hd[0])===-1);
 assert(sar&&qa,'sample kpis');
 const mk=depts=>{hd[3]=depts;return tok(hd)};
 const perm=(t,id)=>{const k=C.getAllData(t,2570).data.find(x=>x.id===id);return k?{view:true,edit:k.canEditResults&&k.canEditDetails,mine:k.mine}:{view:false}};
@@ -34,4 +37,31 @@ assert.strictEqual(perm(t2,sar.id).edit,false,'QA head: SAR not editable (SAR-on
 mk('QA');let r=C.saveKpi(t2,2570,{id:qa.id,target:'≥ 91',});assert(r.success,JSON.stringify(r));
 mk('QMR');r=C.saveKpi(t1,2570,{id:sar.id,target:'≥ 92'});assert(r.success,JSON.stringify(r));
 r=C.saveKpi(mk('ZZZ'),2570,{id:sar.id,target:'≥ 1'});assert(!r.success,'plain head denied');
+// หัวหน้า 2 ชั้น: หน่วยที่ระบุ = สิทธิ์หัวหน้า · หน่วยอัตโนมัติ (จากตัวชี้วัดที่รับผิดชอบ) = สิทธิ์แบบ staff
+{
+ const unitKpis=d=>all2.filter(k=>(k.levels||[]).includes('หน่วยงาน')&&!(k.levels||[]).includes('SAR')&&C.parseDepts_(k.department).length===1&&C.parseDepts_(k.department)[0]===d);
+ const dcount={};all2.forEach(k=>{if((k.levels||[]).includes('หน่วยงาน')&&!(k.levels||[]).includes('SAR')&&C.parseDepts_(k.department).length===1){const d=C.parseDepts_(k.department)[0];dcount[d]=(dcount[d]||0)+1}});
+ const D=Object.keys(dcount).find(d=>dcount[d]>=2&&d!=='ZZZ');assert(D,'a unit with 2+ unit-level kpis');
+ const [own,other]=unitKpis(D);
+ const rowOf=id=>Y.slice(1).find(r=>String(r[0]).trim()===id);
+ const oldOwner=rowOf(own.id)[25];rowOf(own.id)[25]=hd[0];
+ // หัวหน้าหน่วย ZZZ เท่านั้น แต่รับผิดชอบตัวชี้วัดของหน่วย D
+ let th=mk('ZZZ');
+ const pOwn=perm(th,own.id),pOther=perm(th,other.id);
+ assert.strictEqual(pOwn.edit,true,'head edits own kpi of an auto unit (staff-like)');assert.strictEqual(pOwn.mine,true);
+ assert.strictEqual(pOther.view,true,'head sees other unit-level kpi of auto unit');assert.strictEqual(pOther.edit,false,'...but cannot edit it (not head of D)');
+ const lg2=C.authenticateUser(hd[0],'pw123456');assert(lg2.success);
+ assert(lg2.user.depts.includes('ZZZ')&&lg2.user.depts.includes(D),'depts = specified + auto');eq(lg2.user.headDepts,['ZZZ']);
+ const au=C.getUsersForAdmin(tA).users.find(u=>u.username===hd[0]);assert.strictEqual(au.depts,'ZZZ');assert(au.autoDepts.split(', ').includes(D),'settings shows auto for head');
+ // ระบุ D เป็นหน่วยที่เป็นหัวหน้า → แก้ได้ทั้งหน่วย
+ th=mk(D);assert.strictEqual(perm(th,other.id).edit,true,'head of D edits whole unit');
+ // QMR/QA มาจากหน่วยที่ระบุเท่านั้น: หน่วยอัตโนมัติชื่อ QA ไม่ให้สิทธิ์พิเศษ
+ rowOf(own.id)[25]=oldOwner;
+ const qaRow=rowOf(qa.id),oldDept=qaRow[26],oldOwn=qaRow[25];qaRow[26]='QA';qaRow[25]=hd[0];
+ th=mk('ZZZ');const kq=C.getAllData(th,2570).data.find(k=>k.id===qa.id);
+ const other2=all2.find(k=>(k.levels||[]).includes('QA-หน่วยงาน')&&k.id!==qa.id&&!C.parseDepts_(k.department).includes('QA'));
+ if(other2)assert.strictEqual(perm(th,other2.id).edit,false,'auto "QA" unit gives no special QA right');
+ qaRow[26]=oldDept;qaRow[25]=oldOwn;
+}
+ownBackup.forEach(([r,v])=>{r[25]=v});
 console.log('perm2 ok');

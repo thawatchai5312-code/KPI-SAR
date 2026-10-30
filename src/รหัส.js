@@ -608,7 +608,7 @@ function addIndicator(token, fy, newItem) {
       if (owners.indexOf(user.username) === -1) owners.unshift(user.username);
       newItem.owner = owners.join(" / ");
     }
-    if (!privileged && !(newItem.department || "").toString().trim()) newItem.department = effectiveDepts_(user, fy).join(" / ");
+    if (!privileged && !(newItem.department || "").toString().trim()) newItem.department = (user.tier === "head" ? user.depts : effectiveDepts_(user, fy)).join(" / ");
     // ช่องหน่วยงานยังว่าง แต่ระบุผู้รับผิดชอบ → ใช้หน่วยงานของผู้รับผิดชอบ
     if (!(newItem.department || "").toString().trim() && newItem.owner) newItem.department = deptsOfOwners_(newItem.owner).join(" / ");
     // หมวดผูกกับระดับ: QA-หน่วยงาน → "<หน่วย> QA › มิติ" · หน่วยงาน/รายบุคคล → "<หน่วย> › หัวข้อ/ขั้นตอน" (ที่ยังไม่ได้เลือกเอง ระบบจัดให้)

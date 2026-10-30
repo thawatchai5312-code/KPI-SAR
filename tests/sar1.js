@@ -70,7 +70,7 @@ assert(head,'found a head with both editable and view-only core kpis');
 r=C.saveSarPdca(tH,FY,own.id,'หัวหน้าเขียนของหน่วยตัวเอง',(C.getSarDoc(tH,FY).pdca[own.id]||{rev:0}).rev);assert(r.success&&r.item.by===head[0],JSON.stringify(r));
 r=C.saveSarPdca(tH,FY,other.id,'ข้ามหน่วย',0);assert(!r.success&&/ไม่มีสิทธิ์แก้ไข/.test(r.message),JSON.stringify(r));
 // หัวหน้าไม่เห็น PDCA ของตัวที่ตัวเองดูไม่ได้ (ตัว Part I–IV ระดับ QA-หน่วยงานของหน่วยอื่น — ข้อมูลจริงทุกตัวเป็นระดับ SAR จึงสร้างตัวทดสอบ)
-const myDepts=String(head[3]).split(',').map(x=>x.trim());
+const myDepts=String(head[3]).split(',').map(x=>x.trim()).concat(C.autoDeptsByOwner_(FY)[head[0]]||[]);
 const otherDept=U.filter(u=>u[2]==='head').map(u=>String(u[3]).split(',')[0].trim()).find(d=>d&&myDepts.indexOf(d)===-1);assert(otherDept);
 const ar=C.addIndicator(tA,FY,{name:'ตัวทดสอบ QA หน่วยอื่น',target:'',years:[null,null,null,null,null],months:Array(12).fill(null),levels:['QA-หน่วยงาน'],department:otherDept,cats:[{part:'Part II',category:'II-4 การป้องกันและควบคุมการติดเชื้อ'}]});assert(ar.success,ar.message);
 assert(!C.getAllData(tH,FY).data.some(k=>k.id===ar.newId),'head cannot see the QA-only kpi of another unit');

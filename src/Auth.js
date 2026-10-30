@@ -419,15 +419,15 @@ function ensureLevelColumn_() {
 // ---------------------------------------------------------------- session
 
 function publicUser_(user) {
-  return { username: user.username, tier: user.tier, depts: user.tier === "staff" ? effectiveDepts_(user, getCurrentFiscalYear_()) : user.depts, mustChange: user.mustChange };
+  var eff = user.tier === "staff" || user.tier === "head" ? effectiveDepts_(user, getCurrentFiscalYear_()) : user.depts;
+  return { username: user.username, tier: user.tier, depts: eff, headDepts: user.depts, mustChange: user.mustChange };
 }
 
 /**
- * หน่วยงานที่ผู้ใช้สังกัดในปีงบ fy: เจ้าหน้าที่ (staff) ไม่ต้องระบุในหน้าตั้งค่า — คิดจากช่อง "หน่วยงาน" ของตัวชี้วัดที่ตนเป็นผู้รับผิดชอบในปีงบนั้น
- * (อ่านชีตปีงบครั้งเดียวต่อคำขอ เก็บไว้ที่ user._ed) · หัวหน้าหน่วย/ผอ./admin ใช้ที่ระบุในหน้าตั้งค่า
+ * หน่วยงานที่คิดอัตโนมัติจากช่อง "หน่วยงาน" ของตัวชี้วัดที่ผู้ใช้เป็นผู้รับผิดชอบในปีงบ fy (staff และหัวหน้า)
+ * (อ่านชีตปีงบครั้งเดียวต่อคำขอ เก็บไว้ที่ user._ed)
  */
-function effectiveDepts_(user, fy) {
-  if (user.tier !== "staff") return user.depts;
+function ownedDepts_(user, fy) {
   user._ed = user._ed || {};
   if (!user._ed[fy]) {
     var out = [];
@@ -442,8 +442,24 @@ function effectiveDepts_(user, fy) {
     } catch (e) { out = []; }
     user._ed[fy] = out;
   }
-  user._effDepts = user._ed[fy]; // visibleCats_ (ไม่รู้ปีงบ) ใช้ค่าล่าสุดที่คิดไว้ในคำขอนี้
   return user._ed[fy];
+}
+
+/**
+ * หน่วยงานที่ผู้ใช้สังกัด (ใช้กับการมองเห็น/ตัวกรอง "หน่วยของฉัน") ในปีงบ fy
+ *  - เจ้าหน้าที่ (staff): ไม่ต้องระบุในหน้าตั้งค่า — คิดจากตัวชี้วัดที่ตนรับผิดชอบ
+ *  - หัวหน้า: หน่วยที่ระบุ (สิทธิ์หัวหน้า — user.depts) รวมหน่วยอัตโนมัติจากตัวชี้วัดที่ตนรับผิดชอบ (สิทธิ์แบบ staff)
+ *  - ผอ./admin: ที่ระบุในหน้าตั้งค่า
+ */
+function effectiveDepts_(user, fy) {
+  var out;
+  if (user.tier === "staff") out = ownedDepts_(user, fy);
+  else if (user.tier === "head") {
+    out = user.depts.slice();
+    ownedDepts_(user, fy).forEach(function(d) { if (out.indexOf(d) === -1) out.push(d); });
+  } else return user.depts;
+  user._effDepts = out; // visibleCats_ (ไม่รู้ปีงบ) ใช้ค่าล่าสุดที่คิดไว้ในคำขอนี้
+  return out;
 }
 
 /** ชื่อผู้ใช้ staff → หน่วยงานอัตโนมัติ (ปีงบ fy) อ่านชีตครั้งเดียว — ใช้แสดงในหน้าตั้งค่า */
@@ -574,8 +590,11 @@ function hasHospitalLevel_(levels) {
 function getKpiPermission_(user, kpi, fy) {
   var isOwner = parseOwners_(kpi.owner).indexOf(user.username) !== -1;
   var myDepts = effectiveDepts_(user, fy);
-  var inDept = parseDepts_(kpi.department).some(function(d) { return myDepts.indexOf(d) !== -1; });
-  if (!isOwner && user.tier === "head" && inDept) {
+  var kpiDepts = parseDepts_(kpi.department);
+  var inDept = kpiDepts.some(function(d) { return myDepts.indexOf(d) !== -1; });
+  // หัวหน้า: สิทธิ์หัวหน้า (แก้ทั้งหน่วย) ใช้เฉพาะหน่วยที่ระบุในหน้าตั้งค่า · หน่วยอัตโนมัติได้แค่สิทธิ์แบบ staff
+  var inHead = user.tier === "head" && kpiDepts.some(function(d) { return user.depts.indexOf(d) !== -1; });
+  if (!isOwner && inHead) {
     // ตัวชี้วัดที่ผู้รับผิดชอบเขียนว่า "หัวหน้าหน่วย" = หัวหน้าของหน่วยงานในแถวนั้นรับผิดชอบ (ข้ามหน่วยไม่ได้)
     isOwner = (kpi.owner || "").toString().split("/").some(function(t) { return t.trim() === HEAD_OWNER_TOKEN; });
   }
@@ -590,7 +609,7 @@ function getKpiPermission_(user, kpi, fy) {
     return { view: execView, editResults: execView, editDetails: execView, mine: isOwner, inDept: inDept, isOwner: isOwner };
   }
   // แก้ได้: เจ้าหน้าที่ = ตัวที่ตนรับผิดชอบ · หัวหน้าหน่วย = ทุกตัวของหน่วยที่ตนสังกัดเท่านั้น (ถึงจะระบุชื่อเป็นผู้รับผิดชอบของหน่วยอื่น ก็ดูได้อย่างเดียว)
-  var edit = user.tier === "head" ? inDept : isOwner;
+  var edit = user.tier === "head" ? (inHead || isOwner) : isOwner;
   // สิทธิ์พิเศษของหัวหน้าตามหน่วยที่ระบุ: หน่วย QMR = แก้ได้ทุกตัวระดับ SAR · หน่วย QA = ดู+แก้ได้ทุกตัวระดับ QA-หน่วยงาน (ทุกหน่วย)
   var special = user.tier === "head" && ((user.depts.indexOf("QMR") !== -1 && levels.indexOf("SAR") !== -1) || (user.depts.indexOf("QA") !== -1 && levels.indexOf("QA-หน่วยงาน") !== -1));
   // "ของฉัน" = ตัวที่แก้ได้ หรือที่ระบุชื่อตัวเองเป็นผู้รับผิดชอบ (สิทธิ์พิเศษข้างบนไม่นับเป็นของฉัน)
@@ -692,7 +711,7 @@ function getUsersForAdmin(token) {
     requireAdmin_(token);
     var auto = autoDeptsByOwner_(getCurrentFiscalYear_());
     var users = readUsers_(ensureUsersSheet_()).map(function(u) {
-      return { username: u.username, tier: u.tier, depts: u.depts.join(","), autoDepts: u.tier === "staff" ? (auto[u.username] || []).join(", ") : "", mustChange: u.mustChange, lastAccess: u.lastAccess, lastEdit: u.lastEdit };
+      return { username: u.username, tier: u.tier, depts: u.depts.join(","), autoDepts: u.tier === "staff" || u.tier === "head" ? (auto[u.username] || []).join(", ") : "", mustChange: u.mustChange, lastAccess: u.lastAccess, lastEdit: u.lastEdit };
     });
     return { success: true, users: users };
   } catch (e) {

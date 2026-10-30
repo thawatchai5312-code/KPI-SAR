@@ -3142,7 +3142,7 @@
       if (!isPrivilegedUser()) {
         // staff / หัวหน้าหน่วย: ใส่ตัวเองเป็นผู้รับผิดชอบ และหน่วยงานของตัวเองให้ก่อน (แก้ได้)
         document.getElementById('add-kpi-owner').value = currentUser.username;
-        document.getElementById('add-kpi-dept').value = (currentUser.depts || []).join(' / ');
+        document.getElementById('add-kpi-dept').value = (currentUser.tier === 'head' ? (currentUser.headDepts || currentUser.depts || []) : (currentUser.depts || [])).join(' / ');
       }
       document.getElementById('add-kpi-extra-cats').innerHTML = '';
       document.getElementById('add-kpi-levels').innerHTML = levelCheckboxesHtml('add-level-cb', isPrivilegedUser() ? ['SAR'] : ['หน่วยงาน']);
@@ -3734,7 +3734,7 @@
       const tierOptions = (cur) => Object.keys(TIER_LABELS)
         .map(t => `<option value="${t}" ${t === cur ? 'selected' : ''}>${t} (${TIER_LABELS[t]})</option>`).join('');
       let html = `<table class="user-table"><thead><tr>
-        <th>ชื่อผู้ใช้</th><th>Tier</th><th>หน่วยงาน (หัวหน้าหน่วยขึ้นไประบุ · เจ้าหน้าที่อัตโนมัติ)</th><th>รหัสผ่าน</th><th>เข้าใช้ล่าสุด</th><th>แก้ไขล่าสุด</th><th style="width:150px;">จัดการ</th></tr></thead><tbody>`;
+        <th>ชื่อผู้ใช้</th><th>Tier</th><th>หน่วยงาน (หัวหน้าหน่วยขึ้นไประบุ · เจ้าหน้าที่/หัวหน้ามีอัตโนมัติเพิ่ม)</th><th>รหัสผ่าน</th><th>เข้าใช้ล่าสุด</th><th>แก้ไขล่าสุด</th><th style="width:150px;">จัดการ</th></tr></thead><tbody>`;
       settingsUsers.forEach((u, i) => {
         const isSelf = !u.isNew && u.username === currentUser.username;
         const resetMark = settingsResets[u.username] ? ' ✔' : '';
@@ -3743,7 +3743,7 @@
           <td><select class="editable-input" onchange="settingsUsers[${i}].tier = this.value; renderSettingsForm()">${tierOptions(u.tier)}</select></td>
           ${u.tier === 'staff'
             ? `<td style="font-size:12px; color:#475569;" title="เจ้าหน้าที่ไม่ต้องระบุหน่วยงาน: ระบบคิดจากช่อง หน่วยงาน ของตัวชี้วัดที่ตนเป็นผู้รับผิดชอบ (ปีงบปัจจุบัน)">🔄 อัตโนมัติ: ${esc(u.autoDepts) || '(ยังไม่มีตัวชี้วัดที่รับผิดชอบ)'}</td>`
-            : `<td><input type="text" class="editable-input" value="${esc(u.depts)}" placeholder="เช่น ER,IPD (หัวหน้า: หน่วยที่เป็นหัวหน้า · QMR = แก้ SAR ได้ทุกตัว · QA = ดู/แก้ QA ได้ทุกตัว)" onchange="settingsUsers[${i}].depts = this.value"></td>`}
+            : `<td><input type="text" class="editable-input" value="${esc(u.depts)}" placeholder="เช่น ER,IPD (หัวหน้า: หน่วยที่เป็นหัวหน้า · QMR = แก้ SAR ได้ทุกตัว · QA = ดู/แก้ QA ได้ทุกตัว)" onchange="settingsUsers[${i}].depts = this.value">${u.tier === 'head' && u.autoDepts ? `<div style="font-size:11px; color:#475569; margin-top:2px;" title="หัวหน้าได้สิทธิ์แบบเจ้าหน้าที่ในหน่วยเหล่านี้ (จากตัวชี้วัดที่ตนรับผิดชอบ)">🔄 อัตโนมัติ (สิทธิ์แบบเจ้าหน้าที่): ${esc(u.autoDepts)}</div>` : ''}</td>`}
           <td style="font-size:11px; text-align:center; font-weight:700; color:${u.isNew || u.mustChange ? '#b45309' : '#047857'};">${u.isNew || u.mustChange ? '⚠️ ยังเป็นรหัสตั้งต้น' : '✓ เปลี่ยนแล้ว'}</td>
           <td style="font-size:11px; text-align:center;">${esc(u.lastAccess) || '-'}</td>
           <td style="font-size:11px; text-align:center;">${esc(u.lastEdit) || '-'}</td>
@@ -5139,7 +5139,7 @@
       clt.loaded = false; clt.loading = false; clt.refreshing = false; clt.fy = null; clt.items = {}; clt.kpis = [];
       clt.sel = 'O|mission'; clt.draft = null; clt.remote = null; clt.open = new Set();
     }
-    function cltCanUse() { return !!currentUser && (isPrivilegedUser() || (currentUser.tier === 'head' && (currentUser.depts || []).indexOf('PCT') !== -1)); }
+    function cltCanUse() { return !!currentUser && (isPrivilegedUser() || (currentUser.tier === 'head' && (currentUser.headDepts || currentUser.depts || []).indexOf('PCT') !== -1)); }
     function cltItem(key) { return clt.items[key] || { text: '', rev: 0, at: '', by: '' }; }
     function cltFilledText(key) { // มีข้อความ (รวมร่าง) — Process Management นับว่ามีถ้า Driver เลือกตัวชี้วัดไว้ เพราะ Export ดึงแถวมาให้เอง
       if (/^D\|[^|]+\|pm$/.test(key) && cltPmDisplayRows(key.split('|')[1]).length) return true;
