@@ -419,7 +419,49 @@ function ensureLevelColumn_() {
 // ---------------------------------------------------------------- session
 
 function publicUser_(user) {
-  return { username: user.username, tier: user.tier, depts: user.depts, mustChange: user.mustChange };
+  return { username: user.username, tier: user.tier, depts: user.tier === "staff" ? effectiveDepts_(user, getCurrentFiscalYear_()) : user.depts, mustChange: user.mustChange };
+}
+
+/**
+ * หน่วยงานที่ผู้ใช้สังกัดในปีงบ fy: เจ้าหน้าที่ (staff) ไม่ต้องระบุในหน้าตั้งค่า — คิดจากช่อง "หน่วยงาน" ของตัวชี้วัดที่ตนเป็นผู้รับผิดชอบในปีงบนั้น
+ * (อ่านชีตปีงบครั้งเดียวต่อคำขอ เก็บไว้ที่ user._ed) · หัวหน้าหน่วย/ผอ./admin ใช้ที่ระบุในหน้าตั้งค่า
+ */
+function effectiveDepts_(user, fy) {
+  if (user.tier !== "staff") return user.depts;
+  user._ed = user._ed || {};
+  if (!user._ed[fy]) {
+    var out = [];
+    try {
+      var sheet = getFiscalSheet_(fy), last = sheet ? sheet.getLastRow() : 0;
+      if (last >= 2) {
+        sheet.getRange(2, 26, last - 1, 2).getValues().forEach(function(r) {
+          if (parseOwners_(r[0]).indexOf(user.username) === -1) return;
+          parseDepts_(r[1]).forEach(function(d) { if (out.indexOf(d) === -1) out.push(d); });
+        });
+      }
+    } catch (e) { out = []; }
+    user._ed[fy] = out;
+  }
+  user._effDepts = user._ed[fy]; // visibleCats_ (ไม่รู้ปีงบ) ใช้ค่าล่าสุดที่คิดไว้ในคำขอนี้
+  return user._ed[fy];
+}
+
+/** ชื่อผู้ใช้ staff → หน่วยงานอัตโนมัติ (ปีงบ fy) อ่านชีตครั้งเดียว — ใช้แสดงในหน้าตั้งค่า */
+function autoDeptsByOwner_(fy) {
+  var map = {};
+  try {
+    var sheet = getFiscalSheet_(fy), last = sheet ? sheet.getLastRow() : 0;
+    if (last >= 2) {
+      sheet.getRange(2, 26, last - 1, 2).getValues().forEach(function(r) {
+        var depts = parseDepts_(r[1]);
+        parseOwners_(r[0]).forEach(function(n) {
+          map[n] = map[n] || [];
+          depts.forEach(function(d) { if (map[n].indexOf(d) === -1) map[n].push(d); });
+        });
+      });
+    }
+  } catch (e) {}
+  return map;
 }
 
 // session ผูกกับรหัสผ่านปัจจุบัน — เปลี่ยน/รีเซ็ตรหัสผ่านแล้ว session เก่าทั้งหมดใช้ไม่ได้
@@ -510,7 +552,8 @@ function visibleCats_(user, kpi, perm) {
     out = cats.filter(function(c) { return isCorePart_(c.part); });
   } else if (user.tier !== "admin") {
     var depts = parseDepts_(kpi.department);
-    out = cats.filter(function(c) { var d = viewDeptOfPart_(c.part); return depts.indexOf(d) === -1 || user.depts.indexOf(d) !== -1; });
+    var mine = user._effDepts || user.depts; // staff: หน่วยที่คิดอัตโนมัติจากตัวชี้วัดของตน
+    out = cats.filter(function(c) { var d = viewDeptOfPart_(c.part); return depts.indexOf(d) === -1 || mine.indexOf(d) !== -1; });
   }
   return out.length > 0 ? out : [cats[0]];
 }
@@ -530,7 +573,8 @@ function hasHospitalLevel_(levels) {
  */
 function getKpiPermission_(user, kpi, fy) {
   var isOwner = parseOwners_(kpi.owner).indexOf(user.username) !== -1;
-  var inDept = parseDepts_(kpi.department).some(function(d) { return user.depts.indexOf(d) !== -1; });
+  var myDepts = effectiveDepts_(user, fy);
+  var inDept = parseDepts_(kpi.department).some(function(d) { return myDepts.indexOf(d) !== -1; });
   if (!isOwner && user.tier === "head" && inDept) {
     // ตัวชี้วัดที่ผู้รับผิดชอบเขียนว่า "หัวหน้าหน่วย" = หัวหน้าของหน่วยงานในแถวนั้นรับผิดชอบ (ข้ามหน่วยไม่ได้)
     isOwner = (kpi.owner || "").toString().split("/").some(function(t) { return t.trim() === HEAD_OWNER_TOKEN; });
@@ -547,8 +591,11 @@ function getKpiPermission_(user, kpi, fy) {
   }
   // แก้ได้: เจ้าหน้าที่ = ตัวที่ตนรับผิดชอบ · หัวหน้าหน่วย = ทุกตัวของหน่วยที่ตนสังกัดเท่านั้น (ถึงจะระบุชื่อเป็นผู้รับผิดชอบของหน่วยอื่น ก็ดูได้อย่างเดียว)
   var edit = user.tier === "head" ? inDept : isOwner;
-  // "ของฉัน" = ตัวที่แก้ได้ หรือที่ระบุชื่อตัวเองเป็นผู้รับผิดชอบ
+  // สิทธิ์พิเศษของหัวหน้าตามหน่วยที่ระบุ: หน่วย QMR = แก้ได้ทุกตัวระดับ SAR · หน่วย QA = ดู+แก้ได้ทุกตัวระดับ QA-หน่วยงาน (ทุกหน่วย)
+  var special = user.tier === "head" && ((user.depts.indexOf("QMR") !== -1 && levels.indexOf("SAR") !== -1) || (user.depts.indexOf("QA") !== -1 && levels.indexOf("QA-หน่วยงาน") !== -1));
+  // "ของฉัน" = ตัวที่แก้ได้ หรือที่ระบุชื่อตัวเองเป็นผู้รับผิดชอบ (สิทธิ์พิเศษข้างบนไม่นับเป็นของฉัน)
   var mine = edit || isOwner;
+  if (special) edit = true;
   var view = edit || isOwner;
   if (!view) {
     // หลายระดับ: เห็นได้ถ้าระดับใดระดับหนึ่งให้สิทธิ์ดู
@@ -643,8 +690,9 @@ function changePassword(token, oldPassword, newPassword) {
 function getUsersForAdmin(token) {
   try {
     requireAdmin_(token);
+    var auto = autoDeptsByOwner_(getCurrentFiscalYear_());
     var users = readUsers_(ensureUsersSheet_()).map(function(u) {
-      return { username: u.username, tier: u.tier, depts: u.depts.join(","), mustChange: u.mustChange, lastAccess: u.lastAccess, lastEdit: u.lastEdit };
+      return { username: u.username, tier: u.tier, depts: u.depts.join(","), autoDepts: u.tier === "staff" ? (auto[u.username] || []).join(", ") : "", mustChange: u.mustChange, lastAccess: u.lastAccess, lastEdit: u.lastEdit };
     });
     return { success: true, users: users };
   } catch (e) {
@@ -714,6 +762,24 @@ function generateAccountsFromOwners(token) {
     } finally {
       lock.releaseLock();
     }
+  } catch (e) {
+    return { success: false, message: e.toString() };
+  }
+}
+
+/** รายชื่อสำหรับ dropdown ค้นหาช่องผู้รับผิดชอบ/หน่วยงาน (ผู้ใช้ทุกคนเรียกได้ — มีแต่ชื่อบัญชีกับชื่อหน่วย ไม่มีรหัสผ่าน/Tier) */
+function getDirectory(token) {
+  try {
+    requireUser_(token);
+    var sheet = getUsersSpreadsheet_().getSheetByName(USERS_SHEET_NAME);
+    var users = sheet ? readUsers_(sheet) : [];
+    var names = users.map(function(u) { return u.username; });
+    var units = {};
+    users.forEach(function(u) { u.depts.forEach(function(d) { units[d] = 1; }); });
+    var ks = getFiscalSheet_(getCurrentFiscalYear_()), last = ks ? ks.getLastRow() : 0;
+    if (last >= 2) ks.getRange(2, 27, last - 1, 1).getValues().forEach(function(r) { parseDepts_(r[0]).forEach(function(d) { units[d] = 1; }); });
+    var cmp = function(a, b) { return String(a).localeCompare(String(b), "th"); };
+    return { success: true, users: names.sort(cmp), units: Object.keys(units).sort(cmp) };
   } catch (e) {
     return { success: false, message: e.toString() };
   }

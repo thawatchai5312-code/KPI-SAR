@@ -836,6 +836,9 @@
     }
   
     .tbl-wrap::after { content: ''; display: block; height: calc(100vh - 140px); } /* เว้นที่ท้ายตาราง ให้แถวสุดท้ายก็เลื่อนขึ้นมาบนสุดได้ (tblScrollToRow) */
+    #ac-pop { position: fixed; z-index: 100001; display: none; min-width: 180px; max-width: 320px; max-height: 232px; overflow-y: auto; background: #fff; border: 1px solid #94a3b8; border-radius: 8px; box-shadow: 0 8px 24px rgba(15,23,42,.22); padding: 3px; }
+    #ac-pop .ac-item { padding: 5px 9px; font-size: 13px; border-radius: 6px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #ac-pop .ac-item.on, #ac-pop .ac-item:hover { background: #dbeafe; color: #1e3a8a; }
     .fwd-chk { display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px; font-weight: 600; color: #166534; background: #f0fdf4; border: 1px solid #86efac; border-radius: 8px; padding: 3px 8px; cursor: pointer; white-space: nowrap; }
     .fwd-chk input { margin: 0; }
     .tbl-fwd { display: block; margin-top: 3px; font-size: 10.5px; line-height: 1.2; font-weight: 600; color: #166534; cursor: pointer; }
@@ -1613,6 +1616,7 @@
         <p>กรุณารอสักครู่ ระบบกำลังจัดเตรียมข้อมูลทั้งหมด</p>
       `;
       fetchAllDataFromServer();
+      acLoad(); // รายชื่อสำหรับ dropdown ค้นหาผู้รับผิดชอบ/หน่วยงาน
     }
 
     function applyUserUi() {
@@ -1639,6 +1643,7 @@
       editingKey = null; selectedKey = null; pendingSelectAfterLoad = null; selectedFy = null;
       openParts.clear(); openCats.clear(); lastInViewKey = null;
       globalProgressData = [];
+      acDir = { users: [], units: [] }; acHide();
       tourReset();
       liveReset();
       linksReset();
@@ -3642,18 +3647,99 @@
         .getUsersForAdmin(sessionToken);
     }
 
+    // ===================== dropdown ค้นหา ผู้รับผิดชอบ / หน่วยงาน =====================
+    // ช่อง ed-owner / ed-dept (การ์ดและแถวตาราง) และ add-kpi-owner / add-kpi-dept (ฟอร์มเพิ่ม): พิมพ์แล้วขึ้นรายการที่ตรงกับ "ชื่อที่กำลังพิมพ์" (ส่วนหลังเครื่องหมาย / หรือ ,)
+    // รายชื่อ = บัญชีผู้ใช้ทั้งหมด + ชื่อหน่วย (จากเซิร์ฟเวอร์ getDirectory) รวมกับค่าที่มีอยู่แล้วในตัวชี้วัดที่โหลดมา
+    let acDir = { users: [], units: [] }, acIdx = -1, acInput = null, acSkip = false;
+    const AC_FIELDS = { 'ed-owner': 'users', 'add-kpi-owner': 'users', 'ed-dept': 'units', 'add-kpi-dept': 'units' };
+    function acLoad() {
+      if (!sessionToken) return;
+      google.script.run.withSuccessHandler(r => { if (r && r.success) acDir = { users: r.users || [], units: r.units || [] }; }).withFailureHandler(() => {}).getDirectory(sessionToken);
+    }
+    function acSource(kind) {
+      const set = new Set(acDir[kind]);
+      globalDatabase.forEach(k => (kind === 'users' ? String(k.owner || '').split('/') : pdfKpiDepts(k)).forEach(t => { t = String(t).trim(); if (t) set.add(t); }));
+      return Array.from(set).sort((a, b) => a.localeCompare(b, 'th'));
+    }
+    function acParts(input) {
+      const kind = AC_FIELDS[input.id], v = input.value;
+      const re = kind === 'users' ? /\/(?=[^\/]*$)/ : /[\/,](?=[^\/,]*$)/;
+      const m = re.exec(v);
+      return { kind: kind, prefix: m ? v.slice(0, m.index + 1) : '', token: (m ? v.slice(m.index + 1) : v).trim(), re: re };
+    }
+    function acHide() {
+      const pop = document.getElementById('ac-pop');
+      if (pop) pop.style.display = 'none';
+      acIdx = -1; acInput = null;
+    }
+    function acShow(input) {
+      if (acSkip || !AC_FIELDS[input.id] || input.readOnly || input.disabled) return;
+      const p = acParts(input);
+      const have = new Set(p.prefix.split(p.kind === 'users' ? '/' : /[\/,]/).map(x => x.trim()).filter(Boolean));
+      const q = p.token.toLowerCase();
+      const list = acSource(p.kind).filter(n => !have.has(n) && (q === '' || n.toLowerCase().includes(q)) && n.toLowerCase() !== q).slice(0, 40);
+      let pop = document.getElementById('ac-pop');
+      if (!pop) { pop = document.createElement('div'); pop.id = 'ac-pop'; document.body.appendChild(pop); }
+      if (list.length === 0) { acHide(); return; }
+      acInput = input; acIdx = -1;
+      pop.innerHTML = list.map((n, i) => `<div class="ac-item" data-i="${i}" data-v="${esc(n)}">${esc(n)}</div>`).join('');
+      const r = input.getBoundingClientRect();
+      pop.style.minWidth = Math.max(180, Math.round(r.width)) + 'px';
+      pop.style.left = Math.max(4, Math.min(r.left, window.innerWidth - 330)) + 'px';
+      const below = window.innerHeight - r.bottom;
+      if (below < 160 && r.top > below) { pop.style.top = 'auto'; pop.style.bottom = (window.innerHeight - r.top + 2) + 'px'; }
+      else { pop.style.bottom = 'auto'; pop.style.top = (r.bottom + 2) + 'px'; }
+      pop.style.display = 'block';
+    }
+    function acPick(v) {
+      const input = acInput;
+      if (!input) return;
+      const p = acParts(input);
+      input.value = (p.prefix ? p.prefix.replace(/\s*$/, ' ') : '') + v;
+      acHide();
+      acSkip = true;
+      input.dispatchEvent(new Event('input', { bubbles: true })); // ให้ระบบรู้ว่าแก้แล้ว (ป้ายยังไม่ได้บันทึก / วาดหมวดตามหน่วยงาน)
+      acSkip = false;
+      input.focus();
+    }
+    function acMove(d) {
+      const items = document.querySelectorAll('#ac-pop .ac-item');
+      if (!items.length) return;
+      acIdx = (acIdx + d + items.length) % items.length;
+      items.forEach((it, i) => it.classList.toggle('on', i === acIdx));
+      items[acIdx].scrollIntoView({ block: 'nearest' });
+    }
+    document.addEventListener('input', e => { if (e.target && AC_FIELDS[e.target.id]) acShow(e.target); });
+    document.addEventListener('focusout', e => { if (e.target && AC_FIELDS[e.target.id]) setTimeout(() => { if (document.activeElement !== acInput) acHide(); }, 150); });
+    document.addEventListener('mousedown', e => {
+      const it = e.target.closest && e.target.closest('#ac-pop .ac-item');
+      if (it) { e.preventDefault(); acPick(it.dataset.v); }
+    });
+    document.addEventListener('keydown', e => {
+      const pop = document.getElementById('ac-pop');
+      if (!pop || pop.style.display !== 'block' || !acInput) return;
+      if (e.key === 'ArrowDown') { e.preventDefault(); acMove(1); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); acMove(-1); }
+      else if (e.key === 'Enter' && acIdx >= 0) { e.preventDefault(); e.stopPropagation(); acPick(pop.querySelectorAll('.ac-item')[acIdx].dataset.v); }
+      else if (e.key === 'Escape') { e.stopPropagation(); acHide(); }
+    }, true);
+    window.addEventListener('scroll', e => { if (acInput && e.target !== acInput && !(e.target && e.target.id === 'ac-pop')) acHide(); }, true); // ข้อความในช่องเลื่อนเองตอนพิมพ์ยาว (scroll ของ input) ไม่นับ
+    window.addEventListener('resize', acHide);
+
     function renderSettingsForm() {
       const tierOptions = (cur) => Object.keys(TIER_LABELS)
         .map(t => `<option value="${t}" ${t === cur ? 'selected' : ''}>${t} (${TIER_LABELS[t]})</option>`).join('');
       let html = `<table class="user-table"><thead><tr>
-        <th>ชื่อผู้ใช้</th><th>Tier</th><th>หน่วยงาน (คั่นด้วย , / หรือเว้นวรรค)</th><th>รหัสผ่าน</th><th>เข้าใช้ล่าสุด</th><th>แก้ไขล่าสุด</th><th style="width:150px;">จัดการ</th></tr></thead><tbody>`;
+        <th>ชื่อผู้ใช้</th><th>Tier</th><th>หน่วยงาน (หัวหน้าหน่วยขึ้นไประบุ · เจ้าหน้าที่อัตโนมัติ)</th><th>รหัสผ่าน</th><th>เข้าใช้ล่าสุด</th><th>แก้ไขล่าสุด</th><th style="width:150px;">จัดการ</th></tr></thead><tbody>`;
       settingsUsers.forEach((u, i) => {
         const isSelf = !u.isNew && u.username === currentUser.username;
         const resetMark = settingsResets[u.username] ? ' ✔' : '';
         html += `<tr>
           <td><input type="text" class="editable-input" value="${esc(u.username)}" ${u.isNew ? '' : 'disabled'} onchange="settingsUsers[${i}].username = this.value.trim()"></td>
-          <td><select class="editable-input" onchange="settingsUsers[${i}].tier = this.value">${tierOptions(u.tier)}</select></td>
-          <td><input type="text" class="editable-input" value="${esc(u.depts)}" placeholder="เช่น ER,IPD" onchange="settingsUsers[${i}].depts = this.value"></td>
+          <td><select class="editable-input" onchange="settingsUsers[${i}].tier = this.value; renderSettingsForm()">${tierOptions(u.tier)}</select></td>
+          ${u.tier === 'staff'
+            ? `<td style="font-size:12px; color:#475569;" title="เจ้าหน้าที่ไม่ต้องระบุหน่วยงาน: ระบบคิดจากช่อง หน่วยงาน ของตัวชี้วัดที่ตนเป็นผู้รับผิดชอบ (ปีงบปัจจุบัน)">🔄 อัตโนมัติ: ${esc(u.autoDepts) || '(ยังไม่มีตัวชี้วัดที่รับผิดชอบ)'}</td>`
+            : `<td><input type="text" class="editable-input" value="${esc(u.depts)}" placeholder="เช่น ER,IPD (หัวหน้า: หน่วยที่เป็นหัวหน้า · QMR = แก้ SAR ได้ทุกตัว · QA = ดู/แก้ QA ได้ทุกตัว)" onchange="settingsUsers[${i}].depts = this.value"></td>`}
           <td style="font-size:11px; text-align:center; font-weight:700; color:${u.isNew || u.mustChange ? '#b45309' : '#047857'};">${u.isNew || u.mustChange ? '⚠️ ยังเป็นรหัสตั้งต้น' : '✓ เปลี่ยนแล้ว'}</td>
           <td style="font-size:11px; text-align:center;">${esc(u.lastAccess) || '-'}</td>
           <td style="font-size:11px; text-align:center;">${esc(u.lastEdit) || '-'}</td>

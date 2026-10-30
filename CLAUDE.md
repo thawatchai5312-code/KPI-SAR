@@ -73,6 +73,8 @@ bash tests/run.sh          # ทั้งหมด รวมหน้าเว�
   AD–AE แก้ไขล่าสุดเมื่อ/โดย · AF–AG เข้าดูล่าสุดเมื่อ/โดย · AH วิธีสรุปผล · AI วันที่อัปเดตการวิเคราะห์ · AJ ความถี่ ·
   AK หมวดเพิ่มเติม · AL ตัวชี้วัดแม่ · AM หัวข้อกลุ่ม (`KPI_COLS = 39`)
 - Tier ผู้ใช้: `admin` | `executive` (ผอ./QMR) | `head` (หัวหน้าหน่วย) | `staff` — แก้ข้อมูลได้ทุกปีงบตามสิทธิ์
+  **หน่วยงานของผู้ใช้**: `staff` ไม่ต้องระบุในหน้าตั้งค่า — `effectiveDepts_(user, fy)` คิดจากช่อง "หน่วยงาน" ของตัวชี้วัดที่ตนเป็นผู้รับผิดชอบในปีงบที่เปิดดู (อ่านชีตครั้งเดียวต่อคำขอ เก็บที่ `user._ed`; `visibleCats_` ใช้ `user._effDepts`) · `head` ต้องระบุหน่วยที่เป็นหัวหน้า (แก้ได้ทั้งหน่วย) · หัวหน้าที่ระบุหน่วย **QMR** = แก้ได้ทุกตัวระดับ SAR · ระบุหน่วย **QA** = ดู+แก้ได้ทุกตัวระดับ QA-หน่วยงาน (ไม่นับเป็น "ของฉัน") — ใน `getKpiPermission_`
+  dropdown ค้นหาช่องผู้รับผิดชอบ/หน่วยงาน (`ed-owner` `ed-dept` `add-kpi-owner` `add-kpi-dept`, `acShow`/`acPick` ใน Index.html): รายชื่อจาก `getDirectory` (บัญชีผู้ใช้ + หน่วย) รวมกับค่าที่มีอยู่ในตัวชี้วัดที่โหลดมา
 - Script Properties ที่เป็น flag "ทำแล้ว" ของ migration/นำเข้า: `HEAD_SEED_V1`, `UNIT_CATEGORIES_V1`, `NURSING_LEVEL_TO_UNIT_V1`,
   `OWNER_LEVEL_V1`, `NSO_IMPORT_BACKUP_V1`, `PCT_IMPORT_V1`, `TIDY_BACKUP_V1`, `VIEW_HEADINGS_V1`, และ `TOUR_HIDE_V1:<user>`
 - ไฟล์ NSO ต้นทาง (`NURSING_SPREADSHEET_URL`) มีชีต Users ที่เก็บรหัสผ่านแบบข้อความ — **ห้ามนำเข้า/คัดลอก**
