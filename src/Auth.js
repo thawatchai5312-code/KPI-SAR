@@ -798,7 +798,8 @@ function getDirectory(token) {
     var ks = getFiscalSheet_(getCurrentFiscalYear_()), last = ks ? ks.getLastRow() : 0;
     if (last >= 2) ks.getRange(2, 27, last - 1, 1).getValues().forEach(function(r) { parseDepts_(r[0]).forEach(function(d) { units[d] = 1; }); });
     var cmp = function(a, b) { return String(a).localeCompare(String(b), "th"); };
-    return { success: true, users: names.sort(cmp), units: Object.keys(units).sort(cmp) };
+    var heads = users.filter(function(u) { return u.tier === "head"; }).map(function(u) { return u.username; });
+    return { success: true, users: names.sort(cmp), units: Object.keys(units).sort(cmp), heads: heads.sort(cmp) };
   } catch (e) {
     return { success: false, message: e.toString() };
   }

@@ -837,6 +837,8 @@
     }
   
     .tbl-wrap::after { content: ''; display: block; height: calc(100vh - 140px); } /* เว้นที่ท้ายตาราง ให้แถวสุดท้ายก็เลื่อนขึ้นมาบนสุดได้ (tblScrollToRow) */
+    #rp-filterbar.person-on .fb-scope { opacity: .4; pointer-events: none; }
+    .rp-person-box input { font-size: 13px; }
     #ac-pop { position: fixed; z-index: 100001; display: none; min-width: 180px; max-width: 320px; max-height: 232px; overflow-y: auto; background: #fff; border: 1px solid #94a3b8; border-radius: 8px; box-shadow: 0 8px 24px rgba(15,23,42,.22); padding: 3px; }
     #ac-pop .ac-item { padding: 5px 9px; font-size: 13px; border-radius: 6px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     #ac-pop .ac-item.on, #ac-pop .ac-item:hover { background: #dbeafe; color: #1e3a8a; }
@@ -1994,11 +1996,12 @@
     // จำนวนบนปุ่ม (นับเฉพาะตัวที่อยู่ในมุมมองปัจจุบัน): ปุ่มขอบเขต นับตามสถานะที่เลือก · ปุ่มสถานะ นับตามขอบเขตที่เลือก
     function filterCounts() {
       const sc = { mine: 0, unit: 0, all: 0 }, st = { all: 0, red: 0, yellow: 0, green: 0 };
-      globalDatabase.forEach(k => {
+      const person = rptPersonOn();
+      (person ? rpt.personData : globalDatabase).forEach(k => {
         if (viewPlacements(k, treeView).length === 0) return;
         const s = kpiStatus(k).level;
         if (statusPasses(s, appliedFilters.mode)) SCOPE_BTNS.forEach(([v]) => { if (inScope(k, v)) sc[v]++; });
-        if (inScope(k, appliedFilters.scope)) { st.all++; st[s]++; }
+        if (person || inScope(k, appliedFilters.scope)) { st.all++; st[s]++; }
       });
       return { sc: sc, st: st };
     }
@@ -2136,13 +2139,15 @@
     }
 
     // ตัวชี้วัดที่ผ่านตัวกรอง เรียงแบบเดียวกับผังรายการ: หมวดหลัก → หมวดย่อย → ลำดับในชีต
-    function getOrderedKpis(ignoreStatus = false, view = treeView) {
+    function getOrderedKpis(ignoreStatus = false, view = treeView, forReport = false) {
       const f = appliedFilters;
-      const list = globalDatabase.filter(k => {
+      const person = forReport && rptPersonOn(); // KPI รายบุคคล (หน้าสรุปรายงาน): ใช้ข้อมูลที่ดึงของคนนั้น ไม่ใช้ตัวกรองขอบเขต
+      const src = person ? rpt.personData : globalDatabase;
+      const list = src.filter(k => {
         if (!ignoreStatus && !statusPasses(kpiStatus(k).level, f.mode)) return false;
-        return inScope(k, f.scope);
+        return person || inScope(k, f.scope);
       });
-      const order = new Map(globalDatabase.map((k, i) => [k.id, i]));
+      const order = new Map(src.map((k, i) => [k.id, i]));
       // ตัวชี้วัดที่อยู่หลายหมวดจะขึ้นในทุกหมวด (เป็นตัวเดียวกัน)
       const placements = [];
       list.forEach(k => viewPlacements(k, view).forEach(p => placements.push(p)));
@@ -2197,7 +2202,7 @@
 
     function updateViewTabs() {
       const counts = {};
-      VIEWS.forEach(v => { counts[v] = uniqueById(getOrderedKpis(false, v)).length; });
+      VIEWS.forEach(v => { counts[v] = uniqueById(getOrderedKpis(false, v, currentTab === 'report')).length; });
       document.querySelectorAll('.nav-group').forEach(g => { g.dataset.view = treeView; });
       document.querySelectorAll('.view-tabs .view-tab').forEach(btn => {
         const v = btn.dataset.view;
@@ -3651,20 +3656,26 @@
     // ===================== dropdown ค้นหา ผู้รับผิดชอบ / หน่วยงาน =====================
     // ช่อง ed-owner / ed-dept (การ์ดและแถวตาราง) และ add-kpi-owner / add-kpi-dept (ฟอร์มเพิ่ม): พิมพ์แล้วขึ้นรายการที่ตรงกับ "ชื่อที่กำลังพิมพ์" (ส่วนหลังเครื่องหมาย / หรือ ,)
     // รายชื่อ = บัญชีผู้ใช้ทั้งหมด + ชื่อหน่วย (จากเซิร์ฟเวอร์ getDirectory) รวมกับค่าที่มีอยู่แล้วในตัวชี้วัดที่โหลดมา
-    let acDir = { users: [], units: [] }, acIdx = -1, acInput = null, acSkip = false;
-    const AC_FIELDS = { 'ed-owner': 'users', 'add-kpi-owner': 'users', 'ed-dept': 'units', 'add-kpi-dept': 'units' };
+    let acDir = { users: [], units: [], heads: [] }, acIdx = -1, acInput = null, acSkip = false;
+    const AC_FIELDS = { 'ed-owner': 'users', 'add-kpi-owner': 'users', 'ed-dept': 'units', 'add-kpi-dept': 'units', 'rp-person': 'person' };
     function acLoad() {
       if (!sessionToken) return;
-      google.script.run.withSuccessHandler(r => { if (r && r.success) acDir = { users: r.users || [], units: r.units || [] }; }).withFailureHandler(() => {}).getDirectory(sessionToken);
+      google.script.run.withSuccessHandler(r => { if (r && r.success) acDir = { users: r.users || [], units: r.units || [], heads: r.heads || [] }; }).withFailureHandler(() => {}).getDirectory(sessionToken);
     }
-    function acSource(kind) {
+    function acSource(kind, q) {
+      if (kind === 'person') { // KPI รายบุคคล: ยังไม่พิมพ์ = รายชื่อหัวหน้าหน่วย · พิมพ์แล้ว = ค้นได้ทุกคน (บัญชีผู้ใช้ + ผู้รับผิดชอบในตัวชี้วัด)
+        if (!q) return (acDir.heads || []).slice().sort((a, b) => a.localeCompare(b, 'th'));
+        const set = new Set(acDir.users);
+        globalDatabase.forEach(k => String(k.owner || '').split('/').forEach(t => { t = t.trim(); if (t) set.add(t); }));
+        return Array.from(set).sort((a, b) => a.localeCompare(b, 'th'));
+      }
       const set = new Set(acDir[kind]);
       globalDatabase.forEach(k => (kind === 'users' ? String(k.owner || '').split('/') : pdfKpiDepts(k)).forEach(t => { t = String(t).trim(); if (t) set.add(t); }));
       return Array.from(set).sort((a, b) => a.localeCompare(b, 'th'));
     }
     function acParts(input) {
       const kind = AC_FIELDS[input.id], v = input.value;
-      const re = kind === 'users' ? /\/(?=[^\/]*$)/ : /[\/,](?=[^\/,]*$)/;
+      const re = kind === 'person' ? /$^/ : kind === 'users' ? /\/(?=[^\/]*$)/ : /[\/,](?=[^\/,]*$)/;
       const m = re.exec(v);
       return { kind: kind, prefix: m ? v.slice(0, m.index + 1) : '', token: (m ? v.slice(m.index + 1) : v).trim(), re: re };
     }
@@ -3678,7 +3689,7 @@
       const p = acParts(input);
       const have = new Set(p.prefix.split(p.kind === 'users' ? '/' : /[\/,]/).map(x => x.trim()).filter(Boolean));
       const q = p.token.toLowerCase();
-      const list = acSource(p.kind).filter(n => !have.has(n) && (q === '' || n.toLowerCase().includes(q)) && n.toLowerCase() !== q).slice(0, 40);
+      const list = acSource(p.kind, q).filter(n => !have.has(n) && (q === '' || n.toLowerCase().includes(q)) && n.toLowerCase() !== q).slice(0, 40);
       let pop = document.getElementById('ac-pop');
       if (!pop) { pop = document.createElement('div'); pop.id = 'ac-pop'; document.body.appendChild(pop); }
       if (list.length === 0) { acHide(); return; }
@@ -3699,6 +3710,7 @@
       input.value = (p.prefix ? p.prefix.replace(/\s*$/, ' ') : '') + v;
       acHide();
       acSkip = true;
+      if (input.id === 'rp-person') rptPersonCommit();
       input.dispatchEvent(new Event('input', { bubbles: true })); // ให้ระบบรู้ว่าแก้แล้ว (ป้ายยังไม่ได้บันทึก / วาดหมวดตามหน่วยงาน)
       acSkip = false;
       input.focus();
@@ -3711,6 +3723,8 @@
       items[acIdx].scrollIntoView({ block: 'nearest' });
     }
     document.addEventListener('input', e => { if (e.target && AC_FIELDS[e.target.id]) acShow(e.target); });
+    document.addEventListener('focusin', e => { if (e.target && e.target.id === 'rp-person') acShow(e.target); }); // ช่อง KPI รายบุคคล: กดแล้วกางรายชื่อหัวหน้าหน่วยทันที
+    document.addEventListener('click', e => { if (e.target && e.target.id === 'rp-person' && document.activeElement === e.target) acShow(e.target); });
     document.addEventListener('focusout', e => { if (e.target && AC_FIELDS[e.target.id]) setTimeout(() => { if (document.activeElement !== acInput) acHide(); }, 150); });
     document.addEventListener('mousedown', e => {
       const it = e.target.closest && e.target.closest('#ac-pop .ac-item');
@@ -4055,13 +4069,14 @@
 
     const RPT_SIZES = [10, 30, 50]; // ตัวอย่างบนจอแสดงทีละ 10/30/50 ตัวชี้วัด แบ่งหน้าเหมือนหน้าแรก (ตอน Export ใส่ครบทุกตัว)
     const RPT_DEFAULT_OPTS = { table: true, chart: true, detail: true, source: true, owner: true };
-    const rpt = { loaded: false, loading: false, waiters: [], orient: 'landscape', opts: Object.assign({}, RPT_DEFAULT_OPTS), unchecked: new Set(), page: 1, size: 10 };
+    const rpt = { loaded: false, loading: false, waiters: [], orient: 'landscape', opts: Object.assign({}, RPT_DEFAULT_OPTS), unchecked: new Set(), page: 1, size: 10, person: '', personData: null, personSeq: 0 };
     let rptSaveTimer = null, rptPreviewTimer = null, rptControlsBuilt = false;
 
     function rptReset() {
       clearTimeout(rptSaveTimer); clearTimeout(rptPreviewTimer);
       rpt.loaded = false; rpt.loading = false; rpt.waiters = []; rpt.orient = 'landscape';
       rpt.opts = Object.assign({}, RPT_DEFAULT_OPTS); rpt.unchecked = new Set(); rpt.page = 1; rpt.size = 10;
+      rpt.person = ''; rpt.personData = null; rpt.personSeq++; rptControlsBuilt = false;
     }
 
     function rptApplyPrefs(p) {
@@ -4104,7 +4119,7 @@
     // ตัวชี้วัด (แยกเป็นหมวด) ที่ผ่านตัวกรองหลักของมุมมองปัจจุบัน — ตัวที่อยู่หลายหมวดพิมพ์ครั้งเดียว (ในหมวดแรกที่เรียงได้)
     function rptGroups() {
       const g = {};
-      getOrderedKpis().forEach(p => {
+      getOrderedKpis(false, treeView, true).forEach(p => {
         if (!g[p.part]) g[p.part] = {};
         g[p.part][p.category] = (g[p.part][p.category] || 0) + 1;
       });
@@ -4113,13 +4128,17 @@
 
     // ตัวชี้วัดในหมวดที่ติ๊ก
     function rptChosen() {
-      return getOrderedKpis().filter(p => !rpt.unchecked.has(p.part + '||' + p.category));
+      return getOrderedKpis(false, treeView, true).filter(p => !rpt.unchecked.has(p.part + '||' + p.category));
     }
 
     function rptControlsHtml(p) {
       const opt = (key, label) => `<label class="check-row"><input type="checkbox" id="${p}-opt-${key}" onchange="rptSetOpt('${p}', '${key}', this.checked)"> ${label}</label>`;
       const orient = (v, label) => `<label class="check-row"><input type="radio" name="${p}-orient" value="${v}" onchange="rptSetOrient('${p}', '${v}')"> ${label}</label>`;
-      return `<div class="form-group"><label>1. เลือกหมวดที่จะพิมพ์ (ตามตัวกรองด้านบน)</label>
+      const personBox = p === 'rp' && rptCanPerson() ? `<div class="form-group rp-person-box"><label for="rp-person">👤 KPI รายบุคคล <span class="hint" style="margin:0;">(ผู้รับผิดชอบ)</span></label>
+          <div style="display:flex; gap:6px;"><input type="text" id="rp-person" class="editable-input" autocomplete="off" placeholder="กดเลือกหัวหน้าหน่วย หรือพิมพ์ชื่อใครก็ได้" style="flex:1; min-width:0;" onkeydown="if(event.key==='Enter'){event.preventDefault();rptPersonCommit();}" onchange="rptPersonCommit()">
+          <button type="button" class="btn btn-secondary btn-sm" id="rp-person-clear" onclick="rptPersonClear()" style="display:none;" title="ล้างการค้นหา กลับเป็นรายงานปกติ">✕ ล้าง</button></div>
+          <div id="rp-person-note" class="hint"></div></div>` : '';
+      return personBox + `<div class="form-group"><label>1. เลือกหมวดที่จะพิมพ์ (ตามตัวกรองด้านบน)</label>
           <div class="rpt-bar">
             <button type="button" class="btn btn-secondary btn-sm" onclick="rptSelectAll('${p}', true)">เลือกทั้งหมด</button>
             <button type="button" class="btn btn-secondary btn-sm" onclick="rptSelectAll('${p}', false)">ล้างทั้งหมด</button>
@@ -4138,6 +4157,7 @@
       renderFilterUi();
       updateViewTabs();
       if (!rptControlsBuilt) return;
+      rptPersonUi();
       Object.keys(rpt.opts).forEach(k => { document.getElementById(`${p}-opt-${k}`).checked = rpt.opts[k]; });
       document.querySelector(`input[name="${p}-orient"][value="${rpt.orient}"]`).checked = true;
       rptRenderCats(p);
@@ -4198,6 +4218,53 @@
       rptChanged(p, true);
     }
 
+    // ---------- KPI รายบุคคล (หน้าสรุปรายงาน · หัวหน้าหน่วยขึ้นไป) ----------
+    // ค้นชื่อผู้รับผิดชอบ → รายงานแสดงตัวชี้วัดทุกตัวของคนนั้น (ดึงจากเซิร์ฟเวอร์ getKpisOfPerson ดูอย่างเดียว ไม่ปนกับ globalDatabase) · ไม่จำค่า ล้างได้ด้วยปุ่ม ✕
+    let rptPersonTimer = null;
+    function rptCanPerson() { return !!currentUser && currentUser.tier !== 'staff'; }
+    function rptPersonOn() { return currentTab === 'report' && !!rpt.person && Array.isArray(rpt.personData); }
+    function rptPersonUi() {
+      const box = document.getElementById('rp-person'); if (!box) return;
+      if (document.activeElement !== box) box.value = rpt.person;
+      document.getElementById('rp-person-clear').style.display = rpt.person ? '' : 'none';
+      const note = document.getElementById('rp-person-note');
+      note.textContent = !rpt.person ? '' : (Array.isArray(rpt.personData) ? `แสดงตัวชี้วัดของ ${rpt.person} ทั้งหมด ${uniqueById(rpt.personData).length} ตัว (ดูอย่างเดียว · ตัวกรองขอบเขตไม่มีผล)` : 'กำลังโหลด…');
+      const fb = document.getElementById('rp-filterbar'); if (fb) fb.classList.toggle('person-on', !!rpt.person);
+    }
+    function rptPersonCommit() {
+      const box = document.getElementById('rp-person'); if (!box) return;
+      const name = box.value.trim();
+      if (!name) { rptPersonClear(); return; }
+      if (name === rpt.person) return; // เลือกจากรายการแล้ว change ตามมาตอนออกจากช่อง: ไม่โหลดซ้ำ
+      rptPersonLoad(name);
+    }
+    function rptPersonClear() {
+      rpt.person = ''; rpt.personData = null; rpt.personSeq++; rpt.page = 1;
+      const box = document.getElementById('rp-person'); if (box) box.value = '';
+      homeStale = true;
+      if (currentTab === 'report') { rptSync('rp'); rptPreviewSoon(); }
+    }
+    function rptPersonLoad(name, silent) {
+      const seq = ++rpt.personSeq, token = sessionToken;
+      rpt.person = name; if (!silent) rpt.personData = null;
+      if (!silent) { rptPersonUi(); showBusy('กำลังโหลดตัวชี้วัดของ ' + name + '…'); }
+      google.script.run
+        .withSuccessHandler(res => {
+          if (!silent) hideBusy();
+          if (seq !== rpt.personSeq || sessionToken !== token) return;
+          if (!res || !res.success) { rptPersonClear(); showAlert('ค้นหาไม่สำเร็จ', '⚠️', (res && res.message) || 'ลองใหม่อีกครั้ง'); return; }
+          rpt.personData = res.data || []; rpt.personFy = res.fy; rpt.page = 1; homeStale = true;
+          if (currentTab === 'report') { rptSync('rp'); rptRenderPreview(!!silent); }
+        })
+        .withFailureHandler(() => { if (!silent) hideBusy(); if (seq === rpt.personSeq) { rptPersonClear(); showAlert('ค้นหาไม่สำเร็จ', '⚠️', 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ ลองใหม่อีกครั้ง'); } })
+        .getKpisOfPerson(token, selectedFy, name);
+    }
+    function rptPersonRefreshSoon() { // มีคนแก้ข้อมูลระหว่างดูรายงานรายบุคคล: ดึงใหม่เงียบ ๆ
+      if (!rpt.person) return;
+      clearTimeout(rptPersonTimer);
+      rptPersonTimer = setTimeout(() => { if (rpt.person && currentTab === 'report') rptPersonLoad(rpt.person, true); }, 1500);
+    }
+
     // ---------- หน้าสรุปรายงาน: ตัวอย่างรายงาน ----------
     function rptOpenPage() {
       const rv = document.getElementById('rp-view-tabs');
@@ -4207,6 +4274,7 @@
         if (!rptControlsBuilt) { document.getElementById('rp-controls').innerHTML = rptControlsHtml('rp'); rptControlsBuilt = true; }
         rptSync('rp');
         rpt.page = 1;
+        if (rpt.person && (!Array.isArray(rpt.personData) || rpt.personFy !== selectedFy)) { rptPersonLoad(rpt.person); return; }
         rptRenderPreview();
       });
     }
@@ -4262,7 +4330,7 @@
       const total = uniqueById(rptChosen()).length;
       const hasContent = Object.keys(rpt.opts).some(k => rpt.opts[k]);
       if (total === 0 || !hasContent) {
-        paper.innerHTML = `<div class="empty-state">${total === 0 ? 'ยังไม่ได้เลือกตัวชี้วัด — ติ๊กหมวดตัวชี้วัดทางซ้าย' : 'ยังไม่ได้เลือกเนื้อหา — ติ๊กเนื้อหาที่จะพิมพ์ทางซ้าย'}</div>`;
+        paper.innerHTML = `<div class="empty-state">${total === 0 ? (rptPersonOn() ? 'ไม่พบตัวชี้วัดของ ' + esc(rpt.person) + ' ในมุมมอง/สถานะที่เลือก — ลองเปลี่ยนมุมมองหรือสถานะทางซ้าย' : 'ยังไม่ได้เลือกตัวชี้วัด — ติ๊กหมวดตัวชี้วัดทางซ้าย') : 'ยังไม่ได้เลือกเนื้อหา — ติ๊กเนื้อหาที่จะพิมพ์ทางซ้าย'}</div>`;
         more.innerHTML = ''; top.innerHTML = '';
       } else {
         const rows = rptRowCount(), pages = Math.max(1, Math.ceil(rows / rpt.size));
@@ -4408,7 +4476,7 @@
       const printedAt = new Date().toLocaleString('th-TH', { dateStyle: 'long', timeStyle: 'short' });
       let html = `<div class="pr-head"><div class="pr-hosp">โรงพยาบาลภูหลวง</div>
         <div class="pr-sub">รายงานตัวชี้วัดคุณภาพ ปีงบประมาณ ${selectedFy}</div>
-        <div class="pr-info">พิมพ์เมื่อ ${esc(printedAt)} · โดย ${esc(currentUser.username)} · จำนวน ${chosen.length} ตัวชี้วัด</div></div>`;
+        <div class="pr-info">${rptPersonOn() ? 'ผู้รับผิดชอบ: <b>' + esc(rpt.person) + '</b> · ' : ''}พิมพ์เมื่อ ${esc(printedAt)} · โดย ${esc(currentUser.username)} · จำนวน ${chosen.length} ตัวชี้วัด</div></div>`;
       const perKpi = opts.chart || opts.detail || opts.source || opts.owner;
       Object.keys(tree).sort(comparePartNames).forEach(part => {
         html += `<div class="pr-part">${esc(partLabel(part))}</div>`;
@@ -6568,7 +6636,7 @@
     }
     function liveRefreshPages() {
       if (currentTab === 'progress') loadProgressSummary();
-      if (currentTab === 'report' && typeof rptRenderPreview === 'function') rptRenderPreview(true);
+      if (currentTab === 'report' && typeof rptRenderPreview === 'function') { rptRenderPreview(true); rptPersonRefreshSoon(); }
       if (currentTab === 'sar') { sarRenderCats(); sarRender(true); }
     }
 

@@ -145,6 +145,47 @@ function decorateKpi_(user, fy, kpi, sources) {
   return kpi;
 }
 
+/**
+ * KPI รายบุคคล (หน้าสรุปรายงาน): ตัวชี้วัดทุกตัวในปีงบ fy ที่ `name` เป็นผู้รับผิดชอบ — ดูอย่างเดียว ไม่ขึ้นกับสิทธิ์ของคนค้น
+ * ใช้ได้เฉพาะหัวหน้าหน่วยขึ้นไป · นับ "หัวหน้าหน่วย"/"หัวหน้าตึก" ตามหน่วยของคนที่ค้นด้วย (ใช้ getKpiPermission_ ของคนนั้น)
+ */
+function getKpisOfPerson(token, requestedFy, name) {
+  try {
+    var user = requireUser_(token);
+    if (user.tier === "staff") return { success: false, message: "ใช้ได้เฉพาะหัวหน้าหน่วยขึ้นไป" };
+    name = (name || "").toString().trim();
+    if (!name) return { success: false, message: "กรุณาระบุชื่อผู้รับผิดชอบ" };
+    ensureFiscalSheets_();
+    var fy = resolveFiscalYear_(requestedFy);
+    var usersSheet = getUsersSpreadsheet_().getSheetByName(USERS_SHEET_NAME);
+    var target = (usersSheet ? readUsers_(usersSheet) : []).filter(function(u) { return u.username === name; })[0]
+      || { username: name, tier: "staff", depts: [] };
+    var dataV = dataVersion_(readChangeLog_());
+    var sources = getAnnualSources_(fy);
+    var data = getFiscalSheet_(fy).getDataRange().getValues();
+    var out = [];
+    for (var i = 1; i < data.length; i++) {
+      if (!data[i][0]) continue;
+      var kpi = rowToKpi_(data[i]);
+      if (!getKpiPermission_(target, kpi, fy).isOwner) continue;
+      kpi.canEditResults = false;
+      kpi.canEditDetails = false;
+      kpi.mine = false;
+      kpi.isOwner = true;
+      kpi.inDept = false;
+      kpi.cats = kpiCats_(kpi);
+      kpi.part = kpi.cats[0].part;
+      kpi.category = kpi.cats[0].category;
+      kpi.lockedYears = sources.map(function(m) { return !!(m && m[kpi.id]); });
+      kpi.pctOrder = viewPctOrder_(kpi.id);
+      out.push(kpi);
+    }
+    return { success: true, data: out, fy: fy, name: name, dataV: dataV };
+  } catch (e) {
+    return { success: false, message: e.toString() };
+  }
+}
+
 // ตัดหมวดว่าง/ซ้ำ จากรายการที่ส่งมา
 function cleanCatList_(list) {
   var seen = {}, out = [];

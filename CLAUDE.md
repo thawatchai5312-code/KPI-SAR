@@ -124,6 +124,8 @@ bash tests/run.sh          # ทั้งหมด รวมหน้าเว�
 - Export ทำในเบราว์เซอร์: Word = `docx@9.5.1`, PowerPoint = `pptxgenjs@4.0.1` โหลดจาก jsDelivr ตอนกดปุ่ม (ระบุเวอร์ชันตายตัว) · ฟอนต์ TH SarabunPSK เลขอารบิก · ขนาดตัวอักษรไทยใน docx ต้องตั้ง `sizeComplexScript`/`boldComplexScript` ด้วย
   (ไม่งั้น Word ใช้ขนาด/ตัวหนาของอักษรซับซ้อนเดิม) · ต้องทดสอบการดาวน์โหลดบน `/exec` จริงหลัง deploy ทุกครั้งที่แก้ส่วน Export (sandbox iframe ของ Apps Script)
 
+- KPI รายบุคคล (หน้าสรุปรายงาน — ช่อง 👤 ในแถบซ้าย, head/executive/admin เท่านั้น): `getKpisOfPerson(token, fy, name)` คืนตัวชี้วัด **ทุกตัว** ที่ `name` เป็นผู้รับผิดชอบ (ใช้ `getKpiPermission_` ของคนนั้นตัดสิน `isOwner` จึงนับ "หัวหน้าหน่วย"/"หัวหน้าตึก" ด้วย) ดูอย่างเดียว (`canEdit*` = false, `cats` เต็ม) · หน้าเว็บเก็บแยกที่ `rpt.person` / `rpt.personData` ไม่ปนกับ `globalDatabase` — `getOrderedKpis(…, forReport=true)` (เฉพาะ `rptGroups`/`rptChosen`/`updateViewTabs`) ใช้ข้อมูลนี้แทนและข้ามตัวกรองขอบเขต · ไม่จำค่า (`rptReset` ล้าง) · dropdown: ยังไม่พิมพ์ = `heads` จาก `getDirectory` · พิมพ์แล้ว = ทุกคน (`acSource('person', q)`)
+
 ## งานถัดไปที่ผู้ใช้วางไว้
 
 ยังไม่มี (ฟีเจอร์เอกสาร สรพ. ทำแล้ว — รายละเอียด/ข้อตกลงกับผู้ใช้ดู `docs/SAR-CLT-export.md`)
