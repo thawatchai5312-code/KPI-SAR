@@ -56,6 +56,7 @@ bash tests/run.sh          # ทั้งหมด รวมหน้าเว�
 | `src/Links.js` | เอกสารแนบตัวชี้วัด (ลิงก์ Google Drive/Docs): ชีต `KPI_Links` (แยกจากชีตปีงบ) — `getKpiLinks`, `saveKpiLink`, `deleteKpiLink` |
 | `src/Rename.js` | ✏️ เปลี่ยนชื่อหมวด/หน่วยงาน (admin, ⚙️ ตั้งค่า): `renameInfo`, `renamePreview`, `renameCommit` + ตารางชื่อเดิม→ชื่อใหม่ (Script Property `RENAME_MAP_V1` + ค่าตั้งต้น `RENAME_SEED`) |
 | `src/Forward.js` | ☑ ใช้กับปีงบถัดไปด้วย: `saveKpi`/`addIndicator` ส่งช่องที่เปลี่ยนไปปีงบที่ใหม่กว่า (`kpiAfterSave_`, `fwdApplyToYear_`, `fwdAddToYear_`) + ย้ายข้อมูล CLT ตามกลุ่มโรค (`cltMoveKpi_`) + `kpiDocImpact` (เตือนก่อนบันทึก) |
+| `src/PullPrev.js` | ⤵ ดึงข้อมูลจากปีงบก่อนหน้า (ปุ่มบนการ์ด/แถวตาราง): `pullPrevPreview` (ดูก่อน ไม่เขียน) → `pullPrevCommit` (เขียนจริง) — ผลทั้งปีย้อนหลัง G–J + รายละเอียด X + ลิงก์เอกสารแนบ |
 | `src/Index.html` | หน้าเว็บทั้งหมด (~4,700 บรรทัด) — CSS บนสุด แล้ว 4 บล็อก `<script>` |
 
 `Index.html` แบ่งด้วยคอมเมนต์ `// ===================== <ชื่อส่วน> =====================` ค้นด้วยชื่อส่วนได้:
@@ -125,6 +126,8 @@ bash tests/run.sh          # ทั้งหมด รวมหน้าเว�
   (ไม่งั้น Word ใช้ขนาด/ตัวหนาของอักษรซับซ้อนเดิม) · ต้องทดสอบการดาวน์โหลดบน `/exec` จริงหลัง deploy ทุกครั้งที่แก้ส่วน Export (sandbox iframe ของ Apps Script)
 
 - KPI รายบุคคล (หน้าสรุปรายงาน — ช่อง 👤 ในแถบซ้าย, head/executive/admin เท่านั้น): `getKpisOfPerson(token, fy, name)` คืนตัวชี้วัด **ทุกตัว** ที่ `name` เป็นผู้รับผิดชอบ (ใช้ `getKpiPermission_` ของคนนั้นตัดสิน `isOwner` จึงนับ "หัวหน้าหน่วย"/"หัวหน้าตึก" ด้วย) ดูอย่างเดียว (`canEdit*` = false, `cats` เต็ม) · หน้าเว็บเก็บแยกที่ `rpt.person` / `rpt.personData` ไม่ปนกับ `globalDatabase` — `getOrderedKpis(…, forReport=true)` (เฉพาะ `rptGroups`/`rptChosen`/`updateViewTabs`) ใช้ข้อมูลนี้แทนและข้ามตัวกรองขอบเขต · ไม่จำค่า (`rptReset` ล้าง) · dropdown: ยังไม่พิมพ์ = `heads` จาก `getDirectory` · พิมพ์แล้ว = ทุกคน (`acSource('person', q)`)
+
+- ⤵ ดึงข้อมูลจากปีงบก่อนหน้า (`src/PullPrev.js`): จับคู่ด้วยรหัสกับชีตปีงบ−1 · **เติมเฉพาะช่องที่ว่าง ไม่ทับ** · ผลทั้งปี: ช่องปี y ของปีนี้ ← ช่อง y+1 ของชีตปีก่อน; ผลปีที่แล้วถ้าปีก่อนว่างแต่รายเดือนครบ 12 ช่อง = คำนวณตามวิธีสรุป (`pullPrevMonthlySummary_`) · ปีที่ล็อก (`lockedYears`) เติมได้เฉพาะ admin/ผอ./QMR · รายละเอียด **ไม่ลงเวลา `ANALYSIS_COL`** (ผู้รับผิดชอบต้องทบทวนเอง) · ลิงก์: URL เดียวกับที่มีในปีนี้ = ผูกเพิ่มรหัส (ไม่สร้างแถวซ้ำ) · สิทธิ์ผลต้อง `editResults`, รายละเอียด/ลิงก์ต้อง `editDetails` · เขียนใต้ lock + ตรวจ `baseRev` + `propagateAnnual_` + `bumpDataVersion_` · หน้าเว็บ `pullOpen`/`pullGo` (หน้าต่าง `#modal-pull` ดูตัวอย่างก่อนยืนยัน)
 
 ## งานถัดไปที่ผู้ใช้วางไว้
 

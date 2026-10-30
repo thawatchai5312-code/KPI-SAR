@@ -238,6 +238,10 @@
     .kpi-table th.c-act { right: 0; }
     .kpi-table td.c-act { text-align: center; vertical-align: top; padding: 4px; }
     .tbl-edit-btn { padding: 3px 8px; font-size: 11.5px; }
+    .pull-sec { margin: 0 0 10px; }
+    .pull-sec h4 { margin: 0 0 4px; font-size: 13px; color: #015c8b; }
+    .pull-row { font-size: 13px; padding: 3px 0; border-bottom: 1px dashed #e2e8f0; color: #1e293b; }
+    .pull-row.ok b { color: #047857; } .pull-row.skip { color: #64748b; }
     .tbl-acts { display: flex; gap: 4px; }
     .tbl-acts .btn { flex: 1 1 0; min-width: 0; padding: 4px 0; font-size: 14px; line-height: 1.2; text-align: center; }
     .kpi-table td.c-act .dirty-mark { display: none; margin-top: 3px; font-size: 10.5px; line-height: 1.2; }
@@ -1305,6 +1309,17 @@
       <div class="modal-footer" style="display: flex; justify-content: space-between;">
         <button class="btn btn-secondary" onclick="closeConfirm(false)">ยกเลิก</button>
         <button class="btn btn-danger" onclick="closeConfirm(true)">ยืนยันดำเนินการ</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modal-pull" class="modal-overlay">
+    <div class="modal-card" style="max-width: 560px;">
+      <div class="modal-header" id="pull-title">⤵ ดึงข้อมูลจากปีงบก่อนหน้า</div>
+      <div class="modal-body" id="pull-body" style="max-height: 60vh; overflow-y: auto;"></div>
+      <div class="modal-footer" style="display: flex; justify-content: space-between;">
+        <button class="btn btn-secondary" onclick="pullClose()">ยกเลิก</button>
+        <button class="btn btn-primary" id="pull-go" onclick="pullGo()">✓ ยืนยันดึงข้อมูล</button>
       </div>
     </div>
   </div>
@@ -2616,7 +2631,7 @@
           ${fwdBoxHtml(kpi, false)}
           <span class="dirty-mark" id="dirty-mark">● ยังไม่ได้บันทึก</span>`;
       } else if (kpi.canEditResults || kpi.canEditDetails) {
-        actions = `<button class="btn btn-accent btn-sm" onclick="startEditFromCard(this)">✏️ แก้ไข</button>`;
+        actions = `<button class="btn btn-accent btn-sm" onclick="startEditFromCard(this)">✏️ แก้ไข</button> ${pullBtnHtml(false)}`;
       } else {
         actions = `<span class="hint" style="margin:0;">ดูอย่างเดียว</span>`;
       }
@@ -2967,6 +2982,80 @@
 
     function startEdit(id, key) {
       guardUnsaved(() => startEditNow(id, key));
+    }
+    // ===== ดึงข้อมูลจากปีงบก่อนหน้า (ผลทั้งปีย้อนหลัง · รายละเอียด · ลิงก์เอกสารแนบ) — ดูตัวอย่างก่อน แล้วยืนยัน =====
+    let pullState = null;
+    function pullBtnHtml(tbl) {
+      return `<button class="btn btn-secondary btn-sm${tbl ? ' tbl-edit-btn' : ''}" onclick="pullPrevFromCard(this)" title="ดึงผลทั้งปีย้อนหลัง รายละเอียด และเอกสารแนบ จากปีงบก่อนหน้า (เติมเฉพาะช่องที่ว่าง)">⤵ ปีงบก่อน</button>`;
+    }
+    function pullPrevFromCard(btn) {
+      const card = btn.closest(CARD_SEL);
+      pullOpen(card.dataset.id);
+    }
+    function pullOpen(id) {
+      const token = sessionToken, fy = selectedFy;
+      showBusy('กำลังตรวจข้อมูลปีงบก่อนหน้า…');
+      google.script.run
+        .withSuccessHandler(unbusy((res) => {
+          if (sessionToken !== token || selectedFy !== fy) return;
+          if (!res || !res.success) { showAlert('ดึงข้อมูลไม่ได้', 'ℹ️', (res && res.message) || 'ลองใหม่อีกครั้ง'); return; }
+          pullState = { id: id, fy: fy, rev: res.preview.rev, todo: res.preview.todo };
+          pullRender(res.preview);
+        }))
+        .withFailureHandler(unbusy((err) => showAlert('เกิดข้อผิดพลาด', '❌', err.toString())))
+        .pullPrevPreview(token, fy, id);
+    }
+    function pullRender(p) {
+      const yRow = y => {
+        const lab = 'ผลทั้งปี ' + y.year;
+        if (y.action === 'fill') return `<div class="pull-row ok">${lab}: <b>เติม ${esc(y.value)}</b> <span class="hint" style="margin:0;">(${esc(y.via)})</span></div>`;
+        if (y.action === 'keep') return `<div class="pull-row skip">${lab}: ข้าม — มีข้อมูลอยู่แล้ว (${esc(y.current)})</div>`;
+        if (y.action === 'locked') return `<div class="pull-row skip">${lab}: ข้าม — ปีที่ล็อก (มีค่า ${esc(y.value)} ในปีก่อน แก้ได้เฉพาะ admin / ผอ. / QMR)</div>`;
+        if (y.action === 'noperm') return `<div class="pull-row skip">${lab}: ข้าม — ไม่มีสิทธิ์แก้ผลตัวชี้วัดนี้</div>`;
+        return `<div class="pull-row skip">${lab}: ไม่มีข้อมูลในปีก่อน</div>`;
+      };
+      const d = p.details;
+      const dRow = d.action === 'fill' ? `<div class="pull-row ok"><b>เติม</b> ${p.details.length} ตัวอักษร<div class="hint" style="margin:2px 0 0; white-space:pre-line;">${esc(d.text)}${d.length > d.text.length ? '…' : ''}</div></div>`
+        : d.action === 'keep' ? '<div class="pull-row skip">ข้าม — ปีนี้มีรายละเอียดอยู่แล้ว</div>'
+        : d.action === 'noperm' ? '<div class="pull-row skip">ข้าม — ไม่มีสิทธิ์แก้รายละเอียดตัวชี้วัดนี้</div>'
+        : '<div class="pull-row skip">ไม่มีรายละเอียดในปีก่อน</div>';
+      const lRows = p.links.length ? p.links.map(l => {
+        const t = l.action === 'new' ? ['ok', 'เพิ่มลิงก์'] : l.action === 'attach' ? ['ok', 'ผูกกับลิงก์ที่มีอยู่ในปีนี้'] : l.action === 'keep' ? ['skip', 'ข้าม — ผูกไว้แล้ว'] : ['skip', 'ข้าม — ไม่มีสิทธิ์แนบ'];
+        return `<div class="pull-row ${t[0]}">${esc(l.title)}: ${t[0] === 'ok' ? '<b>' + t[1] + '</b>' : t[1]}</div>`;
+      }).join('') : '<div class="pull-row skip">ไม่มีเอกสารแนบในปีก่อน</div>';
+      document.getElementById('pull-title').innerText = '⤵ ดึงข้อมูลจากปีงบ ' + p.prevFy;
+      document.getElementById('pull-body').innerHTML = `<div style="font-weight:700; margin-bottom:8px;">${esc(p.name)}</div>
+        <div class="pull-sec"><h4>📊 ผลทั้งปีย้อนหลัง</h4>${p.years.map(yRow).join('')}</div>
+        <div class="pull-sec"><h4>📝 รายละเอียด / การวิเคราะห์</h4>${dRow}</div>
+        <div class="pull-sec"><h4>📎 เอกสารแนบ</h4>${lRows}</div>
+        <div class="hint">เติมเฉพาะช่องที่ว่าง · ไม่ทับข้อมูลที่มีอยู่ · รายละเอียดที่ดึงมายังไม่นับว่าอัปเดตการวิเคราะห์ของปีนี้</div>
+        ${p.todo === 0 ? '<div style="margin-top:8px; font-weight:700; color:#b45309;">ไม่มีข้อมูลใหม่ให้ดึง</div>' : ''}`;
+      const go = document.getElementById('pull-go');
+      go.disabled = p.todo === 0; go.style.opacity = p.todo === 0 ? '.5' : '1';
+      document.getElementById('modal-pull').style.display = 'flex';
+    }
+    function pullClose() { document.getElementById('modal-pull').style.display = 'none'; pullState = null; }
+    function pullGo() {
+      if (!pullState || pullState.todo === 0) return;
+      const st = pullState, token = sessionToken;
+      pullClose();
+      showBusy('กำลังดึงข้อมูล…');
+      google.script.run
+        .withSuccessHandler(unbusy((res) => {
+          if (sessionToken !== token) return;
+          if (!res || !res.success) { showAlert(res && res.conflict ? 'ข้อมูลเปลี่ยนไป' : 'ดึงข้อมูลไม่สำเร็จ', res && res.conflict ? '⚠️' : '❌', (res && res.message) || 'ลองใหม่อีกครั้ง'); return; }
+          if (selectedFy !== st.fy) return;
+          if (res.kpi) {
+            const idx = globalDatabase.findIndex(k => k.id === res.kpi.id);
+            if (idx !== -1) { globalDatabase[idx] = res.kpi; dbVersion++; rerenderCard(res.kpi.id); renderTree(); }
+            if (currentTab === 'progress') loadProgressSummary();
+          }
+          if (res.done && res.done.links) linksLoad();
+          const d = res.done || {};
+          showToast(res.changed ? '✅ ดึงข้อมูลแล้ว' + (d.years ? ' · ผลทั้งปี ' + d.years + ' ปี' : '') + (d.details ? ' · รายละเอียด' : '') + (d.links ? ' · ลิงก์ ' + d.links : '') : 'ℹ️ ' + res.message);
+        }))
+        .withFailureHandler(unbusy((err) => showAlert('เกิดข้อผิดพลาด', '❌', err.toString())))
+        .pullPrevCommit(token, st.fy, st.id, st.rev);
     }
     // รหัสตัวชี้วัดอ่านจาก data-attribute ของการ์ด ไม่ฝังในโค้ดของปุ่ม (รหัสที่มีเครื่องหมายคำพูดจะไม่ทำให้ปุ่มพัง)
     function startEditFromCard(btn) {
@@ -6887,7 +6976,7 @@
           </div>`;
         }
       } else if (kpi.canEditResults || kpi.canEditDetails) {
-        act = `<button class="btn btn-accent btn-sm tbl-edit-btn" onclick="startEditFromCard(this)">✏️ แก้ไข</button>`;
+        act = `<button class="btn btn-accent btn-sm tbl-edit-btn" onclick="startEditFromCard(this)">✏️ แก้ไข</button> ${pullBtnHtml(true)}`;
       } else {
         act = `<span class="hint" style="margin:0;">ดูอย่างเดียว</span>`;
       }
