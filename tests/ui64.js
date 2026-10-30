@@ -36,6 +36,10 @@ async function open(b,user){
  const pg=await open(br,ad);
  await pg.waitForFunction(()=>acDir.heads&&acDir.heads.length>0,null,{timeout:20000});
  await pg.evaluate(()=>switchMenu('report'));await pg.waitForSelector('#rp-person');await pg.waitForFunction(()=>document.querySelectorAll('#rp-paper .pr-main, #rp-paper table').length>0||document.querySelector('#rp-paper .empty-state'),null,{timeout:60000});
+ // ค่าตั้งต้นเนื้อหาที่จะพิมพ์: ไม่ติ๊ก "ที่มาแหล่งข้อมูล" · ค่าที่จำไว้เก่า (ไม่มี v:2) ถูกเมินเฉพาะช่องนี้
+ assert.deepStrictEqual(await pg.evaluate(()=>[rpt.opts.source,document.getElementById('rp-opt-source').checked,rpt.opts.table,rpt.opts.owner]),[false,false,true,true]);
+ assert.deepStrictEqual(await pg.evaluate(()=>{const o=Object.assign({},rpt.opts);rptApplyPrefs({opts:{source:true,table:false}});const a=[rpt.opts.source,rpt.opts.table];rptApplyPrefs({v:2,opts:{source:true}});const b=rpt.opts.source;rpt.opts=o;return [a,b]}),[[false,false],true]);
+ await pg.evaluate(()=>{rpt.opts.source=false;rpt.opts.table=true;rptSync('rp')});
  const items=()=>pg.evaluate(()=>[...document.querySelectorAll('#ac-pop .ac-item')].map(e=>e.dataset.v));
  const base=await pg.evaluate(()=>uniqueById(rptChosen()).length);assert(base>0,'base count');
  // กดช่อง → รายชื่อหัวหน้าหน่วยเรียงตามตัวอักษร

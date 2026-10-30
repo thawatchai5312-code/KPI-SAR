@@ -562,7 +562,9 @@ function saveReportPrefs(token, prefs) {
     var clean = {
       scope: ["mine", "dept", "all"].indexOf(p.scope) !== -1 ? p.scope : "mine",
       orient: p.orient === "portrait" ? "portrait" : "landscape",
-      opts: { table: o.table !== false, chart: o.chart !== false, detail: o.detail !== false, source: o.source !== false, owner: o.owner !== false },
+      opts: { table: o.table !== false, chart: o.chart !== false, detail: o.detail !== false, source: o.source === true, owner: o.owner !== false }, // ที่มาแหล่งข้อมูล: ค่าตั้งต้นไม่ติ๊ก
+      v: 2, // v2 = ค่าที่จำไว้ใช้ได้ (v ต่ำกว่า/ไม่มี = บันทึกก่อนเปลี่ยนค่าตั้งต้น 'ที่มา' เป็นไม่ติ๊ก หน้าเว็บจึงไม่ใช้ค่า source เก่า)
+
       unchecked: (Array.isArray(p.unchecked) ? p.unchecked : []).slice(0, 400).map(function(x) { return String(x).slice(0, 120); })
     };
     var json = JSON.stringify(clean);

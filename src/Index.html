@@ -4068,7 +4068,7 @@
     }
 
     const RPT_SIZES = [10, 30, 50]; // ตัวอย่างบนจอแสดงทีละ 10/30/50 ตัวชี้วัด แบ่งหน้าเหมือนหน้าแรก (ตอน Export ใส่ครบทุกตัว)
-    const RPT_DEFAULT_OPTS = { table: true, chart: true, detail: true, source: true, owner: true };
+    const RPT_DEFAULT_OPTS = { table: true, chart: true, detail: true, source: false, owner: true };
     const rpt = { loaded: false, loading: false, waiters: [], orient: 'landscape', opts: Object.assign({}, RPT_DEFAULT_OPTS), unchecked: new Set(), page: 1, size: 10, person: '', personData: null, personSeq: 0 };
     let rptSaveTimer = null, rptPreviewTimer = null, rptControlsBuilt = false;
 
@@ -4081,7 +4081,7 @@
 
     function rptApplyPrefs(p) {
       if (p.orient === 'portrait' || p.orient === 'landscape') rpt.orient = p.orient;
-      if (p.opts) Object.keys(RPT_DEFAULT_OPTS).forEach(k => { if (typeof p.opts[k] === 'boolean') rpt.opts[k] = p.opts[k]; });
+      if (p.opts) Object.keys(RPT_DEFAULT_OPTS).forEach(k => { if (k === 'source' && !(p.v >= 2)) return; /* ค่าเก่าก่อนเปลี่ยนค่าตั้งต้น: ให้ทุกคนเริ่มที่ไม่ติ๊ก 'ที่มา' */ if (typeof p.opts[k] === 'boolean') rpt.opts[k] = p.opts[k]; });
       if (Array.isArray(p.unchecked)) rpt.unchecked = new Set(p.unchecked);
     }
 
