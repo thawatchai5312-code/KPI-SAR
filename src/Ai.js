@@ -681,7 +681,7 @@ function aiSaveSettings(token, s) {
     lock.waitLock(30000);
     var key = (s.key || "").toString().trim();
     if (key) {
-      if (!/^AIza[0-9A-Za-z_\-]{20,80}$/.test(key)) return { success: false, message: "รูปแบบ API key ไม่ถูกต้อง (ควรขึ้นต้นด้วย AIza)" };
+      if (!/^(AIza[0-9A-Za-z_\-]{20,80}|AQ\.[0-9A-Za-z_\-.]{20,300})$/.test(key)) return { success: false, message: "รูปแบบ API key ไม่ถูกต้อง (คีย์ของ Google AI Studio ขึ้นต้นด้วย AQ. หรือ AIza)" };
       p.setProperty("AI_KEY", key);
     }
     if (s.clearKey === true) p.deleteProperty("AI_KEY");

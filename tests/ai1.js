@@ -21,6 +21,7 @@ assert.deepStrictEqual(JSON.parse(JSON.stringify(C.aiStatus(tS))),{success:true,
 // ---- ตั้งค่า: เฉพาะ admin · ตรวจรูปแบบ · ไม่ส่งคีย์เต็มกลับ
 assert(!C.aiSaveSettings(tS,{key:'x'}).success,'staff cannot save');assert(!C.aiGetSettings(tS).success);
 assert(!C.aiSaveSettings(tA,{key:'bad'}).success);
+{const aq='AQ.Ab8RN6'+'x'.repeat(40);const ra=C.aiSaveSettings(tA,{key:aq});assert(ra.success&&ra.keyMasked.indexOf('AQ.A')===0&&JSON.stringify(ra).indexOf(aq)===-1,'new AQ. key format accepted '+JSON.stringify(ra));}
 const KEY='AIza'+'B'.repeat(35);
 r=C.aiSaveSettings(tA,{key:KEY,model:'gemini-flash-latest',limit:3,enabled:true});assert(r.success&&r.hasKey&&r.keyMasked==='AIza••••'+KEY.slice(-4)&&JSON.stringify(r).indexOf(KEY)===-1,JSON.stringify(r));
 assert(!C.aiSaveSettings(tA,{limit:9999}).success);
