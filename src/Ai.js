@@ -247,6 +247,7 @@ function aiCallGemini_(cfg, system, contents, temperature, maxTokens) {
   if (cand && cand.content && cand.content.parts) cand.content.parts.forEach(function(p) { if (p.text) text += p.text; });
   if (!text.trim()) {
     if (cand && cand.finishReason === "SAFETY") throw new Error("AI ไม่ตอบข้อความนี้ (ถูกบล็อกโดยตัวกรองความปลอดภัย)");
+    if (cand && cand.finishReason === "MAX_TOKENS") throw new Error("AI คิดนานจนเกินความยาวที่กำหนดและยังไม่ได้ตอบ ลองใหม่ หรือให้ admin เปลี่ยนเป็นรุ่น Flash-Lite");
     throw new Error("AI ไม่ได้ตอบกลับ ลองใหม่อีกครั้ง");
   }
   return text;
@@ -514,7 +515,7 @@ function aiAnalyze(token, fy, kind, ref, draft) {
     var parts = [{ text: prompt }];
     att.pdfs.forEach(function(f) { parts.push({ inline_data: { mime_type: "application/pdf", data: f.data } }); });
     consumed = aiConsume_(user.username, cfg.limit);
-    var answer = aiClean_(aiCallGemini_(cfg, AI_SYSTEM, [{ role: "user", parts: parts }], 0.3, 1800));
+    var answer = aiClean_(aiCallGemini_(cfg, AI_SYSTEM, [{ role: "user", parts: parts }], 0.3, 8192));
     return { success: true, text: answer, files: att.report, used: consumed, limit: cfg.limit };
   } catch (e) {
     if (consumed !== null && user) aiRefund_(user.username);
@@ -641,7 +642,7 @@ function aiChat(token, fy, messages, page) {
       return { role: m.role, parts: [{ text: text }] };
     });
     consumed = aiConsume_(user.username, cfg.limit);
-    var answer = aiClean_(aiCallGemini_(cfg, AI_CHAT_SYSTEM, contents, 0.5, 1200));
+    var answer = aiClean_(aiCallGemini_(cfg, AI_CHAT_SYSTEM, contents, 0.5, 4096));
     return { success: true, text: answer, used: consumed, limit: cfg.limit };
   } catch (e) {
     if (consumed !== null && user) aiRefund_(user.username);
@@ -719,8 +720,9 @@ function aiTest(token) {
         if (/^gemini/.test(name) && (m.supportedGenerationMethods || []).indexOf("generateContent") !== -1) models.push(name);
       });
     } catch (e) { models = []; }
-    var text = aiCallGemini_(cfg, "ตอบสั้น ๆ ภาษาไทย", [{ role: "user", parts: [{ text: "ตอบคำว่า พร้อมใช้งาน" }] }], 0, 50);
-    return { success: true, reply: aiClean_(text).slice(0, 100), model: cfg.model, models: models.slice(0, 20) };
+    var t0 = new Date().getTime();
+    var text = aiCallGemini_(cfg, "ตอบสั้น ๆ ภาษาไทย", [{ role: "user", parts: [{ text: "ตอบคำว่า พร้อมใช้งาน" }] }], 0, 1024);
+    return { success: true, reply: aiClean_(text).slice(0, 100), model: cfg.model, models: models.slice(0, 20), seconds: Math.round((new Date().getTime() - t0) / 100) / 10 };
   } catch (e) {
     return { success: false, message: String(e && e.message ? e.message : e).replace(/^Error: /, "") };
   }
