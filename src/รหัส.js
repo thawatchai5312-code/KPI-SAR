@@ -608,6 +608,79 @@ function recordViews(token, fy, ids) {
   }
 }
 
+/**
+ * สร้างแถวตัวชี้วัดใหม่ 1 แถว (ไม่เขียนชีต) — ใช้ร่วมกันโดย addIndicator และนำเข้าตัวชี้วัดรายบุคคล (PersonalImport.js)
+ * data = ค่าทั้งชีตปีงบ (ใช้นับลำดับในหมวด · ผู้เรียกที่สร้างหลายแถวต้องต่อแถวที่สร้างแล้วเข้า data เอง)
+ * idTime = ตัวเลขต่อท้ายรหัส "KPI-<idTime>" (ไม่ส่ง = เวลาปัจจุบัน; นำเข้าหลายแถวต้องส่งค่าไม่ซ้ำกัน)
+ * คืน { error } หรือ { row, newId, cats, newItem }
+ */
+function buildNewKpiRow_(user, fy, sheet, data, newItem, privileged, idTime) {
+    // หมวด: ส่งมาเป็นรายการ cats (หมวดแรก = หมวดหลัก) หรือ part/category เดี่ยวๆ แบบเดิม
+    var cats = cleanCatList_(newItem.cats && newItem.cats.length ? newItem.cats : [{ part: newItem.part, category: newItem.category }]);
+    newItem.name = arabicDigits_((newItem.name || "").toString().trim());
+    ["target", "templateDetails", "dataSource"].forEach(function(f) {
+      if (newItem[f] !== undefined && newItem[f] !== null) newItem[f] = arabicDigits_(newItem[f].toString());
+    });
+    if (cats.length === 0 || !newItem.name) {
+      return { error: "กรุณาระบุ หมวดหลัก หมวดหมู่ย่อย และชื่อตัวชี้วัด" };
+    }
+    newItem.part = cats[0].part;
+    newItem.category = cats[0].category;
+    var coreInvolved = cats.some(function(c) { return isCorePart_(c.part); });
+    var newLevels = cleanLevelList_(newItem.levels || (newItem.level ? [newItem.level] : []), []);
+    if (newLevels.length === 0) newLevels = [DEFAULT_KPI_LEVEL];
+    if (coreInvolved && !hasHospitalLevel_(newLevels)) {
+      return { error: "หมวด Part I–IV ต้องเป็นตัวชี้วัดระดับ SAR หรือ QA-หน่วยงาน (ถ้าเป็นระดับรายบุคคล/หน่วยงาน ให้ตั้งชื่อหมวดอื่น)" };
+    }
+    // ผู้เพิ่ม (ที่ไม่ใช่ admin) ต้องเห็นตัวชี้วัดที่ตัวเองเพิ่ม จึงใส่ตัวเองเป็นผู้รับผิดชอบให้
+    // ยกเว้น ผอ./QMR ที่เพิ่มตัวชี้วัด Part I–IV ระดับ SAR/QA ซึ่งเห็นได้อยู่แล้ว
+    var seesAnyway = user.tier === "admin" || (user.tier === "executive" && coreInvolved && hasHospitalLevel_(newLevels));
+    if (!seesAnyway) {
+      var owners = parseOwners_(newItem.owner);
+      if (owners.indexOf(user.username) === -1) owners.unshift(user.username);
+      newItem.owner = owners.join(" / ");
+    }
+    if (!privileged && !(newItem.department || "").toString().trim()) newItem.department = (user.tier === "head" ? user.depts : effectiveDepts_(user, fy)).join(" / ");
+    // ช่องหน่วยงานยังว่าง แต่ระบุผู้รับผิดชอบ → ใช้หน่วยงานของผู้รับผิดชอบ
+    if (!(newItem.department || "").toString().trim() && newItem.owner) newItem.department = deptsOfOwners_(newItem.owner).join(" / ");
+    // หมวดผูกกับระดับ: QA-หน่วยงาน → "<หน่วย> QA › มิติ" · หน่วยงาน/รายบุคคล → "<หน่วย> › หัวข้อ/ขั้นตอน" (ที่ยังไม่ได้เลือกเอง ระบบจัดให้)
+    var kinds = viewLevelKinds_(newLevels);
+    cats = viewFillPlaceholders_(viewBindCats_(cats, parseDepts_(newItem.department), { qa: kinds.qa, unit: kinds.unit }), newItem.name);
+    if (kinds.sar && !cats.some(function(c) { return isCorePart_(c.part); })) {
+      return { error: "ตัวชี้วัดระดับ SAR ต้องเลือกหมวด รพ. (Part I–IV) อย่างน้อย 1 หมวด" };
+    }
+    newItem.part = cats[0].part;
+    newItem.category = cats[0].category;
+    // ผู้เพิ่มต้องเห็นตัวชี้วัดที่ตัวเองเพิ่ม (เช่น ผอ. เพิ่มได้เฉพาะ Part I–IV ระดับ SAR/QA)
+    var probe = { part: newItem.part, category: newItem.category, cats: cats, owner: newItem.owner || "", department: newItem.department || "", levels: newLevels };
+    if (!getKpiPermission_(user, probe, fy).view) {
+      return { error: "บัญชีผอ./QMR เพิ่มได้เฉพาะตัวชี้วัด Part I–IV ระดับ SAR/QA หรือที่ตัวเองเป็นผู้รับผิดชอบ" };
+    }
+
+    var count = data.filter(function(r) {
+      return r[2] && r[2].toString().trim() === newItem.part.trim() &&
+             r[3] && r[3].toString().trim() === newItem.category.trim();
+    }).length;
+    var autoNo = count + 1;
+    var levels = newLevels;
+
+    var newId = "KPI-" + (idTime || new Date().getTime());
+    var newRow = [
+      newId, autoNo, newItem.part, newItem.category, newItem.name, newItem.target,
+      newItem.years[0], newItem.years[1], newItem.years[2], newItem.years[3], newItem.years[4],
+      newItem.months[0], newItem.months[1], newItem.months[2], newItem.months[3],
+      newItem.months[4], newItem.months[5], newItem.months[6], newItem.months[7],
+      newItem.months[8], newItem.months[9], newItem.months[10], newItem.months[11],
+      newItem.templateDetails || "", newItem.dataSource || "", newItem.owner || "", newItem.department || "",
+      "", levels.join(", "), nowStamp_(), user.username, "", "",
+      SUMMARY_METHODS.indexOf(newItem.summaryMethod) !== -1 ? newItem.summaryMethod : DEFAULT_SUMMARY_METHOD,
+      (newItem.templateDetails || newItem.dataSource) ? nowStamp_() : "",
+      FREQUENCIES.indexOf(newItem.frequency) !== -1 ? newItem.frequency : DEFAULT_FREQUENCY,
+      formatExtraCats_(cats.slice(1))
+    ];
+  return { row: newRow, newId: newId, cats: cats, newItem: newItem };
+}
+
 // เพิ่มตัวชี้วัดใหม่ในปีงบที่เลือก — ทุกคนที่ล็อกอิน (staff ขึ้นไป) เพิ่มได้ (ปีงบถัดไปจะคัดลอกตามจากปีล่าสุดเอง)
 //  - staff/head: เพิ่มได้เฉพาะปีงบปัจจุบัน และระบบใส่ตัวเองเป็นผู้รับผิดชอบให้เสมอ
 //  - หมวด Part I–IV ต้องมีระดับ SAR หรือ QA-หน่วยงาน อย่างน้อย 1 ระดับ (หมวดอื่นตั้งชื่อเองได้)
@@ -625,70 +698,10 @@ function addIndicator(token, fy, newItem) {
     if (!privileged && fy !== getCurrentFiscalYear_()) {
       return { success: false, message: "เพิ่มตัวชี้วัดใหม่ได้เฉพาะปีงบปัจจุบัน (" + getCurrentFiscalYear_() + ")" };
     }
-    // หมวด: ส่งมาเป็นรายการ cats (หมวดแรก = หมวดหลัก) หรือ part/category เดี่ยวๆ แบบเดิม
-    var cats = cleanCatList_(newItem.cats && newItem.cats.length ? newItem.cats : [{ part: newItem.part, category: newItem.category }]);
-    newItem.name = arabicDigits_((newItem.name || "").toString().trim());
-    ["target", "templateDetails", "dataSource"].forEach(function(f) {
-      if (newItem[f] !== undefined && newItem[f] !== null) newItem[f] = arabicDigits_(newItem[f].toString());
-    });
-    if (cats.length === 0 || !newItem.name) {
-      return { success: false, message: "กรุณาระบุ หมวดหลัก หมวดหมู่ย่อย และชื่อตัวชี้วัด" };
-    }
-    newItem.part = cats[0].part;
-    newItem.category = cats[0].category;
-    var coreInvolved = cats.some(function(c) { return isCorePart_(c.part); });
-    var newLevels = cleanLevelList_(newItem.levels || (newItem.level ? [newItem.level] : []), []);
-    if (newLevels.length === 0) newLevels = [DEFAULT_KPI_LEVEL];
-    if (coreInvolved && !hasHospitalLevel_(newLevels)) {
-      return { success: false, message: "หมวด Part I–IV ต้องเป็นตัวชี้วัดระดับ SAR หรือ QA-หน่วยงาน (ถ้าเป็นระดับรายบุคคล/หน่วยงาน ให้ตั้งชื่อหมวดอื่น)" };
-    }
     var data = sheet.getDataRange().getValues();
-    // ผู้เพิ่ม (ที่ไม่ใช่ admin) ต้องเห็นตัวชี้วัดที่ตัวเองเพิ่ม จึงใส่ตัวเองเป็นผู้รับผิดชอบให้
-    // ยกเว้น ผอ./QMR ที่เพิ่มตัวชี้วัด Part I–IV ระดับ SAR/QA ซึ่งเห็นได้อยู่แล้ว
-    var seesAnyway = user.tier === "admin" || (user.tier === "executive" && coreInvolved && hasHospitalLevel_(newLevels));
-    if (!seesAnyway) {
-      var owners = parseOwners_(newItem.owner);
-      if (owners.indexOf(user.username) === -1) owners.unshift(user.username);
-      newItem.owner = owners.join(" / ");
-    }
-    if (!privileged && !(newItem.department || "").toString().trim()) newItem.department = (user.tier === "head" ? user.depts : effectiveDepts_(user, fy)).join(" / ");
-    // ช่องหน่วยงานยังว่าง แต่ระบุผู้รับผิดชอบ → ใช้หน่วยงานของผู้รับผิดชอบ
-    if (!(newItem.department || "").toString().trim() && newItem.owner) newItem.department = deptsOfOwners_(newItem.owner).join(" / ");
-    // หมวดผูกกับระดับ: QA-หน่วยงาน → "<หน่วย> QA › มิติ" · หน่วยงาน/รายบุคคล → "<หน่วย> › หัวข้อ/ขั้นตอน" (ที่ยังไม่ได้เลือกเอง ระบบจัดให้)
-    var kinds = viewLevelKinds_(newLevels);
-    cats = viewFillPlaceholders_(viewBindCats_(cats, parseDepts_(newItem.department), { qa: kinds.qa, unit: kinds.unit }), newItem.name);
-    if (kinds.sar && !cats.some(function(c) { return isCorePart_(c.part); })) {
-      return { success: false, message: "ตัวชี้วัดระดับ SAR ต้องเลือกหมวด รพ. (Part I–IV) อย่างน้อย 1 หมวด" };
-    }
-    newItem.part = cats[0].part;
-    newItem.category = cats[0].category;
-    // ผู้เพิ่มต้องเห็นตัวชี้วัดที่ตัวเองเพิ่ม (เช่น ผอ. เพิ่มได้เฉพาะ Part I–IV ระดับ SAR/QA)
-    var probe = { part: newItem.part, category: newItem.category, cats: cats, owner: newItem.owner || "", department: newItem.department || "", levels: newLevels };
-    if (!getKpiPermission_(user, probe, fy).view) {
-      return { success: false, message: "บัญชีผอ./QMR เพิ่มได้เฉพาะตัวชี้วัด Part I–IV ระดับ SAR/QA หรือที่ตัวเองเป็นผู้รับผิดชอบ" };
-    }
-
-    var count = data.filter(function(r) {
-      return r[2] && r[2].toString().trim() === newItem.part.trim() &&
-             r[3] && r[3].toString().trim() === newItem.category.trim();
-    }).length;
-    var autoNo = count + 1;
-    var levels = newLevels;
-
-    var newId = "KPI-" + new Date().getTime();
-    var newRow = [
-      newId, autoNo, newItem.part, newItem.category, newItem.name, newItem.target,
-      newItem.years[0], newItem.years[1], newItem.years[2], newItem.years[3], newItem.years[4],
-      newItem.months[0], newItem.months[1], newItem.months[2], newItem.months[3],
-      newItem.months[4], newItem.months[5], newItem.months[6], newItem.months[7],
-      newItem.months[8], newItem.months[9], newItem.months[10], newItem.months[11],
-      newItem.templateDetails || "", newItem.dataSource || "", newItem.owner || "", newItem.department || "",
-      "", levels.join(", "), nowStamp_(), user.username, "", "",
-      SUMMARY_METHODS.indexOf(newItem.summaryMethod) !== -1 ? newItem.summaryMethod : DEFAULT_SUMMARY_METHOD,
-      (newItem.templateDetails || newItem.dataSource) ? nowStamp_() : "",
-      FREQUENCIES.indexOf(newItem.frequency) !== -1 ? newItem.frequency : DEFAULT_FREQUENCY,
-      formatExtraCats_(cats.slice(1))
-    ];
+    var built = buildNewKpiRow_(user, fy, sheet, data, newItem, privileged);
+    if (built.error) return { success: false, message: built.error };
+    var newRow = built.row, newId = built.newId, cats = built.cats;
     sheet.appendRow(newRow);
     if (cats.length > 1 && !sheet.getRange(1, EXTRA_CATS_COL).getValue()) {
       sheet.getRange(1, EXTRA_CATS_COL).setValue(EXTRA_CATS_HEADER).setFontWeight("bold").setBackground("#e0f2fe").setHorizontalAlignment("center");

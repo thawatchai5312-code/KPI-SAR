@@ -240,6 +240,20 @@
     .tbl-edit-btn { padding: 3px 8px; font-size: 11.5px; }
     .ai-btn { display: none !important; }
     body.ai-on .ai-btn { display: inline-flex !important; align-items: center; gap: 4px; }
+    .import-wrap { position: relative; display: inline-block; }
+    .import-menu { display: none; position: absolute; top: calc(100% + 4px); left: 0; z-index: 20; min-width: 300px; background: #fff; border: 1px solid #b7d7bd; border-radius: 10px; box-shadow: 0 10px 26px rgba(0, 0, 0, .2); padding: 4px; }
+    .import-menu.open { display: block; }
+    .import-menu button { display: block; width: 100%; text-align: left; padding: 8px 10px; border: none; background: none; border-radius: 7px; cursor: pointer; font-size: 13px; font-weight: 600; color: #1f2d24; }
+    .import-menu button:hover { background: #e8f5e9; }
+    .pimp-sum { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+    .pimp-sum span { background: #f3faf4; border: 1px solid #b7d7bd; border-radius: 999px; padding: 3px 10px; font-size: 12px; font-weight: 700; color: #064e3b; }
+    .pimp-sum span.warn { background: #fff7ed; border-color: #fdba74; color: #9a3412; }
+    .pimp-tbl { width: 100%; border-collapse: collapse; font-size: 12.5px; margin: 6px 0 12px; }
+    .pimp-tbl th, .pimp-tbl td { border: 1px solid #d5e3d8; padding: 4px 6px; vertical-align: top; text-align: left; }
+    .pimp-tbl th { background: #e8f5e9; position: sticky; top: 0; }
+    .pimp-tbl tr.skip td { color: #94a3b8; background: #f8fafc; }
+    .pimp-tbl tr.warn td { background: #fff7ed; }
+    .pimp-tgt { width: 110px; }
     .ai-row { margin-top: 4px; }
     .ai-ico { width: 1.15em; height: 1.15em; fill: currentColor; flex: 0 0 auto; }
     #ai-fab { position: fixed; right: 16px; bottom: 16px; z-index: 900; height: 56px; min-width: 56px; padding: 0 15px; border-radius: 28px; border: none; cursor: pointer; color: #fff; font-family: inherit; font-weight: 700; font-size: 14px; background: var(--primary-gradient); box-shadow: 0 10px 26px rgba(0, 74, 36, .35), inset 0 1px 0 rgba(255,255,255,.25); display: none; align-items: center; gap: 0; transition: box-shadow .2s, transform .2s; animation: aiGlow 2.4s ease-out 1; }
@@ -1066,10 +1080,14 @@
         <div style="display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap;">
           <button class="btn btn-secondary" onclick="addUserRow()">+ เพิ่มผู้ใช้</button>
           <button class="btn btn-secondary" onclick="generateAccounts()">👥 สร้างบัญชีจากผู้รับผิดชอบที่ยังไม่มีบัญชี</button>
-          <button class="btn btn-accent" onclick="openNsoImport()">📥 นำเข้า/อัปเดตตัวชี้วัดฝ่ายการพยาบาล (NSO)</button>
+          <span class="import-wrap"><button class="btn btn-accent" id="import-menu-btn" type="button" onclick="importMenuToggle(event)" aria-haspopup="true">📥 นำเข้าตัวชี้วัด ▾</button>
+            <div class="import-menu" id="import-menu" role="menu">
+              <button type="button" role="menuitem" onclick="importMenuClose();openNsoImport()">📥 นำเข้า/อัปเดตตัวชี้วัดฝ่ายการพยาบาล (NSO)</button>
+              <button type="button" role="menuitem" onclick="importMenuClose();openPct()">📥 นำเข้าตัวชี้วัด PCT</button>
+              <button type="button" role="menuitem" onclick="importMenuClose();openPersonalImport()">👤 นำเข้าตัวชี้วัดรายบุคคลจาก Google Sheet</button>
+            </div></span>
           <button class="btn btn-accent" onclick="openTidy()">🧹 จัดระเบียบข้อมูล</button>
           <button class="btn btn-accent" onclick="openRename()">✏️ เปลี่ยนชื่อ</button>
-          <button class="btn btn-accent" onclick="openPct()">📥 นำเข้าตัวชี้วัด PCT</button>
         </div>
         <div id="ai-settings" style="border: 1px solid #b7d7bd; background: #f3faf4; border-radius: 10px; padding: 10px 12px; margin-bottom: 12px;">
           <div style="font-weight: 700; margin-bottom: 6px; display: flex; align-items: center; gap: 6px; color: var(--primary-color);"><svg class="ai-ico" style="color: #c9991d;" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 2.5c.55 4.6 2.4 6.45 7 7-4.6.55-6.45 2.4-7 7-.55-4.6-2.4-6.45-7-7 4.6-.55 6.45-2.4 7-7z"/><path d="M18.5 14c.3 2.2 1.05 2.95 3.25 3.25-2.2.3-2.95 1.05-3.25 3.25-.3-2.2-1.05-2.95-3.25-3.25 2.2-.3 2.95-1.05 3.25-3.25z"/></svg> ตั้งค่า AI — น้องเป้า (Google Gemini)</div>
@@ -1091,6 +1109,24 @@
       <div class="modal-footer">
         <button class="btn btn-secondary" onclick="document.getElementById('modal-settings').style.display='none'">ยกเลิก</button>
         <button class="btn btn-primary" onclick="saveSettings()">💾 บันทึกการตั้งค่า</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modal-pimp" class="modal-overlay">
+    <div class="modal-card" style="max-width: 980px; width: 96%;">
+      <div class="modal-header">👤 นำเข้าตัวชี้วัดรายบุคคลจาก Google Sheet (ปีงบปัจจุบัน)</div>
+      <div class="modal-body" style="max-height: 72vh; overflow-y: auto;">
+        <p class="hint" style="margin-bottom: 6px;">ไฟล์ Excel (.xlsx) ให้เปิดใน Google Drive → เปิดด้วย Google ชีต → ไฟล์ → บันทึกเป็น Google ชีต แล้ววางลิงก์ที่นี่ · ไฟล์ต้องเปิดได้ด้วยบัญชี Google ที่เป็นเจ้าของสคริปต์ · คอลัมน์ที่ต้องมี: ตัวชี้วัดรายบุคคล (ชื่อผู้รับผิดชอบ) · ตัวชี้วัด · เป้าหมาย · KPI Template · หน่วยงาน</p>
+        <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+          <input type="text" id="pimp-url" class="editable-input" autocomplete="off" placeholder="https://docs.google.com/spreadsheets/d/…" style="flex: 1; min-width: 240px;" onkeydown="if(event.key==='Enter'){event.preventDefault();pimpCheck(false);}">
+          <button class="btn btn-secondary" type="button" onclick="pimpCheck(false)">🔍 ตรวจไฟล์</button>
+        </div>
+        <div id="pimp-body"><div class="empty-state">วางลิงก์แล้วกด "ตรวจไฟล์" — ขั้นตอนนี้ยังไม่เขียนข้อมูลใดๆ</div></div>
+      </div>
+      <div class="modal-footer" style="display: flex; justify-content: space-between;">
+        <button class="btn btn-secondary" onclick="document.getElementById('modal-pimp').style.display='none'">ปิด</button>
+        <button class="btn btn-primary" id="pimp-commit-btn" onclick="pimpCommit()" disabled>📥 นำเข้า</button>
       </div>
     </div>
   </div>
@@ -3704,6 +3740,102 @@
         ${sec('ตัวชี้วัดย่อยของหอ', rep.samples.kids.length, ul(rep.samples.kids, x => short(x.name) + ' <span style="color:#64748b;">↳ ' + short(x.parent, 45) + '</span>'))}
         ${sec('ตัวชี้วัดใหม่ (ตัวอย่าง)', rep.samples.created.length, ul(rep.samples.created, x => short(x)))}`;
     }
+    // ===== เมนู 📥 นำเข้าตัวชี้วัด ▾ + นำเข้าตัวชี้วัดรายบุคคลจาก Google Sheet (docs/import-personal-plan.md) =====
+    function importMenuClose() { const m = document.getElementById('import-menu'); if (m) m.classList.remove('open'); }
+    function importMenuToggle(e) { if (e) e.stopPropagation(); const m = document.getElementById('import-menu'); if (m) m.classList.toggle('open'); }
+    document.addEventListener('click', e => { if (!e.target.closest || !e.target.closest('.import-wrap')) importMenuClose(); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') importMenuClose(); });
+    let pimp = { url: '', preview: null, choices: {}, targets: {}, skip: [], busy: false };
+    function pimpDecisions() { return { people: pimp.choices, targets: pimp.targets, skip: pimp.skip }; }
+    function openPersonalImport() {
+      if (!currentUser || currentUser.tier !== 'admin') return;
+      pimp = { url: '', preview: null, choices: {}, targets: {}, skip: [], busy: false };
+      document.getElementById('pimp-url').value = '';
+      document.getElementById('pimp-body').innerHTML = '<div class="empty-state">วางลิงก์แล้วกด "ตรวจไฟล์" — ขั้นตอนนี้ยังไม่เขียนข้อมูลใดๆ</div>';
+      document.getElementById('pimp-commit-btn').disabled = true;
+      document.getElementById('modal-pimp').style.display = 'flex';
+    }
+    function pimpCheck(again) {
+      if (!sessionToken) return;
+      const url = again ? pimp.url : document.getElementById('pimp-url').value.trim();
+      if (!url) { showAlert('ยังไม่ได้วางลิงก์', 'ℹ️', 'วางลิงก์ Google ชีตของไฟล์ที่จะนำเข้าก่อนครับ'); return; }
+      if (!again) { pimp = { url: url, preview: null, choices: {}, targets: {}, skip: [], busy: false }; }
+      const token = sessionToken;
+      document.getElementById('pimp-commit-btn').disabled = true;
+      showBusy('กำลังอ่านไฟล์และตรวจกับข้อมูลในระบบ…', 300000);
+      google.script.run
+        .withSuccessHandler(unbusy(res => {
+          if (sessionToken !== token) return;
+          if (!res || !res.success) { document.getElementById('pimp-body').innerHTML = '<div class="empty-state">' + esc((res && res.message) || 'ตรวจไฟล์ไม่สำเร็จ') + '</div>'; pimp.preview = null; return; }
+          pimp.preview = res.preview; pimpRender();
+        }))
+        .withFailureHandler(unbusy(err => { document.getElementById('pimp-body').innerHTML = '<div class="empty-state">' + esc(String(err)) + '</div>'; }))
+        .personalImportPreview(token, pimp.url, pimpDecisions());
+    }
+    function pimpRender() {
+      const pv = pimp.preview; if (!pv) return;
+      const st = pv.stats;
+      const chips = [`ปีงบ ${pv.fy}`, `${st.people} คน`, `ตัวชี้วัดใหม่ ${st.include} ตัว`, st.skipSame ? `ข้าม (มีอยู่แล้ว) ${st.skipSame}` : '', `บัญชีใหม่ ${st.newAccounts}`, pv.newUnits.length ? 'หน่วยใหม่: ' + pv.newUnits.join(', ') : ''].filter(Boolean).map(t => `<span>${esc(t)}</span>`).join('')
+        + (st.review ? `<span class="warn">⚠️ เป้าหมายที่ต้องตรวจ ${st.review}</span>` : '') + (st.noTarget ? `<span>ⓘ ไม่มีเป้าหมาย ${st.noTarget}</span>` : '') + (st.similar ? `<span class="warn">มีชื่อคล้ายของคนอื่น ${st.similar}</span>` : '');
+      const people = pv.people.map(p => {
+        let act;
+        if (p.status === 'same') act = `<span style="color:#047857; font-weight:700;">ใช้บัญชีเดิม <b>${esc(p.username)}</b> (พบตัวชี้วัดชุดนี้ของบัญชีนี้อยู่แล้ว)</span>`;
+        else if (p.status === 'collision') act = `<span style="color:#9a3412; font-weight:700;">ชื่อต้นซ้ำกับบัญชี "${esc(p.existing.username)}" (${esc(p.existing.tier)}${p.existing.depts.length ? ' · ' + esc(p.existing.depts.join(',')) : ''})</span><br>
+            <label><input type="radio" name="pimp-c-${esc(p.key)}" ${p.choice === 'new' ? 'checked' : ''} onchange="pimpChoice(this.dataset.k,'new')" data-k="${esc(p.key)}"> สร้างบัญชีใหม่ <b>${esc(p.choice === 'new' ? p.username : p.fullName)}</b></label>
+            <label style="margin-left:10px;"><input type="radio" name="pimp-c-${esc(p.key)}" ${p.choice === 'existing' ? 'checked' : ''} onchange="pimpChoice(this.dataset.k,'existing')" data-k="${esc(p.key)}"> ใช้บัญชีเดิมของ <b>${esc(p.existing.username)}</b> (คนเดียวกัน)</label>`;
+        else act = `สร้างบัญชี staff ใหม่ <b>${esc(p.username)}</b>`;
+        return `<tr class="${p.status === 'collision' ? 'warn' : ''}"><td>${esc(p.fullName)}</td><td>${p.kpis}</td><td>${act}</td></tr>`;
+      }).join('');
+      const rows = pv.rows.map(r => {
+        const off = !r.include;
+        const stt = r.dup === 'same' ? 'ข้าม — มีอยู่แล้ว' : r.problem ? esc(r.problem) : (r.dup === 'similar' ? '⚠️ มีชื่อเดียวกันของคนอื่น' : 'ใหม่') + (r.newUnit ? ' · หน่วยใหม่' : '');
+        const tgt = r.dup === 'same' ? esc(r.target.value || '-') : `<input type="text" class="editable-input pimp-tgt" value="${esc(r.target.value)}" data-i="${r.i}" onchange="pimpTarget(this)" placeholder="เช่น ≥ 90">`
+          + (!r.target.sure && r.target.original ? `<div style="color:#9a3412;">⚠️ ${esc(r.target.note)}<br><i>เดิม: ${esc(r.target.original)}</i></div>` : (r.target.empty ? '<div style="color:#64748b;">ⓘ ไม่มีเป้าหมายในไฟล์</div>' : (r.target.original && r.target.original !== r.target.value ? `<div style="color:#64748b;"><i>เดิม: ${esc(r.target.original)}</i></div>` : '')));
+        const can = r.dup !== 'same' && !r.problem;
+        return `<tr class="${off ? 'skip' : (!r.target.sure ? 'warn' : '')}"><td><input type="checkbox" ${r.include ? 'checked' : ''} ${can ? '' : 'disabled'} data-i="${r.i}" onchange="pimpSkip(this)"></td><td>${esc(r.owner)}</td><td>${esc(r.name)}${r.hasTemplate ? '' : ' <span style="color:#94a3b8;">(ไม่มี Template)</span>'}</td><td>${tgt}</td><td>${esc(r.unit) || '-'}</td><td>${stt}</td></tr>`;
+      }).join('');
+      document.getElementById('pimp-body').innerHTML = `<div class="pimp-sum">${chips}</div>
+        <h4 style="margin: 8px 0 2px;">👥 ผู้รับผิดชอบ</h4><table class="pimp-tbl"><thead><tr><th>ชื่อในไฟล์</th><th>ตัวชี้วัด</th><th>บัญชีในระบบ</th></tr></thead><tbody>${people}</tbody></table>
+        <h4 style="margin: 8px 0 2px;">📋 ตัวชี้วัด</h4><table class="pimp-tbl"><thead><tr><th style="width:28px;"></th><th>ผู้รับผิดชอบ (บัญชี)</th><th>ตัวชี้วัด</th><th>เป้าหมาย (แก้ได้)</th><th>หน่วยงาน</th><th>สถานะ</th></tr></thead><tbody>${rows}</tbody></table>
+        <p class="hint">ระดับ "รายบุคคล" · หมวดจัดให้อัตโนมัติตามหน่วยงาน · KPI Template ลงช่อง ที่มา/สูตร · เป้าหมายที่ปรับรูปแบบแล้ว ข้อความเดิมต่อท้ายที่มา/สูตร · ผลรายเดือนเว้นว่าง</p>`;
+      document.getElementById('pimp-commit-btn').disabled = st.include === 0;
+      document.getElementById('pimp-commit-btn').innerText = st.include ? `📥 นำเข้า ${st.include} ตัวชี้วัด` + (st.newAccounts ? ` + สร้าง ${st.newAccounts} บัญชี` : '') : '📥 นำเข้า';
+    }
+    function pimpChoice(key, choice) { pimp.choices[key] = { choice: choice }; pimpCheck(true); }
+    function pimpTarget(el) { pimp.targets[el.dataset.i] = el.value.trim(); pimpCheck(true); }
+    function pimpSkip(el) {
+      const i = Number(el.dataset.i), at = pimp.skip.indexOf(i);
+      if (!el.checked && at === -1) pimp.skip.push(i); else if (el.checked && at !== -1) pimp.skip.splice(at, 1);
+      pimpCheck(true);
+    }
+    function pimpCommit() {
+      const pv = pimp.preview; if (!pv || pv.stats.include === 0) return;
+      const st = pv.stats;
+      showConfirm(`นำเข้า ${st.include} ตัวชี้วัด เข้าปีงบ ${pv.fy}` + (st.newAccounts ? `\nและสร้างบัญชี staff ใหม่ ${st.newAccounts} บัญชี (รหัสผ่านตั้งต้น 11038 ต้องเปลี่ยนตอนเข้าครั้งแรก)` : '') + (st.review ? `\n\nยังมีเป้าหมาย ⚠️ ที่ยังไม่ได้ตรวจ ${st.review} ตัว (แก้ภายหลังในการ์ดได้)` : '') + '\n\nระบบสำรองชีตปีงบและรายชื่อผู้ใช้ไว้ก่อนเขียน', () => {
+        if (pimp.busy) return;
+        pimp.busy = true;
+        const token = sessionToken;
+        document.getElementById('pimp-commit-btn').disabled = true;
+        showBusy('กำลังนำเข้าตัวชี้วัด… อย่าปิดหน้านี้', 420000);
+        google.script.run
+          .withSuccessHandler(unbusy(res => {
+            pimp.busy = false;
+            if (sessionToken !== token) return;
+            if (!res || !res.success) { showAlert('นำเข้าไม่สำเร็จ', '❌', (res && res.message) || 'ลองใหม่อีกครั้ง'); pimpCheck(true); return; }
+            document.getElementById('pimp-body').innerHTML = `<div class="empty-state" style="text-align:left;"><b>✅ ${esc(res.message)}</b>`
+              + (res.accounts && res.accounts.length ? `<div style="margin-top:8px;">บัญชีที่สร้างใหม่ (รหัสผ่านตั้งต้น 11038): <b>${res.accounts.map(a => esc(a.username)).join(', ')}</b></div>` : '')
+              + `<div style="margin-top:8px;">ตรวจหมวดของหน่วยใหม่ในมุมมอง "หน่วยงาน" และแจ้งชื่อบัญชีให้ผู้รับผิดชอบด้วยครับ</div></div>`;
+            document.getElementById('pimp-commit-btn').disabled = true;
+            pimp.preview = null;
+            fetchAllDataFromServer(true);
+            loadSettingsUsers();
+            acLoad();
+          }))
+          .withFailureHandler(unbusy(err => { pimp.busy = false; showAlert('นำเข้าไม่สำเร็จ', '❌', String(err)); }))
+          .personalImportCommit(token, pimp.url, pimpDecisions());
+      });
+    }
+
     function openPct() {
       if (!currentUser || currentUser.tier !== 'admin') return;
       document.getElementById('modal-pct').style.display = 'flex';

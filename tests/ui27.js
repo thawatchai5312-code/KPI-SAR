@@ -17,7 +17,7 @@ const html=fs.readFileSync(require('path').join(__dirname,'../src/Index.html'),'
 
  let pg=await mkpage(); await login(pg,'Admin','Admin11038');
  await pg.click('#admin-settings-btn'); await pg.waitForSelector('#modal-settings',{state:'visible'});
- await pg.click('button:has-text("นำเข้า/อัปเดตตัวชี้วัดฝ่ายการพยาบาล")'); await pg.waitForSelector('#modal-nso',{state:'visible'});
+ await pg.click('#import-menu-btn'); await pg.click('#import-menu button:has-text("นำเข้า/อัปเดตตัวชี้วัดฝ่ายการพยาบาล")'); await pg.waitForSelector('#modal-nso',{state:'visible'});
  await pg.waitForFunction(()=>!document.getElementById('nso-commit-btn').disabled,null,{timeout:60000});
  console.log('preview text:',(await pg.innerText('#nso-body')).replace(/\n+/g,' | ').slice(0,300));
  await pg.screenshot({path:'ui27-preview.png'});

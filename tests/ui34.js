@@ -17,7 +17,7 @@ const U=h.sheets.Users.d; const setPw=(n,p)=>{const r=U.find(x=>x[0]===n);r[1]=C
  const login=async(pg,u,p)=>{await pg.fill('#login-username',u);await pg.fill('#login-password',p);await pg.click('#login-box-content button');await pg.waitForSelector('#modal-fy',{state:'visible'});await pg.click('#modal-fy button');await pg.waitForSelector('#app-login-screen',{state:'hidden'});await pg.waitForTimeout(500)};
  let pg=await mk(); await login(pg,'Admin','pw123456');
  await pg.click('#admin-settings-btn'); await pg.waitForSelector('#modal-settings',{state:'visible'}); await pg.waitForTimeout(400);
- await pg.click('button:has-text("นำเข้าตัวชี้วัด PCT")'); await pg.waitForSelector('#pct-body details',{timeout:20000});
+ await pg.click('#import-menu-btn'); await pg.click('#import-menu button:has-text("นำเข้าตัวชี้วัด PCT")'); await pg.waitForSelector('#pct-body details',{timeout:20000});
  const prev=await pg.innerText('#pct-body'); console.log('preview:',prev.replace(/\n+/g,' | ').slice(0,260));
  assert(!(await pg.isDisabled('#pct-commit-btn')));
  await pg.screenshot({path:'ui34-pct.png'});
