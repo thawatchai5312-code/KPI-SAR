@@ -58,6 +58,9 @@ var AI_SYSTEM = [
   "   [ ] มีหัวข้อครบตามที่สั่ง  [ ] ไม่เกินความยาวที่กำหนด  [ ] ไม่มี markdown",
   "   [ ] สะกดภาษาไทยถูกทุกคำ  [ ] ไม่ได้ขยายเรื่องที่ร่างเดิมของ AI เดาไว้  [ ] [ต้องเติม] ที่ยังไม่มีคนกรอกยังคงอยู่",
   "7. ข้อความเดิมในช่อง (อาจมีทั้งที่คนเขียน และที่ผู้ช่วย AI เคยร่างไว้แล้วผู้ใช้กดใส่ลงช่อง) ให้แยกก่อนใช้:",
+  "   - บรรทัดที่ขึ้นต้นด้วย [ร่าง AI] = ระบบตรวจแล้วว่าเป็นข้อความที่ผู้ช่วย AI เคยร่าง และยังไม่มีใครแก้ (เชื่อถือได้แน่นอน)",
+  "   - บรรทัดที่ไม่มีป้าย = คนเขียนหรือคนแก้แล้ว ถือเป็นข้อความที่คนเขียน ยกเว้นข้อความเก่าที่มีลักษณะร่างของ AI ชัดเจน (ดูลักษณะด้านล่าง)",
+  "   - ห้ามใส่ป้าย [ร่าง AI] ในคำตอบ",
   "   - ลักษณะร่างเดิมของ AI: ใช้หัวข้อชุดเดียวกับที่สั่ง · มี [ต้องเติม: …] · ประโยคขึ้นต้น \"ข้อสันนิษฐาน:\" · มี (จากเอกสาร: …)",
   "     · ประโยคทั่วไปที่ไม่มีรายละเอียดเฉพาะของหน่วย (ไม่มีวันที่ สถานที่ จำนวนครั้ง ชื่อกิจกรรมหรือโครงการจริง)",
   "   - ลักษณะข้อความที่คนเขียน: มีรายละเอียดเฉพาะที่ไม่ได้มาจาก <ข้อมูล> หรือ <เอกสารแนบ> เช่น วันที่ ชื่อกิจกรรม/โครงการ",
@@ -280,6 +283,7 @@ function aiClean_(text) {
   t = t.replace(/\*\*(.+?)\*\*/g, "$1").replace(/__(.+?)__/g, "$1").replace(/\*\*/g, "");
   t = t.replace(/^\s{0,3}#{1,6}\s*/gm, "");
   t = t.replace(/^\s*[\*•]\s+/gm, "- ");
+  t = t.replace(/^[ \t]*\[ร่าง AI\][ \t]*/gm, "");
   t = t.replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n");
   return t.trim();
 }
@@ -492,6 +496,78 @@ function aiDraftMonths_(kpi, draft) {
  * วิเคราะห์ด้วย AI ใส่ช่อง — kind: "detail" (รายละเอียด/การวิเคราะห์ หน้าแรก) | "pdca" (SAR) | "clt" (CLT รายตัวชี้วัด)
  * ref: รหัสตัวชี้วัด (detail/pdca) หรือ { id, group } (clt) · draft: { text, months } ข้อความร่างในช่อง + ผลรายเดือนที่ยังไม่บันทึก
  */
+// ---------------------------------------------------------------- จำร่างของ AI (แยกข้อความที่คนเขียนกับร่างเดิมของ AI)
+// เก็บเฉพาะรหัสย่อ (SHA-256 16 หลัก) ของแต่ละบรรทัดที่ AI เคยร่าง ต่อช่อง — ไม่เก็บข้อความ · ชีตซ่อน AI_Drafts (ไม่แสดงในหน้าเว็บ)
+// บรรทัดในช่องที่รหัสตรงกับที่ AI เคยร่าง = ยังไม่มีใครแก้ → ติดป้าย [ร่าง AI] ตอนส่งให้ AI · คนแก้บรรทัดนั้นแล้ว = รหัสไม่ตรง = ของคน
+var AI_DRAFT_SHEET = "AI_Drafts";
+var AI_DRAFT_TAG = "[ร่าง AI] ";
+var AI_DRAFT_MAX_HASH = 400;
+
+function aiDraftKey_(kind, id, group) { return kind === "clt" ? "clt|" + group + "|" + id : kind + "|" + id; }
+
+function aiLineNorm_(line) { return arabicDigits_(String(line || "")).replace(/^\s*\[ร่าง AI\]\s*/, "").replace(/\s+/g, " ").trim(); }
+
+function aiLineHash_(line) {
+  var bytes = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, line, Utilities.Charset.UTF_8);
+  var out = "";
+  for (var i = 0; i < 8; i++) { var b = (bytes[i] + 256) % 256; out += (b < 16 ? "0" : "") + b.toString(16); }
+  return out;
+}
+
+function aiDraftSheet_(create) {
+  var ss = SpreadsheetApp.openByUrl(SPREADSHEET_URL), sh = ss.getSheetByName(AI_DRAFT_SHEET);
+  if (!sh && create) {
+    sh = ss.insertSheet(AI_DRAFT_SHEET);
+    sh.getRange(1, 1, 1, 3).setValues([["ช่อง (ประเภท|รหัส)", "รหัสย่อบรรทัดที่ AI ร่าง", "อัปเดตเมื่อ"]]).setFontWeight("bold");
+    sh.hideSheet();
+  }
+  return sh;
+}
+
+/** key → { row, hashes: [] } ของช่องที่ขอ (อ่านชีตครั้งเดียว · อ่านไม่ได้ = ว่าง) */
+function aiDraftRead_(keys) {
+  var out = {};
+  try {
+    var sh = aiDraftSheet_(false), last = sh ? sh.getLastRow() : 0;
+    if (last < 2) return out;
+    sh.getRange(2, 1, last - 1, 2).getValues().forEach(function(r, i) {
+      var k = String(r[0] || "");
+      if (keys.indexOf(k) !== -1) out[k] = { row: i + 2, hashes: String(r[1] || "").split(",").filter(String) };
+    });
+  } catch (e) {}
+  return out;
+}
+
+/** ติดป้าย [ร่าง AI] หน้าบรรทัดที่ AI เคยร่างและยังไม่มีใครแก้ */
+function aiTagDraft_(text, hashes) {
+  if (!text || !hashes || !hashes.length) return text;
+  var set = {};
+  hashes.forEach(function(h) { set[h] = true; });
+  return String(text).split("\n").map(function(line) {
+    var n = aiLineNorm_(line);
+    return n && set[aiLineHash_(n)] ? AI_DRAFT_TAG + n : line;
+  }).join("\n");
+}
+
+/** จำบรรทัดของคำตอบ AI ไว้ (ใต้ lock · ทำไม่ได้ก็ข้าม ไม่กระทบคำตอบ) */
+function aiDraftRemember_(key, answer) {
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(5000)) return;
+  try {
+    var hs = [];
+    String(answer || "").split("\n").forEach(function(line) { var n = aiLineNorm_(line); if (n) hs.push(aiLineHash_(n)); });
+    if (!hs.length) return;
+    var sh = aiDraftSheet_(true), cur = aiDraftRead_([key])[key];
+    var seen = {}, merged = [];
+    hs.concat(cur ? cur.hashes : []).forEach(function(h) { if (!seen[h]) { seen[h] = 1; merged.push(h); } });
+    var row = cur ? cur.row : sh.getLastRow() + 1;
+    sh.getRange(row, 1, 1, 3).setNumberFormat("@").setValues([[key, merged.slice(0, AI_DRAFT_MAX_HASH).join(","), nowStamp_()]]);
+  } catch (e) {
+  } finally {
+    lock.releaseLock();
+  }
+}
+
 function aiAnalyze(token, fy, kind, ref, draft) {
   var consumed = null, user = null;
   try {
@@ -527,7 +603,10 @@ function aiAnalyze(token, fy, kind, ref, draft) {
       return { success: false, message: "ประเภทการวิเคราะห์ไม่ถูกต้อง" };
     }
     var months = aiDraftMonths_(kpi, draft);
-    var details = kind === "detail" ? existing : (kpi.templateDetails || "");
+    var dKey = aiDraftKey_(kind, id, group), detKey = aiDraftKey_("detail", id, "");
+    var known = aiDraftRead_(kind === "detail" ? [dKey] : [dKey, detKey]);
+    existing = aiTagDraft_(existing, known[dKey] && known[dKey].hashes);
+    var details = kind === "detail" ? existing : aiTagDraft_(kpi.templateDetails || "", known[detKey] && known[detKey].hashes);
     var block = aiKpiBlock_(kpi, fy, months, kind === "detail" ? aiRedact_(existing) : aiRedact_(existing));
     if (kind !== "detail") block += "\nรายละเอียด/การวิเคราะห์ของตัวชี้วัด: " + (aiRedact_(details) || "(ว่าง)");
     var att = aiAttachments_(fy, id, AI_MAX_FILES, true);
@@ -536,6 +615,7 @@ function aiAnalyze(token, fy, kind, ref, draft) {
     att.pdfs.forEach(function(f) { parts.push({ inline_data: { mime_type: "application/pdf", data: f.data } }); });
     consumed = aiConsume_(user.username, cfg.limit);
     var answer = aiClean_(aiCallGemini_(cfg, AI_SYSTEM, [{ role: "user", parts: parts }], 0.3, 8192));
+    aiDraftRemember_(dKey, answer);
     return { success: true, text: answer, files: att.report, used: consumed, limit: cfg.limit };
   } catch (e) {
     if (consumed !== null && user) aiRefund_(user.username);
