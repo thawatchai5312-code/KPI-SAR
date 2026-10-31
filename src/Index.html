@@ -1147,11 +1147,12 @@
 
   <div id="modal-rename" class="modal-overlay">
     <div class="modal-card" style="max-width: 860px; width: 95%;">
-      <div class="modal-header">✏️ เปลี่ยนชื่อหมวด / หน่วยงาน</div>
+      <div class="modal-header">✏️ เปลี่ยนชื่อหมวด / หน่วยงาน / ผู้ใช้</div>
       <div class="modal-body" style="max-height: 72vh; overflow-y: auto;">
         <div class="rn-tabs">
           <button class="rn-tab" id="rn-tab-cat" onclick="rnTab('cat')">หมวด</button>
           <button class="rn-tab" id="rn-tab-unit" onclick="rnTab('unit')">หน่วยงาน</button>
+          <button class="rn-tab" id="rn-tab-user" onclick="rnTab('user')">ผู้ใช้</button>
         </div>
         <div id="rn-body"><div class="empty-state">กำลังโหลด...</div></div>
       </div>
@@ -1383,6 +1384,20 @@
       </div>
       <div class="modal-footer" style="text-align: center;">
         <button class="btn btn-primary" style="min-width: 100px;" onclick="document.getElementById('modal-alert').style.display='none'">รับทราบ</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modal-owner-pick" class="modal-overlay">
+    <div class="modal-card" style="max-width: 460px; width: 95%;">
+      <div class="modal-header">👥 ระบุนามสกุลผู้รับผิดชอบ</div>
+      <div class="modal-body" style="max-height: 60vh; overflow-y: auto;">
+        <p class="hint" style="margin: 0 0 8px;">ชื่อต่อไปนี้มีหลายคนในระบบ กรุณาเลือกให้ตรงตัว (บันทึกเป็น "ชื่อ นามสกุล")</p>
+        <div id="owner-pick-body"></div>
+      </div>
+      <div class="modal-footer" style="display: flex; justify-content: space-between;">
+        <button class="btn btn-secondary" onclick="ownerPickCancel()">ยกเลิก</button>
+        <button class="btn btn-primary" onclick="ownerPickOk()">ตกลง</button>
       </div>
     </div>
   </div>
@@ -1697,9 +1712,25 @@
       document.getElementById('login-box-content').innerHTML = loginBoxHtml(notice);
     }
 
-    function unlockApp() {
-      const username = document.getElementById('login-username').value.trim();
-      const password = document.getElementById('login-password').value;
+    // พิมพ์แต่ชื่อต้นที่ซ้ำกับหลายคน และรหัสผ่านตรงหลายบัญชี → เซิร์ฟเวอร์ส่ง choose (ชื่อเต็ม) มาให้เลือก (เก็บรหัสผ่านไว้ในหน่วยความจำชั่วคราวเท่านั้น)
+    let loginPendingPw = '';
+    function loginChooseHtml(typed, names) {
+      return `
+        <div style="font-size: 40px; margin-bottom: 10px;">👥</div>
+        <h2>มีชื่อ "${esc(typed)}" หลายคน</h2>
+        <p>เลือกชื่อ-นามสกุลของคุณ</p>
+        <div id="login-choose" style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px;">
+          ${names.map(n => `<button class="btn btn-secondary login-choose-btn" style="width: 100%; font-size: 15px; padding: 10px;" data-n="${esc(n)}" onclick="loginPickName(this.dataset.n)">${esc(n)}</button>`).join('')}
+        </div>
+        <button class="btn btn-secondary" style="width: 100%;" onclick="loginChooseBack()">← กลับ</button>
+      `;
+    }
+    function loginPickName(n) { const pw = loginPendingPw; loginPendingPw = ''; unlockApp(n, pw); }
+    function loginChooseBack() { loginPendingPw = ''; resetLoginBox(); }
+
+    function unlockApp(forceName, forcePw) {
+      const username = typeof forceName === 'string' ? forceName.trim() : document.getElementById('login-username').value.trim();
+      const password = typeof forcePw === 'string' ? forcePw : document.getElementById('login-password').value;
       if (!username || !password) {
         showAlert('กรุณากรอกชื่อผู้ใช้และรหัสผ่าน', '⚠️', '');
         return;
@@ -1713,11 +1744,17 @@
 
       google.script.run
         .withSuccessHandler((res) => {
+          if (res && res.choose && res.choose.length) {
+            loginPendingPw = password;
+            document.getElementById('login-box-content').innerHTML = loginChooseHtml(username, res.choose);
+            return;
+          }
           if (!res.success) {
             resetLoginBox();
             showAlert('เข้าสู่ระบบไม่สำเร็จ', '⚠️', res.message);
             return;
           }
+          loginPendingPw = '';
           sessionToken = res.token;
           currentUser = res.user;
           isAppUnlocked = true;
@@ -3403,6 +3440,41 @@
     }
 
     // forceLatest: ข้อมูลล่าสุดจากเซิร์ฟเวอร์ เมื่อผู้ใช้เลือก "บันทึกทับ" หลังพบว่ามีคนอื่นบันทึกไปก่อน
+    // ชื่อกำกวมในช่องผู้รับผิดชอบ: ไม่มีบัญชีชื่อนี้ตรงๆ แต่มีบัญชี "ชื่อ นามสกุล" ตั้งแต่ 1 คน → ให้เลือกนามสกุลก่อนบันทึก (เซิร์ฟเวอร์ตรวจซ้ำอีกชั้น)
+    let ownerPick = null;
+    function ownerAmbiguous(text) {
+      const users = acDir.users || [], out = [];
+      String(text || '').split('/').forEach(t => {
+        t = t.trim();
+        if (!t || users.indexOf(t) !== -1 || out.some(o => o.name === t)) return;
+        const opts = users.filter(u => u.indexOf(t + ' ') === 0).sort((a, b) => a.localeCompare(b, 'th'));
+        if (opts.length) out.push({ name: t, options: opts });
+      });
+      return out;
+    }
+    function ownerPickAsk(amb, done, cancel) {
+      ownerPick = { amb: amb, done: done, cancel: cancel };
+      document.getElementById('owner-pick-body').innerHTML = amb.map((a, i) => `<div style="margin-bottom: 10px;"><b>"${esc(a.name)}"</b> คือใคร?`
+        + a.options.map(o => `<label style="display: block; margin: 4px 0 0 8px; cursor: pointer;"><input type="radio" name="owner-pick-${i}" value="${esc(o)}"> ${esc(o)}</label>`).join('') + '</div>').join('');
+      document.getElementById('modal-owner-pick').style.display = 'flex';
+    }
+    function ownerPickCancel() {
+      document.getElementById('modal-owner-pick').style.display = 'none';
+      const c = ownerPick && ownerPick.cancel; ownerPick = null; if (c) c();
+    }
+    function ownerPickOk() {
+      if (!ownerPick) return;
+      const chosen = ownerPick.amb.map((a, i) => { const el = document.querySelector('input[name="owner-pick-' + i + '"]:checked'); return el ? el.value : ''; });
+      if (chosen.some(c => !c)) { showAlert('ยังเลือกไม่ครบ', '⚠️', 'กรุณาเลือกนามสกุลให้ครบทุกชื่อ'); return; }
+      const map = {}; ownerPick.amb.forEach((a, i) => { map[a.name] = chosen[i]; });
+      const done = ownerPick.done; ownerPick = null;
+      document.getElementById('modal-owner-pick').style.display = 'none';
+      done(map);
+    }
+    function ownerApplyPick(text, map) {
+      return String(text || '').split('/').map(seg => { const t = seg.trim(); return Object.prototype.hasOwnProperty.call(map, t) ? seg.replace(t, () => map[t]) : seg; }).join('/');
+    }
+
     function saveKpiEdit(afterSave, onFail, forceLatest) {
       if (savingKpi) return;
       const fail = () => { if (onFail) onFail(); };
@@ -3431,6 +3503,13 @@
       } else if (draft.levels !== undefined && kpiCats(kpi).some(c => isCorePart(c.part)) && !hasHospitalLevel(draft.levels)) {
         showAlert('ระดับไม่ถูกต้อง', '⚠️', 'ตัวชี้วัดที่อยู่ใน Part I–IV ต้องมีระดับ SAR หรือ QA-หน่วยงาน อย่างน้อย 1 ระดับ');
         fail(); return;
+      }
+      if (draft.owner !== undefined && draft.owner.trim() !== String(kpi.owner || '').trim()) {
+        const amb = ownerAmbiguous(draft.owner);
+        if (amb.length) {
+          ownerPickAsk(amb, map => { const el = document.getElementById('ed-owner'); if (el) el.value = ownerApplyPick(el.value, map); saveKpiEdit(afterSave, onFail, forceLatest); }, fail);
+          return;
+        }
       }
       const reqFy = selectedFy, reqId = kpi.id, reqToken = sessionToken;
       let payload = draft;
@@ -3628,6 +3707,11 @@
       };
       if (newItem.levels.length === 0) {
         showAlert('ข้อมูลไม่ครบ', '⚠️', 'กรุณาเลือกระดับตัวชี้วัดอย่างน้อย 1 ระดับ');
+        return;
+      }
+      const ambAdd = ownerAmbiguous(newItem.owner);
+      if (ambAdd.length) {
+        ownerPickAsk(ambAdd, map => { const el = document.getElementById('add-kpi-owner'); el.value = ownerApplyPick(el.value, map); submitAddKpi(); }, null);
         return;
       }
       // หมวดตามระดับ (ช่องว่าง = "รอจัดหมวดย่อย" ให้ระบบเลือก) + หมวดอื่นที่เพิ่มเอง
@@ -3939,9 +4023,56 @@
       rn.tab = t; rn.preview = null; rn.from = ''; rn.to = '';
       document.getElementById('rn-tab-cat').classList.toggle('on', t === 'cat');
       document.getElementById('rn-tab-unit').classList.toggle('on', t === 'unit');
+      document.getElementById('rn-tab-user').classList.toggle('on', t === 'user');
       document.getElementById('rn-commit-btn').disabled = true;
       if (t === 'cat') rnSetYearsDefault();
+      if (t === 'user') { rnLoadUsers(); return; }
       rnRender();
+    }
+
+    // แท็บ "ผู้ใช้": เปลี่ยนชื่อบัญชี (ชื่อต้นซ้ำ → ชื่อ นามสกุล) พร้อมช่องผู้รับผิดชอบในตัวชี้วัดทุกปีงบ — RenameUser.js
+    function rnLoadUsers(done) {
+      showBusy('กำลังโหลดรายชื่อผู้ใช้…');
+      google.script.run
+        .withSuccessHandler(unbusy((res) => {
+          if (!res.success) { document.getElementById('rn-body').innerHTML = '<div class="empty-state">' + esc(res.message) + '</div>'; return; }
+          rn.users = res.users; rn.me = res.me;
+          if (rn.tab === 'user') rnRender();
+          if (done) done();
+        }))
+        .withFailureHandler(unbusy((err) => { document.getElementById('rn-body').innerHTML = '<div class="empty-state">' + esc(err.toString()) + '</div>'; }))
+        .renameUserInfo(sessionToken);
+    }
+
+    function rnRenderUser() {
+      const users = rn.users || [], sim = users.filter(u => u.similar);
+      let h = '<div class="rn-box">ℹ️ ใช้กับคนที่ <b>ชื่อต้นซ้ำกัน</b> ให้เปลี่ยนเป็น "ชื่อ นามสกุล" — เปลี่ยนทั้งชื่อเข้าระบบและชื่อในช่องผู้รับผิดชอบของตัวชี้วัด <b>ทุกปีงบ</b> (รหัสผ่านและสิทธิ์คงเดิม) · เจ้าของบัญชีต้องเข้าสู่ระบบใหม่ด้วยชื่อใหม่ · ระบบสำรองข้อมูลก่อนเขียน</div>';
+      if (sim.length) {
+        h += '<div class="rn-box warn"><b>ชื่อที่คล้ายกัน (อาจเป็นคนละคนที่ชื่อซ้ำ) — กดเพื่อเลือกเปลี่ยน</b><br>'
+          + sim.map(u => '<button class="btn btn-secondary" style="margin:3px 4px 0 0;" data-n="' + esc(u.username) + '" onclick="rnPick(\'from\', this.dataset.n)">' + esc(u.username) + '</button>').join('') + '</div>';
+      }
+      h += '<div class="rn-row">'
+        + '<label>บัญชีเดิม<select id="rn-from" onchange="rnPick(\'from\', this.value)"><option value="">— เลือก —</option>'
+        + users.map(u => '<option value="' + esc(u.username) + '"' + (u.username === rn.from ? ' selected' : '') + '>' + esc(u.username) + (u.username === rn.me ? ' (ตัวคุณเอง)' : '') + '</option>').join('')
+        + '</select></label>'
+        + '<label>ชื่อใหม่ (ชื่อ นามสกุล)<input type="text" id="rn-to" style="min-width: 320px;" maxlength="60" value="' + esc(rn.to) + '" oninput="rnPick(\'to\', this.value)" placeholder="เช่น มานี ใจดี"></label>'
+        + '</div>';
+      h += '<div style="margin:6px 0 10px;"><button class="btn btn-accent" id="rn-preview-btn" onclick="rnPreview()">🔍 ตรวจสอบ / ดูตัวอย่าง (ยังไม่เขียนข้อมูล)</button></div><div id="rn-result"></div>';
+      document.getElementById('rn-body').innerHTML = h;
+      if (rn.preview) rnRenderUserPreview(rn.preview);
+    }
+
+    function rnRenderUserPreview(p) {
+      let h = '';
+      p.errors.forEach(e => { h += '<div class="rn-box err">❌ ' + esc(e) + '</div>'; });
+      if (!p.errors.length) {
+        h += '<div class="rn-box ok"><b>' + esc(p.from) + '  →  ' + esc(p.to) + '</b> (' + esc(p.tier) + (p.depts.length ? ' · ' + esc(p.depts.join(', ')) : '') + ')</div>';
+        p.years.forEach(y => {
+          h += '<div class="rn-box"><b>ปีงบ ' + y.fy + '</b> — แก้ช่องผู้รับผิดชอบ ' + y.count + ' ตัวชี้วัด' + (y.samples.length ? '<br><span class="hint">' + y.samples.map(s => esc(s.id + ' ' + s.name + ' : ' + s.from + ' → ' + s.to)).join('<br>') + '</span>' : '') + '</div>';
+        });
+        if (!p.total) h += '<div class="rn-box warn">⚠️ ไม่พบตัวชี้วัดที่ใช้ชื่อนี้เป็นผู้รับผิดชอบ — จะเปลี่ยนเฉพาะชื่อบัญชี</div>';
+      }
+      document.getElementById('rn-result').innerHTML = h;
     }
 
     function rnCatInfo() {
@@ -3956,6 +4087,7 @@
     }
 
     function rnRender() {
+      if (rn.tab === 'user') { rnRenderUser(); return; }
       const inv = rn.inv, body = document.getElementById('rn-body');
       if (!inv) return;
       let h = '';
@@ -3998,6 +4130,7 @@
       if (k === 'part') { rn.from = ''; rn.years = new Set(rn.inv.years); rnRender(); }
       if (k === 'from' && rn.tab === 'cat') { rnSetYearsDefault(); rnRender(); }
       if (k === 'from' && rn.tab === 'unit') rnRender();
+      if (k === 'from' && rn.tab === 'user') { rn.preview = null; rnRender(); }
       rnInvalidate();
     }
     function rnYear(fy, on) { if (on) rn.years.add(fy); else rn.years.delete(fy); rnInvalidate(); }
@@ -4016,6 +4149,7 @@
     }
 
     function rnPreview() {
+      if (rn.tab === 'user') { rnPreviewUser(); return; }
       const req = rnRequest();
       showBusy('กำลังตรวจสอบ…');
       google.script.run
@@ -4027,6 +4161,43 @@
         }))
         .withFailureHandler(unbusy((err) => { document.getElementById('rn-result').innerHTML = '<div class="rn-box err">' + esc(err.toString()) + '</div>'; }))
         .renamePreview(sessionToken, req);
+    }
+
+    function rnPreviewUser() {
+      if (!rn.from) { document.getElementById('rn-result').innerHTML = '<div class="rn-box err">❌ เลือกบัญชีเดิมก่อน</div>'; return; }
+      showBusy('กำลังตรวจสอบ…');
+      google.script.run
+        .withSuccessHandler(unbusy((res) => {
+          if (!res.success) { document.getElementById('rn-result').innerHTML = '<div class="rn-box err">' + esc(res.message) + '</div>'; return; }
+          rn.preview = res.preview; rn.preview.canCommit = res.preview.errors.length === 0;
+          rnRenderUserPreview(res.preview);
+          document.getElementById('rn-commit-btn').disabled = !rn.preview.canCommit;
+        }))
+        .withFailureHandler(unbusy((err) => { document.getElementById('rn-result').innerHTML = '<div class="rn-box err">' + esc(err.toString()) + '</div>'; }))
+        .renameUserPreview(sessionToken, { from: rn.from, to: rn.to });
+    }
+
+    function rnConfirmUser() {
+      const p = rn.preview;
+      if (!p || !p.canCommit) return;
+      showConfirm('เปลี่ยนชื่อบัญชี "' + p.from + '" เป็น "' + p.to + '"\nแก้ช่องผู้รับผิดชอบของตัวชี้วัด ' + p.total + ' รายการ (ทุกปีงบ)\nเจ้าของบัญชีต้องเข้าสู่ระบบใหม่ด้วยชื่อใหม่\n\nระบบสำรองข้อมูลไว้ก่อนเขียน', () => {
+        const btn = document.getElementById('rn-commit-btn');
+        btn.disabled = true;
+        showBusy('กำลังเปลี่ยนชื่อ…', 420000);
+        google.script.run
+          .withSuccessHandler(unbusy((res) => {
+            if (!res.success) { document.getElementById('rn-result').innerHTML = '<div class="rn-box err">' + esc(res.message) + '</div>'; btn.disabled = false; return; }
+            const done = '<div class="rn-box ok"><b>✅ ' + esc(res.message) + '</b></div>';
+            rn.from = ''; rn.to = ''; rn.preview = null;
+            if (res.selfRenamed) { document.getElementById('modal-rename').style.display = 'none'; showAlert('เปลี่ยนชื่อเรียบร้อย', '✅', res.message); logout(); return; }
+            fetchAllDataFromServer(true);
+            loadSettingsUsers();
+            acLoad();
+            rnLoadUsers(() => { document.getElementById('rn-result').innerHTML = done; });
+          }))
+          .withFailureHandler(unbusy((err) => { document.getElementById('rn-result').innerHTML = '<div class="rn-box err">' + esc(err.toString()) + '</div>'; btn.disabled = false; }))
+          .renameUserCommit(sessionToken, { from: p.from, to: p.to });
+      });
     }
 
     function rnRenderPreview(p) {
@@ -4048,6 +4219,7 @@
     }
 
     function rnConfirm() {
+      if (rn.tab === 'user') { rnConfirmUser(); return; }
       const p = rn.preview;
       if (!p || !p.canCommit) return;
       const total = p.years.reduce((a, y) => a + y.count, 0);

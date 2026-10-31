@@ -112,6 +112,39 @@ function parseOwners_(text) {
   return out;
 }
 
+/**
+ * ชื่อกำกวม = ไม่มีบัญชีชื่อ "name" ตรงๆ แต่มีบัญชีขึ้นต้นด้วย "name " (ชื่อ นามสกุล) — คืนรายชื่อเต็มของบัญชีเหล่านั้น (ว่าง = ไม่กำกวม)
+ * ใช้ตอนล็อกอิน (พิมพ์แต่ชื่อต้น) และตอนบันทึกช่องผู้รับผิดชอบ
+ */
+function nameMatchesFull_(name, usernames) {
+  name = (name || "").toString().trim();
+  if (!name || usernames.indexOf(name) !== -1) return [];
+  var prefix = name + " ";
+  return usernames.filter(function(u) { return u.indexOf(prefix) === 0; });
+}
+
+/** ชื่อกำกวมทั้งหมดในช่องผู้รับผิดชอบ → [{ name, options: [ชื่อเต็ม…] }] (ว่าง = ไม่มี) */
+function ownerAmbiguities_(ownerText, usernames) {
+  var out = [];
+  parseOwners_(ownerText).forEach(function(n) {
+    var opts = nameMatchesFull_(n, usernames);
+    if (opts.length > 0) out.push({ name: n, options: opts.slice().sort(function(a, b) { return a.localeCompare(b, "th"); }) });
+  });
+  return out;
+}
+
+function allUsernames_() {
+  var sheet = getUsersSpreadsheet_().getSheetByName(USERS_SHEET_NAME);
+  return (sheet ? readUsers_(sheet) : []).map(function(u) { return u.username; });
+}
+
+/** ข้อความแจ้งเมื่อช่องผู้รับผิดชอบมีชื่อกำกวม (ใช้ตอนบันทึกที่เซิร์ฟเวอร์) · ไม่กำกวม = "" */
+function ownerAmbiguityMessage_(ownerText) {
+  var amb = ownerAmbiguities_(ownerText, allUsernames_());
+  if (amb.length === 0) return "";
+  return amb.map(function(a) { return "ชื่อ \"" + a.name + "\" มีหลายคน กรุณาระบุนามสกุล (" + a.options.join(", ") + ")"; }).join("\n");
+}
+
 /** แยกคอลัมน์หน่วยงาน เช่น "ER/IPD", "NSO PCT IM" เป็นรายการหน่วยงาน */
 function parseDepts_(text) {
   var out = [];
@@ -364,9 +397,11 @@ function buildAccountsFromOwners_(existingUsers) {
 
   var existing = {};
   existingUsers.forEach(function(u) { existing[u.username] = true; });
+  var allNames = existingUsers.map(function(u) { return u.username; });
   var created = [];
   Object.keys(deptsByOwner).sort().forEach(function(name) {
     if (existing[name]) return;
+    if (nameMatchesFull_(name, allNames).length > 0) return; // ชื่อกำกวม (มีบัญชี "ชื่อ นามสกุล" แล้ว) — ไม่สร้างบัญชีชื่อต้นกลับมา
     var isExec = EXECUTIVE_NAMES.indexOf(name) !== -1;
     created.push(buildUser_(name, DEFAULT_PASSWORD, isExec ? "executive" : "staff", isExec ? [] : deptsByOwner[name], true));
   });
@@ -657,6 +692,21 @@ function authenticateUser(username, password) {
         cache.remove(failKey);
         touchUser_(users[i], "access");
         return { success: true, token: createSession_(username, users[i].hash), user: publicUser_(users[i]) };
+      }
+    }
+    // พิมพ์แต่ชื่อต้นที่ซ้ำกับหลายคน (บัญชีเป็น "ชื่อ นามสกุล"): ตรวจรหัสผ่านกับบัญชีเหล่านั้น — ตรง 1 บัญชี = เข้าเลย · ตรงหลายบัญชี = ให้เลือกนามสกุล
+    // (ไม่เปิดเผยนามสกุลก่อนรหัสผ่านถูก)
+    var names = users.map(function(u) { return u.username; });
+    if (nameMatchesFull_(username, names).length > 0) {
+      var okUsers = users.filter(function(u) { return u.username.indexOf(username + " ") === 0 && verifyPassword_(password, u.hash); });
+      if (okUsers.length === 1) {
+        cache.remove(failKey);
+        touchUser_(okUsers[0], "access");
+        return { success: true, token: createSession_(okUsers[0].username, okUsers[0].hash), user: publicUser_(okUsers[0]) };
+      }
+      if (okUsers.length > 1) {
+        cache.remove(failKey);
+        return { success: false, choose: okUsers.map(function(u) { return u.username; }).sort(function(a, b) { return a.localeCompare(b, "th"); }), message: "มีชื่อนี้หลายคน กรุณาเลือกนามสกุล" };
       }
     }
     cache.put(failKey, String(parseInt(cache.get(failKey) || "0", 10) + 1), LOGIN_LOCK_SECONDS);

@@ -6,8 +6,8 @@
 # ภาพหน้าจอ/ไฟล์ผลลัพธ์ของเทสต์ถูกเขียนลง tests/out/
 set -uo pipefail
 DIR="$(cd "$(dirname "$0")" && pwd)"
-SERVER="gas1 chars1 t3 t4 t5 t6 t7 t8 t9 t11 t13 t14 sar1 clt1 n3 tidy4 merge2 pct2 sub1 v3 v4 v5 carry1 link1 rename1 fwd1 nocase1 perm2 person1 pull1 ai1 pimp1"
-UI="ui18 ui20 ui23 ui24 ui25 ui26 ui27 ui28 ui31 ui32 ui33 ui34 ui35 ui35b ui36 ui37 ui38 ui39 ui40 ui41 ui42 ui43 ui44 ui45 ui46 ui47 ui48 ui49 ui50 ui51 ui52 ui53 ui54 ui55 ui56 ui57 ui58 ui59 ui60 ui61 ui62 ui63 ui64 ui65 ui66 ui67 ui68"
+SERVER="gas1 chars1 t3 t4 t5 t6 t7 t8 t9 t11 t13 t14 sar1 clt1 n3 tidy4 merge2 pct2 sub1 v3 v4 v5 carry1 link1 rename1 fwd1 nocase1 perm2 person1 pull1 ai1 pimp1 uname1"
+UI="ui18 ui20 ui23 ui24 ui25 ui26 ui27 ui28 ui31 ui32 ui33 ui34 ui35 ui35b ui36 ui37 ui38 ui39 ui40 ui41 ui42 ui43 ui44 ui45 ui46 ui47 ui48 ui49 ui50 ui51 ui52 ui53 ui54 ui55 ui56 ui57 ui58 ui59 ui60 ui61 ui62 ui63 ui64 ui65 ui66 ui67 ui68 ui69"
 TOUR="ui40" # เทสต์ที่ต้องเห็นป๊อปอัประบบสอน (ตัวอื่นปิดไว้ผ่าน TOUR_HIDE_V1)
 
 if [[ ! -f "$DIR/fixtures/db.json" ]]; then

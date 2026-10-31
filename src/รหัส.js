@@ -370,6 +370,11 @@ function saveKpiCore_(user, fy, item) {
     var parentChange = item.parentId !== undefined && (item.parentId || "").toString().trim() !== old.parentId;
     if (parentChange && !perm.editDetails) return { success: false, message: "ไม่มีสิทธิ์กำหนดตัวชี้วัดแม่ของตัวชี้วัดนี้ในปีงบ " + fy };
     if (metaDiffers && !perm.editDetails) return { success: false, message: "ไม่มีสิทธิ์แก้ไขข้อมูลตัวชี้วัดนี้ในปีงบ " + fy };
+    // เปลี่ยนช่องผู้รับผิดชอบเป็นชื่อกำกวม (ชื่อต้นที่มีหลายคน) → ต้องระบุนามสกุล · ข้อความเดิมที่ไม่ได้แก้ไม่ตรวจ
+    if (item.owner !== undefined && perm.editDetails && item.owner.toString().trim() !== old.owner) {
+      var ambMsg = ownerAmbiguityMessage_(item.owner);
+      if (ambMsg) return { success: false, message: ambMsg };
+    }
     // ตรวจระดับก่อนเขียนข้อมูลใดๆ (หมวด Part I–IV ต้องมีระดับ SAR หรือ QA-หน่วยงาน)
     var levelList = item.levels !== undefined ? item.levels : (item.level !== undefined ? [item.level] : undefined);
     var newLevels = levelList !== undefined && privileged ? cleanLevelList_(levelList, old.levels) : [];
@@ -635,6 +640,8 @@ function buildNewKpiRow_(user, fy, sheet, data, newItem, privileged, idTime) {
     // ผู้เพิ่ม (ที่ไม่ใช่ admin) ต้องเห็นตัวชี้วัดที่ตัวเองเพิ่ม จึงใส่ตัวเองเป็นผู้รับผิดชอบให้
     // ยกเว้น ผอ./QMR ที่เพิ่มตัวชี้วัด Part I–IV ระดับ SAR/QA ซึ่งเห็นได้อยู่แล้ว
     var seesAnyway = user.tier === "admin" || (user.tier === "executive" && coreInvolved && hasHospitalLevel_(newLevels));
+    var ambAdd = idTime ? "" : ownerAmbiguityMessage_(newItem.owner); // นำเข้าเป็นชุด (ส่ง idTime): ชื่อมาจากบัญชีอยู่แล้ว ไม่ต้องอ่านชีตผู้ใช้ซ้ำทุกแถว
+    if (ambAdd) return { error: ambAdd };
     if (!seesAnyway) {
       var owners = parseOwners_(newItem.owner);
       if (owners.indexOf(user.username) === -1) owners.unshift(user.username);
