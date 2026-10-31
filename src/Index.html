@@ -241,17 +241,27 @@
     .ai-btn { display: none !important; }
     body.ai-on .ai-btn { display: inline-flex !important; align-items: center; gap: 4px; }
     .ai-row { margin-top: 4px; }
-    #ai-fab { position: fixed; right: 16px; bottom: 16px; z-index: 900; width: 54px; height: 54px; border-radius: 50%; border: none; cursor: pointer; font-size: 26px; line-height: 1; color: #fff; background: linear-gradient(135deg, #0ea5e9, #6366f1); box-shadow: 0 8px 22px rgba(30, 64, 175, .38); display: none; }
-    body.ai-on #ai-fab { display: block; }
-    #ai-fab:hover { transform: scale(1.06); }
+    .ai-ico { width: 1.15em; height: 1.15em; fill: currentColor; flex: 0 0 auto; }
+    #ai-fab { position: fixed; right: 16px; bottom: 16px; z-index: 900; height: 56px; min-width: 56px; padding: 0 15px; border-radius: 28px; border: none; cursor: pointer; color: #fff; font-family: inherit; font-weight: 700; font-size: 14px; background: linear-gradient(135deg, #2563eb 0%, #7c3aed 55%, #c026d3 100%); box-shadow: 0 10px 26px rgba(91, 33, 182, .38), inset 0 1px 0 rgba(255,255,255,.25); display: none; align-items: center; gap: 0; transition: box-shadow .2s, transform .2s; animation: aiGlow 2.4s ease-out 1; }
+    body.ai-on #ai-fab { display: flex; }
+    #ai-fab .ai-ico { width: 27px; height: 27px; }
+    #ai-fab .ai-fab-label { max-width: 0; overflow: hidden; white-space: nowrap; transition: max-width .25s ease, margin .25s ease; }
+    #ai-fab:hover, #ai-fab:focus-visible { transform: translateY(-1px); box-shadow: 0 14px 30px rgba(91, 33, 182, .45); }
+    #ai-fab:hover .ai-fab-label, #ai-fab:focus-visible .ai-fab-label { max-width: 140px; margin-left: 8px; }
+    @keyframes aiGlow { 0% { box-shadow: 0 0 0 0 rgba(124, 58, 237, .55); } 70% { box-shadow: 0 0 0 16px rgba(124, 58, 237, 0); } 100% { box-shadow: 0 10px 26px rgba(91, 33, 182, .38); } }
+    .btn.ai-btn { background: linear-gradient(135deg, #2563eb 0%, #7c3aed 60%, #c026d3 100%); color: #fff; border: none; box-shadow: 0 3px 10px rgba(124, 58, 237, .28); }
+    .btn.ai-btn:hover { filter: brightness(1.08); }
     #ai-chat { position: fixed; right: 16px; bottom: 80px; z-index: 900; width: max(340px, 25vw); height: min(75vh, calc(100vh - 96px)); background: #fff; border: 1px solid #94a3b8; border-radius: 16px; box-shadow: 0 16px 40px rgba(15, 23, 42, .3); display: none; flex-direction: column; overflow: hidden; }
     #ai-chat.open { display: flex; }
-    .ai-head { display: flex; align-items: center; gap: 8px; padding: 10px 12px; color: #fff; background: linear-gradient(135deg, #0ea5e9, #6366f1); font-weight: 700; font-size: 14px; }
+    .ai-head { display: flex; align-items: center; gap: 8px; padding: 10px 12px; color: #fff; background: linear-gradient(135deg, #2563eb 0%, #7c3aed 55%, #c026d3 100%); font-weight: 700; font-size: 14px; }
+    .ai-head-title { display: flex; align-items: center; gap: 8px; min-width: 0; }
+    .ai-head-title .ai-ico { width: 24px; height: 24px; }
+    .ai-head-title small { display: block; font-weight: 500; font-size: 11px; opacity: .85; }
     .ai-head button { margin-left: auto; background: rgba(255,255,255,.2); color: #fff; border: none; border-radius: 8px; padding: 3px 8px; cursor: pointer; font-size: 12px; font-family: inherit; }
     .ai-head button + button { margin-left: 4px; }
     #ai-msgs { flex: 1; overflow-y: auto; padding: 10px; background: #f8fafc; display: flex; flex-direction: column; gap: 8px; }
     .ai-msg { max-width: 92%; padding: 8px 11px; border-radius: 12px; font-size: 13px; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
-    .ai-msg.u { align-self: flex-end; background: #0ea5e9; color: #fff; border-bottom-right-radius: 3px; }
+    .ai-msg.u { align-self: flex-end; background: #6d28d9; color: #fff; border-bottom-right-radius: 3px; }
     .ai-msg.m { align-self: flex-start; background: #fff; border: 1px solid #cbd5e1; color: #1e293b; border-bottom-left-radius: 3px; }
     .ai-msg.err { background: #fef2f2; border-color: #fca5a5; color: #991b1b; }
     .ai-quick { display: flex; flex-wrap: wrap; gap: 5px; padding: 6px 10px 0; background: #fff; }
@@ -1061,7 +1071,7 @@
           <button class="btn btn-accent" onclick="openPct()">📥 นำเข้าตัวชี้วัด PCT</button>
         </div>
         <div id="ai-settings" style="border: 1px solid #bae6fd; background: #f0f9ff; border-radius: 10px; padding: 10px 12px; margin-bottom: 12px;">
-          <div style="font-weight: 700; margin-bottom: 6px;">🤖 ตั้งค่า AI (Google Gemini)</div>
+          <div style="font-weight: 700; margin-bottom: 6px; display: flex; align-items: center; gap: 6px; color: #6d28d9;"><svg class="ai-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 2.5c.55 4.6 2.4 6.45 7 7-4.6.55-6.45 2.4-7 7-.55-4.6-2.4-6.45-7-7 4.6-.55 6.45-2.4 7-7z"/><path d="M18.5 14c.3 2.2 1.05 2.95 3.25 3.25-2.2.3-2.95 1.05-3.25 3.25-.3-2.2-1.05-2.95-3.25-3.25 2.2-.3 2.95-1.05 3.25-3.25z"/></svg> ตั้งค่า AI — น้องเป้า (Google Gemini)</div>
           <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px; align-items: end;">
             <label style="font-size: 12px;">API key <span id="ai-key-state" class="hint" style="margin: 0;"></span><input type="password" id="ai-set-key" class="editable-input" autocomplete="off" placeholder="วางคีย์ที่ขึ้นต้น AQ. หรือ AIza… (เว้นว่าง = ไม่เปลี่ยน)"></label>
             <label style="font-size: 12px;">ชื่อรุ่น (model)<input type="text" id="ai-set-model" class="editable-input" autocomplete="off"></label>
@@ -1394,7 +1404,7 @@
   </div>
   <div id="modal-ai" class="modal-overlay">
     <div class="modal-card" style="max-width: 640px;">
-      <div class="modal-header" id="ai-title">🤖 ร่างจาก AI</div>
+      <div class="modal-header" id="ai-title" style="background: linear-gradient(135deg, #2563eb 0%, #7c3aed 55%, #c026d3 100%);">✦ ร่างจากน้องเป้า</div>
       <div class="modal-body">
         <p class="hint" style="margin: 0 0 6px;">ตรวจและแก้ไขข้อความได้ในช่องนี้ก่อนใส่ลงช่องจริง · ใส่แล้วยังไม่บันทึก ต้องกดบันทึกเอง · ตัวเลข/ข้อมูลที่ AI อ้างให้ตรวจกับระบบก่อนใช้ทุกครั้ง</p>
         <textarea id="ai-result" class="editable-input" spellcheck="false"></textarea>
@@ -1411,12 +1421,12 @@
     </div>
   </div>
 
-  <button id="ai-fab" type="button" onclick="aiToggle()" title="ผู้ช่วย AI" aria-label="ผู้ช่วย AI">🤖</button>
-  <div id="ai-chat" role="dialog" aria-label="ผู้ช่วย AI">
-    <div class="ai-head"><span>🤖 ผู้ช่วย AI</span><button type="button" onclick="aiChatClear()" title="ล้างบทสนทนา">🗑️ ล้าง</button><button type="button" onclick="aiToggle()" title="ปิด">✕</button></div>
+  <button id="ai-fab" type="button" onclick="aiToggle()" title="ถามน้องเป้า — ผู้ช่วย AI" aria-label="ถามน้องเป้า ผู้ช่วย AI"><svg class="ai-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 2.5c.55 4.6 2.4 6.45 7 7-4.6.55-6.45 2.4-7 7-.55-4.6-2.4-6.45-7-7 4.6-.55 6.45-2.4 7-7z"/><path d="M18.5 14c.3 2.2 1.05 2.95 3.25 3.25-2.2.3-2.95 1.05-3.25 3.25-.3-2.2-1.05-2.95-3.25-3.25 2.2-.3 2.95-1.05 3.25-3.25z"/></svg><span class="ai-fab-label">ถามน้องเป้า</span></button>
+  <div id="ai-chat" role="dialog" aria-label="น้องเป้า ผู้ช่วย AI">
+    <div class="ai-head"><span class="ai-head-title"><svg class="ai-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 2.5c.55 4.6 2.4 6.45 7 7-4.6.55-6.45 2.4-7 7-.55-4.6-2.4-6.45-7-7 4.6-.55 6.45-2.4 7-7z"/><path d="M18.5 14c.3 2.2 1.05 2.95 3.25 3.25-2.2.3-2.95 1.05-3.25 3.25-.3-2.2-1.05-2.95-3.25-3.25 2.2-.3 2.95-1.05 3.25-3.25z"/></svg><span>น้องเป้า<small>ผู้ช่วย AI ด้านตัวชี้วัด</small></span></span><button type="button" onclick="aiChatClear()" title="ล้างบทสนทนา">🗑️ ล้าง</button><button type="button" onclick="aiToggle()" title="ปิด">✕</button></div>
     <div id="ai-msgs"></div>
     <div class="ai-quick" id="ai-quick"></div>
-    <div class="ai-input"><textarea id="ai-text" rows="1" placeholder="ถามเรื่องตัวชี้วัด หรือวิธีใช้ระบบ… (Enter ส่ง · Shift+Enter ขึ้นบรรทัดใหม่)" onkeydown="aiKey(event)"></textarea><button type="button" class="btn btn-primary btn-sm" id="ai-send" onclick="aiSend()">ส่ง</button></div>
+    <div class="ai-input"><textarea id="ai-text" rows="1" placeholder="ถามน้องเป้าได้เลยครับ… (Enter ส่ง)" title="Enter ส่ง · Shift+Enter ขึ้นบรรทัดใหม่" onkeydown="aiKey(event)"></textarea><button type="button" class="btn btn-primary btn-sm" id="ai-send" onclick="aiSend()">ส่ง</button></div>
     <div class="ai-foot" id="ai-foot">AI อาจผิดพลาด ตรวจข้อมูลกับระบบก่อนใช้ · ไม่บันทึกบทสนทนา</div>
   </div>
 
@@ -2775,7 +2785,7 @@
             <div class="card-right"><div class="card-right-inner">
               <div class="info-card clip-box">
                 <div class="info-card-title">📝 รายละเอียด/การวิเคราะห์ตัวชี้วัด</div>
-                ${ed ? (canDet ? `<textarea id="ed-details" class="editable-input" rows="8" placeholder="ผลการวิเคราะห์: แนวโน้มของผล สาเหตุ ปัญหา/อุปสรรค แนวทางพัฒนา (นิยาม สูตร แหล่งข้อมูล ให้ใส่ช่อง &quot;ที่มาแหล่งข้อมูล / สูตรคำนวณ&quot;)">${esc(kpi.templateDetails)}</textarea><div class="ai-row"><button type="button" class="btn btn-secondary btn-sm ai-btn" onclick="aiDetail()">🤖 วิเคราะห์รายละเอียดโดย AI</button></div>` : lockWrap(`<textarea id="ed-details" class="editable-input" rows="8" readonly>${esc(kpi.templateDetails)}</textarea>`, whyNoDetails()))
+                ${ed ? (canDet ? `<textarea id="ed-details" class="editable-input" rows="8" placeholder="ผลการวิเคราะห์: แนวโน้มของผล สาเหตุ ปัญหา/อุปสรรค แนวทางพัฒนา (นิยาม สูตร แหล่งข้อมูล ให้ใส่ช่อง &quot;ที่มาแหล่งข้อมูล / สูตรคำนวณ&quot;)">${esc(kpi.templateDetails)}</textarea><div class="ai-row"><button type="button" class="btn btn-secondary btn-sm ai-btn" onclick="aiDetail()">${AI_ICON}ให้น้องเป้าช่วยวิเคราะห์</button></div>` : lockWrap(`<textarea id="ed-details" class="editable-input" rows="8" readonly>${esc(kpi.templateDetails)}</textarea>`, whyNoDetails()))
                      : `<p>${esc(kpi.templateDetails) || 'ไม่มีข้อมูลรายละเอียดเพิ่มเติม'}</p>`}
               </div>
               <div class="info-card clip-box">
@@ -3054,6 +3064,7 @@
       guardUnsaved(() => startEditNow(id, key));
     }
     // ===== ผู้ช่วย AI (Gemini) — ปุ่มวิเคราะห์ใต้ช่อง + แชทลอย (docs/AI-plan.md) =====
+    var AI_ICON = '<svg class="ai-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 2.5c.55 4.6 2.4 6.45 7 7-4.6.55-6.45 2.4-7 7-.55-4.6-2.4-6.45-7-7 4.6-.55 6.45-2.4 7-7z"/><path d="M18.5 14c.3 2.2 1.05 2.95 3.25 3.25-2.2.3-2.95 1.05-3.25 3.25-.3-2.2-1.05-2.95-3.25-3.25 2.2-.3 2.95-1.05 3.25-3.25z"/></svg>';
     var aiState = { enabled: false, used: 0, limit: 30, msgs: [], busy: false, apply: null, seq: 0 };
     function aiReset() {
       aiState = { enabled: false, used: 0, limit: 30, msgs: [], busy: false, apply: null, seq: ((aiState && aiState.seq) || 0) + 1 };
@@ -3081,8 +3092,8 @@
     }
     function aiRenderChat() {
       const box = document.getElementById('ai-msgs'); if (!box) return;
-      if (aiState.msgs.length === 0) box.innerHTML = '<div class="ai-msg m">สวัสดีครับ ผมเป็นผู้ช่วยระบบตัวชี้วัด ถามเรื่องตัวชี้วัดที่คุณเห็น แนวโน้ม สิ่งที่ควรทำ หรือวิธีใช้ระบบได้เลย\n\nผมแก้ไขหรือบันทึกข้อมูลแทนคุณไม่ได้ ทำได้เพียงตอบและแนะนำ</div>';
-      else box.innerHTML = aiState.msgs.map(m => `<div class="ai-msg ${m.role === 'user' ? 'u' : 'm'}${m.err ? ' err' : ''}">${esc(m.text)}</div>`).join('') + (aiState.busy ? '<div class="ai-msg m">🤖 กำลังคิด…</div>' : '');
+      if (aiState.msgs.length === 0) box.innerHTML = '<div class="ai-msg m">สวัสดีครับ น้องเป้าเองครับ ผู้ช่วย AI ด้านตัวชี้วัดของโรงพยาบาล ถามเรื่องตัวชี้วัดที่คุณเห็น แนวโน้ม สิ่งที่ควรทำก่อน หรือวิธีใช้ระบบได้เลยครับ\n\nน้องเป้าแก้ไขหรือบันทึกข้อมูลแทนไม่ได้ ทำได้เพียงตอบและแนะนำครับ</div>';
+      else box.innerHTML = aiState.msgs.map(m => `<div class="ai-msg ${m.role === 'user' ? 'u' : 'm'}${m.err ? ' err' : ''}">${esc(m.text)}</div>`).join('') + (aiState.busy ? '<div class="ai-msg m">✦ น้องเป้ากำลังคิด…</div>' : '');
       box.scrollTop = box.scrollHeight;
       document.getElementById('ai-quick').innerHTML = aiState.msgs.length ? '' : aiQuickList().map(q => `<button type="button" data-q="${esc(q)}" onclick="aiSend(this.dataset.q)">${esc(q)}</button>`).join('');
       document.getElementById('ai-foot').innerText = 'AI อาจผิดพลาด ตรวจข้อมูลกับระบบก่อนใช้ · ไม่บันทึกบทสนทนา · ใช้แล้ว ' + aiState.used + '/' + aiState.limit + ' ครั้งวันนี้';
@@ -3112,7 +3123,7 @@
           if (sessionToken !== token || seq !== aiState.seq) return;
           aiState.busy = false;
           if (res && res.success) { aiState.msgs.push({ role: 'model', text: res.text }); aiState.used = res.used || aiState.used; aiState.limit = res.limit || aiState.limit; }
-          else aiState.msgs.push({ role: 'model', text: (res && res.message) || 'ขออภัย ตอบไม่สำเร็จ ลองใหม่อีกครั้ง', err: true });
+          else aiState.msgs.push({ role: 'model', text: (res && res.message) || 'ขออภัยครับ น้องเป้าตอบไม่สำเร็จ ลองใหม่อีกครั้งนะครับ', err: true });
           aiRenderChat();
         })
         .withFailureHandler(err => {
@@ -3125,19 +3136,19 @@
     function aiRun(kind, ref, draft, apply, title) {
       if (!sessionToken || aiState.busy) return;
       const token = sessionToken, fy = selectedFy;
-      showBusy('🤖 AI กำลังวิเคราะห์… (ใช้เวลา 10-30 วินาที)');
+      showBusy('✦ น้องเป้ากำลังวิเคราะห์… (ใช้เวลา 10-30 วินาที)');
       google.script.run
         .withSuccessHandler(unbusy((res) => {
           if (sessionToken !== token || selectedFy !== fy) return;
-          if (!res || !res.success) { showAlert('วิเคราะห์โดย AI ไม่สำเร็จ', '🤖', (res && res.message) || 'ลองใหม่อีกครั้ง'); return; }
+          if (!res || !res.success) { showAlert('น้องเป้าวิเคราะห์ไม่สำเร็จ', '✦', (res && res.message) || 'ลองใหม่อีกครั้ง'); return; }
           aiState.used = res.used || aiState.used; aiState.limit = res.limit || aiState.limit; aiRenderChat();
           aiState.apply = apply;
-          document.getElementById('ai-title').innerText = '🤖 ' + title + ' (ร่างจาก AI)';
+          document.getElementById('ai-title').innerText = '✦ ร่างจากน้องเป้า — ' + title;
           document.getElementById('ai-result').value = res.text;
           document.getElementById('ai-files').innerHTML = (res.files && res.files.length) ? '📎 เอกสารแนบ: ' + res.files.map(f => `<span class="${f.ok ? '' : 'bad'}">${esc(f.title)} — ${esc(f.note)}</span>`).join(' · ') : '';
           document.getElementById('modal-ai').style.display = 'flex';
         }))
-        .withFailureHandler(unbusy((err) => showAlert('วิเคราะห์โดย AI ไม่สำเร็จ', '🤖', String(err))))
+        .withFailureHandler(unbusy((err) => showAlert('น้องเป้าวิเคราะห์ไม่สำเร็จ', '✦', String(err))))
         .aiAnalyze(token, fy, kind, ref, draft);
     }
     function aiResultClose() { document.getElementById('modal-ai').style.display = 'none'; aiState.apply = null; }
@@ -5221,7 +5232,7 @@
           <button type="button" class="btn btn-primary btn-sm sar-save" ${idAttr} onclick="sarSave(this.dataset.id)"${dirty ? '' : ' disabled'}>💾 บันทึก</button>
           ${small('sar-revert', 'sarRevert', '↩ ยกเลิกการแก้ไข', !dirty)}
           ${small('sar-heads', 'sarInsertHeads', '➕ ใส่หัวข้อ')}
-          ${small('sar-ai ai-btn', 'sarAi', '🤖 วิเคราะห์ PDCA โดย AI')}
+          ${small('sar-ai ai-btn', 'sarAi', AI_ICON + 'ให้น้องเป้าช่วยเขียน PDCA')}
           ${sarDetails(k) ? small('sar-from', 'sarFromDetails', '⬇ ดึงจากการวิเคราะห์เดิม') : ''}
           ${isDraft && !dirty ? small('sar-confirm', 'sarConfirmDraft', '✔ ตรวจแล้ว ใช้ข้อความนี้') : ''}
           <span class="sar-stamp">${stamp}</span>
@@ -5987,7 +5998,7 @@
           <select class="editable-input" style="width:auto;" data-id="${esc(k.id)}" onchange="cltSetDim(this.dataset.id, this.value)">${CLT_DIMS.map(d => `<option value="${d[0]}"${d[0] === dim ? ' selected' : ''}>${d[1]} (${d[2]})</option>`).join('')}</select></div>
         <p class="hint">การพัฒนาที่ผ่านมา · ปัญหา/อุปสรรค · แผนการพัฒนา ของตัวชี้วัดนี้ (ขึ้นในสไลด์ผลลัพธ์ข้างกราฟ)</p>${remote}
         <textarea id="clt-text" class="editable-input sar-pdca" rows="10" oninput="cltInput(this)">${esc(val)}</textarea>` +
-        cltActionsHtml(key, `<button type="button" class="btn btn-secondary btn-sm" onclick="cltInsertHeads()">➕ ใส่หัวข้อ</button><button type="button" class="btn btn-secondary btn-sm ai-btn" onclick="cltAi()">🤖 วิเคราะห์ CLT โดย AI</button>${k.details ? `<button type="button" class="btn btn-secondary btn-sm" onclick="cltFromDetails()">⬇ ดึงจากการวิเคราะห์เดิม</button>` : ''}`);
+        cltActionsHtml(key, `<button type="button" class="btn btn-secondary btn-sm" onclick="cltInsertHeads()">➕ ใส่หัวข้อ</button><button type="button" class="btn btn-secondary btn-sm ai-btn" onclick="cltAi()">${AI_ICON}ให้น้องเป้าช่วยเขียน CLT</button>${k.details ? `<button type="button" class="btn btn-secondary btn-sm" onclick="cltFromDetails()">⬇ ดึงจากการวิเคราะห์เดิม</button>` : ''}`);
     }
     function cltDimsHtml() {
       const groups = cltSelectedGroups();
@@ -7212,7 +7223,7 @@
         if (canDet) {
           const parts = kpiCats(kpi).map(x => catRowHtml(x, !priv && isCorePart(x.part))).join('');
           act += `<div class="tbl-hold" hidden>
-            <div class="tbl-sec" data-sec="details"><label class="tbl-lab">📝 รายละเอียด/การวิเคราะห์ตัวชี้วัด</label><textarea id="ed-details" class="editable-input" rows="8" placeholder="ผลการวิเคราะห์: แนวโน้มของผล สาเหตุ ปัญหา/อุปสรรค แนวทางพัฒนา (นิยาม สูตร แหล่งข้อมูล ให้ใส่ช่อง &quot;ที่มาแหล่งข้อมูล / สูตรคำนวณ&quot;)">${esc(kpi.templateDetails)}</textarea><div class="ai-row"><button type="button" class="btn btn-secondary btn-sm ai-btn" onclick="aiDetail()">🤖 วิเคราะห์รายละเอียดโดย AI</button></div></div>
+            <div class="tbl-sec" data-sec="details"><label class="tbl-lab">📝 รายละเอียด/การวิเคราะห์ตัวชี้วัด</label><textarea id="ed-details" class="editable-input" rows="8" placeholder="ผลการวิเคราะห์: แนวโน้มของผล สาเหตุ ปัญหา/อุปสรรค แนวทางพัฒนา (นิยาม สูตร แหล่งข้อมูล ให้ใส่ช่อง &quot;ที่มาแหล่งข้อมูล / สูตรคำนวณ&quot;)">${esc(kpi.templateDetails)}</textarea><div class="ai-row"><button type="button" class="btn btn-secondary btn-sm ai-btn" onclick="aiDetail()">${AI_ICON}ให้น้องเป้าช่วยวิเคราะห์</button></div></div>
             <div class="tbl-sec" data-sec="source"><label class="tbl-lab">🔗 ที่มาแหล่งข้อมูล / สูตรคำนวณ</label><textarea id="ed-source" class="editable-input" rows="6" placeholder="นิยาม · ตัวตั้ง (A) / ตัวหาร (B) · สูตรคำนวณ · แหล่งข้อมูล / วิธีเก็บข้อมูล">${esc(kpi.dataSource)}</textarea></div>
             <div class="tbl-sec" data-sec="cats"><label class="tbl-lab">หมวดที่แสดง <span class="hint" style="margin:0;">(ตัวชี้วัดเดียวกัน แสดงได้หลายหมวด · แก้ที่ไหนก็เปลี่ยนทุกหมวด)</span></label>
               <div id="ed-cats">${parts}</div>

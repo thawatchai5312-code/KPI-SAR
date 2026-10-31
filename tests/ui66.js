@@ -38,15 +38,16 @@ async function open(b,user){
  let pg=await open(br,stf);await pg.waitForTimeout(800);
  assert.deepStrictEqual(await pg.evaluate(()=>[document.body.classList.contains('ai-on'),getComputedStyle(document.getElementById('ai-fab')).display]),[false,'none']);
  await pg.evaluate(id=>{pageSize=50;currentPage=1;goToKpi(id);startEditNow(id)},kp.id);await pg.waitForSelector('#ed-details');
- assert.strictEqual(await pg.locator('button:has-text("วิเคราะห์รายละเอียดโดย AI")').isVisible(),false,'hidden while AI off');
+ assert.strictEqual(await pg.locator('button:has-text("ให้น้องเป้าช่วยวิเคราะห์")').isVisible(),false,'hidden while AI off');
  await pg.close();
  // ===== ตั้งคีย์แล้ว =====
  C.aiSaveSettings(C.createSession_(ad[0],ad[1]),{key:'AIza'+'C'.repeat(35),limit:30,enabled:true,model:'gemini-flash-latest'});
  pg=await open(br,stf);await pg.waitForFunction(()=>document.body.classList.contains('ai-on'),null,{timeout:20000});
- assert.strictEqual(await pg.evaluate(()=>getComputedStyle(document.getElementById('ai-fab')).display),'block');
+ assert.strictEqual(await pg.evaluate(()=>getComputedStyle(document.getElementById('ai-fab')).display),'flex');
+ assert(/น้องเป้า/.test(await pg.getAttribute('#ai-fab','aria-label'))&&await pg.locator('#ai-fab svg.ai-ico').count()===1,'sparkle fab');
  // --- หน้าแรก: ปุ่มใต้ช่องรายละเอียด
  await pg.evaluate(id=>{pageSize=50;currentPage=1;goToKpi(id);startEditNow(id)},kp.id);await pg.waitForSelector('#ed-details');
- const btn=pg.locator('button:has-text("วิเคราะห์รายละเอียดโดย AI")');assert(await btn.isVisible(),'button visible when AI on');
+ const btn=pg.locator('button:has-text("ให้น้องเป้าช่วยวิเคราะห์")');assert(await btn.isVisible(),'button visible when AI on');
  await pg.fill('#ed-details','ข้อความเดิม');
  await btn.click();await pg.waitForSelector('#modal-ai',{state:'visible'});
  assert.strictEqual(await pg.inputValue('#ai-result'),'ผลการดำเนินงาน\nร่างจาก AI');
@@ -65,6 +66,7 @@ async function open(b,user){
  const box=await pg.evaluate(()=>{const r=document.getElementById('ai-chat').getBoundingClientRect();return {w:r.width,h:r.height,right:innerWidth-r.right,vw:innerWidth,vh:innerHeight}});
  assert(Math.abs(box.w-Math.max(340,box.vw*0.25))<3&&Math.abs(box.h-Math.min(box.vh*0.75,box.vh-96))<3&&box.right>=8,JSON.stringify(box));
  assert((await pg.locator('#ai-quick button').count())>=3,'quick questions');
+ assert(/น้องเป้า/.test(await pg.innerText('#ai-chat .ai-head'))&&/น้องเป้าเองครับ/.test(await pg.innerText('#ai-msgs')),'character name + greeting');
  await pg.click('#ai-quick button >> nth=0');await pg.waitForFunction(()=>document.querySelectorAll('#ai-msgs .ai-msg.m').length>=1&&/ร่างจาก AI/.test(document.getElementById('ai-msgs').innerText),null,{timeout:20000});
  assert(/ร่างจาก AI/.test(await pg.innerText('#ai-msgs')));assert(/ใช้แล้ว 3\/30|ใช้แล้ว \d+\/30/.test(await pg.innerText('#ai-foot')));
  const chatCall=calls[calls.length-1];assert(/<ดัชนีตัวชี้วัด/.test(chatCall.contents.slice(-1)[0].parts[0].text)&&/ผู้ช่วยระบบตัวชี้วัด/.test(chatCall.systemInstruction.parts[0].text));
@@ -97,7 +99,7 @@ async function open(b,user){
   await pg.click('#doc-tabs .doc-tab[data-doc=clt]');await pg.waitForSelector('#clt-tree .clt-link');
   await pg.evaluate(g=>cltOpenGroup(g),ck.groups[0]);await pg.waitForTimeout(300);
   await pg.evaluate(([g,id])=>cltSelect('D|'+g+'|R|'+id),[ck.groups[0],ck.id]);await pg.waitForSelector('#clt-text');
-  const cb=pg.locator('button:has-text("วิเคราะห์ CLT โดย AI")');assert(await cb.isVisible(),'CLT ai button');
+  const cb=pg.locator('button:has-text("ให้น้องเป้าช่วยเขียน CLT")');assert(await cb.isVisible(),'CLT ai button');
   await cb.click();await pg.waitForSelector('#modal-ai',{state:'visible'});
   assert(calls[calls.length-1].contents[0].parts[0].text.indexOf('กลุ่มโรค "'+ck.groups[0]+'"')!==-1);
   await pg.click('#modal-ai button:has-text("แทนที่")');assert.strictEqual(await pg.inputValue('#clt-text'),'ร่าง PDCA จาก AI');
