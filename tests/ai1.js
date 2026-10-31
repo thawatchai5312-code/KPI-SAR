@@ -45,7 +45,7 @@ const before=calls.length;r=C.aiAnalyze(tS,FY,'detail',mine.id,{});assert(!r.suc
 assert.strictEqual(C.aiStatus(tS).used,3);
 C.aiSaveSettings(tA,{limit:10});reply={code:429};r=C.aiAnalyze(tS,FY,'detail',mine.id,{});assert(!r.success&&/มีคนใช้เยอะ/.test(r.message),JSON.stringify(r));assert.strictEqual(C.aiStatus(tS).used,3,'refunded');
 reply={code:403,msg:'API key not valid'};r=C.aiAnalyze(tS,FY,'detail',mine.id,{});assert(!r.success&&/API key/.test(r.message));
-reply={code:404};r=C.aiAnalyze(tS,FY,'detail',mine.id,{});assert(!r.success&&/ไม่พบรุ่น/.test(r.message));
+reply={code:404,msg:'This model is no longer available to new users.'};r=C.aiAnalyze(tS,FY,'detail',mine.id,{});assert(!r.success&&/ใช้รุ่น AI ที่ตั้งไว้/.test(r.message)&&/no longer available/.test(r.message),r.message);
 reply={code:200,text:'ตกลง'};
 // ---- สิทธิ์
 const ro=C.getAllData(tS,FY).data.find(k=>!k.canEditDetails);

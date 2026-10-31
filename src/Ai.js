@@ -238,7 +238,7 @@ function aiCallGemini_(cfg, system, contents, temperature, maxTokens) {
     if (/API key|api_key|permission|PERMISSION/i.test(msg400)) throw new Error("API key ของผู้ช่วย AI ใช้ไม่ได้ (ให้ admin ตรวจสอบที่ ⚙️ ตั้งค่า → 🤖 ตั้งค่า AI)");
     throw new Error("ส่งคำขอให้ AI ไม่สำเร็จ: " + (msg400 || ("รหัส " + code)).slice(0, 200));
   }
-  if (code === 404) throw new Error("ไม่พบรุ่น AI ที่ตั้งไว้ (" + cfg.model + ") ให้ admin ตรวจชื่อรุ่นที่ ⚙️ ตั้งค่า → 🤖 ตั้งค่า AI");
+  if (code === 404) throw new Error("ใช้รุ่น AI ที่ตั้งไว้ (" + cfg.model + ") ไม่ได้ ให้ admin เปลี่ยนชื่อรุ่นที่ ⚙️ ตั้งค่า → 🤖 ตั้งค่า AI" + (json && json.error && json.error.message ? " — Google แจ้งว่า: " + String(json.error.message).slice(0, 200) : ""));
   if (code >= 500) throw new Error("บริการ AI ของ Google ขัดข้องชั่วคราว ลองใหม่อีกสักครู่");
   if (code !== 200 || !json) throw new Error("AI ตอบกลับไม่ถูกต้อง (รหัส " + code + ")");
   if (json.promptFeedback && json.promptFeedback.blockReason) throw new Error("AI ไม่ตอบข้อความนี้ (ถูกบล็อกโดยตัวกรองความปลอดภัย)");
