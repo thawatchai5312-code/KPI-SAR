@@ -238,6 +238,31 @@
     .kpi-table th.c-act { right: 0; }
     .kpi-table td.c-act { text-align: center; vertical-align: top; padding: 4px; }
     .tbl-edit-btn { padding: 3px 8px; font-size: 11.5px; }
+    .ai-btn { display: none !important; }
+    body.ai-on .ai-btn { display: inline-flex !important; align-items: center; gap: 4px; }
+    .ai-row { margin-top: 4px; }
+    #ai-fab { position: fixed; right: 16px; bottom: 16px; z-index: 900; width: 54px; height: 54px; border-radius: 50%; border: none; cursor: pointer; font-size: 26px; line-height: 1; color: #fff; background: linear-gradient(135deg, #0ea5e9, #6366f1); box-shadow: 0 8px 22px rgba(30, 64, 175, .38); display: none; }
+    body.ai-on #ai-fab { display: block; }
+    #ai-fab:hover { transform: scale(1.06); }
+    #ai-chat { position: fixed; right: 16px; bottom: 80px; z-index: 900; width: max(340px, 25vw); height: min(75vh, calc(100vh - 96px)); background: #fff; border: 1px solid #94a3b8; border-radius: 16px; box-shadow: 0 16px 40px rgba(15, 23, 42, .3); display: none; flex-direction: column; overflow: hidden; }
+    #ai-chat.open { display: flex; }
+    .ai-head { display: flex; align-items: center; gap: 8px; padding: 10px 12px; color: #fff; background: linear-gradient(135deg, #0ea5e9, #6366f1); font-weight: 700; font-size: 14px; }
+    .ai-head button { margin-left: auto; background: rgba(255,255,255,.2); color: #fff; border: none; border-radius: 8px; padding: 3px 8px; cursor: pointer; font-size: 12px; font-family: inherit; }
+    .ai-head button + button { margin-left: 4px; }
+    #ai-msgs { flex: 1; overflow-y: auto; padding: 10px; background: #f8fafc; display: flex; flex-direction: column; gap: 8px; }
+    .ai-msg { max-width: 92%; padding: 8px 11px; border-radius: 12px; font-size: 13px; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
+    .ai-msg.u { align-self: flex-end; background: #0ea5e9; color: #fff; border-bottom-right-radius: 3px; }
+    .ai-msg.m { align-self: flex-start; background: #fff; border: 1px solid #cbd5e1; color: #1e293b; border-bottom-left-radius: 3px; }
+    .ai-msg.err { background: #fef2f2; border-color: #fca5a5; color: #991b1b; }
+    .ai-quick { display: flex; flex-wrap: wrap; gap: 5px; padding: 6px 10px 0; background: #fff; }
+    .ai-quick button { font-size: 11.5px; padding: 3px 8px; border-radius: 999px; border: 1px solid #94a3b8; background: #f1f5f9; cursor: pointer; font-family: inherit; color: #334155; }
+    .ai-quick button:hover { background: #e0f2fe; }
+    .ai-input { display: flex; gap: 6px; padding: 8px 10px 4px; background: #fff; }
+    .ai-input textarea { flex: 1; resize: none; border: 1px solid #94a3b8; border-radius: 10px; padding: 7px 9px; font-family: inherit; font-size: 13px; min-height: 38px; max-height: 90px; }
+    .ai-foot { font-size: 10.5px; color: #64748b; padding: 0 12px 7px; background: #fff; }
+    @media (max-width: 700px) { #ai-chat { right: 8px; width: calc(100vw - 16px); } }
+    #ai-result { width: 100%; box-sizing: border-box; min-height: 230px; font-family: inherit; font-size: 13px; line-height: 1.55; }
+    .ai-files { font-size: 12px; color: #475569; margin-top: 6px; } .ai-files .bad { color: #b45309; }
     .pull-sec { margin: 0 0 10px; }
     .pull-sec h4 { margin: 0 0 4px; font-size: 13px; color: #015c8b; }
     .pull-row { font-size: 13px; padding: 3px 0; border-bottom: 1px dashed #e2e8f0; color: #1e293b; }
@@ -280,7 +305,7 @@
     .busy-box small { display: block; font-weight: 500; font-size: 12px; color: #64748b; margin-top: 2px; }
     .busy-spin { width: 30px; height: 30px; flex: none; border-radius: 50%; border: 4px solid #bae6fd; border-top-color: #0284c7; animation: busySpin 0.8s linear infinite; }
     @keyframes busySpin { to { transform: rotate(360deg); } }
-    #live-toast { position: fixed; right: 16px; bottom: 16px; max-width: min(360px, calc(100vw - 32px)); background: #0c4a6e; color: #fff; padding: 9px 14px; border-radius: 12px; font-weight: 600; font-size: 13px; box-shadow: 0 8px 20px rgba(0,0,0,0.25); z-index: 1900; display: none; animation: liveIn 0.25s ease-out; }
+    #live-toast { position: fixed; right: 16px; bottom: 80px; max-width: min(360px, calc(100vw - 32px)); background: #0c4a6e; color: #fff; padding: 9px 14px; border-radius: 12px; font-weight: 600; font-size: 13px; box-shadow: 0 8px 20px rgba(0,0,0,0.25); z-index: 1900; display: none; animation: liveIn 0.25s ease-out; }
     @keyframes liveIn { from { transform: translateY(10px); opacity: 0; } to { transform: none; opacity: 1; } }
     .remote-banner { margin: 6px 0 2px; padding: 8px 10px; border-radius: 10px; background: #fff7ed; border: 1px solid #fdba74; color: #9a3412; font-size: 13px; font-weight: 600; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
     .remote-banner .btn { padding: 4px 10px; font-size: 12px; }
@@ -1035,6 +1060,21 @@
           <button class="btn btn-accent" onclick="openRename()">✏️ เปลี่ยนชื่อ</button>
           <button class="btn btn-accent" onclick="openPct()">📥 นำเข้าตัวชี้วัด PCT</button>
         </div>
+        <div id="ai-settings" style="border: 1px solid #bae6fd; background: #f0f9ff; border-radius: 10px; padding: 10px 12px; margin-bottom: 12px;">
+          <div style="font-weight: 700; margin-bottom: 6px;">🤖 ตั้งค่า AI (Google Gemini)</div>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px; align-items: end;">
+            <label style="font-size: 12px;">API key <span id="ai-key-state" class="hint" style="margin: 0;"></span><input type="password" id="ai-set-key" class="editable-input" autocomplete="off" placeholder="วางคีย์ที่ขึ้นต้น AIza… (เว้นว่าง = ไม่เปลี่ยน)"></label>
+            <label style="font-size: 12px;">ชื่อรุ่น (model)<input type="text" id="ai-set-model" class="editable-input" autocomplete="off"></label>
+            <label style="font-size: 12px;">เพดาน (ครั้ง/คน/วัน)<input type="number" id="ai-set-limit" class="editable-input" min="1" max="500"></label>
+            <label style="font-size: 12px; display: flex; gap: 6px; align-items: center;"><input type="checkbox" id="ai-set-on"> เปิดใช้ผู้ช่วย AI</label>
+          </div>
+          <div style="display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; align-items: center;">
+            <button class="btn btn-primary btn-sm" onclick="aiSettingsSave()">💾 บันทึกค่า AI</button>
+            <button class="btn btn-secondary btn-sm" onclick="aiSettingsTest()">🧪 ทดสอบการเชื่อมต่อ</button>
+            <span id="ai-set-msg" class="hint" style="margin: 0;"></span>
+          </div>
+          <div class="hint" style="margin-top: 6px;">สร้างคีย์ที่ aistudio.google.com/app/apikey · คีย์เก็บฝั่งเซิร์ฟเวอร์ ไม่แสดงเต็มอีก · แบบฟรี Google อาจนำข้อความที่ส่งไปใช้ปรับปรุงบริการ</div>
+        </div>
         <div id="settings-users-list"></div>
       </div>
       <div class="modal-footer">
@@ -1352,6 +1392,34 @@
   <div id="busy-overlay" role="alert" aria-live="assertive">
     <div class="busy-box"><div class="busy-spin"></div><div><span id="busy-text">กำลังบันทึกข้อมูล…</span><small>กรุณารอสักครู่ อย่าปิดหรือรีเฟรชหน้านี้</small></div></div>
   </div>
+  <div id="modal-ai" class="modal-overlay">
+    <div class="modal-card" style="max-width: 640px;">
+      <div class="modal-header" id="ai-title">🤖 ร่างจาก AI</div>
+      <div class="modal-body">
+        <p class="hint" style="margin: 0 0 6px;">ตรวจและแก้ไขข้อความได้ในช่องนี้ก่อนใส่ลงช่องจริง · ใส่แล้วยังไม่บันทึก ต้องกดบันทึกเอง · ตัวเลข/ข้อมูลที่ AI อ้างให้ตรวจกับระบบก่อนใช้ทุกครั้ง</p>
+        <textarea id="ai-result" class="editable-input" spellcheck="false"></textarea>
+        <div id="ai-files" class="ai-files"></div>
+      </div>
+      <div class="modal-footer" style="display: flex; justify-content: space-between; gap: 6px; flex-wrap: wrap;">
+        <button class="btn btn-secondary" onclick="aiResultClose()">ยกเลิก</button>
+        <span style="display: flex; gap: 6px; flex-wrap: wrap;">
+          <button class="btn btn-secondary" onclick="aiResultCopy()">📋 คัดลอก</button>
+          <button class="btn btn-secondary" onclick="aiResultApply('append')">➕ ต่อท้ายข้อความเดิม</button>
+          <button class="btn btn-primary" onclick="aiResultApply('replace')">✔ แทนที่ข้อความเดิม</button>
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <button id="ai-fab" type="button" onclick="aiToggle()" title="ผู้ช่วย AI" aria-label="ผู้ช่วย AI">🤖</button>
+  <div id="ai-chat" role="dialog" aria-label="ผู้ช่วย AI">
+    <div class="ai-head"><span>🤖 ผู้ช่วย AI</span><button type="button" onclick="aiChatClear()" title="ล้างบทสนทนา">🗑️ ล้าง</button><button type="button" onclick="aiToggle()" title="ปิด">✕</button></div>
+    <div id="ai-msgs"></div>
+    <div class="ai-quick" id="ai-quick"></div>
+    <div class="ai-input"><textarea id="ai-text" rows="1" placeholder="ถามเรื่องตัวชี้วัด หรือวิธีใช้ระบบ… (Enter ส่ง · Shift+Enter ขึ้นบรรทัดใหม่)" onkeydown="aiKey(event)"></textarea><button type="button" class="btn btn-primary btn-sm" id="ai-send" onclick="aiSend()">ส่ง</button></div>
+    <div class="ai-foot" id="ai-foot">AI อาจผิดพลาด ตรวจข้อมูลกับระบบก่อนใช้ · ไม่บันทึกบทสนทนา</div>
+  </div>
+
   <div id="live-toast"></div>
   <div id="toast"></div>
   <div id="print-root"></div>
@@ -1635,6 +1703,7 @@
       `;
       fetchAllDataFromServer();
       acLoad(); // รายชื่อสำหรับ dropdown ค้นหาผู้รับผิดชอบ/หน่วยงาน
+      aiLoad(); // เปิด/ปิดปุ่มผู้ช่วย AI
     }
 
     function applyUserUi() {
@@ -1648,6 +1717,7 @@
 
     // ล้างสถานะทั้งหมดแล้วกลับไปหน้าล็อกอิน
     function showLogin(notice) {
+      aiReset();
       sessionToken = null;
       currentUser = null;
       isAppUnlocked = false;
@@ -2705,7 +2775,7 @@
             <div class="card-right"><div class="card-right-inner">
               <div class="info-card clip-box">
                 <div class="info-card-title">📝 รายละเอียด/การวิเคราะห์ตัวชี้วัด</div>
-                ${ed ? (canDet ? `<textarea id="ed-details" class="editable-input" rows="8" placeholder="ผลการวิเคราะห์: แนวโน้มของผล สาเหตุ ปัญหา/อุปสรรค แนวทางพัฒนา (นิยาม สูตร แหล่งข้อมูล ให้ใส่ช่อง &quot;ที่มาแหล่งข้อมูล / สูตรคำนวณ&quot;)">${esc(kpi.templateDetails)}</textarea>` : lockWrap(`<textarea id="ed-details" class="editable-input" rows="8" readonly>${esc(kpi.templateDetails)}</textarea>`, whyNoDetails()))
+                ${ed ? (canDet ? `<textarea id="ed-details" class="editable-input" rows="8" placeholder="ผลการวิเคราะห์: แนวโน้มของผล สาเหตุ ปัญหา/อุปสรรค แนวทางพัฒนา (นิยาม สูตร แหล่งข้อมูล ให้ใส่ช่อง &quot;ที่มาแหล่งข้อมูล / สูตรคำนวณ&quot;)">${esc(kpi.templateDetails)}</textarea><div class="ai-row"><button type="button" class="btn btn-secondary btn-sm ai-btn" onclick="aiDetail()">🤖 วิเคราะห์รายละเอียดโดย AI</button></div>` : lockWrap(`<textarea id="ed-details" class="editable-input" rows="8" readonly>${esc(kpi.templateDetails)}</textarea>`, whyNoDetails()))
                      : `<p>${esc(kpi.templateDetails) || 'ไม่มีข้อมูลรายละเอียดเพิ่มเติม'}</p>`}
               </div>
               <div class="info-card clip-box">
@@ -2983,6 +3053,168 @@
     function startEdit(id, key) {
       guardUnsaved(() => startEditNow(id, key));
     }
+    // ===== ผู้ช่วย AI (Gemini) — ปุ่มวิเคราะห์ใต้ช่อง + แชทลอย (docs/AI-plan.md) =====
+    var aiState = { enabled: false, used: 0, limit: 30, msgs: [], busy: false, apply: null, seq: 0 };
+    function aiReset() {
+      aiState = { enabled: false, used: 0, limit: 30, msgs: [], busy: false, apply: null, seq: ((aiState && aiState.seq) || 0) + 1 };
+      document.body.classList.remove('ai-on');
+      const c = document.getElementById('ai-chat'); if (c) c.classList.remove('open');
+      const m = document.getElementById('ai-msgs'); if (m) m.innerHTML = '';
+      const r = document.getElementById('modal-ai'); if (r) r.style.display = 'none';
+    }
+    function aiLoad() {
+      if (!sessionToken) return;
+      const token = sessionToken;
+      google.script.run.withSuccessHandler(res => {
+        if (sessionToken !== token || !res || !res.success) return;
+        aiState.enabled = !!res.enabled; aiState.used = res.used || 0; aiState.limit = res.limit || 30;
+        document.body.classList.toggle('ai-on', aiState.enabled);
+        aiRenderChat();
+      }).withFailureHandler(() => {}).aiStatus(token);
+    }
+    function aiQuickList() {
+      const t = currentTab;
+      const q = ['ตัวชี้วัดของฉันที่ยังไม่ถึงเป้า', 'ตัวไหนที่ฉันยังไม่กรอกผลปีนี้', 'สรุปภาพรวมหน่วยของฉัน'];
+      if (t === 'sar' || t === 'clt') q.push('ช่วยเขียน PDCA อย่างไรดี');
+      q.push('วิธีแนบเอกสาร');
+      return q;
+    }
+    function aiRenderChat() {
+      const box = document.getElementById('ai-msgs'); if (!box) return;
+      if (aiState.msgs.length === 0) box.innerHTML = '<div class="ai-msg m">สวัสดีครับ ผมเป็นผู้ช่วยระบบตัวชี้วัด ถามเรื่องตัวชี้วัดที่คุณเห็น แนวโน้ม สิ่งที่ควรทำ หรือวิธีใช้ระบบได้เลย\n\nผมแก้ไขหรือบันทึกข้อมูลแทนคุณไม่ได้ ทำได้เพียงตอบและแนะนำ</div>';
+      else box.innerHTML = aiState.msgs.map(m => `<div class="ai-msg ${m.role === 'user' ? 'u' : 'm'}${m.err ? ' err' : ''}">${esc(m.text)}</div>`).join('') + (aiState.busy ? '<div class="ai-msg m">🤖 กำลังคิด…</div>' : '');
+      box.scrollTop = box.scrollHeight;
+      document.getElementById('ai-quick').innerHTML = aiState.msgs.length ? '' : aiQuickList().map(q => `<button type="button" data-q="${esc(q)}" onclick="aiSend(this.dataset.q)">${esc(q)}</button>`).join('');
+      document.getElementById('ai-foot').innerText = 'AI อาจผิดพลาด ตรวจข้อมูลกับระบบก่อนใช้ · ไม่บันทึกบทสนทนา · ใช้แล้ว ' + aiState.used + '/' + aiState.limit + ' ครั้งวันนี้';
+      document.getElementById('ai-send').disabled = aiState.busy;
+    }
+    function aiToggle() {
+      const c = document.getElementById('ai-chat');
+      c.classList.toggle('open');
+      if (c.classList.contains('open')) { aiRenderChat(); setTimeout(() => { const t = document.getElementById('ai-text'); if (t) t.focus(); }, 50); }
+    }
+    function aiChatClear() { aiState.msgs = []; aiState.seq++; aiState.busy = false; aiRenderChat(); }
+    function aiKey(e) {
+      if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); aiSend(); }
+    }
+    function aiSend(text) {
+      if (aiState.busy) return;
+      const ta = document.getElementById('ai-text');
+      const q = String(text !== undefined ? text : ta.value).trim();
+      if (!q || !sessionToken) return;
+      if (text === undefined) { ta.value = ''; }
+      aiState.msgs.push({ role: 'user', text: q.slice(0, 2000) });
+      aiState.busy = true; aiRenderChat();
+      const token = sessionToken, seq = ++aiState.seq;
+      const hist = aiState.msgs.filter(m => !m.err).slice(-10).map(m => ({ role: m.role, text: m.text }));
+      google.script.run
+        .withSuccessHandler(res => {
+          if (sessionToken !== token || seq !== aiState.seq) return;
+          aiState.busy = false;
+          if (res && res.success) { aiState.msgs.push({ role: 'model', text: res.text }); aiState.used = res.used || aiState.used; aiState.limit = res.limit || aiState.limit; }
+          else aiState.msgs.push({ role: 'model', text: (res && res.message) || 'ขออภัย ตอบไม่สำเร็จ ลองใหม่อีกครั้ง', err: true });
+          aiRenderChat();
+        })
+        .withFailureHandler(err => {
+          if (sessionToken !== token || seq !== aiState.seq) return;
+          aiState.busy = false; aiState.msgs.push({ role: 'model', text: 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ ลองใหม่อีกครั้ง', err: true }); aiRenderChat();
+        })
+        .aiChat(token, selectedFy, hist, currentTab);
+    }
+    // ปุ่มวิเคราะห์ใต้ช่อง: kind = detail | pdca | clt · apply(text, mode) ใส่ลงช่องจริง (ยังไม่บันทึก)
+    function aiRun(kind, ref, draft, apply, title) {
+      if (!sessionToken || aiState.busy) return;
+      const token = sessionToken, fy = selectedFy;
+      showBusy('🤖 AI กำลังวิเคราะห์… (ใช้เวลา 10-30 วินาที)');
+      google.script.run
+        .withSuccessHandler(unbusy((res) => {
+          if (sessionToken !== token || selectedFy !== fy) return;
+          if (!res || !res.success) { showAlert('วิเคราะห์โดย AI ไม่สำเร็จ', '🤖', (res && res.message) || 'ลองใหม่อีกครั้ง'); return; }
+          aiState.used = res.used || aiState.used; aiState.limit = res.limit || aiState.limit; aiRenderChat();
+          aiState.apply = apply;
+          document.getElementById('ai-title').innerText = '🤖 ' + title + ' (ร่างจาก AI)';
+          document.getElementById('ai-result').value = res.text;
+          document.getElementById('ai-files').innerHTML = (res.files && res.files.length) ? '📎 เอกสารแนบ: ' + res.files.map(f => `<span class="${f.ok ? '' : 'bad'}">${esc(f.title)} — ${esc(f.note)}</span>`).join(' · ') : '';
+          document.getElementById('modal-ai').style.display = 'flex';
+        }))
+        .withFailureHandler(unbusy((err) => showAlert('วิเคราะห์โดย AI ไม่สำเร็จ', '🤖', String(err))))
+        .aiAnalyze(token, fy, kind, ref, draft);
+    }
+    function aiResultClose() { document.getElementById('modal-ai').style.display = 'none'; aiState.apply = null; }
+    function aiResultCopy() {
+      const ta = document.getElementById('ai-result'); ta.focus(); ta.select();
+      try { document.execCommand('copy'); showToast('📋 คัดลอกแล้ว'); } catch (e) { showToast('คัดลอกไม่ได้ — เลือกข้อความแล้วกด Ctrl+C'); }
+    }
+    function aiResultApply(mode) {
+      const text = document.getElementById('ai-result').value.trim();
+      if (!text || !aiState.apply) { aiResultClose(); return; }
+      const ok = aiState.apply(text, mode);
+      if (ok === false) { showAlert('ใส่ลงช่องไม่ได้', 'ℹ️', 'ช่องนี้ถูกปิดไปแล้ว (เช่น ออกจากโหมดแก้ไข) ใช้ปุ่มคัดลอกแทนได้'); return; }
+      aiResultClose();
+      showToast('✅ ใส่ข้อความลงช่องแล้ว — ตรวจแล้วกดบันทึกเอง');
+    }
+    function aiJoin(old, text, mode) { return mode === 'append' && String(old).trim() ? String(old).replace(/\s+$/, '') + '\n\n' + text : text; }
+    function aiDetail() {
+      const kpi = editingKpi();
+      if (!kpi || !kpi.canEditDetails) return;
+      const d = collectDraft();
+      aiRun('detail', kpi.id, { text: d.templateDetails || '', months: d.months }, (text, mode) => {
+        const el = document.getElementById('ed-details');
+        if (!el || editingId !== kpi.id) return false;
+        el.value = aiJoin(el.value, text, mode); el.dispatchEvent(new Event('input', { bubbles: true })); onEditInput(); el.focus();
+        return true;
+      }, 'วิเคราะห์รายละเอียด');
+    }
+    function sarAi(id) {
+      const box = sarBox(id), ta = box && box.querySelector('.sar-pdca');
+      if (!ta) return;
+      aiRun('pdca', id, { text: ta.value }, (text, mode) => {
+        const b = sarBox(id), t = b && b.querySelector('.sar-pdca');
+        if (!t) return false;
+        sarSetText(id, aiJoin(t.value, text, mode));
+        return true;
+      }, 'วิเคราะห์ PDCA');
+    }
+    function cltAi() {
+      const s = cltSpecOf(clt.sel), ta = document.getElementById('clt-text');
+      if (!s || !s.kpi || !ta) return;
+      const key = clt.sel;
+      aiRun('clt', { id: s.kpi.id, group: s.group }, { text: ta.value }, (text, mode) => {
+        const t = document.getElementById('clt-text');
+        if (!t || clt.sel !== key) return false;
+        cltSetText(aiJoin(t.value, text, mode));
+        return true;
+      }, 'วิเคราะห์ CLT');
+    }
+    // ตั้งค่า AI (admin — ใน ⚙️ ตั้งค่า)
+    function aiSettingsMsg(t, bad) { const m = document.getElementById('ai-set-msg'); if (m) { m.innerText = t || ''; m.style.color = bad ? '#b91c1c' : '#047857'; } }
+    function aiSettingsLoad(keepMsg) {
+      if (!keepMsg) aiSettingsMsg('');
+      google.script.run.withSuccessHandler(res => {
+        if (!res || !res.success) { aiSettingsMsg((res && res.message) || 'โหลดค่า AI ไม่สำเร็จ', true); return; }
+        document.getElementById('ai-set-key').value = '';
+        document.getElementById('ai-key-state').innerText = res.hasKey ? '(ตั้งไว้แล้ว: ' + res.keyMasked + ')' : '(ยังไม่ได้ตั้ง)';
+        document.getElementById('ai-set-model').value = res.model || '';
+        document.getElementById('ai-set-limit').value = res.limit || 30;
+        document.getElementById('ai-set-on').checked = !!res.enabled;
+      }).withFailureHandler(() => aiSettingsMsg('โหลดค่า AI ไม่สำเร็จ', true)).aiGetSettings(sessionToken);
+    }
+    function aiSettingsSave() {
+      const payload = { key: document.getElementById('ai-set-key').value.trim(), model: document.getElementById('ai-set-model').value.trim(), limit: Number(document.getElementById('ai-set-limit').value), enabled: document.getElementById('ai-set-on').checked };
+      showBusy('กำลังบันทึกค่า AI…');
+      google.script.run.withSuccessHandler(unbusy(res => {
+        if (!res || !res.success) { aiSettingsMsg((res && res.message) || 'บันทึกไม่สำเร็จ', true); return; }
+        aiSettingsMsg('✅ บันทึกแล้ว'); aiSettingsLoad(true); aiLoad();
+      })).withFailureHandler(unbusy(err => aiSettingsMsg(String(err), true))).aiSaveSettings(sessionToken, payload);
+    }
+    function aiSettingsTest() {
+      showBusy('กำลังทดสอบการเชื่อมต่อ…');
+      google.script.run.withSuccessHandler(unbusy(res => {
+        if (!res || !res.success) { aiSettingsMsg((res && res.message) || 'ทดสอบไม่สำเร็จ', true); return; }
+        aiSettingsMsg('✅ เชื่อมต่อได้ (รุ่น ' + res.model + ' ตอบ: ' + res.reply + ')' + (res.models && res.models.length ? ' · รุ่นที่คีย์นี้ใช้ได้: ' + res.models.slice(0, 8).join(', ') : ''));
+      })).withFailureHandler(unbusy(err => aiSettingsMsg(String(err), true))).aiTest(sessionToken);
+    }
+
     // ===== ดึงข้อมูลจากปีงบก่อนหน้า (ผลทั้งปีย้อนหลัง · รายละเอียด · ลิงก์เอกสารแนบ) — ดูตัวอย่างก่อน แล้วยืนยัน =====
     let pullState = null;
     function pullBtnHtml(tbl) {
@@ -3723,6 +3955,7 @@
       if (!currentUser || currentUser.tier !== 'admin') return;
       document.getElementById('modal-settings').style.display = 'flex';
       loadSettingsUsers();
+      aiSettingsLoad();
     }
 
     function loadSettingsUsers() {
@@ -4975,6 +5208,7 @@
           <button type="button" class="btn btn-primary btn-sm sar-save" ${idAttr} onclick="sarSave(this.dataset.id)"${dirty ? '' : ' disabled'}>💾 บันทึก</button>
           ${small('sar-revert', 'sarRevert', '↩ ยกเลิกการแก้ไข', !dirty)}
           ${small('sar-heads', 'sarInsertHeads', '➕ ใส่หัวข้อ')}
+          ${small('sar-ai ai-btn', 'sarAi', '🤖 วิเคราะห์ PDCA โดย AI')}
           ${sarDetails(k) ? small('sar-from', 'sarFromDetails', '⬇ ดึงจากการวิเคราะห์เดิม') : ''}
           ${isDraft && !dirty ? small('sar-confirm', 'sarConfirmDraft', '✔ ตรวจแล้ว ใช้ข้อความนี้') : ''}
           <span class="sar-stamp">${stamp}</span>
@@ -5740,7 +5974,7 @@
           <select class="editable-input" style="width:auto;" data-id="${esc(k.id)}" onchange="cltSetDim(this.dataset.id, this.value)">${CLT_DIMS.map(d => `<option value="${d[0]}"${d[0] === dim ? ' selected' : ''}>${d[1]} (${d[2]})</option>`).join('')}</select></div>
         <p class="hint">การพัฒนาที่ผ่านมา · ปัญหา/อุปสรรค · แผนการพัฒนา ของตัวชี้วัดนี้ (ขึ้นในสไลด์ผลลัพธ์ข้างกราฟ)</p>${remote}
         <textarea id="clt-text" class="editable-input sar-pdca" rows="10" oninput="cltInput(this)">${esc(val)}</textarea>` +
-        cltActionsHtml(key, `<button type="button" class="btn btn-secondary btn-sm" onclick="cltInsertHeads()">➕ ใส่หัวข้อ</button>${k.details ? `<button type="button" class="btn btn-secondary btn-sm" onclick="cltFromDetails()">⬇ ดึงจากการวิเคราะห์เดิม</button>` : ''}`);
+        cltActionsHtml(key, `<button type="button" class="btn btn-secondary btn-sm" onclick="cltInsertHeads()">➕ ใส่หัวข้อ</button><button type="button" class="btn btn-secondary btn-sm ai-btn" onclick="cltAi()">🤖 วิเคราะห์ CLT โดย AI</button>${k.details ? `<button type="button" class="btn btn-secondary btn-sm" onclick="cltFromDetails()">⬇ ดึงจากการวิเคราะห์เดิม</button>` : ''}`);
     }
     function cltDimsHtml() {
       const groups = cltSelectedGroups();
@@ -6965,7 +7199,7 @@
         if (canDet) {
           const parts = kpiCats(kpi).map(x => catRowHtml(x, !priv && isCorePart(x.part))).join('');
           act += `<div class="tbl-hold" hidden>
-            <div class="tbl-sec" data-sec="details"><label class="tbl-lab">📝 รายละเอียด/การวิเคราะห์ตัวชี้วัด</label><textarea id="ed-details" class="editable-input" rows="8" placeholder="ผลการวิเคราะห์: แนวโน้มของผล สาเหตุ ปัญหา/อุปสรรค แนวทางพัฒนา (นิยาม สูตร แหล่งข้อมูล ให้ใส่ช่อง &quot;ที่มาแหล่งข้อมูล / สูตรคำนวณ&quot;)">${esc(kpi.templateDetails)}</textarea></div>
+            <div class="tbl-sec" data-sec="details"><label class="tbl-lab">📝 รายละเอียด/การวิเคราะห์ตัวชี้วัด</label><textarea id="ed-details" class="editable-input" rows="8" placeholder="ผลการวิเคราะห์: แนวโน้มของผล สาเหตุ ปัญหา/อุปสรรค แนวทางพัฒนา (นิยาม สูตร แหล่งข้อมูล ให้ใส่ช่อง &quot;ที่มาแหล่งข้อมูล / สูตรคำนวณ&quot;)">${esc(kpi.templateDetails)}</textarea><div class="ai-row"><button type="button" class="btn btn-secondary btn-sm ai-btn" onclick="aiDetail()">🤖 วิเคราะห์รายละเอียดโดย AI</button></div></div>
             <div class="tbl-sec" data-sec="source"><label class="tbl-lab">🔗 ที่มาแหล่งข้อมูล / สูตรคำนวณ</label><textarea id="ed-source" class="editable-input" rows="6" placeholder="นิยาม · ตัวตั้ง (A) / ตัวหาร (B) · สูตรคำนวณ · แหล่งข้อมูล / วิธีเก็บข้อมูล">${esc(kpi.dataSource)}</textarea></div>
             <div class="tbl-sec" data-sec="cats"><label class="tbl-lab">หมวดที่แสดง <span class="hint" style="margin:0;">(ตัวชี้วัดเดียวกัน แสดงได้หลายหมวด · แก้ที่ไหนก็เปลี่ยนทุกหมวด)</span></label>
               <div id="ed-cats">${parts}</div>

@@ -57,6 +57,7 @@ bash tests/run.sh          # ทั้งหมด รวมหน้าเว�
 | `src/Rename.js` | ✏️ เปลี่ยนชื่อหมวด/หน่วยงาน (admin, ⚙️ ตั้งค่า): `renameInfo`, `renamePreview`, `renameCommit` + ตารางชื่อเดิม→ชื่อใหม่ (Script Property `RENAME_MAP_V1` + ค่าตั้งต้น `RENAME_SEED`) |
 | `src/Forward.js` | ☑ ใช้กับปีงบถัดไปด้วย: `saveKpi`/`addIndicator` ส่งช่องที่เปลี่ยนไปปีงบที่ใหม่กว่า (`kpiAfterSave_`, `fwdApplyToYear_`, `fwdAddToYear_`) + ย้ายข้อมูล CLT ตามกลุ่มโรค (`cltMoveKpi_`) + `kpiDocImpact` (เตือนก่อนบันทึก) |
 | `src/PullPrev.js` | ⤵ ดึงข้อมูลจากปีงบก่อนหน้า (ปุ่มบนการ์ด/แถวตาราง): `pullPrevPreview` (ดูก่อน ไม่เขียน) → `pullPrevCommit` (เขียนจริง) — ผลทั้งปีย้อนหลัง G–J + รายละเอียด X + ลิงก์เอกสารแนบ |
+| `src/Ai.js` | 🤖 ผู้ช่วย AI (Google Gemini API): `aiAnalyze` (ปุ่มใต้ช่องรายละเอียด/PDCA/CLT) · `aiChat` (แชทลอย) · `aiStatus` · admin `aiGetSettings`/`aiSaveSettings`/`aiTest` · `aiAuthorizeOnce` (เจ้าของสคริปต์ Run ใน editor ครั้งเดียวเพื่ออนุญาตสิทธิ์) — prompt อยู่ในไฟล์นี้ (`AI_SYSTEM`, `AI_TASK_*`, `AI_CHAT_SYSTEM`) |
 | `src/Index.html` | หน้าเว็บทั้งหมด (~4,700 บรรทัด) — CSS บนสุด แล้ว 4 บล็อก `<script>` |
 
 `Index.html` แบ่งด้วยคอมเมนต์ `// ===================== <ชื่อส่วน> =====================` ค้นด้วยชื่อส่วนได้:
@@ -131,8 +132,8 @@ bash tests/run.sh          # ทั้งหมด รวมหน้าเว�
 
 ## งานถัดไปที่ผู้ใช้วางไว้
 
-- **ผู้ช่วย AI (Gemini API แบบฟรี)** — วางแผนและตกลงกับผู้ใช้ครบแล้ว **รอผู้ใช้สั่ง "เริ่มได้"** · แผนละเอียด + prompt ที่อนุมัติ + ขั้นตอนขึ้นระบบ: `docs/AI-plan.md`
-  (ปุ่ม 🤖 ใต้ช่องรายละเอียด/PDCA/CLT · แชทลอยมุมขวาล่าง ¼×¾ · อ่านไฟล์แนบอัตโนมัติ · ขึ้น **ลิงก์ทดสอบ** ก่อน + ให้ผู้ใช้กดอนุญาตสิทธิ์ใหม่ก่อนขึ้นหลัก)
+- **ผู้ช่วย AI (Gemini API แบบฟรี)** — ทำเสร็จและขึ้น **ลิงก์ทดสอบ** แล้ว (ยังไม่ขึ้นหลัก) · แผน/prompt ที่อนุมัติ: `docs/AI-plan.md` · รอผู้ใช้: ① เจ้าของสคริปต์กดอนุญาตสิทธิ์ใหม่ (Apps Script editor → Run `aiAuthorizeOnce`) ② ใส่ API key ที่ ⚙️ ตั้งค่า → 🤖 ตั้งค่า AI ③ ลองจริงบนลิงก์ทดสอบ ④ สั่ง "ขึ้นหลัก" — **ก่อน `npm run deploy` ต้องมั่นใจว่าอนุญาตสิทธิ์แล้ว** (`appsscript.json` มี `oauthScopes` ใหม่ ถ้ายังไม่อนุญาตเว็บหลักจะใช้ไม่ได้ทั้งระบบ)
+  ความจำเป็น: ปุ่ม `.ai-btn` ซ่อนด้วย CSS จนกว่า `aiStatus` ตอบ enabled (`body.ai-on`) · แชทอ่านเฉพาะตัวชี้วัดที่ผู้ใช้เห็น (ดัชนีปีงบที่เปิดสูงสุด 500 ตัว + รายละเอียดตัวที่ตรงคำถาม) · ไฟล์แนบลบเลขระบุตัวก่อนส่ง · ไม่เก็บเนื้อหาคำถาม/คำตอบ (นับครั้งต่อวันใน CacheService) · เทสต์จำลอง `UrlFetchApp` (ไม่เรียก Gemini จริง): `tests/ai1.js`, `tests/ui66.js`
 - เอกสาร สรพ. ทำแล้ว — รายละเอียด/ข้อตกลงกับผู้ใช้ดู `docs/SAR-CLT-export.md`
 - ลิงก์ทดสอบ (deployment แยก ใช้ข้อมูลจริงชุดเดียวกัน): `AKfycbzBSVmolUFi1a_AjLaKKOCB7TXGeUEBt79iEDOEtjJfL18OiK7u_EseYHclaMXOJqRhvg` — อัปเดตด้วย `clasp push -f` + `clasp deploy -i <id>` (ไม่ใช้ `npm run deploy` ซึ่งทับทุก deployment)
 - ผู้ใช้ขอให้: แก้เสร็จขึ้นลิงก์ทดสอบก่อน · เทสต์เฉพาะส่วนที่แก้ · ไม่ต้องสร้างภาพตัวอย่างระหว่างคุย · ประหยัด token
