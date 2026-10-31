@@ -109,6 +109,12 @@ async function open(b,user){
  const keyOnPage=await pg.evaluate(()=>document.documentElement.innerHTML.indexOf('AIza'+'C'.repeat(35)));assert.strictEqual(keyOnPage,-1,'full key never reaches the page');
  await pg.fill('#ai-set-limit','12');await pg.click('#ai-settings button:has-text("บันทึกค่า AI")');await pg.waitForFunction(()=>/บันทึกแล้ว/.test(document.getElementById('ai-set-msg').innerText));
  assert.strictEqual(C.aiConfig_().limit,12);
+ // วางคีย์แล้วกดทดสอบเลย (ไม่กดบันทึก) → บันทึกให้ก่อนแล้วทดสอบ
+ C.UrlFetchApp={fetch:(u)=>/models\?/.test(u)?{getResponseCode:()=>200,getContentText:()=>JSON.stringify({models:[]})}:{getResponseCode:()=>200,getContentText:()=>JSON.stringify({candidates:[{content:{parts:[{text:'พร้อมใช้งาน'}]}}]})}};
+ const newKey='AQ.Ab8RN6'+'z'.repeat(40);
+ await pg.fill('#ai-set-key',newKey);await pg.click('#ai-settings button:has-text("ทดสอบการเชื่อมต่อ")');
+ await pg.waitForFunction(()=>/เชื่อมต่อได้/.test(document.getElementById('ai-set-msg').innerText),null,{timeout:20000});
+ assert.strictEqual(C.aiConfig_().key,newKey,'typed key saved before test');assert.strictEqual(await pg.inputValue('#ai-set-key'),'');
  console.log('errors',pg.errs);assert.strictEqual(pg.errs.length,0);
  await br.close();console.log('UI66 OK');
 })().catch(e=>{console.error(e);process.exit(1)});

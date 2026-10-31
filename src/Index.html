@@ -3208,6 +3208,16 @@
       })).withFailureHandler(unbusy(err => aiSettingsMsg(String(err), true))).aiSaveSettings(sessionToken, payload);
     }
     function aiSettingsTest() {
+      // วางคีย์ไว้แต่ยังไม่กดบันทึก → บันทึกให้ก่อนแล้วค่อยทดสอบ (ทดสอบใช้คีย์ที่บันทึกในระบบ)
+      if (document.getElementById('ai-set-key').value.trim()) {
+        const payload = { key: document.getElementById('ai-set-key').value.trim(), model: document.getElementById('ai-set-model').value.trim(), limit: Number(document.getElementById('ai-set-limit').value), enabled: document.getElementById('ai-set-on').checked };
+        showBusy('กำลังบันทึกคีย์…');
+        google.script.run.withSuccessHandler(unbusy(res => {
+          if (!res || !res.success) { aiSettingsMsg((res && res.message) || 'บันทึกคีย์ไม่สำเร็จ', true); return; }
+          aiSettingsLoad(true); aiLoad(); aiSettingsTest();
+        })).withFailureHandler(unbusy(err => aiSettingsMsg(String(err), true))).aiSaveSettings(sessionToken, payload);
+        return;
+      }
       showBusy('กำลังทดสอบการเชื่อมต่อ…');
       google.script.run.withSuccessHandler(unbusy(res => {
         if (!res || !res.success) { aiSettingsMsg((res && res.message) || 'ทดสอบไม่สำเร็จ', true); return; }
