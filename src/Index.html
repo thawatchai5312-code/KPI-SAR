@@ -914,7 +914,20 @@
     .rn-box.ok { border-color: #86efac; background: #f0fdf4; color: #166534; }
     .rn-unm { width: 100%; border-collapse: collapse; font-size: 12px; }
     .rn-unm td { padding: 3px 6px; border-bottom: 1px solid #f1f5f9; text-align: left; }
-</style>
+
+    /* จอโทรศัพท์เท่านั้น (จอแตะ + ด้านสั้นของจอ ≤ ~500px · แนวตั้งหรือแนวนอน): ปุ่มแถบบน/แถบเมนูแสดงแต่ไอคอน — iPad/แท็บเล็ต/คอมพิวเตอร์ไม่กระทบ
+       เมนูหน้าที่เปิดอยู่ (.nav-item.active) ยังแสดงชื่อ · ข้อความอยู่ใน <span class="lbl"> (ซ่อนด้วย CSS เท่านั้น ไม่แตะ logic) · ปุ่มมี title/aria-label ครบ */
+    @media (hover: none) and (pointer: coarse) and (max-width: 600px), (hover: none) and (pointer: coarse) and (max-height: 500px) {
+      .header-actions .btn-icon .lbl, #user-info .lbl, .nav-item:not(.active) .lbl, .mode-switch .lbl, #btn-add-kpi .lbl, .nav-item.static .lbl { display: none; }
+      .header-actions { gap: 8px; }
+      .header-actions .btn-icon { min-width: 42px; min-height: 42px; padding: 6px 10px; font-size: 18px; line-height: 1; display: inline-flex; align-items: center; justify-content: center; }
+      .nav-bar .nav-item { min-height: 42px; min-width: 42px; padding: 6px 12px; font-size: 18px; display: inline-flex; align-items: center; justify-content: center; }
+      .nav-bar .nav-item.active { font-size: 14px; }
+      .nav-bar .nav-item.static { padding: 4px 8px; gap: 4px; font-size: 18px; }
+      .mode-switch button { min-width: 42px; min-height: 36px; padding: 4px 10px; font-size: 18px; }
+      #btn-add-kpi { min-width: 42px; min-height: 42px; padding: 6px 12px; font-size: 18px; }
+    }
+  </style>
 </head>
 <body>
 
@@ -928,11 +941,11 @@
     <h1><span class="logo">🏥</span><span>ระบบจัดการตัวชี้วัดคุณภาพ <span class="sub">· โรงพยาบาลภูหลวง จังหวัดเลย</span></span></h1>
     <div class="header-actions" id="user-bar" style="display: none;">
       <span id="user-info"></span>
-      <button class="btn-icon" id="admin-settings-btn" style="display: none;" onclick="guardUnsaved(openSettings)">⚙️ ตั้งค่า</button>
-      <button class="btn-icon install-btn" onclick="installOpen()" title="ติดตั้งเป็นแอป / ทางลัดบนหน้าจอ">📲 ติดตั้งแอป</button>
-      <button class="btn-icon" id="tour-btn" onclick="guardUnsaved(tourStart)" title="ดูขั้นตอนการใช้งานทีละขั้น">🎓 แนะนำการใช้งาน</button>
-      <button class="btn-icon" onclick="guardUnsaved(() => openChangePassword(false))">🔑 เปลี่ยนรหัสผ่าน</button>
-      <button class="btn-icon" onclick="guardUnsaved(logout)">🚪 ออกจากระบบ</button>
+      <button class="btn-icon" id="admin-settings-btn" style="display: none;" onclick="guardUnsaved(openSettings)" title="ตั้งค่า" aria-label="ตั้งค่า">⚙️<span class="lbl"> ตั้งค่า</span></button>
+      <button class="btn-icon install-btn" onclick="installOpen()" title="ติดตั้งเป็นแอป / ทางลัดบนหน้าจอ" aria-label="ติดตั้งแอป">📲<span class="lbl"> ติดตั้งแอป</span></button>
+      <button class="btn-icon" id="tour-btn" onclick="guardUnsaved(tourStart)" title="ดูขั้นตอนการใช้งานทีละขั้น" aria-label="แนะนำการใช้งาน">🎓<span class="lbl"> แนะนำการใช้งาน</span></button>
+      <button class="btn-icon" onclick="guardUnsaved(() => openChangePassword(false))" title="เปลี่ยนรหัสผ่าน" aria-label="เปลี่ยนรหัสผ่าน">🔑<span class="lbl"> เปลี่ยนรหัสผ่าน</span></button>
+      <button class="btn-icon" onclick="guardUnsaved(logout)" title="ออกจากระบบ" aria-label="ออกจากระบบ">🚪<span class="lbl"> ออกจากระบบ</span></button>
     </div>
   </div>
 
@@ -943,20 +956,20 @@
 
   <!-- 1.2 แถบนำทาง -->
   <div class="nav-bar">
-    <div class="nav-item static">📅 ปีงบ
+    <div class="nav-item static" title="ปีงบประมาณ">📅<span class="lbl"> ปีงบ</span>
       <select id="fy-select" class="editable-input" style="width: auto; display: inline-block; padding: 3px 6px; margin-left: 4px;" onchange="onFiscalYearChange(this)"></select>
     </div>
-    <div class="nav-item active" id="menu-home-btn" onclick="guardUnsaved(() => switchMenu('home'))">📊 หน้าแรก</div>
-    <div class="nav-item" id="menu-report-btn" onclick="guardUnsaved(() => switchMenu('report'))">📑 สรุปรายงาน</div>
-    <div class="nav-item" id="menu-progress-btn" onclick="guardUnsaved(() => switchMenu('progress'))">📋 ติดตามงาน</div>
-    <div class="nav-item" id="menu-sar-btn" style="display: none;" onclick="guardUnsaved(() => switchMenu('sar'))">🏛️ เอกสาร สรพ.</div>
+    <div class="nav-item active" id="menu-home-btn" onclick="guardUnsaved(() => switchMenu('home'))" title="หน้าแรก" aria-label="หน้าแรก">📊<span class="lbl"> หน้าแรก</span></div>
+    <div class="nav-item" id="menu-report-btn" onclick="guardUnsaved(() => switchMenu('report'))" title="สรุปรายงาน" aria-label="สรุปรายงาน">📑<span class="lbl"> สรุปรายงาน</span></div>
+    <div class="nav-item" id="menu-progress-btn" onclick="guardUnsaved(() => switchMenu('progress'))" title="ติดตามงาน" aria-label="ติดตามงาน">📋<span class="lbl"> ติดตามงาน</span></div>
+    <div class="nav-item" id="menu-sar-btn" style="display: none;" onclick="guardUnsaved(() => switchMenu('sar'))" title="เอกสาร สรพ." aria-label="เอกสาร สรพ.">🏛️<span class="lbl"> เอกสาร สรพ.</span></div>
     <div class="nav-spacer"></div>
     <div class="nav-actions">
       <div class="mode-switch" id="mode-switch" role="group" aria-label="รูปแบบการแสดงตัวชี้วัด">
-        <button type="button" data-mode="card" onclick="setListMode('card')" title="แสดงเป็นการ์ดตัวชี้วัด">🗂️ การ์ด</button>
-        <button type="button" data-mode="table" class="on" onclick="setListMode('table')" title="แสดงเป็นตารางแบบ Google Sheet">📋 ตาราง</button>
+        <button type="button" data-mode="card" onclick="setListMode('card')" title="แสดงเป็นการ์ดตัวชี้วัด" aria-label="การ์ด">🗂️<span class="lbl"> การ์ด</span></button>
+        <button type="button" data-mode="table" class="on" onclick="setListMode('table')" title="แสดงเป็นตารางแบบ Google Sheet" aria-label="ตาราง">📋<span class="lbl"> ตาราง</span></button>
       </div>
-      <button class="btn btn-accent" id="btn-add-kpi" style="display: none;" onclick="guardUnsaved(openAddKpiModal)">➕ เพิ่มตัวชี้วัดใหม่</button>
+      <button class="btn btn-accent" id="btn-add-kpi" style="display: none;" onclick="guardUnsaved(openAddKpiModal)" title="เพิ่มตัวชี้วัดใหม่" aria-label="เพิ่มตัวชี้วัดใหม่">➕<span class="lbl"> เพิ่มตัวชี้วัดใหม่</span></button>
     </div>
   </div>
 
@@ -1792,7 +1805,10 @@
 
     function applyUserUi() {
       document.getElementById('user-bar').style.display = 'flex';
-      document.getElementById('user-info').innerText = '👤 ' + currentUser.username + ' (' + (TIER_LABELS[currentUser.tier] || currentUser.tier) + ')';
+      const uiEl = document.getElementById('user-info');
+      uiEl.textContent = '👤 ' + currentUser.username;
+      const uiTier = document.createElement('span'); uiTier.className = 'lbl'; uiTier.textContent = ' (' + (TIER_LABELS[currentUser.tier] || currentUser.tier) + ')';
+      uiEl.appendChild(uiTier);
       document.getElementById('admin-settings-btn').style.display = currentUser.tier === 'admin' ? 'inline-block' : 'none';
       document.getElementById('btn-add-kpi').style.display = 'inline-block';
       document.getElementById('menu-sar-btn').style.display = sarCanUse() ? '' : 'none';
