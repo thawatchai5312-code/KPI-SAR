@@ -50,7 +50,7 @@ async function open(b,user){
  await pg.fill('#ed-details','ข้อความเดิม');
  await btn.click();await pg.waitForSelector('#modal-ai',{state:'visible'});
  assert.strictEqual(await pg.inputValue('#ai-result'),'ผลการดำเนินงาน\nร่างจาก AI');
- const sent=calls[calls.length-1].contents[0].parts[0].text;assert(/ข้อความเดิม/.test(sent)&&/P – การวางแผน/.test(sent));
+ const sent=calls[calls.length-1].contents[0].parts[0].text;assert(/ข้อความเดิม/.test(sent)&&/\nการวางแผน\n/.test(sent)&&/ห้ามเติมตัวอักษร P D C A/.test(sent));
  await pg.screenshot({path:OUT+'/ui66-modal.png'});
  await pg.click('#modal-ai button:has-text("ยกเลิก")');assert.strictEqual(await pg.inputValue('#ed-details'),'ข้อความเดิม');
  await btn.click();await pg.waitForSelector('#modal-ai',{state:'visible'});

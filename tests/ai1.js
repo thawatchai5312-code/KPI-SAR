@@ -32,7 +32,7 @@ calls=[];
 r=C.aiAnalyze(tS,FY,'detail',mine.id,{text:'ข้อความเดิม HN 123456 โทร 081-234-5678'});
 assert(r.success&&r.text==='สรุปผล\n- ผล 80 ตามเป้า\nหัวข้อ'&&r.used===1&&r.limit===3,JSON.stringify(r));
 const sent=prompt(),sys=calls[0].body.systemInstruction.parts[0].text;
-assert(/<ข้อมูล>/.test(sent)&&/<ข้อเท็จจริงที่คำนวณแล้ว>/.test(sent)&&sent.indexOf(mine.name)!==-1&&/สรุปผลการดำเนินงาน/.test(sent)&&/P – การวางแผน/.test(sent),'task+data');
+assert(/<ข้อมูล>/.test(sent)&&/<ข้อเท็จจริงที่คำนวณแล้ว>/.test(sent)&&sent.indexOf(mine.name)!==-1&&/สรุปผลการดำเนินงาน/.test(sent)&&/\nการวางแผน\n/.test(sent)&&/ห้ามเติมตัวอักษร P D C A/.test(sent),'task+data');
 assert(/ยึดข้อเท็จจริง/.test(sys),'system');
 assert(sent.indexOf('HN 123456')===-1&&sent.indexOf('081-234-5678')===-1&&sent.indexOf('[ปิดบัง]')!==-1,'redacted draft');
 const ownerName=(mine.owner||'').split('/')[0].trim();
