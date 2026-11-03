@@ -9,6 +9,9 @@
 
 var KPILINK_SHEET = "KPI_Links";
 var KPILINK_HEADERS = ["ปีงบ", "รหัสลิงก์", "ชื่อเอกสาร", "ลิงก์", "รหัสตัวชี้วัด", "หมายเหตุ", "รุ่น", "แก้ไขล่าสุดเมื่อ", "แก้ไขล่าสุดโดย", "แนบเมื่อ", "แนบโดย", "สถานะ"];
+// คอลัมน์ M–P (เพิ่มภายหลัง สำหรับไฟล์อัปโหลด) แยกจาก KPILINK_HEADERS เพื่อไม่กระทบโค้ดที่เขียนแถว 12 คอลัมน์เดิม (เช่น PullPrev.js)
+var KPILINK_UP_HEADERS = ["ที่มา", "รหัสไฟล์ Drive", "ชื่อไฟล์เดิม", "ขนาดไฟล์ (ไบต์)"];
+var KPILINK_SRC_UPLOAD = "อัปโหลด"; // คอลัมน์ "ที่มา": ว่าง = วางลิงก์เอง · "อัปโหลด" = ไฟล์ที่อัปโหลดผ่านระบบ (Upload.js)
 var KPILINK_DOC = "LINKS";
 var KPILINK_ACTIVE = "ใช้งาน";
 var KPILINK_DELETED = "ลบ";
@@ -32,6 +35,14 @@ function kpiLinkSheetEnsure_() {
   return sheet;
 }
 
+/** เติมหัวคอลัมน์ M–P (ที่มา/รหัสไฟล์/ชื่อไฟล์เดิม/ขนาด) ถ้ายังว่าง — เรียกเฉพาะตอนเขียนแถวไฟล์อัปโหลด (Upload.js) ภายใต้ script lock · ชีตที่ไม่เคยมีการอัปโหลดคงเดิม 12 คอลัมน์ */
+function kpiLinkEnsureUploadCols_(sheet) {
+  var from = KPILINK_HEADERS.length + 1, n = KPILINK_UP_HEADERS.length;
+  var cur = sheet.getRange(1, from, 1, n).getValues()[0];
+  if (cur.every(function(v) { return String(v || "") !== ""; })) return;
+  sheet.getRange(1, from, 1, n).setValues([KPILINK_UP_HEADERS]).setFontWeight("bold").setBackground("#e0f2fe");
+}
+
 function kpiLinkSplitIds_(v) {
   var seen = {}, out = [];
   (v === null || v === undefined ? "" : v).toString().split(",").forEach(function(s) {
@@ -52,7 +63,8 @@ function kpiLinkRead_(sheet, fy) {
     out.push({
       row: i + 1, id: r[1].toString(), title: (r[2] || "").toString(), url: (r[3] || "").toString(), ids: kpiLinkSplitIds_(r[4]),
       note: (r[5] || "").toString(), rev: Number(r[6]) || 0, at: formatStamp_(r[7]), by: (r[8] || "").toString(),
-      createdAt: formatStamp_(r[9]), createdBy: (r[10] || "").toString()
+      createdAt: formatStamp_(r[9]), createdBy: (r[10] || "").toString(),
+      source: (r[12] || "").toString(), fileId: (r[13] || "").toString(), fileName: (r[14] || "").toString(), fileSize: Number(r[15]) || 0
     });
   }
   return out;
@@ -93,7 +105,8 @@ function kpiLinkView_(link, perms) {
   return {
     id: link.id, title: link.title, url: link.url, note: link.note, ids: visible, editableIds: editable,
     hidden: link.ids.length - visible.length, rev: link.rev, at: link.at, by: link.by, createdAt: link.createdAt, createdBy: link.createdBy,
-    canEdit: editable.length > 0
+    canEdit: editable.length > 0,
+    uploaded: link.source === KPILINK_SRC_UPLOAD, fileName: link.fileName, fileSize: link.fileSize
   };
 }
 
@@ -159,6 +172,7 @@ function saveKpiLink(token, fy, p) {
 
     var finalIds;
     if (cur) {
+      if (cur.source === KPILINK_SRC_UPLOAD && url !== cur.url) return { success: false, message: "ไฟล์ที่อัปโหลดเปลี่ยนลิงก์ไม่ได้ — ลบแล้วอัปโหลดไฟล์ใหม่" };
       if (!cur.ids.some(canEdit)) return { success: false, message: "ไม่มีสิทธิ์แก้ไขลิงก์นี้ (ต้องแก้ไขรายละเอียดของตัวชี้วัดในลิงก์ได้)" };
       if (!p.force && p.baseRev !== undefined && p.baseRev !== null && Number(p.baseRev) !== cur.rev) return kpiLinkConflict_(cur);
       var added = want.filter(function(id) { return cur.ids.indexOf(id) === -1; });
@@ -227,6 +241,10 @@ function deleteKpiLink(token, fy, linkId, baseRev, force) {
     }
     touchUser_(user, "edit");
     bumpDataVersion_(fy, [], user, KPILINK_DOC);
+    // ไฟล์ที่อัปโหลดผ่านระบบ: ไม่เหลือแถวไหนใช้แล้ว → ย้ายไปโฟลเดอร์ "ลบแล้ว" (ผิดพลาด = ข้าม ไม่กระทบการลบลิงก์)
+    if (remaining.length === 0 && cur.source === KPILINK_SRC_UPLOAD && cur.fileId) {
+      try { uploadRetireIfUnused_(cur.fileId); } catch (e2) {}
+    }
     return { success: true, removedAll: remaining.length === 0, remaining: remaining.length };
   } catch (e) {
     return { success: false, message: e.toString() };
