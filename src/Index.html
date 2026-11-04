@@ -598,6 +598,7 @@
     table.pr-table th { background: #dcfce7; color: #14532d; border: 1px solid #94a3b8; padding: 2px 3px; font-size: inherit; white-space: normal; position: static; }
     table.pr-table td { border: 1px solid #cbd5e1; padding: 2px 2px; font-size: inherit; text-align: center; white-space: nowrap; }
     table.pr-table td.pr-left { text-align: left; white-space: normal; word-break: break-word; }
+    table.pr-table td.pr-mname { line-height: 1.2; }
     table.pr-table td.pr-subkpi { padding-left: 14px; }
     table.pr-table td.pr-main { font-weight: 700; }
     table.pr-table td.pr-target { background: #fef3c7; font-weight: 700; }
@@ -4748,14 +4749,15 @@
 
     const RPT_SIZES = [10, 30, 50]; // ตัวอย่างบนจอแสดงทีละ 10/30/50 ตัวชี้วัด แบ่งหน้าเหมือนหน้าแรก (ตอน Export ใส่ครบทุกตัว)
     const RPT_DEFAULT_OPTS = { table: true, chart: true, detail: true, source: false, owner: true };
-    const rpt = { loaded: false, loading: false, waiters: [], orient: 'landscape', opts: Object.assign({}, RPT_DEFAULT_OPTS), unchecked: new Set(), page: 1, size: 10, person: '', personData: null, personSeq: 0 };
+    const RPT_PERSON_OPTS = { table: true, chart: false, detail: false, source: false, owner: false }; // KPI รายบุคคล: เหลือแค่ตารางตัวชี้วัด (5 ปี + รายเดือน)
+    const rpt = { loaded: false, loading: false, waiters: [], orient: 'landscape', opts: Object.assign({}, RPT_DEFAULT_OPTS), unchecked: new Set(), page: 1, size: 10, person: '', personData: null, personSeq: 0, optsBeforePerson: null };
     let rptSaveTimer = null, rptPreviewTimer = null, rptControlsBuilt = false;
 
     function rptReset() {
       clearTimeout(rptSaveTimer); clearTimeout(rptPreviewTimer);
       rpt.loaded = false; rpt.loading = false; rpt.waiters = []; rpt.orient = 'landscape';
       rpt.opts = Object.assign({}, RPT_DEFAULT_OPTS); rpt.unchecked = new Set(); rpt.page = 1; rpt.size = 10;
-      rpt.person = ''; rpt.personData = null; rpt.personSeq++; rptControlsBuilt = false;
+      rpt.person = ''; rpt.personData = null; rpt.personSeq++; rpt.optsBeforePerson = null; rptControlsBuilt = false;
     }
 
     function rptApplyPrefs(p) {
@@ -4791,7 +4793,7 @@
       clearTimeout(rptSaveTimer);
       rptSaveTimer = setTimeout(() => {
         if (!sessionToken) return;
-        google.script.run.withFailureHandler(() => {}).saveReportPrefs(sessionToken, { orient: rpt.orient, opts: rpt.opts, unchecked: Array.from(rpt.unchecked) });
+        google.script.run.withFailureHandler(() => {}).saveReportPrefs(sessionToken, { orient: rpt.orient, opts: rpt.optsBeforePerson || rpt.opts, unchecked: Array.from(rpt.unchecked) });
       }, 800);
     }
 
@@ -4917,7 +4919,18 @@
       if (name === rpt.person) return; // เลือกจากรายการแล้ว change ตามมาตอนออกจากช่อง: ไม่โหลดซ้ำ
       rptPersonLoad(name);
     }
+    // เลือกบุคคล: จำค่าเนื้อหาที่ตั้งไว้ก่อน แล้วตั้งเหลือแค่ตารางตัวชี้วัด (ครั้งเดียวต่อรอบ — เปลี่ยนคน A→B ไม่ตั้งทับ) · ล้าง = คืนค่าเดิม · ไม่จำค่าของโหมดนี้ (rptSaveSoon)
+    function rptPersonOptsOn() {
+      if (rpt.optsBeforePerson) return;
+      rpt.optsBeforePerson = Object.assign({}, rpt.opts);
+      rpt.opts = Object.assign({}, RPT_PERSON_OPTS);
+    }
+    function rptPersonOptsOff() {
+      if (!rpt.optsBeforePerson) return;
+      rpt.opts = rpt.optsBeforePerson; rpt.optsBeforePerson = null;
+    }
     function rptPersonClear() {
+      rptPersonOptsOff();
       rpt.person = ''; rpt.personData = null; rpt.personSeq++; rpt.page = 1;
       const box = document.getElementById('rp-person'); if (box) box.value = '';
       homeStale = true;
@@ -4926,6 +4939,7 @@
     function rptPersonLoad(name, silent) {
       const seq = ++rpt.personSeq, token = sessionToken;
       rpt.person = name; if (!silent) rpt.personData = null;
+      if (!silent) { rptPersonOptsOn(); Object.keys(rpt.opts).forEach(k => { const c = document.getElementById('rp-opt-' + k); if (c) c.checked = rpt.opts[k]; }); }
       if (!silent) { rptPersonUi(); showBusy('กำลังโหลดตัวชี้วัดของ ' + name + '…'); }
       google.script.run
         .withSuccessHandler(res => {
@@ -5071,7 +5085,7 @@
       const fs = landscape ? '10.5pt' : '9.5pt';
       const fsMonth = landscape ? '10.5pt' : '9pt'; // แนวตั้ง: 12 เดือนในหน้าเดียวต้องลดขนาดตาราง
       const wA = landscape ? [6, 40, 10, 8.8, 8.8, 8.8, 8.8, 8.8] : [7, 36, 12, 9, 9, 9, 9, 9];
-      const wB = landscape ? [5, 21, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 7] : [5, 15, 5.8, 5.8, 5.8, 5.8, 5.8, 5.8, 5.8, 5.8, 5.8, 5.8, 5.8, 5.8, 8.4];
+      const wB = landscape ? [5, 26.6, 5.2, 5.2, 5.2, 5.2, 5.2, 5.2, 5.2, 5.2, 5.2, 5.2, 5.2, 5.2, 6] : [5, 19.4, 5.7, 5.7, 5.7, 5.7, 5.7, 5.7, 5.7, 5.7, 5.7, 5.7, 5.7, 5.7, 7.2];
       const cols = (w) => '<colgroup>' + w.map(x => `<col style="width:${x}%">`).join('') + '</colgroup>';
 
       let a = `<div class="pr-sub-title">เป้าหมายและผลทั้งปี</div><table class="pr-table" style="font-size:${fs};">${cols(wA)}
@@ -5084,7 +5098,7 @@
         const sub = isSub ? ' pr-subkpi' : ' pr-main';   // ตัวชี้วัดหลัก: ลำดับ+ชื่อเป็นตัวหนา · ตัวย่อยปกติ
         const noCls = isSub ? '' : ' class="pr-main"';
         a += `<tr><td${noCls}>${no}</td><td class="pr-left${sub}">${esc(k.name)}</td><td class="pr-target">${esc(k.target) || '-'}</td>${k.years.map(v => `<td>${prNum(v)}</td>`).join('')}</tr>`;
-        b += `<tr><td${noCls}>${no}</td><td class="pr-left${sub}">${esc(prShort(k.name, landscape ? 40 : 18))}</td>${k.months.map(v => `<td>${prNum(v)}</td>`).join('')}<td>${calculateMonthlySummary(k.months, k.summaryMethod)}<br><span class="pr-method">${esc(k.summaryMethod || 'เฉลี่ย')}</span></td></tr>`;
+        b += `<tr><td${noCls}>${no}</td><td class="pr-left pr-mname${sub}">${esc(k.name)}</td>${k.months.map(v => `<td>${prNum(v)}</td>`).join('')}<td>${calculateMonthlySummary(k.months, k.summaryMethod)}<br><span class="pr-method">${esc(k.summaryMethod || 'เฉลี่ย')}</span></td></tr>`;
       });
       return a + '</tbody></table>' + b + '</tbody></table>';
     }
