@@ -7,7 +7,7 @@ const html=fs.readFileSync(path.join(__dirname,'../src/Index.html'),'utf8');
 const U=h.sheets.Users.d;const fy=2570;
 const ad=U.find(r=>r[2]==='admin');ad[1]=C.hashPassword_('pw123456');ad[4]='FALSE';
 const saved=[];const origSave=C.saveReportPrefs;C.saveReportPrefs=function(t,p){saved.push(JSON.parse(JSON.stringify(p)));return origSave.apply(this,arguments)};
-const OUT=process.cwd();
+const OUT=path.join(__dirname,'..');
 (async()=>{
  const br=await chromium.launch({executablePath:'/opt/pw-browsers/chromium'});
  const ctx=await br.newContext({viewport:{width:1500,height:950}});const pg=await ctx.newPage();pg.errs=[];pg.on('pageerror',e=>pg.errs.push(e.message));
