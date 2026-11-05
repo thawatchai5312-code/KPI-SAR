@@ -16,7 +16,7 @@ function pullPrevMonthlySummary_(months, method) {
     if (v === null || v === undefined || v === "") return null;
     if (typeof v === "number") nums.push(v);
   }
-  if (nums.length === 0) return null;
+  if (nums.length === 0) return null; // ไม่มีตัวเลขเลย (เช่น เป็นข้อความล้วน) = ไม่คำนวณผลทั้งปีให้
   var sum = nums.reduce(function(a, b) { return a + b; }, 0), out;
   if (method === "ผลรวม") out = sum;
   else if (method === "เดือนล่าสุด") out = nums[nums.length - 1];

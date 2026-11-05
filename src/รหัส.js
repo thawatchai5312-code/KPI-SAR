@@ -51,6 +51,31 @@ function monthOrNull_(v) {
 }
 
 var NO_CASE_ = "-";
+var RESULT_TEXT_MAX = 60;
+
+/**
+ * ค่าในช่องผล (ผลทั้งปี/รายเดือน) รับได้ทั้งตัวเลขและข้อความ (เช่น A, B-, ดีมาก) — ตัดสินจากค่าที่กรอกทีละช่อง
+ *  ว่าง → null · "-" → รายเดือน "ไม่มีเคส" / ผลทั้งปี ว่าง · NA/N/A → (บันทึกรายเดือน) "ไม่มีเคส" / (อ่านจากชีต) ว่าง · ตัวเลข (ตัด , หลักพัน และ % ท้าย, เลขไทย→อารบิก) → Number · อย่างอื่น → ข้อความ ≤ 60 ตัว
+ * cleanValue_/cleanMonth_ เดิมไม่แก้ (NSO import ใช้) — ใช้ฟังก์ชันนี้เฉพาะช่องผลที่หน้าเว็บอ่าน/บันทึก
+ */
+function resultParse_(v, isMonth, saving) {
+  if (v === null || v === undefined) return null;
+  if (typeof v === "number") return isFinite(v) ? v : null;
+  if (Object.prototype.toString.call(v) === "[object Date]") return cleanValue_(v);
+  var t = arabicDigits_(String(v)).replace(/\u00a0/g, " ").trim();
+  if (t === "") return null;
+  if (t === "-") return isMonth ? NO_CASE_ : null;
+  var up = t.toUpperCase();
+  if (up === "NA" || up === "N/A") return isMonth && saving ? NO_CASE_ : null;
+  var n = t.replace(/%$/, "").replace(/\s+/g, "");
+  if (/^-?\d{1,3}(,\d{3})+(\.\d+)?$/.test(n)) n = n.replace(/,/g, "");
+  if (/^-?\d+(\.\d+)?$/.test(n) || /^-?\.\d+$/.test(n)) return Number(n);
+  return t.length > RESULT_TEXT_MAX ? t.substring(0, RESULT_TEXT_MAX) : t;
+}
+/** อ่านจากชีต */
+function readResult_(cell, isMonth) { return resultParse_(cell, isMonth, false); }
+/** ค่าที่หน้าเว็บส่งมาบันทึก */
+function resultValue_(raw, isMonth) { return resultParse_(raw, isMonth, true); }
 
 function rowToKpi_(row) {
   var part = row[2] ? row[2].toString().trim() : "ทั่วไป";
@@ -66,12 +91,12 @@ function rowToKpi_(row) {
     // ดึงค่าเป้าหมายเป็นข้อความ (String) เพื่อเก็บเครื่องหมายต่างๆ ไว้
     target: row[5] ? row[5].toString().trim() : "",
     years: [
-      cleanValue_(row[6]), cleanValue_(row[7]), cleanValue_(row[8]), cleanValue_(row[9]), cleanValue_(row[10])
+      readResult_(row[6], false), readResult_(row[7], false), readResult_(row[8], false), readResult_(row[9], false), readResult_(row[10], false)
     ],
     months: [
-      cleanMonth_(row[11]), cleanMonth_(row[12]), cleanMonth_(row[13]), cleanMonth_(row[14]),
-      cleanMonth_(row[15]), cleanMonth_(row[16]), cleanMonth_(row[17]), cleanMonth_(row[18]),
-      cleanMonth_(row[19]), cleanMonth_(row[20]), cleanMonth_(row[21]), cleanMonth_(row[22])
+      readResult_(row[11], true), readResult_(row[12], true), readResult_(row[13], true), readResult_(row[14], true),
+      readResult_(row[15], true), readResult_(row[16], true), readResult_(row[17], true), readResult_(row[18], true),
+      readResult_(row[19], true), readResult_(row[20], true), readResult_(row[21], true), readResult_(row[22], true)
     ],
     templateDetails: row[23] ? row[23].toString().trim() : "",
     dataSource: row[24] ? row[24].toString().trim() : "",
@@ -438,7 +463,7 @@ function saveKpiCore_(user, fy, item) {
       for (var y = 0; y < 5; y++) {
         var locked = y < 4 && sources[y] && sources[y][old.id];
         if (locked && !privileged) continue; // ผลปีที่มีชีตต้นทางอยู่ แก้ได้เฉพาะ admin, ผอ., QMR
-        var nv = numberOrNull_(item.years ? item.years[y] : null);
+        var nv = resultValue_(item.years ? item.years[y] : null, false);
         if (nv === old.years[y]) continue;
         newYears[y] = nv;
         // ผลทั้งปีของปี Y ต้องตรงกันทุกชีตที่เก็บปีนั้น (ช่อง K ของชีตปี Y และ G–J ของชีตปีถัดๆ ไป)
@@ -446,10 +471,12 @@ function saveKpiCore_(user, fy, item) {
       }
       var newMonths = [];
       for (var m = 0; m < 12; m++) {
-        newMonths.push(item.months ? monthOrNull_(item.months[m]) : old.months[m]);
+        newMonths.push(item.months ? resultValue_(item.months[m], true) : old.months[m]);
       }
       if (newYears.join("|") !== old.years.join("|") || newMonths.join("|") !== old.months.join("|")) changed = true;
-      sheet.getRange(row, ANNUAL_FIRST_COL, 1, 17).setValues([newYears.concat(newMonths)]);
+      var resultCells = newYears.concat(newMonths);
+      resultCells.forEach(function(v, i) { if (typeof v === "string" && v !== NO_CASE_) sheet.getRange(row, ANNUAL_FIRST_COL + i).setNumberFormat("@"); }); // ข้อความ (เช่น A, 1/2): กันชีตแปลงเป็นตัวเลข/วันที่
+      sheet.getRange(row, ANNUAL_FIRST_COL, 1, 17).setValues([resultCells]);
     }
 
     if (hasDetails) {

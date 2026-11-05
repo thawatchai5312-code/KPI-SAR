@@ -189,7 +189,9 @@ function propagateAnnual_(changes) {
       if (offset < 0 || offset > 4) return;
       var row = rowOf[c.id];
       if (!row) return;
-      sheet.getRange(row, ANNUAL_FIRST_COL + offset).setValue(c.value === null || c.value === undefined ? "" : c.value);
+      var cell = sheet.getRange(row, ANNUAL_FIRST_COL + offset);
+      if (typeof c.value === "string" && c.value !== "") cell.setNumberFormat("@"); // ผลเป็นข้อความ (เช่น A): กันชีตแปลงชนิด
+      cell.setValue(c.value === null || c.value === undefined ? "" : c.value);
     });
   });
 }

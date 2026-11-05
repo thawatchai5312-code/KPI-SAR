@@ -52,10 +52,10 @@ async function open(b,user){
  assert.strictEqual(await pg.inputValue('#ed-m1'),'-');assert.strictEqual(await pg.inputValue('#ed-m2'),'0');assert.strictEqual(await pg.inputValue('#ed-m4'),'');
  assert(/พิมพ์ - ถ้าเดือนนั้นไม่มีเคส/.test(await pg.textContent('.kpi-card.editing, .kpi-card')),'hint');
  await pg.screenshot({path:OUT+'/ui59-card.png'});
- // กรอกผิดรูปแบบ → เตือน ไม่บันทึก
- await pg.fill('#ed-m4','abc');await pg.evaluate(()=>saveKpiEdit());
+ // ช่องผลรับข้อความได้ (เช่น abc) แต่ยาวเกิน 60 ตัว → เตือน ไม่บันทึก
+ await pg.fill('#ed-m4','x'.repeat(70));await pg.evaluate(()=>saveKpiEdit());
  await pg.waitForFunction(()=>document.getElementById('modal-alert')&&document.getElementById('modal-alert').style.display==='flex',null,{timeout:15000}).catch(()=>{});
- assert(/ผลรายเดือนไม่ถูกต้อง|กรอกได้เฉพาะตัวเลข/.test(await pg.evaluate(()=>document.body.innerText)),'bad input warning');
+ assert(/ผลรายเดือนไม่ถูกต้อง|ยาวเกิน/.test(await pg.evaluate(()=>document.body.innerText)),'bad input warning');
  assert.strictEqual(rowOf(2570,kp.id)[15]===null||rowOf(2570,kp.id)[15]==='',true,'not saved');
  await pg.evaluate(()=>{const b=document.querySelector('#modal-alert .btn');if(b)b.click()});
  await pg.fill('#ed-m4','-');await pg.evaluate(()=>saveKpiEdit());await pg.waitForFunction(()=>!savingKpi&&editingId===null,null,{timeout:60000});

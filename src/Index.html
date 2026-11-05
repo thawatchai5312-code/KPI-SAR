@@ -166,6 +166,7 @@
     td { padding: 5px 6px; font-size: 13px; border-bottom: 1px solid #e2e8f0; text-align: center; border-right: 1px solid #f1f5f9; }
     tr:hover td { background: #f8fafc; }
     .cell-input { width: 100%; min-width: 46px; padding: 5px 3px !important; text-align: center; }
+    .cell-input.res-text { border-color: #f59e0b !important; border-style: dashed !important; background: #fffbeb; }
 
     .btn { padding: 7px 16px; border-radius: var(--radius-pill); border: none; font-weight: 700; cursor: pointer; font-size: 13px; transition: all 0.3s; box-shadow: 0 2px 4px rgba(0,0,0,0.15); }
     .btn-primary { background: var(--primary-gradient); color: #fff; }
@@ -2700,7 +2701,7 @@
 
     // ช่องผลทั้งปี: ถ้าแก้ไม่ได้ ครอบด้วยป้ายบอกเหตุผล (เอาเมาส์ไปชี้แล้วขึ้นข้อความ)
     function yearInputHtml(kpi, i, v) {
-      const input = (dis) => `<input type="number" step="any" id="ed-y${i}" class="editable-input cell-input" value="${v !== null ? v : ''}" ${dis ? 'disabled' : ''}>`;
+      const input = (dis) => `<input type="text" autocomplete="off" id="ed-y${i}" class="editable-input cell-input${resCls(v)}"${resultIsText(v) ? ` title="${RESULT_TEXT_TIP}"` : ''} value="${esc(v !== null ? v : '')}" ${dis ? 'disabled' : ''}>`;
       if (!kpi.canEditResults) return lockWrap(input(true), whyNoResults());
       if (i < 4 && kpi.lockedYears && kpi.lockedYears[i] && !isPrivilegedUser()) {
         return lockWrap(input(true), `แก้ไม่ได้: ผลปีงบ ${selectedFy - 4 + i} อ้างอิงจากชีตปีงบนั้น (แก้ได้เฉพาะ admin / ผอ. / QMR)`);
@@ -2820,7 +2821,7 @@
       }
 
       const yearsView = `<table><thead><tr>${yearsLabels.map(y => `<th>${y}</th>`).join('')}</tr></thead>
-        <tbody><tr>${kpi.years.map(v => `<td>${v !== null ? v : '-'}</td>`).join('')}</tr></tbody></table>`;
+        <tbody><tr>${kpi.years.map(v => `<td>${resShow(v)}</td>`).join('')}</tr></tbody></table>`;
       const yearsEdit = `<table><thead><tr>${yearsLabels.map(y => `<th>${y}</th>`).join('')}</tr></thead>
         <tbody><tr>${kpi.years.map((v, i) => `<td style="padding:0;">${yearInputHtml(kpi, i, v)}</td>`).join('')}</tr></tbody></table>`;
 
@@ -2829,8 +2830,8 @@
         const idx = [0, 1, 2, 3, 4, 5].map(i => start + i);
         return `<tr>${idx.map(i => `<th style="background:#fffbeb;">${thMonthsNames[i]}</th>`).join('')}</tr>` +
           `<tr>${idx.map(i => canRes
-            ? `<td style="padding:0;"><input type="text" inputmode="decimal" autocomplete="off" id="ed-m${i}" class="editable-input cell-input" title="${NO_CASE_HINT}" value="${kpi.months[i] !== null ? kpi.months[i] : ''}"></td>`
-            : `<td ${ed ? `class="locked-cell" data-reason="${esc(whyNoResults())}"` : ''}>${kpi.months[i] !== null ? kpi.months[i] : '-'}</td>`).join('')}</tr>`;
+            ? `<td style="padding:0;"><input type="text" autocomplete="off" id="ed-m${i}" class="editable-input cell-input${resCls(kpi.months[i])}" title="${resultIsText(kpi.months[i]) ? RESULT_TEXT_TIP : NO_CASE_HINT}" value="${esc(kpi.months[i] !== null ? kpi.months[i] : '')}"></td>`
+            : `<td ${ed ? `class="locked-cell" data-reason="${esc(whyNoResults())}"` : ''}>${resShow(kpi.months[i])}</td>`).join('')}</tr>`;
       }).join('');
 
       const ownerHtml = canDet
@@ -3074,23 +3075,39 @@
       return globalDatabase.find(k => k.id === editingId) || null;
     }
 
-    // ผลรายเดือน: ตัวเลข / "-" = เดือนนั้นไม่มีเคส (ไม่นับในค่าเฉลี่ย แต่นับว่ากรอกแล้ว) / ว่าง = ยังไม่กรอก
-    const NO_CASE_HINT = 'พิมพ์ - ถ้าเดือนนั้นไม่มีเคส (ไม่นับในค่าเฉลี่ย) · พิมพ์ 0 เมื่อผลลัพธ์เป็นศูนย์จริง · เว้นว่างถ้ายังไม่มีผล';
+    // ช่องผล (ผลทั้งปี/รายเดือน) รับได้ทั้งตัวเลขและข้อความ (เช่น A, B-, ดีมาก) ตัดสินจากค่าที่กรอกทีละช่อง — กติกาเดียวกับ resultParse_ ฝั่งเซิร์ฟเวอร์
+    //  ว่าง = ยังไม่กรอก · "-" = (รายเดือน) เดือนนั้นไม่มีเคส · ตัวเลข (ตัด , หลักพัน และ % ท้าย) = ตัวเลข · อย่างอื่น = ข้อความ (เก็บไว้ ไม่นำไปคำนวณ/กราฟ)
+    const RESULT_TEXT_MAX = 60;
+    const NO_CASE_HINT = 'พิมพ์ - ถ้าเดือนนั้นไม่มีเคส (ไม่นับในค่าเฉลี่ย) · พิมพ์ 0 เมื่อผลลัพธ์เป็นศูนย์จริง · เว้นว่างถ้ายังไม่มีผล · พิมพ์ข้อความได้ เช่น A, ดีมาก (เก็บเป็นข้อความ ไม่นำไปคำนวณ)';
+    const RESULT_TEXT_TIP = 'เก็บเป็นข้อความ — ไม่นำไปคำนวณค่าเฉลี่ย/กราฟ';
     function monthText(el) { return el ? String(el.value).trim() : ''; }
     function monthIsDash(t) { return /^(-|NA|N\/A)$/i.test(t); }
-    function monthIsBad(t) { return t !== '' && !monthIsDash(t) && !/^-?\d+(\.\d+)?$/.test(t); }
-    function getMonthVal(id) {
-      const t = monthText(document.getElementById(id));
+    function resultValue(raw, isMonth) {
+      if (raw === null || raw === undefined) return null;
+      if (typeof raw === 'number') return isFinite(raw) ? raw : null;
+      const t = String(raw).replace(/[๐-๙]/g, c => String(c.charCodeAt(0) - 0x0E50)).replace(/\u00a0/g, ' ').trim();
       if (t === '') return null;
-      if (monthIsDash(t)) return '-';
-      return monthIsBad(t) ? null : Number(t);
+      if (t === '-') return isMonth ? '-' : null;
+      if (/^(NA|N\/A)$/i.test(t)) return isMonth ? '-' : null;
+      let n = t.replace(/%$/, '').replace(/\s+/g, '');
+      if (/^-?\d{1,3}(,\d{3})+(\.\d+)?$/.test(n)) n = n.replace(/,/g, '');
+      if (/^-?\d+(\.\d+)?$/.test(n) || /^-?\.\d+$/.test(n)) return Number(n);
+      return t.length > RESULT_TEXT_MAX ? t.substring(0, RESULT_TEXT_MAX) : t;
     }
-    function getNum(id) {
-      const el = document.getElementById(id);
-      if (!el || el.value === '') return null;
-      const n = Number(el.value);
-      return isNaN(n) ? null : n;
-    }
+    function resultIsText(v) { return typeof v === 'string' && v !== '-' && v !== ''; }
+    function resultTooLong(el) { return !!el && String(el.value).trim().length > RESULT_TEXT_MAX; }
+    function resCls(v) { return resultIsText(v) ? ' res-text' : ''; }
+    function resShow(v) { return v === null || v === undefined ? '-' : esc(String(v)); }
+    function getMonthVal(id) { const el = document.getElementById(id); return el ? resultValue(el.value, true) : null; }
+    function getNum(id) { const el = document.getElementById(id); return el ? resultValue(el.value, false) : null; }
+    // พิมพ์ข้อความในช่องผล → ขอบสีส้มประ + คำอธิบาย (กันพิมพ์ผิดเช่น 8O แทน 80 โดยไม่รู้ตัว)
+    document.addEventListener('input', e => {
+      const el = e.target;
+      if (!el || !el.id || !/^ed-(y|m)\d+$/.test(el.id)) return;
+      const isM = el.id.charAt(3) === 'm', v = resultValue(el.value, isM);
+      el.classList.toggle('res-text', resultIsText(v));
+      el.title = resultIsText(v) ? RESULT_TEXT_TIP : (isM ? NO_CASE_HINT : '');
+    });
 
     function getVal(id) {
       const el = document.getElementById(id);
@@ -3515,9 +3532,16 @@
         fail(); return;
       }
       if (draft.months !== undefined) {
-        const badM = draft.months.findIndex((_, i) => monthIsBad(monthText(document.getElementById('ed-m' + i))));
+        const badM = draft.months.findIndex((_, i) => resultTooLong(document.getElementById('ed-m' + i)));
         if (badM !== -1) {
-          showAlert('ผลรายเดือนไม่ถูกต้อง', '⚠️', 'ผลเดือน ' + thMonthsNames[badM] + ' กรอกได้เฉพาะตัวเลข หรือ - (เดือนนั้นไม่มีเคส) หรือเว้นว่าง');
+          showAlert('ผลรายเดือนไม่ถูกต้อง', '⚠️', 'ผลเดือน ' + thMonthsNames[badM] + ' ยาวเกิน ' + RESULT_TEXT_MAX + ' ตัวอักษร (ตัวเลข หรือข้อความสั้น ๆ เช่น A, ดีมาก)');
+          fail(); return;
+        }
+      }
+      if (draft.years !== undefined) {
+        const badY = draft.years.findIndex((_, i) => resultTooLong(document.getElementById('ed-y' + i)));
+        if (badY !== -1) {
+          showAlert('ผลทั้งปีไม่ถูกต้อง', '⚠️', 'ผลปีงบ ' + (selectedFy - 4 + badY) + ' ยาวเกิน ' + RESULT_TEXT_MAX + ' ตัวอักษร (ตัวเลข หรือข้อความสั้น ๆ เช่น A, ดีมาก)');
           fail(); return;
         }
       }
@@ -4507,10 +4531,14 @@
     // วิธีสรุปผลรายเดือนที่ผู้ดูแลกำหนดต่อตัวชี้วัด: เฉลี่ย / ผลรวม / เดือนล่าสุด (ที่มีข้อมูล)
     const SUMMARY_METHODS = ['เฉลี่ย', 'ผลรวม', 'เดือนล่าสุด'];
     function calculateMonthlySummary(mArray, method) {
-      const validValues = mArray.filter(v => typeof v === 'number'); // "-" (ไม่มีเคส) และช่องว่าง ไม่นับ
-      if (validValues.length === 0) return '-';
+      const validValues = mArray.filter(v => typeof v === 'number'); // "-" (ไม่มีเคส) ช่องว่าง และข้อความ ไม่นับในการคำนวณ
+      const texts = mArray.filter(resultIsText);
+      if (method === 'เดือนล่าสุด') { // ค่าล่าสุดที่กรอก (ตัวเลขหรือข้อความ)
+        const last = mArray.filter(v => typeof v === 'number' || resultIsText(v));
+        return last.length ? esc(String(last[last.length - 1])) : '-'; // ข้อความผลต้อง escape (ผลลัพธ์ใส่ใน HTML ทุกจุด)
+      }
+      if (validValues.length === 0) return texts.length ? esc(String(texts[texts.length - 1])) : '-'; // มีแต่ข้อความ: แสดงข้อความล่าสุด
       if (method === 'ผลรวม') return String(Math.round(validValues.reduce((a, b) => a + b, 0) * 100) / 100);
-      if (method === 'เดือนล่าสุด') return String(validValues[validValues.length - 1]);
       return (validValues.reduce((a, b) => a + b, 0) / validValues.length).toFixed(2);
     }
 
@@ -4525,7 +4553,19 @@
       const targetMatch = String(targetStr).match(/-?\d+(\.\d+)?/);
       if (targetMatch) targetVal = parseFloat(targetMatch[0]);
 
-      const allVals = [...dataPoints.filter(v => v !== null), targetVal];
+      // ผลที่เป็นข้อความ (เช่น A, ดีมาก) ไม่นำไปวาดเป็นจุด — แสดงเป็นป้ายข้อความใต้แกน · ไม่มีตัวเลขเลยแต่มีข้อความ = แสดงข้อความล้วน ไม่มีกราฟ
+      const numPts = dataPoints.map(v => typeof v === 'number' ? v : null);
+      const textPts = dataPoints.map(v => resultIsText(v) ? v : null);
+      if (numPts.every(v => v === null) && textPts.some(v => v !== null)) {
+        const cw = (width - padL - padR) / labels.length;
+        let ts = `<svg viewBox="0 0 ${width} 110" width="100%" height="auto"><text x="${width / 2}" y="22" font-size="13" font-weight="700" text-anchor="middle" fill="#64748b">ผลเป็นข้อความ — ไม่มีกราฟ</text>`;
+        textPts.forEach((t, i) => {
+          const x = padL + cw * i + cw / 2;
+          ts += `<text x="${x}" y="62" font-size="18" font-weight="700" text-anchor="middle" fill="#b45309">${t === null ? '-' : esc(t)}</text><text x="${x}" y="92" font-size="12" font-weight="700" text-anchor="middle" fill="#475569">${esc(labels[i])}</text>`;
+        });
+        return ts + '</svg>';
+      }
+      const allVals = [...numPts.filter(v => v !== null), targetVal];
       let maxVal = Math.max(...allVals, 10);
       let minVal = Math.min(...allVals, 0);
       maxVal = maxVal + (maxVal * 0.15);
@@ -4553,7 +4593,8 @@
       dataPoints.forEach((val, idx) => {
         const x = calcX(idx);
         svg += `<text x="${x}" y="${height - 8}" font-size="12" font-weight="700" text-anchor="middle" fill="#475569">${labels[idx]}</text>`;
-        if (val !== null) pts.push([x, calcY(val), val]);
+        if (numPts[idx] !== null) pts.push([x, calcY(numPts[idx]), numPts[idx]]);
+        else if (textPts[idx] !== null) svg += `<text x="${x}" y="${height - 26}" font-size="13" font-weight="700" text-anchor="middle" fill="#b45309">${esc(textPts[idx])}</text>`;
       });
 
       if (pts.length > 1) {
@@ -5046,7 +5087,8 @@
     }
     window.addEventListener('resize', () => { if (currentTab === 'report') rptFit(); });
 
-    function prNum(v) { return typeof v === 'number' ? Math.round(v * 100) / 100 : '-'; }
+    function prNum(v) { return typeof v === 'number' ? Math.round(v * 100) / 100 : (resultIsText(v) ? v : '-'); }
+    function prNumH(v) { return esc(String(prNum(v))); } // ใช้ในแม่แบบ HTML (ข้อความผลต้อง escape)
     function prShort(text, n) { return text.length > n ? text.substring(0, n - 1) + '…' : text; }
 
     // เลขข้อในรายงาน: รันต่อเนื่องทั้งเล่มตามลำดับที่พิมพ์ (ไม่เริ่ม 1 ใหม่ทุกหมวด) — ตัวหลัก 1…N
@@ -5097,8 +5139,8 @@
         const isSub = no.indexOf('.') !== -1;
         const sub = isSub ? ' pr-subkpi' : ' pr-main';   // ตัวชี้วัดหลัก: ลำดับ+ชื่อเป็นตัวหนา · ตัวย่อยปกติ
         const noCls = isSub ? '' : ' class="pr-main"';
-        a += `<tr><td${noCls}>${no}</td><td class="pr-left${sub}">${esc(k.name)}</td><td class="pr-target">${esc(k.target) || '-'}</td>${k.years.map(v => `<td>${prNum(v)}</td>`).join('')}</tr>`;
-        b += `<tr><td${noCls}>${no}</td><td class="pr-left pr-mname${sub}">${esc(k.name)}</td>${k.months.map(v => `<td>${prNum(v)}</td>`).join('')}<td>${calculateMonthlySummary(k.months, k.summaryMethod)}<br><span class="pr-method">${esc(k.summaryMethod || 'เฉลี่ย')}</span></td></tr>`;
+        a += `<tr><td${noCls}>${no}</td><td class="pr-left${sub}">${esc(k.name)}</td><td class="pr-target">${esc(k.target) || '-'}</td>${k.years.map(v => `<td>${prNumH(v)}</td>`).join('')}</tr>`;
+        b += `<tr><td${noCls}>${no}</td><td class="pr-left pr-mname${sub}">${esc(k.name)}</td>${k.months.map(v => `<td>${prNumH(v)}</td>`).join('')}<td>${calculateMonthlySummary(k.months, k.summaryMethod)}<br><span class="pr-method">${esc(k.summaryMethod || 'เฉลี่ย')}</span></td></tr>`;
       });
       return a + '</tbody></table>' + b + '</tbody></table>';
     }
@@ -5123,7 +5165,7 @@
       if (opts.chart) {
         h += `<div class="pr-chart">${generateSvgLineChart(k.years, k.target, yl)}</div>
           <table class="pr-table" style="font-size:${landscape ? '10.5pt' : '9pt'};"><thead><tr>${thMonthsNames.map(m => `<th>${m}</th>`).join('')}<th>สรุป</th></tr></thead>
-          <tbody><tr>${k.months.map(v => `<td>${prNum(v)}</td>`).join('')}<td>${calculateMonthlySummary(k.months, k.summaryMethod)}<br><span class="pr-method">${esc(k.summaryMethod || 'เฉลี่ย')}</span></td></tr></tbody></table>`;
+          <tbody><tr>${k.months.map(v => `<td>${prNumH(v)}</td>`).join('')}<td>${calculateMonthlySummary(k.months, k.summaryMethod)}<br><span class="pr-method">${esc(k.summaryMethod || 'เฉลี่ย')}</span></td></tr></tbody></table>`;
       }
       if (opts.detail) h += `<div class="pr-label">รายละเอียด/การวิเคราะห์ตัวชี้วัด</div><div class="pr-text">${esc(k.templateDetails) || '-'}</div>`;
       if (opts.source) h += `<div class="pr-label">ที่มาแหล่งข้อมูล / สูตรคำนวณ</div><div class="pr-text">${esc(k.dataSource) || '-'}</div>`;
@@ -5551,7 +5593,7 @@
         <thead><tr><th>ที่</th><th>ตัวชี้วัด</th><th>เป้าหมาย</th>${yl.map(y => `<th>${y}</th>`).join('')}</tr></thead><tbody>`;
       kpis.forEach(k => {
         const no = prNo(k), isSub = no.indexOf('.') !== -1;
-        h += `<tr><td${isSub ? '' : ' class="pr-main"'}>${no}</td><td class="pr-left${isSub ? ' pr-subkpi' : ' pr-main'}">${esc(k.name)}</td><td class="pr-target">${esc(k.target) || '-'}</td>${k.years.map(v => `<td>${prNum(v)}</td>`).join('')}</tr>`;
+        h += `<tr><td${isSub ? '' : ' class="pr-main"'}>${no}</td><td class="pr-left${isSub ? ' pr-subkpi' : ' pr-main'}">${esc(k.name)}</td><td class="pr-target">${esc(k.target) || '-'}</td>${k.years.map(v => `<td>${prNumH(v)}</td>`).join('')}</tr>`;
       });
       return h + '</tbody></table>';
     }
@@ -6338,7 +6380,7 @@
       const yl = sarYearLabels(), key = s.key;
       const val = clt.draft && clt.draft.key === key ? clt.draft.text : cltItem(key).text;
       const dim = cltDimOf(k), fixed = /^[A-H]$/.test(cltItem('DIM|' + k.id).text);
-      return `<div class="pr-meta">เป้าหมาย: <b>${esc(k.target) || '-'}</b> · ผลทั้งปี ${yl.map((y, i) => y + ': <b>' + prNum(k.years[i]) + '</b>').join(' · ')}</div>
+      return `<div class="pr-meta">เป้าหมาย: <b>${esc(k.target) || '-'}</b> · ผลทั้งปี ${yl.map((y, i) => y + ': <b>' + prNumH(k.years[i]) + '</b>').join(' · ')}</div>
         ${k.years.some(v => v !== null) ? `<div class="pr-chart" style="max-width:640px;">${generateSvgLineChart(k.years, k.target, yl)}</div>` : ''}
         <div class="form-group"><label>📎 เอกสารแนบ <span class="sar-noexport">(ไม่แสดงในไฟล์ที่ Export)</span></label><div class="doc-links" data-links-ro="${esc(k.id)}">${linkRoBodyHtml(k.id)}</div></div>
         <div class="form-group"><label>มิติคุณภาพ ${fixed ? '' : '(ระบบเดาจากชื่อ — เลือกเพื่อกำหนดเอง)'}</label>
@@ -7606,8 +7648,8 @@
       c.name = canDet ? { h: `<textarea id="ed-name" class="editable-input tbl-in" rows="3">${esc(kpi.name)}</textarea>` } : Object.assign({ h: clamp(kpi.name, '-', 'tbl-name' + (isSub ? ' sub' : '')) }, lockD_);
       c.st = { h: `<span class="st-badge ${stt.level}" style="margin:0;" title="${esc(stt.reasons.join(' · '))}">${stt.icon} ${stt.label}</span>` };
       c.tg = canDet ? { h: `<input type="text" id="ed-target" class="editable-input tbl-in" value="${esc(kpi.target)}">` } : Object.assign({ h: esc(kpi.target) || '-' }, lockD_);
-      kpi.years.forEach((v, i) => { c['y' + i] = canRes ? { h: yearInputHtml(kpi, i, v), num0: 1 } : Object.assign({ h: v !== null ? v : '-' }, lockR_); });
-      kpi.months.forEach((v, i) => { c['m' + i] = canRes ? { h: `<input type="text" inputmode="decimal" autocomplete="off" id="ed-m${i}" class="editable-input cell-input" title="${NO_CASE_HINT}" value="${v !== null ? v : ''}">`, num0: 1 } : Object.assign({ h: v !== null ? v : '-' }, lockR_); });
+      kpi.years.forEach((v, i) => { c['y' + i] = canRes ? { h: yearInputHtml(kpi, i, v), num0: 1 } : Object.assign({ h: resShow(v) }, lockR_); });
+      kpi.months.forEach((v, i) => { c['m' + i] = canRes ? { h: `<input type="text" autocomplete="off" id="ed-m${i}" class="editable-input cell-input${resCls(v)}" title="${resultIsText(v) ? RESULT_TEXT_TIP : NO_CASE_HINT}" value="${esc(v !== null ? v : '')}">`, num0: 1 } : Object.assign({ h: resShow(v) }, lockR_); });
       c.sum = { h: `${calculateMonthlySummary(kpi.months, kpi.summaryMethod)}<div class="hint" style="margin:0;">${esc(kpi.summaryMethod || 'เฉลี่ย')}</div>` };
       c.sm = ed && priv ? { h: `<select id="ed-summary" class="editable-input tbl-in">${SUMMARY_METHODS.map(m => `<option value="${m}" ${m === (kpi.summaryMethod || 'เฉลี่ย') ? 'selected' : ''}>${m}</option>`).join('')}</select>` } : { h: esc(kpi.summaryMethod || 'เฉลี่ย') };
       c.fq = ed && priv ? { h: `<select id="ed-frequency" class="editable-input tbl-in">${FREQUENCIES.map(m => `<option value="${m}" ${m === (kpi.frequency || 'รายเดือน') ? 'selected' : ''}>${m}</option>`).join('')}</select>` } : { h: esc(kpi.frequency || 'รายเดือน') };

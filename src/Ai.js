@@ -311,7 +311,7 @@ function aiTarget_(t) {
   return { op: op, num: parseFloat(m[2]) };
 }
 function aiPass_(v, t) {
-  if (v === null || v === undefined || !t || !t.op) return null;
+  if (typeof v !== "number" || !t || !t.op) return null; // ผลที่เป็นข้อความ (เช่น A) ไม่ตัดสินผ่าน/ไม่ผ่าน
   if (t.op === "≥") return v >= t.num;
   if (t.op === ">") return v > t.num;
   if (t.op === "≤") return v <= t.num;
@@ -325,7 +325,7 @@ function aiDirection_(t) {
   if (t.op === "≤" || t.op === "<") return "ยิ่งต่ำยิ่งดี";
   return "ต้องเท่ากับเป้า";
 }
-function aiNum_(v) { return v === null || v === undefined ? "ว่าง" : String(Math.round(v * 100) / 100); }
+function aiNum_(v) { return v === null || v === undefined ? "ว่าง" : (typeof v === "number" ? String(Math.round(v * 100) / 100) : String(v)); }
 function aiMonthText_(v) { return v === null || v === undefined ? "ว่าง" : (v === "-" ? "-" : aiNum_(v)); }
 
 function aiSummary_(months, method) {
@@ -347,8 +347,13 @@ function aiDueMonths_(fy) {
 function aiFacts_(kpi, fy, months) {
   var t = aiTarget_(kpi.target), lines = [];
   var yrs = [];
-  for (var i = 0; i < 5; i++) if (kpi.years[i] !== null && kpi.years[i] !== undefined) yrs.push({ year: fy - 4 + i, v: kpi.years[i] });
-  if (yrs.length === 0) lines.push("- ผลทั้งปีย้อนหลัง: ยังไม่มีข้อมูล");
+  var yrText = [];
+  for (var i = 0; i < 5; i++) {
+    if (typeof kpi.years[i] === "number") yrs.push({ year: fy - 4 + i, v: kpi.years[i] });
+    else if (typeof kpi.years[i] === "string") yrText.push((fy - 4 + i) + " = " + kpi.years[i]);
+  }
+  if (yrText.length) lines.push("- ผลทั้งปีที่เป็นข้อความ (ไม่นำไปคำนวณ): " + yrText.join(", "));
+  if (yrs.length === 0) lines.push("- ผลทั้งปีย้อนหลังที่เป็นตัวเลข: " + (yrText.length ? "ไม่มี" : "ยังไม่มีข้อมูล"));
   else {
     var last = yrs[yrs.length - 1], p = aiPass_(last.v, t);
     lines.push("- ผลล่าสุด (ผลทั้งปี): " + last.year + " = " + aiNum_(last.v) + (p === null ? "" : (p ? " → ผ่านเป้า" : " → ไม่ผ่านเป้า") + " (" + (last.v >= t.num ? "สูงกว่าเป้า " : "ต่ำกว่าเป้า ") + aiNum_(Math.abs(last.v - t.num)) + ")"));
@@ -367,6 +372,8 @@ function aiFacts_(kpi, fy, months) {
   var nums = months.filter(function(v) { return typeof v === "number"; });
   var dashes = months.filter(function(v) { return v === "-"; }).length;
   var empty = months.filter(function(v) { return v === null || v === undefined || v === ""; }).length;
+  var texts = months.filter(function(v) { return typeof v === "string" && v !== "-" && v !== ""; });
+  if (texts.length) lines.push("- ผลรายเดือนที่เป็นข้อความ (ไม่นำไปคำนวณ): " + months.map(function(v, i) { return typeof v === "string" && v !== "-" && v !== "" ? AI_MONTHS[i] + "=" + v : ""; }).filter(String).join(", "));
   var due = aiDueMonths_(fy), missing = 0;
   for (var m = 0; m < due; m++) if (months[m] === null || months[m] === undefined || months[m] === "") missing++;
   var freq = kpi.frequency && kpi.frequency !== "รายเดือน" ? " · ความถี่เก็บข้อมูล: " + kpi.frequency : "";
@@ -501,7 +508,7 @@ function aiFindKpi_(fy, id) {
 }
 
 function aiDraftMonths_(kpi, draft) {
-  if (draft && Array.isArray(draft.months) && draft.months.length === 12) return draft.months.map(function(v) { return cleanMonth_(v); });
+  if (draft && Array.isArray(draft.months) && draft.months.length === 12) return draft.months.map(function(v) { return resultValue_(v, true); });
   return kpi.months.slice();
 }
 
