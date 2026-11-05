@@ -1973,7 +1973,7 @@
       globalDatabase = [];
       selectedKpiId = null;
       editingKey = null; selectedKey = null; pendingSelectAfterLoad = null; selectedFy = null;
-      openParts.clear(); openCats.clear(); lastInViewKey = null;
+      openParts.clear(); openCats.clear(); treeInitFocus = true;
       globalProgressData = [];
       acDir = { users: [], units: [] }; acHide();
       tourReset();
@@ -2079,7 +2079,7 @@
             if (res.message && res.message.indexOf('SESSION_EXPIRED') !== -1) { showLogin('เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่'); return; }
             showAlert('โหลดข้อมูลล้มเหลว', '❌', res.message); loadFailed(res.message); return;
           }
-          if (res.fy !== selectedFy) currentPage = 1;
+          if (res.fy !== selectedFy) { currentPage = 1; treeInitFocus = true; } // เข้าระบบ/เปลี่ยนปีงบ: กางหมวดแรกให้ 1 ครั้ง
           globalDatabase = res.data;
           dataV = res.dataV !== undefined ? res.dataV : 0; // อัปเดตอัตโนมัติ: นับการเปลี่ยนแปลงต่อจากรุ่นนี้
           remoteEdit = null; liveDeferred = false;
@@ -2576,7 +2576,7 @@
         renderTree();
         renderList();
         const first = document.querySelector('.kpi-card');
-        if (first) { focusTreeOn(first.dataset.key); lastInViewKey = null; }
+        if (first) focusTreeOn(first.dataset.key); // สลับมุมมอง: กางหมวดแรกให้ (กดเอง)
         document.getElementById('panel-tree').scrollTop = 0;
         window.scrollTo({ top: 0, behavior: 'smooth' });
       });
@@ -2645,7 +2645,6 @@
         header.innerHTML = `<span>${esc(partLabel(partName))}</span><span class="part-count">${new Set([].concat(...Object.values(tree[partName])).map(k => k.id)).size}</span>`;
         // กดหัว Part = เปิด/ปิดดูเองได้หลายอันระหว่างหา (ยังไม่ย่ออันอื่น จนกว่าจะเลือกตัวชี้วัด)
         header.onclick = () => {
-          markTreeBrowsing();
           partDiv.classList.toggle('open');
           if (partDiv.classList.contains('open')) openParts.add(partName); else openParts.delete(partName);
         };
@@ -2741,7 +2740,6 @@
       openParts.clear(); openCats.clear();
       openParts.add(focusP.part);
       openCats.add(focusP.part + '||' + focusP.category);
-      suppressTreeSyncUntil = Date.now() + 1500; // ระหว่างเลื่อนจอไปหาการ์ด ไม่ให้แถบซ้ายกระโดดตามการ์ดที่ผ่าน
       const page = listMode === 'table' ? currentPage : Math.floor(idx / pageSize) + 1; // ตาราง: ทุกแถวอยู่ในหน้าเดียว
       const rowMissing = listMode === 'table' ? !tblHasRow(k.key) : !document.getElementById('card-' + cssId(k.key));
       if (relisted || page !== currentPage || rowMissing) {
@@ -3183,13 +3181,11 @@
       document.querySelectorAll(CARD_SEL).forEach(c => cardObserver.observe(c));
     }
 
-    // ---------- แถบรายชื่อตัวชี้วัดเลื่อนตามการ์ดที่อยู่บนจอ (ใช้เป็นแถบนำทาง) ----------
-    let lastInViewKey = null, treeSyncTimer = null, treeBrowsingAt = 0, treeHover = false, suppressTreeSyncUntil = 0;
-    const isWideScreen = () => window.matchMedia('(min-width: 1001px)').matches; // มือถือ/จอแคบ: แถบอยู่เหนือการ์ด ไม่ต้องเลื่อนตาม
-
-    function markTreeBrowsing() { treeBrowsingAt = Date.now(); }
-    // ผู้ใช้กำลังใช้แถบซ้ายอยู่ (เมาส์อยู่บนแถบ หรือเพิ่งกดกาง/ย่อเองไม่ถึง 4 วินาที) → แถบไม่ขยับเอง
-    function treeSyncPaused() { return treeHover || Date.now() - treeBrowsingAt < 4000 || Date.now() < suppressTreeSyncUntil; }
+    // ---------- แถบรายชื่อตัวชี้วัด (ใช้เป็นแถบนำทาง) ----------
+    // เลื่อนรายการขวา = แถบซ้ายไม่กาง/ย่อ/เลื่อนตาม (ผู้ใช้สับสน) — ขยับเฉพาะตอนผู้ใช้สั่ง (กดชื่อ/กดหัวหมวด/สลับมุมมอง/กดมาจากหน้าอื่น) · มีแค่แถบไฮไลต์ตัวที่อยู่บนจอ (เปลี่ยนสีพื้นอย่างเดียว)
+    // treeInitFocus = ตอนเข้าระบบ/เปลี่ยนปีงบ กางหมวดแรกให้ 1 ครั้ง (เมื่อผู้ใช้ยังไม่ได้กางอะไรเอง)
+    let treeInitFocus = true;
+    const isWideScreen = () => window.matchMedia('(min-width: 1001px)').matches; // มือถือ/จอแคบ: แถบอยู่เหนือการ์ด ไม่ต้องกางให้
 
     // ใส่คลาสเปิด/ปิดตาม openParts/openCats โดยไม่วาดแถบใหม่ทั้งหมด (เร็ว ไม่กระตุกตอนเลื่อนจอ)
     function applyTreeOpenState() {
@@ -3219,7 +3215,6 @@
     }
 
     function collapseTree() {
-      markTreeBrowsing();
       openParts.clear(); openCats.clear();
       applyTreeOpenState();
     }
@@ -3240,22 +3235,13 @@
       const first = currentCardKey();
       const firstCard = first ? document.getElementById('card-' + cssId(first)) : null;
       document.querySelectorAll('.kpi-link-item').forEach(el => el.classList.toggle('in-view', !!firstCard && el.dataset.id === firstCard.dataset.id));
-      if (!first || first === lastInViewKey) return;
-      lastInViewKey = first;
-      if (!isWideScreen()) return;
-      clearTimeout(treeSyncTimer);
-      // รอให้หยุดเลื่อนสักครู่ก่อนขยับแถบ ไม่ให้สั่นตอนเลื่อนเร็ว
-      treeSyncTimer = setTimeout(() => {
-        if (treeSyncPaused() || lastInViewKey !== first) return;
-        focusTreeOn(first);
-        scrollTreeTo(first);
-      }, 150);
+      if (treeInitFocus && first && isWideScreen()) { // กางหมวดแรกให้ 1 ครั้ง หลังจากนั้นไม่ขยับเอง
+        treeInitFocus = false;
+        if (openParts.size === 0) focusTreeOn(first);
+      }
     }
 
     (function () {
-      const panel = document.getElementById('panel-tree');
-      panel.addEventListener('mouseenter', () => { treeHover = true; });
-      panel.addEventListener('mouseleave', () => { treeHover = false; });
       // เลื่อนอยู่ในการ์ดใบยาวๆ ตัว observer อาจไม่แจ้ง — ตรวจตำแหน่งเพิ่มตอนเลื่อนจอ (ไม่เกินเฟรมละครั้ง)
       let ticking = false;
       window.addEventListener('scroll', () => {

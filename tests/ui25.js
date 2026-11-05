@@ -19,23 +19,41 @@ const html=fs.readFileSync(require('path').join(__dirname,'../src/Index.html'),'
  const total=pg=>pg.evaluate(()=>getOrderedKpis().length);
 
  let pg=await mkpage(); await login(pg,'อรทัย','secret99'); await pg.evaluate(()=>setTreeView('hosp')); await pg.waitForTimeout(400); await pg.mouse.move(1300,500); await pg.waitForTimeout(600);
- const state=()=>pg.evaluate(()=>({openParts:Array.from(document.querySelectorAll('.accordion-part.open')).map(e=>e.dataset.part),openCats:Array.from(document.querySelectorAll('.category-block.open')).map(e=>e.dataset.cat),inView:(document.querySelector('.kpi-link-item.in-view')||{}).dataset?.key,firstCard:document.querySelector('.kpi-card').dataset.key}));
+ const state=()=>pg.evaluate(()=>({openParts:Array.from(document.querySelectorAll('.accordion-part.open')).map(e=>e.dataset.part),openCats:Array.from(document.querySelectorAll('.category-block.open')).map(e=>e.dataset.cat),inView:(document.querySelector('.kpi-link-item.in-view')||{}).dataset?.key,firstCard:(document.querySelector('.kpi-card')||{dataset:{}}).dataset.key}));
  let st=await state(); console.log('initial (mine filter on):',JSON.stringify(st));
- assert(st.openParts.length<=1&&st.openCats.length<=1,'only one open');
+ assert(st.openParts.length===1&&st.openCats.length===1,'initial: first category opened once (one-time focus)');
  // scroll cards down -> tree follows
  await pg.evaluate(()=>{pageSize=50;currentPage=1;renderList();}); await pg.waitForTimeout(300);
  const keys=await pg.evaluate(()=>Array.from(document.querySelectorAll('.kpi-card')).map(c=>[c.dataset.key,findPlacement(c.dataset.key).part+'||'+findPlacement(c.dataset.key).category]));
  const target=keys.find(k=>k[1]!==keys[0][1]); console.log('scroll to card in other category',JSON.stringify(target));
- await pg.evaluate(k=>document.getElementById('card-'+cssId(k)).scrollIntoView({block:'start'}),target[0]); await pg.waitForTimeout(700);
- st=await state(); console.log('after scroll:',JSON.stringify(st)); console.log('dbg',await pg.evaluate(()=>({y:scrollY,vis:Array.from(visibleCards),nCards:document.querySelectorAll('.kpi-card').length,h:document.body.scrollHeight})));
- assert(st.openCats.length===1&&st.openCats[0]===target[1],'tree focused on scrolled category'); assert(st.inView===target[0]);
- const vis=await pg.evaluate(k=>{const p=document.getElementById('panel-tree'),i=Array.from(p.querySelectorAll('.kpi-link-item')).find(e=>e.dataset.key===k);const pr=p.getBoundingClientRect(),ir=i.getBoundingClientRect();return ir.top>=pr.top&&ir.bottom<=pr.bottom},target[0]); console.log('in-view item visible in panel:',vis); assert(vis);
+ // เลื่อนรายการขวาไปการ์ดอีกหมวด → แถบซ้ายไม่กาง/ย่อ/เลื่อนตาม (เหลือแค่ไฮไลต์เปลี่ยนสีพื้น)
+ const panelTop=()=>pg.evaluate(()=>document.getElementById('panel-tree').scrollTop);
+ const stBefore=await state(), ptBefore=await panelTop();
+ await pg.evaluate(k=>document.getElementById('card-'+cssId(k)).scrollIntoView({block:'start'}),target[0]); await pg.waitForTimeout(900);
+ st=await state(); console.log('after scroll:',JSON.stringify(st));
+ assert.deepStrictEqual(st.openParts,stBefore.openParts,'open parts unchanged after scrolling cards'); assert.deepStrictEqual(st.openCats,stBefore.openCats,'open categories unchanged after scrolling cards');
+ assert.strictEqual(await panelTop(),ptBefore,'tree panel did not scroll');
+ assert.strictEqual(st.inView,target[0],'highlight still follows the card on screen');
+ // เลื่อนต่ออีกหลายรอบ (เร็ว) ก็ยังนิ่ง
+ for(const k of keys.slice(0,3).reverse()){await pg.evaluate(k=>document.getElementById('card-'+cssId(k)).scrollIntoView({block:'start'}),k[0]);} await pg.waitForTimeout(900);
+ st=await state(); assert.deepStrictEqual(st.openCats,stBefore.openCats,'still unchanged'); assert.strictEqual(await panelTop(),ptBefore);
+ // เปลี่ยนหน้า (การ์ด) → แถบซ้ายไม่ขยับ
+ await pg.evaluate(()=>{pageSize=10;currentPage=1;renderList();}); await pg.waitForTimeout(300);
+ const stP=await state(), ptP=await panelTop(); await pg.evaluate(()=>{if(totalPages(uniqueById(getOrderedKpis()).length)>1)goPage(2)}); await pg.waitForTimeout(900);
+ st=await state(); assert.deepStrictEqual(st.openCats,stP.openCats,'page change does not move tree'); assert.strictEqual(await panelTop(),ptP);
+ await pg.evaluate(()=>{pageSize=50;currentPage=1;renderList();}); await pg.waitForTimeout(300);
+ // ตาราง: เลื่อนตารางก็ไม่ขยับแถบซ้าย
+ await pg.evaluate(()=>setListMode('table')); await pg.waitForSelector('#tbl-wrap'); await pg.waitForTimeout(500);
+ const stT=await state(), ptT=await panelTop(); await pg.evaluate(()=>{const w=document.getElementById('tbl-wrap');w.scrollTop=w.scrollHeight/2}); await pg.waitForTimeout(900);
+ st=await state(); assert.deepStrictEqual(st.openCats,stT.openCats,'table scroll does not move tree'); assert.strictEqual(await panelTop(),ptT);
+ await pg.evaluate(()=>setListMode('card')); await pg.waitForSelector('.kpi-card'); await pg.waitForTimeout(300);
  await pg.screenshot({path:'ui25-sync.png'});
  // manual browse: open 2 parts by clicking headers -> both stay open; sync paused while hovering
  const hdrs=pg.locator('.accordion-part:not(.open) > .accordion-header'); await hdrs.first().click(); await pg.locator('.accordion-part:not(.open) > .accordion-header').first().click(); await pg.waitForTimeout(200);
  st=await state(); console.log('manual browse:',st.openParts); assert(st.openParts.length>=3,'manual opens accumulate');
  // pick a KPI from the tree -> only its category open
- const item=pg.locator('.accordion-part.open .category-header').first(); await item.click(); await pg.waitForTimeout(800);
+ await pg.locator('.accordion-part.open .category-header').first().click(); await pg.waitForTimeout(200);
+ await pg.evaluate(()=>{const it=document.querySelector('.category-block.open .kpi-link-item');it.click()}); await pg.waitForTimeout(900);
  st=await state(); console.log('after selecting:',JSON.stringify(st)); assert(st.openParts.length===1&&st.openCats.length===1);
  // collapse all
  await pg.click('.tree-collapse'); st=await state(); assert(st.openParts.length===0); console.log('collapse ok');
