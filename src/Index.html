@@ -148,6 +148,32 @@
     .sc-badge.part { background: #fff7ed; color: #c2410c; border: 1px dashed #fdba74; }
     .sc-issues { margin: 0 0 10px; border: 1px solid #fcd34d; background: #fffbeb; border-radius: 10px; padding: 6px 10px; }
     .sc-issues summary { cursor: pointer; font-weight: 700; color: #92400e; }
+    .sim-box { margin-top: 6px; padding: 7px 10px; border: 1px solid #fcd34d; background: #fffbeb; border-radius: 8px; font-size: 12.5px; color: #78350f; }
+    .sim-box ul { margin: 4px 0 0; padding-left: 1.3em; }
+    .sim-box .sim-sub { color: #92400e; }
+    .dup-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-bottom: 10px; }
+    .dup-bar #dup-q { flex: 1 1 240px; max-width: 380px; }
+    .dup-filters button { border: 1px solid #cbd5e1; background: #fff; border-radius: 999px; padding: 3px 11px; font-size: 12.5px; cursor: pointer; margin-right: 4px; }
+    .dup-filters button.on { background: var(--primary, #166534); color: #fff; border-color: transparent; }
+    .dup-g { border: 1px solid #cbd5e1; border-radius: 12px; margin-bottom: 10px; background: #fff; overflow: hidden; }
+    .dup-gh { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding: 7px 10px; background: #f1f5f9; }
+    .dup-acts { margin-left: auto; display: inline-flex; gap: 6px; }
+    .dup-tag { font-size: 11.5px; border-radius: 999px; padding: 1px 8px; background: #fef3c7; color: #92400e; font-weight: 700; }
+    .dup-tag.same { background: #fee2e2; color: #991b1b; }
+    .dup-tag.cross { background: #e0e7ff; color: #3730a3; }
+    .dup-tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .dup-tbl td { padding: 5px 8px; border-top: 1px solid #e2e8f0; vertical-align: top; }
+    .dup-tbl tr.is-keep td { background: #f0fdf4; }
+    .dup-tbl tr.is-drop td { background: #fff7ed; }
+    .dup-tbl .dup-pick { white-space: nowrap; text-align: center; width: 78px; font-size: 12px; }
+    .dup-tbl .dup-sub { color: #64748b; font-size: 12px; }
+    .dup-prev { padding: 8px 12px; background: #fffbeb; border-top: 1px solid #fcd34d; font-size: 13px; }
+    .dup-prev ul { margin: 4px 0 6px; padding-left: 1.3em; }
+    .dup-x { margin-top: 12px; }
+    .dup-x > summary { cursor: pointer; font-weight: 700; color: #3730a3; padding: 6px 2px; }
+    @media (max-width: 700px) { .dup-tbl, .dup-tbl tbody, .dup-tbl tr, .dup-tbl td { display: block; } .dup-tbl td { border-top: 0; padding: 2px 10px; } .dup-tbl tr { border-top: 1px solid #e2e8f0; padding: 4px 0; } }
+    .sc-issues-empty { border-color: #bae6fd; background: #f0f9ff; }
+    .sc-issues-empty summary { color: #075985; }
     .sc-issue-list { max-height: 240px; overflow-y: auto; margin-top: 6px; }
     .sc-issue { padding: 4px 6px; border-radius: 6px; cursor: pointer; font-size: 13px; }
     .sc-issue:hover { background: #fef3c7; }
@@ -1151,9 +1177,9 @@
   </div>
 
   <div id="modal-settings" class="modal-overlay">
-    <div class="modal-card" style="max-width: 900px; width: 95%;">
+    <div class="modal-card" id="settings-card" style="max-width: 1280px; width: 95%;">
       <div class="modal-header">⚙️ จัดการผู้ใช้งาน (Settings)</div>
-      <div class="modal-body" style="max-height: 75vh; overflow-y: auto;">
+      <div class="modal-body" style="max-height: 85vh; overflow-y: auto;">
         <p style="font-size: 12px; color: #64748b; margin-bottom: 10px;">
           <b>admin</b> เห็นและแก้ได้ทุกอย่าง รวมถึงตั้งค่าผู้ใช้<br>
           <b>executive</b> (ผอ./QMR) เห็นและแก้ได้เฉพาะตัวชี้วัดใน Part I–IV ระดับ SAR/QA และตัวที่ตนรับผิดชอบ · จัดหมวด Part I–IV / ระดับ / วิธีสรุป / ความถี่ / ลบตัวชี้วัดได้<br>
@@ -1173,6 +1199,7 @@
               <button type="button" role="menuitem" onclick="importMenuClose();openHeadImport()">🏅 นำเข้า KPI หัวหน้าหน่วยจาก Google Sheet</button>
             </div></span>
           <button class="btn btn-accent" onclick="openTidy()">🧹 จัดระเบียบข้อมูล</button>
+          <button class="btn btn-accent" onclick="openDup()" title="หาตัวชี้วัดที่ชื่อเหมือน/คล้ายกัน แล้วเลือกรวม">🔁 ตรวจตัวชี้วัดซ้ำ</button>
           <button class="btn btn-accent" onclick="openRename()">✏️ เปลี่ยนชื่อ</button>
         </div>
         <div id="ai-settings" style="border: 1px solid #b7d7bd; background: #f3faf4; border-radius: 10px; padding: 10px 12px; margin-bottom: 12px;">
@@ -1282,6 +1309,24 @@
     </div>
   </div>
 
+  <!-- 🔁 ตรวจ/รวมตัวชี้วัดซ้ำ (admin) -->
+  <div id="modal-dup" class="modal-overlay">
+    <div class="modal-card" style="max-width: 1180px; width: 96%;">
+      <div class="modal-header">🔁 ตรวจ/รวมตัวชี้วัดซ้ำ</div>
+      <div class="modal-body" style="max-height: 80vh; overflow-y: auto;">
+        <p class="hint" style="margin-bottom: 8px;">ระบบหาตัวชี้วัดที่ชื่อเหมือน/คล้ายกันในปีงบที่เลือก <b>ไม่รวมให้เอง</b> — เลือกตัวที่เก็บ (●) แล้วติ๊กตัวที่จะรวมเข้า (☑) ดูตัวอย่างก่อนยืนยันทุกครั้ง · รวมในปีที่เลือกและปีที่ใหม่กว่า · ผลที่กรอก เอกสารแนบ PDCA/CLT และชุดคะแนนย้ายตามตัวที่เก็บ · ก่อนเขียนระบบสำรองชีตไว้และจดประวัติใน Tidy_Log</p>
+        <div class="dup-bar">
+          <label>ปีงบ <select id="dup-fy" class="editable-input" style="width:auto;display:inline-block;" onchange="dupScanRun()"></select></label>
+          <input type="text" id="dup-q" class="editable-input" placeholder="🔍 ค้นหาชื่อ / ผู้รับผิดชอบ / หน่วยงาน…" oninput="dupRender()">
+          <span id="dup-filters" class="dup-filters"></span>
+          <span id="dup-sum" class="hint" style="margin:0;"></span>
+        </div>
+        <div id="dup-list"><div class="empty-state">กำลังตรวจ…</div></div>
+      </div>
+      <div class="modal-footer"><button class="btn btn-secondary" onclick="dupClose()">ปิด</button></div>
+    </div>
+  </div>
+
   <div id="modal-nso" class="modal-overlay">
     <div class="modal-card" style="max-width: 760px; width: 95%;">
       <div class="modal-header">📥 นำเข้า / อัปเดตตัวชี้วัดฝ่ายการพยาบาล (NSO) → ปีงบ 2569</div>
@@ -1303,7 +1348,8 @@
         <datalist id="part-options"></datalist><datalist id="category-options"></datalist><datalist id="cat-options-dyn"></datalist>
         <div class="form-group">
           <label>ชื่อตัวชี้วัด (KPI Name) *</label>
-          <input type="text" id="add-kpi-name" class="editable-input" placeholder="กรอกชื่อตัวชี้วัด" oninput="renderAddLevelCats()">
+          <input type="text" id="add-kpi-name" class="editable-input" placeholder="กรอกชื่อตัวชี้วัด" oninput="renderAddLevelCats(); addSimInput()">
+          <div id="add-kpi-sim" class="sim-box" style="display:none;"></div>
         </div>
         <div class="form-group">
           <label>ค่าเป้าหมาย (Target)</label>
@@ -1944,7 +1990,7 @@
       document.getElementById('user-bar').style.display = 'none';
       document.getElementById('pw-warning-bar').style.display = 'none';
       chpwForced = false;
-      ['modal-settings', 'modal-add-kpi', 'modal-fy', 'modal-unsaved', 'modal-change-password', 'modal-alert', 'modal-confirm', 'modal-tbl-long']
+      ['modal-settings', 'modal-dup', 'modal-add-kpi', 'modal-fy', 'modal-unsaved', 'modal-change-password', 'modal-alert', 'modal-confirm', 'modal-tbl-long']
         .forEach(id => { document.getElementById(id).style.display = 'none'; });
       document.getElementById('accordion-tree-container').innerHTML = '<div class="empty-state">กรุณาเข้าสู่ระบบ...</div>';
       document.getElementById('kpi-list-area').innerHTML = '';
@@ -3816,6 +3862,7 @@
       document.getElementById('add-kpi-fwd').checked = true;
       document.getElementById('add-kpi-fwd-text').textContent = '☑ เพิ่มในปีงบถัดไปด้วย (' + addLater.join(', ') + ')';
       ['add-kpi-name', 'add-kpi-target', 'add-kpi-source', 'add-kpi-owner', 'add-kpi-dept'].forEach(id => { document.getElementById(id).value = ''; });
+      clearTimeout(addSim.timer); addSim.list = []; addSim.name = ''; addSim.pending = false; addSim.ackFor = ''; addSim.seq++; addSimRender();
       if (!isPrivilegedUser()) {
         // staff / หัวหน้าหน่วย: ใส่ตัวเองเป็นผู้รับผิดชอบ และหน่วยงานของตัวเองให้ก่อน (แก้ได้)
         document.getElementById('add-kpi-owner').value = currentUser.username;
@@ -3949,6 +3996,7 @@
       newItem.cats = all;
       newItem.part = all[0].part;
       newItem.category = all[0].category;
+      if (addSim.ackFor !== addSimKey(name)) { addSimGate(name, submitAddKpi); return; } // ชื่อคล้ายตัวที่มีอยู่ → ถามยืนยันก่อน (เตือนอย่างเดียว ไม่บล็อก)
       document.getElementById('modal-add-kpi').style.display = 'none';
       newItem.forward = fwdLaterYears().length > 0 && document.getElementById('add-kpi-fwd').checked;
       showBusy('กำลังเพิ่มตัวชี้วัด…');
@@ -3963,6 +4011,186 @@
         }))
         .withFailureHandler(unbusy((err) => showAlert('เกิดข้อผิดพลาด', '❌', err.toString())))
         .addIndicator(sessionToken, selectedFy, newItem);
+    }
+
+    // ===================== ตรวจ/รวมตัวชี้วัดซ้ำ (admin) =====================
+    const dup = { fy: null, groups: [], sel: {}, f: 'all', prev: {}, seq: 0, total: 0, truncated: false };
+    function openDup() {
+      if (!currentUser || currentUser.tier !== 'admin') return;
+      document.getElementById('modal-dup').style.display = 'flex';
+      document.getElementById('dup-fy').innerHTML = fiscalYears.map(y => `<option value="${y}"${y === selectedFy ? ' selected' : ''}>${y}</option>`).join('');
+      document.getElementById('dup-q').value = '';
+      dup.f = 'all';
+      dupScanRun();
+    }
+    function dupClose() { document.getElementById('modal-dup').style.display = 'none'; }
+    function dupScanRun() {
+      const fy = Number(document.getElementById('dup-fy').value), token = sessionToken, seq = ++dup.seq;
+      dup.fy = fy; dup.prev = {};
+      document.getElementById('dup-list').innerHTML = '<div class="empty-state">กำลังตรวจชื่อตัวชี้วัดทั้งปีงบ (ยังไม่เขียนข้อมูล)…</div>';
+      showBusy('กำลังตรวจตัวชี้วัดซ้ำ…', 300000);
+      google.script.run
+        .withSuccessHandler(unbusy(res => {
+          if (seq !== dup.seq || sessionToken !== token) return;
+          if (!res || !res.success) { document.getElementById('dup-list').innerHTML = '<div class="empty-state">' + esc((res && res.message) || 'ตรวจไม่สำเร็จ') + '</div>'; return; }
+          dup.groups = res.groups; dup.total = res.total; dup.truncated = res.truncated;
+          dup.sel = {};
+          res.groups.forEach(g => {
+            const drops = {};
+            if (g.kind === 'same' && !g.crossUnit) g.members.forEach(m => { if (m.id !== g.suggestKeep) drops[m.id] = true; }); // ชื่อเหมือนหน่วยเดียวกัน: ติ๊กให้ก่อน (ยังต้องดูตัวอย่างและยืนยัน)
+            dup.sel[g.n] = { keep: g.suggestKeep, drops: drops };
+          });
+          dupRender();
+        }))
+        .withFailureHandler(unbusy(() => { document.getElementById('dup-list').innerHTML = '<div class="empty-state">เชื่อมต่อเซิร์ฟเวอร์ไม่ได้</div>'; }))
+        .dupScan(token, fy);
+    }
+    function dupSetFilter(f) { dup.f = f; dupRender(); }
+    function dupGroupMatches(g, terms) {
+      if (dup.f === 'same' && g.kind !== 'same') return false;
+      if (dup.f === 'similar' && g.kind === 'same') return false;
+      if (!terms.length) return true;
+      const hay = g.members.map(m => m.name + ' ' + m.owner + ' ' + m.depts.join(' ')).join(' ').toLowerCase();
+      return terms.every(t => hay.indexOf(t) !== -1);
+    }
+    function dupRender() {
+      const terms = document.getElementById('dup-q').value.toLowerCase().split(/\s+/).filter(Boolean);
+      const shown = dup.groups.filter(g => dupGroupMatches(g, terms)), main = shown.filter(g => !g.crossUnit), cross = shown.filter(g => g.crossUnit);
+      const cnt = f => dup.groups.filter(g => f === 'all' || (f === 'same' ? g.kind === 'same' : g.kind !== 'same')).length;
+      document.getElementById('dup-filters').innerHTML = [['all', 'ทั้งหมด'], ['same', 'ชื่อเหมือน'], ['similar', 'ชื่อคล้าย']].map(([f, t]) => `<button type="button" class="${dup.f === f ? 'on' : ''}" onclick="dupSetFilter('${f}')">${t} ${cnt(f)}</button>`).join('');
+      document.getElementById('dup-sum').textContent = dup.groups.length ? `พบ ${dup.total} กลุ่ม${dup.truncated ? ' (แสดง ' + dup.groups.length + ' กลุ่มแรก — รวมแล้วสแกนใหม่เพื่อดูต่อ)' : ''} · ปีงบ ${dup.fy}` : '';
+      let h = '';
+      if (!dup.groups.length) h = '<div class="empty-state">ไม่พบตัวชี้วัดที่ชื่อเหมือนหรือคล้ายกันในปีงบ ' + esc(dup.fy) + ' 🎉</div>';
+      else if (!shown.length) h = '<div class="empty-state">ไม่พบกลุ่มที่ตรงกับตัวกรอง</div>';
+      else {
+        h += main.map(dupCardHtml).join('') || '<div class="hint">ไม่มีกลุ่มในหน่วยงานเดียวกัน</div>';
+        if (cross.length) h += `<details class="dup-x"><summary>🏢 ชื่อเหมือน/คล้ายแต่อยู่คนละหน่วยงาน ${cross.length} กลุ่ม — ส่วนใหญ่เป็นของแต่ละหน่วยจริง (กดเพื่อดู)</summary>${cross.map(dupCardHtml).join('')}</details>`;
+      }
+      document.getElementById('dup-list').innerHTML = h;
+    }
+    function dupMemberRow(g, m) {
+      const st = dup.sel[g.n] || { keep: '', drops: {} }, isKeep = st.keep === m.id, isDrop = !!st.drops[m.id];
+      const linked = [m.links ? '📎' + m.links : '', m.pdca ? 'PDCA' : '', m.clt ? 'CLT ' + m.clt : '', m.score ? '🏅' + m.score : ''].filter(Boolean).join(' · ');
+      return `<tr class="${isKeep ? 'is-keep' : isDrop ? 'is-drop' : ''}">
+        <td class="dup-pick"><label title="ตัวที่เก็บไว้"><input type="radio" name="dup-keep-${g.n}" ${isKeep ? 'checked' : ''} onchange="dupKeep(${g.n}, '${esc(m.id)}')"> เก็บ</label><br><label title="รวมเข้าตัวที่เก็บแล้วลบตัวนี้"><input type="checkbox" ${isDrop ? 'checked' : ''} ${isKeep ? 'disabled' : ''} onchange="dupToggle(${g.n}, '${esc(m.id)}', this.checked)"> รวมเข้า</label></td>
+        <td><b>${esc(m.name)}</b><div class="dup-sub">${esc(m.id)} · ${esc(m.cat)}</div></td>
+        <td>${esc(m.depts.join(' / ') || '-')}<div class="dup-sub">${esc(m.owner || '-')}</div></td>
+        <td>${esc(m.levels.join(', ') || '-')}<div class="dup-sub">เป้า ${esc(m.target || '-')}</div></td>
+        <td>ผลปี ${m.years}/5 · เดือน ${m.months}/12${m.hasDetails ? ' · มีรายละเอียด' : ''}<div class="dup-sub">${esc(linked || 'ไม่มีข้อมูลผูก')}</div></td>
+        <td class="dup-sub">${esc(m.editedAt || '-')}<br>${esc(m.editedBy || '')}</td></tr>`;
+    }
+    function dupCardHtml(g) {
+      const tag = g.kind === 'same' ? '<span class="dup-tag same">ชื่อเหมือน</span>' : `<span class="dup-tag">ชื่อคล้าย ${Math.round(g.score * 100)}%</span>`;
+      return `<div class="dup-g" id="dup-g-${g.n}"><div class="dup-gh"><b>กลุ่ม ${g.n + 1}</b> ${tag}${g.crossUnit ? ' <span class="dup-tag cross">คนละหน่วยงาน</span>' : ''}<span class="hint" style="margin:0;">${g.members.length + g.more} ตัว${g.more ? ' (แสดง ' + g.members.length + ')' : ''}</span>
+        <span class="dup-acts"><button type="button" class="btn btn-secondary btn-sm" onclick="dupNot(${g.n})" title="จำไว้ ไม่เสนอกลุ่มนี้อีก">✕ ไม่ใช่ตัวซ้ำ</button><button type="button" class="btn btn-accent btn-sm" onclick="dupPreviewRun(${g.n})">👁 ดูตัวอย่างก่อนรวม</button></span></div>
+        <table class="dup-tbl"><tbody>${g.members.map(m => dupMemberRow(g, m)).join('')}</tbody></table><div class="dup-prev" id="dup-prev-${g.n}" style="display:none;"></div></div>`;
+    }
+    function dupCardRefresh(n) {
+      const g = dup.groups.find(x => x.n === n), el = document.getElementById('dup-g-' + n);
+      if (g && el) { el.outerHTML = dupCardHtml(g); dupShowPrev(n); }
+    }
+    function dupKeep(n, id) { const st = dup.sel[n]; if (!st) return; st.keep = id; delete st.drops[id]; delete dup.prev[n]; dupCardRefresh(n); }
+    function dupToggle(n, id, on) { const st = dup.sel[n]; if (!st || st.keep === id) return; if (on) st.drops[id] = true; else delete st.drops[id]; delete dup.prev[n]; dupCardRefresh(n); }
+    function dupPayload(n) { const st = dup.sel[n]; return st ? { keep: st.keep, drops: Object.keys(st.drops).filter(id => id !== st.keep) } : null; }
+    function dupNot(n) {
+      const g = dup.groups.find(x => x.n === n); if (!g) return;
+      showConfirm('จำไว้ว่า ' + g.members.length + ' ตัวในกลุ่มนี้ "ไม่ใช่ตัวซ้ำ" และไม่เสนออีก ใช่หรือไม่?', () => {
+        showBusy('กำลังบันทึก…');
+        google.script.run.withSuccessHandler(unbusy(res => {
+          if (!res || !res.success) { showAlert('ไม่สำเร็จ', '⚠️', (res && res.message) || ''); return; }
+          dup.groups = dup.groups.filter(x => x.n !== n); dup.total = Math.max(0, dup.total - 1); dupRender();
+        })).withFailureHandler(unbusy(() => showAlert('ไม่สำเร็จ', '❌', 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้'))).dupIgnore(sessionToken, g.members.map(m => m.id));
+      });
+    }
+    function dupPreviewRun(n) {
+      const p = dupPayload(n);
+      if (!p || !p.keep) { showAlert('เลือกตัวที่เก็บ', '⚠️', 'เลือกตัวที่จะเก็บไว้ (●) ก่อน'); return; }
+      if (!p.drops.length) { showAlert('ยังไม่ได้เลือกตัวที่จะรวม', '⚠️', 'ติ๊ก "รวมเข้า" ที่ตัวที่ต้องการรวมเข้าตัวที่เก็บอย่างน้อย 1 ตัว'); return; }
+      const token = sessionToken, fy = dup.fy;
+      showBusy('กำลังตรวจผลที่จะเกิดจากการรวม…', 120000);
+      google.script.run.withSuccessHandler(unbusy(res => {
+        if (sessionToken !== token) return;
+        if (!res || !res.success) { showAlert('ดูตัวอย่างไม่สำเร็จ', '⚠️', (res && res.message) || ''); return; }
+        dup.prev[n] = res.preview; dupShowPrev(n);
+      })).withFailureHandler(unbusy(() => showAlert('ดูตัวอย่างไม่สำเร็จ', '❌', 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้'))).dupPreview(token, fy, [p]);
+    }
+    function dupShowPrev(n) {
+      const pv = dup.prev[n], box = document.getElementById('dup-prev-' + n), g = dup.groups.find(x => x.n === n);
+      if (!box || !pv || !g) return;
+      const nm = id => { const m = g.members.find(x => x.id === id); return m ? m.name : id; };
+      const gp = pv.groups[0], keepName = nm(gp.keep);
+      let h = `<b>ตัวอย่างผลการรวม</b> — เก็บ "${esc(keepName)}" · ปีงบที่จะเปลี่ยน: ${esc(pv.fys.join(', '))} (ปีที่เก่ากว่าคงเดิม)<ul>`;
+      gp.drops.forEach(d => {
+        const bits = [];
+        if (d.links) bits.push('เอกสารแนบ ' + d.links + ' รายการย้ายตาม');
+        if (d.scoreMoved) bits.push('ชุดคะแนน ' + d.scoreMoved + ' แถวย้ายตาม');
+        if (d.scoreDropped) bits.push('ชุดคะแนน ' + d.scoreDropped + ' แถวซ้ำกับตัวที่เก็บ → ตัดออก');
+        if (d.docsMoved) bits.push('PDCA/CLT ' + d.docsMoved + ' ข้อความย้ายตาม');
+        if (d.docsKept) bits.push('PDCA/CLT ' + d.docsKept + ' ข้อความชน → คงของตัวที่เก็บ (ข้อความของตัวที่รวมไม่ถูกย้าย)');
+        if (d.renamed.length) bits.push('ปีงบ ' + d.renamed.join(', ') + ' ไม่มีตัวที่เก็บ → เปลี่ยนรหัสเป็นตัวที่เก็บ');
+        h += `<li>รวม "<b>${esc(nm(d.id))}</b>" (${esc(d.id)}) เข้าไป${bits.length ? ' — ' + esc(bits.join(' · ')) : ''}`;
+        if (d.conflicts.length) h += '<ul>' + d.conflicts.slice(0, 12).map(c => `<li>⚠️ ${esc(c.field)}: ใช้ "${esc(c.keep)}" (ตัวที่เก็บ) · ทิ้ง "${esc(c.drop)}"</li>`).join('') + (d.conflicts.length > 12 ? `<li>… และอีก ${d.conflicts.length - 12} ช่อง</li>` : '') + '</ul>';
+        h += '</li>';
+      });
+      h += `</ul><div class="hint" style="margin:0 0 6px;">ช่องที่ตัวที่เก็บว่างจะเติมจากตัวที่รวมเข้า · ผู้รับผิดชอบ/หน่วยงาน/ระดับ/หมวดรวมกัน · ก่อนเขียนระบบสำรองชีตไว้ (ซ่อน) และจดประวัติใน Tidy_Log</div>
+        <button type="button" class="btn btn-primary btn-sm" onclick="dupCommitRun(${n})">✅ ยืนยันรวม</button> <button type="button" class="btn btn-secondary btn-sm" onclick="delete dup.prev[${n}]; document.getElementById('dup-prev-${n}').style.display='none'">ยกเลิก</button>`;
+      box.innerHTML = h; box.style.display = '';
+    }
+    function dupCommitRun(n) {
+      const p = dupPayload(n), token = sessionToken, fy = dup.fy;
+      if (!p) return;
+      showBusy('กำลังรวมตัวชี้วัด (สำรองชีตและเขียนข้อมูล)…', 300000);
+      google.script.run.withSuccessHandler(unbusy(res => {
+        if (sessionToken !== token) return;
+        if (!res || !res.success) { showAlert('รวมไม่สำเร็จ', '⚠️', (res && res.message) || ''); return; }
+        showToast('✅ ' + res.message);
+        dupScanRun(); // สแกนใหม่ — หน้าอื่นอัปเดตเองจากการอัปเดตอัตโนมัติ
+      })).withFailureHandler(unbusy(() => showAlert('รวมไม่สำเร็จ', '❌', 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ — ตรวจสอบผลแล้วลองใหม่'))).dupCommit(token, fy, [p]);
+    }
+
+    // ---------- เตือนชื่อคล้ายตอนเพิ่มตัวชี้วัด ----------
+    const addSim = { name: '', list: [], seq: 0, timer: null, pending: false, ackFor: '' };
+    function addSimKey(n) { return String(n || '').replace(/\s+/g, ' ').trim().toLowerCase(); }
+    function addSimInput() {
+      clearTimeout(addSim.timer);
+      const name = document.getElementById('add-kpi-name').value.trim();
+      if (addSimKey(name).length < 6) { addSim.list = []; addSim.name = name; addSim.pending = false; addSimRender(); return; }
+      addSim.timer = setTimeout(() => addSimFetch(name, null), 500);
+    }
+    function addSimFetch(name, cb) {
+      const token = sessionToken, seq = ++addSim.seq;
+      addSim.pending = true;
+      google.script.run
+        .withSuccessHandler(res => {
+          if (seq !== addSim.seq || sessionToken !== token) return;
+          addSim.pending = false; addSim.name = name; addSim.list = res && res.success ? res.list : [];
+          addSimRender(); if (cb) cb(addSim.list);
+        })
+        .withFailureHandler(() => { if (seq !== addSim.seq) return; addSim.pending = false; addSim.name = name; addSim.list = []; addSimRender(); if (cb) cb([]); })
+        .findSimilarKpis(token, selectedFy, name);
+    }
+    function addSimRender() {
+      const box = document.getElementById('add-kpi-sim'); if (!box) return;
+      if (!addSim.list.length) { box.style.display = 'none'; box.innerHTML = ''; return; }
+      box.style.display = '';
+      box.innerHTML = `<b>⚠️ มีตัวชี้วัดชื่อคล้ายกันในปีงบ ${esc(selectedFy)} อยู่แล้ว ${addSim.list.length} ตัว</b> — ตรวจก่อนว่าเป็นตัวเดียวกันหรือไม่ (เพิ่มซ้ำทำให้ข้อมูลแยกกัน)<ul>`
+        + addSim.list.map(x => `<li>${x.canView ? `<a href="javascript:void(0)" onclick="addSimGo('${esc(x.id)}')" title="เปิดดูตัวชี้วัดนี้">${esc(x.name)}</a>` : esc(x.name)} <span class="sim-sub">— ${esc(x.dept || 'ไม่ระบุหน่วยงาน')} · ${esc(x.owner || 'ไม่ระบุผู้รับผิดชอบ')} · ${x.kind === 'same' ? 'ชื่อเหมือนกัน' : x.kind === 'contain' ? 'ชื่ออยู่ในกัน' : 'ชื่อคล้ายกัน'}${x.canView ? '' : ' · (ไม่มีสิทธิ์ดู)'}</span></li>`).join('') + '</ul>';
+    }
+    function addSimGo(id) {
+      document.getElementById('modal-add-kpi').style.display = 'none';
+      guardUnsaved(() => { switchMenu('home'); goToKpi(id); });
+    }
+    // ก่อนเพิ่มจริง: ถ้ายังมีชื่อคล้าย ถามยืนยันอีกครั้ง (ไม่บล็อก) · proceed = ทำต่อ
+    function addSimGate(name, proceed) {
+      const key = addSimKey(name);
+      if (addSim.ackFor === key) { proceed(); return; }
+      const ask = list => {
+        if (!list.length) { proceed(); return; }
+        showConfirm('มีตัวชี้วัดชื่อคล้ายกันอยู่แล้ว ' + list.length + ' ตัว เช่น\n• ' + list.slice(0, 3).map(x => x.name + ' (' + (x.dept || '-') + ')').join('\n• ') + '\n\nยังต้องการเพิ่มเป็นตัวชี้วัดใหม่ใช่ไหม?', () => { addSim.ackFor = key; proceed(); });
+      };
+      if (!addSim.pending && addSimKey(addSim.name) === key) { ask(addSim.list); return; }
+      showBusy('กำลังตรวจชื่อที่คล้ายกัน…', 30000);
+      addSimFetch(name, list => { hideBusy(); ask(list); });
     }
 
     // ===================== ตั้งค่าผู้ใช้ (admin) =====================
@@ -8434,11 +8662,11 @@
     // ===================== คะแนน KPI (หัวหน้าหน่วย) =====================
     // ดู: เจ้าตัว (ของตัวเอง) · admin และ ผอ./QMR ดูได้ทุกคน และแก้น้ำหนัก/เกณฑ์/คะแนนกรอกเองได้ · คิดคะแนนที่เซิร์ฟเวอร์ (Score.js) หน้าเว็บแค่แสดง
     const SC_LEVELS = ['2.0', '2.5', '3.0', '3.5', '4.0', '4.5', '5.0'];
-    const score = { meta: null, data: null, person: '', round: 0, editing: false, loading: false, seq: 0, mseq: 0, fy: null, cand: null, error: '', q: '', openUnits: new Set(), touched: false, issuesOpen: false };
+    const score = { meta: null, data: null, person: '', round: 0, editing: false, loading: false, seq: 0, mseq: 0, fy: null, cand: null, error: '', q: '', openUnits: new Set(), touched: false, issuesOpen: false, issuesOpen2: false, fillTried: false, filling: false };
 
     function scoreReset() {
       score.meta = null; score.data = null; score.person = ''; score.round = 0; score.editing = false; score.loading = false;
-      score.seq++; score.mseq++; score.fy = null; score.cand = null; score.error = ''; score.q = ''; score.openUnits = new Set(); score.touched = false;
+      score.seq++; score.mseq++; score.fy = null; score.cand = null; score.error = ''; score.q = ''; score.openUnits = new Set(); score.touched = false; score.fillTried = false; score.filling = false;
       const b = document.getElementById('menu-score-btn'); if (b) b.style.display = 'none';
     }
     function scoreIsEditor() { return !!currentUser && isPrivilegedUser(); }
@@ -8477,6 +8705,7 @@
           score.loading = false;
           if (!res || !res.success) { score.data = null; score.error = (res && res.message) || 'โหลดคะแนนไม่สำเร็จ'; scoreRender(); return; }
           score.error = ''; score.data = res; score.person = res.person;
+          if (res.fillPending && !score.fillTried) { score.fillTried = true; scoreFillRun(); } // งานครั้งเดียว: เติมชุดคะแนนที่ตกหล่นจากไฟล์นำเข้า
           // ผู้ที่ดูได้หลายคน: ชุดของตัวเองว่าง → เปิดคนแรกในผังให้เลย
           if (!score.touched && res.canEdit && res.rows.length === 0 && res.dir && res.dir.length) { score.touched = true; score.person = res.dir[0].people[0].person; scoreLoad(silent); return; }
           if (res.dir) res.dir.forEach(u => { if (u.people.some(p => p.person === res.person)) score.openUnits.add(u.unit); });
@@ -8485,6 +8714,25 @@
         }))
         .withFailureHandler(wrap(() => { if (seq !== score.seq) return; score.loading = false; score.data = null; score.error = 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้'; scoreRender(); }))
         .getScoreBoard(token, fy, score.person);
+    }
+
+    // เติมชุดคะแนนที่ตกหล่นจากการนำเข้าครั้งแรก (ไฟล์ไม่ระบุน้ำหนัก/เกณฑ์) — เซิร์ฟเวอร์ทำครั้งเดียว แล้วโหลดตารางใหม่
+    function scoreFillRun() {
+      if (score.filling || !sessionToken) return;
+      score.filling = true;
+      const token = sessionToken;
+      showBusy('กำลังเติมชุดคะแนนจากไฟล์ที่นำเข้า (ทำครั้งเดียว อาจใช้เวลาสักครู่)…', 150000);
+      google.script.run
+        .withSuccessHandler(unbusy(res => {
+          score.filling = false;
+          if (sessionToken !== token) return;
+          if (res && res.success) {
+            if (res.added) showToast('✅ เติมชุดคะแนนจากไฟล์นำเข้าแล้ว ' + res.added + ' แถว' + (res.missed ? ' · หาตัวชี้วัดไม่เจอ ' + res.missed + ' แถว (ดูใน Tidy_Log)' : ''));
+            scoreLoad(true);
+          } else showAlert('เติมชุดคะแนนไม่สำเร็จ', '⚠️', (res && res.message) || 'ลองเปิดหน้านี้ใหม่อีกครั้ง');
+        }))
+        .withFailureHandler(unbusy(() => { score.filling = false; showAlert('เติมชุดคะแนนไม่สำเร็จ', '⚠️', 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ ลองเปิดหน้านี้ใหม่อีกครั้ง'); }))
+        .scoreFillOnce(token);
     }
 
     function scoreFmt(v) { return v === null || v === undefined ? '-' : String(Math.round(v * 100) / 100); }
@@ -8551,8 +8799,10 @@
         + (editor ? `<button type="button" class="btn btn-accent btn-sm" onclick="scoreToggleEdit()">${score.editing ? '✔ เสร็จสิ้นการแก้ไข' : '✏️ แก้ไขชุดคะแนน'}</button>` : '')
         + '</div>';
       if (editor && d.issues && d.issues.length) {
-        h += `<details class="sc-issues"${score.issuesOpen ? ' open' : ''} ontoggle="score.issuesOpen=this.open"><summary>⚠️ เกณฑ์คะแนนที่ต้องแก้ ${d.issues.length} แถว (ทุกคน) — กดเพื่อดูรายการ</summary><div class="sc-issue-list">`
-          + d.issues.map((x, i) => `<div class="sc-issue" data-i="${i}" onclick="scoreIssueGo(this)"><b>${esc(x.person)}</b> · ${esc(x.name)} <span>— ${esc(x.reason)}</span></div>`).join('') + '</div></details>';
+        const iss = d.issues.map((x, i) => [x, i]), bad = iss.filter(a => a[0].kind !== 'empty'), empty = iss.filter(a => a[0].kind === 'empty');
+        const list = arr => arr.map(a => `<div class="sc-issue" data-i="${a[1]}" onclick="scoreIssueGo(this)"><b>${esc(a[0].person)}</b> · ${esc(a[0].name)} <span>— ${esc(a[0].reason)}</span></div>`).join('');
+        if (bad.length) h += `<details class="sc-issues"${score.issuesOpen ? ' open' : ''} ontoggle="score.issuesOpen=this.open"><summary>⚠️ เกณฑ์คะแนนที่ต้องแก้ ${bad.length} แถว (ทุกคน) — กดเพื่อดูรายการ</summary><div class="sc-issue-list">${list(bad)}</div></details>`;
+        if (empty.length) h += `<details class="sc-issues sc-issues-empty"${score.issuesOpen2 ? ' open' : ''} ontoggle="score.issuesOpen2=this.open"><summary>📝 ยังไม่ได้ใส่น้ำหนัก/เกณฑ์ ${empty.length} แถว (ทุกคน) — กดเพื่อดูรายการ</summary><div class="sc-issue-list">${list(empty)}</div></details>`;
       }
       if (editor && score.editing) {
         h += `<div class="sc-add"><select id="score-cand" class="editable-input">${scoreCandOptions()}</select><button type="button" class="btn btn-accent btn-sm" onclick="scoreAddRow()">➕ เพิ่มตัวชี้วัดเข้าชุดคะแนน</button><span class="hint" style="margin:0;">เลือกได้เฉพาะตัวชี้วัดที่บุคคลนี้เป็นผู้รับผิดชอบ · เกณฑ์ใส่ได้หลายแบบ เช่น 80, ≥ 85, &lt;75, มากกว่า 1, A</span></div>`;

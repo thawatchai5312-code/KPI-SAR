@@ -28,7 +28,7 @@ const ss={getSheets:()=>Object.values(sheets),getSheetByName:n=>sheets[n]||null,
 const db=sheets['ปีงบ 2569'];
 // renaming support
 const origSet=Sheet.prototype.setName;Sheet.prototype.setName=function(n){delete sheets[this.name];this.name=n;sheets[n]=this};
-const triggers=[];const cache={};const props={};props.UNIT_CATEGORIES_V1='done';if(!process.env.NOFLAGS){props.NURSING_LEVEL_TO_UNIT_V1='done';props.OWNER_LEVEL_V1='done';props.PCT_IMPORT_V1='done';props.NSO_IMPORT_BACKUP_V1='done';props.TIDY_BACKUP_V1='done';}
+const triggers=[];const cache={};const props={};props.UNIT_CATEGORIES_V1='done';props.HK_SCORE_FILL_V1='done';if(!process.env.NOFLAGS){props.NURSING_LEVEL_TO_UNIT_V1='done';props.OWNER_LEVEL_V1='done';props.PCT_IMPORT_V1='done';props.NSO_IMPORT_BACKUP_V1='done';props.TIDY_BACKUP_V1='done';}
 const ctx={console,
  SpreadsheetApp:{openByUrl:(u)=>String(u).includes('1LmpMCQ')?nsoSs:ss,flush(){}},
  Utilities:{getUuid:()=>crypto.randomUUID(),computeDigest:(a,s)=>[...crypto.createHash('sha256').update(s).digest()].map(b=>b>127?b-256:b),
@@ -38,7 +38,7 @@ const ctx={console,
   PropertiesService:{getScriptProperties:()=>({getProperty:k=>(k.startsWith('TOUR_HIDE_V1:')&&!process.env.TOURTEST?'1':(props[k]??null)),setProperty:(k,v)=>props[k]=v,deleteProperty:k=>{delete props[k]}})},
  HtmlService:{},ScriptApp:{getProjectTriggers:()=>triggers,deleteTrigger:t=>{triggers.splice(triggers.indexOf(t),1)},newTrigger:fn=>{const t={fn,getHandlerFunction:()=>fn};const b={timeBased:()=>b,everyDays:()=>b,atHour:()=>b,nearMinute:()=>b,inTimezone:()=>b,create:()=>{triggers.push(t);return t}};return b}}};
 vm.createContext(ctx);
-const SRC=process.env.SRC||path.join(__dirname,'../src/');for(const f of ['รหัส.js','Auth.js','Fiscal.js','NsoMatch.js','Nso.js','Tidy.js','Views.js','PctData.js','Pct.js','Tour.js','Live.js','SarDoc.js','Links.js','Upload.js','PullPrev.js','Ai.js','PersonalImport.js','Rename.js','RenameUser.js','Score.js','HeadImport.js','Forward.js'].filter(f=>fs.existsSync(SRC+f)))vm.runInContext(fs.readFileSync(SRC+f,'utf8'),ctx,{filename:f});
+const SRC=process.env.SRC||path.join(__dirname,'../src/');for(const f of ['รหัส.js','Auth.js','Fiscal.js','NsoMatch.js','Nso.js','Tidy.js','Views.js','PctData.js','Pct.js','Tour.js','Live.js','SarDoc.js','Links.js','Upload.js','PullPrev.js','Ai.js','PersonalImport.js','Rename.js','RenameUser.js','Score.js','HeadImport.js','Forward.js','Dup.js'].filter(f=>fs.existsSync(SRC+f)))vm.runInContext(fs.readFileSync(SRC+f,'utf8'),ctx,{filename:f});
 // SHIMS: API เก่า (updateIndicatorsBulk/updateKpiDetails) แปลงเป็น saveKpi สำหรับเทสเดิม
 ctx.updateIndicatorsBulk=(token,fy,part,items)=>{let saved=0,denied=0,fyv=fy;items.forEach(it=>{const r=ctx.saveKpi(token,fy,{id:it.id,name:it.name,target:it.target,years:it.years,months:it.months});if(r.success)saved++;else if(/ไม่มีสิทธิ์/.test(r.message))denied++;else throw new Error(r.message)});let m='บันทึกข้อมูลปีงบ '+fy+' เรียบร้อยแล้ว ('+saved+' รายการ)';if(denied)m+=' — ข้าม '+denied+' รายการที่ไม่มีสิทธิ์แก้ไข';return{success:true,message:m}};
 ctx.updateKpiDetails=(token,fy,part,id,d)=>ctx.saveKpi(token,fy,Object.assign({id},d));

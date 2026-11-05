@@ -320,7 +320,7 @@ function getScoreBoard(token, fy, person) {
       out.people = people.sort(function(a, b) { return a.localeCompare(b, "th"); });
     }
     out.dir = scoreDir_(user, fy, all);
-    if (scoreCanEdit_(user)) out.issues = scoreIssues_(fy, all);
+    if (scoreCanEdit_(user)) { out.issues = scoreIssues_(fy, all); out.fillPending = hkFillPending_() && Number(fy) === HK_FILL_FY; }
     return out;
   } catch (e) {
     return { success: false, message: e.toString() };
@@ -370,11 +370,16 @@ function scoreIssues_(fy, all) {
   var kmap = scoreKpiMap_(fy, wanted), out = [];
   all.forEach(function(r) {
     var k = kmap[r.id];
-    if (!k || !r.weight) return; // ไม่มีตัวชี้วัด / น้ำหนัก 0 = ไม่กระทบคะแนน
+    if (!k) return; // ตัวชี้วัดถูกลบ = ไม่กระทบคะแนน
+    if (!r.weight) {
+      // ยังไม่ได้ใส่น้ำหนักและเกณฑ์ (เช่น นำเข้าจากไฟล์ที่ยังไม่ระบุ) = ขึ้นแยก ให้ไปเติมทีหลัง · น้ำหนัก 0 ที่มีเกณฑ์ = ตั้งใจไม่นับ
+      if (!r.crit.some(function(c) { return c; })) out.push({ person: r.owner, id: r.id, name: k.name, kind: "empty", reason: "ยังไม่ได้ใส่น้ำหนัก/เกณฑ์" });
+      return;
+    }
     var chk = scoreCritCheck_(r.crit, k.target);
-    if (!chk.ok) out.push({ person: r.owner, id: r.id, name: k.name, reason: chk.reason });
+    if (!chk.ok) out.push({ person: r.owner, id: r.id, name: k.name, kind: "crit", reason: chk.reason });
   });
-  return out.sort(function(a, b) { return a.person.localeCompare(b.person, "th") || a.name.localeCompare(b.name, "th"); });
+  return out.sort(function(a, b) { return (a.kind === b.kind ? 0 : a.kind === "crit" ? -1 : 1) || a.person.localeCompare(b.person, "th") || a.name.localeCompare(b.name, "th"); });
 }
 
 // ---------------------------------------------------------------- แก้ไข (admin / ผอ./QMR)

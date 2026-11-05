@@ -254,7 +254,7 @@ function hkPlan_(url, fy, decisions) {
     var scoreN = 0;
     g.items.forEach(function(it) {
       var p = pBy[it.personKey];
-      if (p && (it.row.weight || it.row.crit.some(function(c) { return c; }))) scoreN++;
+      if (p) scoreN++; // ทุกแถวเข้าชุดคะแนน (ไม่มีน้ำหนัก/เกณฑ์ = ว่างไว้ เติมทีหลัง)
     });
     result.push({
       key: g.key, name: g.name, status: st, action: action, match: match, owners: owners, addOwners: addOwners, ex: ex && action === "use" ? ex : null, sub: g.sub,
@@ -283,7 +283,7 @@ function hkPlan_(url, fy, decisions) {
     if (g.action === "skip") return;
     g.items.forEach(function(it) {
       var p = pBy[it.personKey];
-      if (!p || !(it.row.weight || it.row.crit.some(function(c) { return c; }))) return;
+      if (!p) return;
       if (g.action === "use" && g.match && scoreHave[g.match.id + "\u0001" + p.username]) return;
       scoreNew++;
     });
@@ -421,12 +421,14 @@ function headKpiCommit(token, url, fy, decisions) {
       if (!id) return;
       g.items.forEach(function(it) {
         var p = plan.people.filter(function(x) { return x.key === it.personKey; })[0];
-        if (!p || !(it.row.weight || it.row.crit.some(function(c) { return c; }))) return;
+        if (!p) return; // ทุกแถวเข้าชุดคะแนน แม้ไฟล์ยังไม่ได้ใส่น้ำหนัก/เกณฑ์
         var kk = id + "\u0001" + p.username;
         if (plan.scoreHave[kk] || seen[kk]) { scoreSkipped++; return; }
         seen[kk] = true;
+        var hasScore = !!(it.row.weight || it.row.crit.some(function(c) { return c; }));
         var w = scoreNum_(it.row.weight);
-        if (w === null || w < 0 || w > SCORE_MAX_WEIGHT) w = 1;
+        if (!hasScore) w = 0; // ยังไม่มีน้ำหนัก/เกณฑ์ → น้ำหนัก 0 (ไม่นับคะแนน) ขึ้นในกล่อง "ยังไม่ได้ใส่น้ำหนัก/เกณฑ์"
+        else if (w === null || w < 0 || w > SCORE_MAX_WEIGHT) w = 1;
         scoreRowsOut.push([String(fyr), id, p.username, w].concat(it.row.crit.map(function(c) { return scoreCell_(c).slice(0, SCORE_MAX_CRIT); }), ["", "", "", stamp, admin.username + " (นำเข้า)"]));
       });
     });
@@ -467,4 +469,99 @@ function hkSourceText_(template, url, target) {
   var t = arabicDigits_((template || "").toString()).trim();
   if (url && /^https:\/\/(drive|docs)\.google\.com\//.test(url)) t = (t ? t + "\n" : "") + url;
   return pimpSourceText_(t, target);
+}
+
+
+// ---------------------------------------------------------------- เติมชุดคะแนนที่ตกหล่นจากการนำเข้าครั้งแรก (งานครั้งเดียว)
+// ครั้งแรกที่นำเข้า แถวที่ไฟล์ไม่มีน้ำหนัก/เกณฑ์ไม่ถูกใส่ในชุดคะแนน → อ่านไฟล์เดิมซ้ำ จับคู่ตัวชี้วัดที่คนนั้นเป็นผู้รับผิดชอบ แล้วเติมเฉพาะแถวที่ยังไม่มี
+// ไม่สร้างตัวชี้วัด/บัญชี ไม่แตะข้อมูลอื่น · ทำครั้งเดียว (Script Property HK_SCORE_FILL_V1) · ลบโค้ดส่วนนี้ได้หลังทำเสร็จ
+var HK_FILL_FLAG = "HK_SCORE_FILL_V1";
+var HK_FILL_FY = 2570;
+var HK_FILL_URL = "https://docs.google.com/spreadsheets/d/1QWBE3LztkMGoqdC3juBMs9dVmHCZtw4V0dvWDo4oocM";
+
+function hkFillPending_() { return !PropertiesService.getScriptProperties().getProperty(HK_FILL_FLAG); }
+
+/** ฟังก์ชันล้วนเกือบทั้งหมด: คืน { add: [แถวคะแนน], missed: [{person, name}], skipped: [ชื่อ], sheets, people } */
+function hkFillPlan_(fy, url, stamp, by) {
+  var plan = hkPlan_(url, fy, {});
+  var kpis = [];
+  plan.data.forEach(function(r, i) {
+    if (i === 0 || !r[0]) return;
+    kpis.push({ id: r[0].toString().trim(), key: pimpKey_(r[4]), owners: parseOwners_(r[25]) });
+  });
+  var pBy = {};
+  plan.people.forEach(function(p) { pBy[p.key] = p; });
+  var add = [], missed = [], skipped = [], seen = {}, nSheets = 0;
+  plan.sheetsOut.forEach(function(e) {
+    if (!e.checked || !e.rows.length) return;
+    var p = pBy[e.personKey];
+    if (!p || !p.username || p.created || p.needsChoice) { if (skipped.indexOf(e.person) === -1) skipped.push(e.person); return; }
+    nSheets++;
+    var mine = kpis.filter(function(k) { return k.owners.indexOf(p.username) !== -1; });
+    e.rows.forEach(function(row) {
+      var key = pimpKey_(row.name);
+      if (!key) return;
+      var hit = null, best = 0;
+      mine.forEach(function(k) {
+        if (!k.key) return;
+        var d = k.key === key ? 1 : hkDice_(key, k.key);
+        if (d > best) { best = d; hit = k; }
+      });
+      if (!hit || best < HK_SIMILAR) { missed.push({ person: p.username, name: pimpStripNo_(row.name) }); return; }
+      var kk = hit.id + "\u0001" + p.username;
+      if (plan.scoreHave[kk] || seen[kk]) return;
+      seen[kk] = true;
+      var hasScore = !!(row.weight || row.crit.some(function(c) { return c; }));
+      var w = scoreNum_(row.weight);
+      if (!hasScore) w = 0;
+      else if (w === null || w < 0 || w > SCORE_MAX_WEIGHT) w = 1;
+      add.push([String(plan.fy), hit.id, p.username, w].concat(row.crit.map(function(c) { return scoreCell_(c).slice(0, SCORE_MAX_CRIT); }), ["", "", "", stamp, by]));
+    });
+  });
+  return { add: add, missed: missed, skipped: skipped, sheets: nSheets, people: plan.people.length, fy: plan.fy };
+}
+
+/** เรียกจากหน้า 🏅 (admin/ผอ./QMR) ครั้งแรกหลังอัปเดต — ทำครั้งเดียว ล้มเหลว = ไม่ตั้ง flag ลองใหม่ครั้งถัดไป */
+function scoreFillOnce(token) {
+  var lock = null;
+  try {
+    var user = requireUser_(token);
+    if (!scoreCanEdit_(user)) return { success: false, message: "เฉพาะ admin และ ผอ./QMR" };
+    if (!hkFillPending_()) return { success: true, done: true, added: 0 };
+    lock = LockService.getScriptLock();
+    lock.waitLock(30000);
+    if (!hkFillPending_()) return { success: true, done: true, added: 0 };
+    var stamp = nowStamp_();
+    var res = hkFillPlan_(HK_FILL_FY, HK_FILL_URL, stamp, user.username + " (เติมจากไฟล์นำเข้า)");
+    var ss = SpreadsheetApp.openByUrl(SPREADSHEET_URL);
+    if (res.add.length) {
+      var old = scoreSheetIfAny_();
+      if (old) {
+        var b = old.copyTo(ss);
+        b.setName(HK_SCORE_BACKUP_PREFIX + "เติมคะแนน " + Utilities.formatDate(new Date(), "Asia/Bangkok", "yyyyMMdd_HHmmss"));
+        b.hideSheet();
+        renameBackupSheets_(ss, HK_SCORE_BACKUP_PREFIX, 3);
+      }
+      var ssheet = scoreSheetEnsure_();
+      var sf = ssheet.getLastRow() + 1;
+      ssheet.getRange(sf, 1, res.add.length, SCORE_HEADERS.length).setNumberFormat("@");
+      ssheet.getRange(sf, 1, res.add.length, SCORE_HEADERS.length).setValues(res.add);
+    }
+    var log = ss.getSheetByName(TIDY_LOG_SHEET);
+    if (!log) {
+      log = ss.insertSheet(TIDY_LOG_SHEET);
+      log.getRange(1, 1, 1, 6).setValues([["เวลา", "ปีงบ", "รหัส", "ฟิลด์", "ค่าเดิม", "ค่าใหม่"]]).setFontWeight("bold");
+      log.hideSheet();
+    }
+    var logRows = [[stamp, res.fy, "", "score-fill", "", "เพิ่ม " + res.add.length + " แถว · หาตัวชี้วัดไม่เจอ " + res.missed.length + " · ข้ามบัญชี " + res.skipped.length]];
+    res.missed.slice(0, 40).forEach(function(m) { logRows.push([stamp, res.fy, m.person, "score-fill-missed", "", String(m.name).slice(0, 200)]); });
+    log.getRange(log.getLastRow() + 1, 1, logRows.length, 6).setNumberFormat("@").setValues(logRows);
+    PropertiesService.getScriptProperties().setProperty(HK_FILL_FLAG, stamp);
+    if (res.add.length) bumpDataVersion_(res.fy, [], user, SCORE_DOC);
+    return { success: true, done: true, added: res.add.length, missed: res.missed.length, skipped: res.skipped.length };
+  } catch (e) {
+    return { success: false, message: String(e && e.message ? e.message : e).replace(/^Error: /, "") };
+  } finally {
+    if (lock) lock.releaseLock();
+  }
 }

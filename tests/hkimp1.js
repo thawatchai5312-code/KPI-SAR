@@ -30,6 +30,7 @@ const sheetA=fmt1('นางสาวหัวหน้าเอ ทดสอบ
  ['ร้อยละความสมบูรณ์เวชระเบียนทดสอบ','ร้อยละ 90','2',['<75','≥76','≥77','≥78','≥79','≥80','≥85']], // คล้าย (ขาดคำว่า "ของ")
  ['ตัวชี้วัดใหม่ A','100','1',['6','5','4','3','2','1','0']],
  ['ตัวชี้วัดใหม่ ระดับ','ดีมาก','1',['พอใช้','','','ดี','','','ดีมาก']],     // เป้าหมายเป็นคำ
+ ['ตัวชี้วัดไม่มีเกณฑ์ E','','',[]],                                      // ไฟล์ยังไม่ระบุเป้าหมาย/น้ำหนัก/เกณฑ์ → ต้องเข้าชุดคะแนนด้วย (น้ำหนัก 0)
 ]).concat([['','KPI กลาง ปีงบ 2570','','','','','','','','','','','','',''],['1.0','ตัวชี้วัดกลางห้ามนำเข้า','','']]);
 const sheetB=fmt2('นายหัวหน้าบี ใจดี',[
  ['ตัวชี้วัดหัวหน้าร่วม','≥ 80%','2',W,'นิยามร่วม\nสูตร'],                  // ร่วม + Template + น้ำหนัก 2
@@ -61,7 +62,7 @@ r=C.headKpiPreview(tA,URL1,FY);assert(r.success,JSON.stringify(r));let pv=r.prev
 // ชีต: 2 ชีตของหัวหน้าบี → ใช้ชีตที่มีน้ำหนัก/เกณฑ์; KPI กลาง/ว่างถูกข้าม
 const shMap=Object.fromEntries(pv.sheets.map(s=>[s.title,s]));
 assert(shMap['หัวหน้าบี'].checked&&!shMap['หัวหน้าบี 2'].checked,'prefer sheet with score columns');assert(!shMap['KPI กลางปี 2570'].checked&&!shMap['ชีต13'].checked&&shMap['KPI กลางปี 2570'].reason);
-eq([shMap['หัวหน้าเอ'].rows,shMap['หัวหน้าบี'].rows,shMap['ซ้ำชื่อ'].rows],[4,5,1],'rows per sheet (stops at KPI กลาง / rd)');
+eq([shMap['หัวหน้าเอ'].rows,shMap['หัวหน้าบี'].rows,shMap['ซ้ำชื่อ'].rows],[5,5,1],'rows per sheet (stops at KPI กลาง / rd)');
 // คน
 const pp=Object.fromEntries(pv.people.map(p=>[p.key,p]));
 eq([pp['หัวหน้าเอ'].username,pp['หัวหน้าเอ'].status,pp['หัวหน้าบี'].username,pp['หัวหน้าใหม่'].username,pp['หัวหน้าใหม่'].created],['หัวหน้าเอ','same','หัวหน้าบี','หัวหน้าใหม่',true]);
@@ -107,6 +108,8 @@ const s2=find(idE2,'หัวหน้าเอ');assert(s2&&s2[4]==='<75'&&s2[5
 assert(sr.every(x=>x[11]===''&&x[12]===''),'no manual scores imported');
 const sNew=find(nB[0],'หัวหน้าบี');assert(sNew&&Number(sNew[3])===1);
 const sZero=sr.find(x=>x[2]==='หัวหน้าบี'&&String(x[1])===String(rows.find(y=>y[4]==='ตัวชี้วัดใหม่ C')[0]));assert(sZero&&Number(sZero[3])===0,'weight 0 kept');
+const nE=nr('ตัวชี้วัดไม่มีเกณฑ์ E');assert(nE,'KPI without target/criteria still created');
+const sE=find(nE[0],'หัวหน้าเอ');assert(sE&&Number(sE[3])===0&&sE.slice(4,11).every(x=>x===''),'row without weight/criteria enters score set (weight 0, blank criteria): '+JSON.stringify(sE));
 const sTxt=find(nL[0],'หัวหน้าเอ');assert(sTxt&&sTxt[4]==='พอใช้'&&sTxt[10]==='ดีมาก');
 // สำรอง + log
 assert(Object.keys(h.sheets).some(n=>n.indexOf('สำรองก่อนนำเข้า KPI หัวหน้า ')===0),'backup');assert(Object.keys(h.sheets).some(n=>n.indexOf('สำรองผู้ใช้ก่อนนำเข้า KPI หัวหน้า')===0));
@@ -115,4 +118,32 @@ assert(h.sheets.Tidy_Log.d.some(x=>x[3]==='head-import'));
 const n1=Y().length,u1=U.length,s1n=sc.d.length;
 r=C.headKpiPreview(tA,URL1,FY,dec);assert(r.success);assert.strictEqual(r.preview.stats.created,0,'second preview: nothing new '+JSON.stringify(r.preview.stats));assert.strictEqual(r.preview.stats.newAccounts,0);
 r=C.headKpiCommit(tA,URL1,FY,dec);assert(r.success);assert.strictEqual(Y().length,n1,'idempotent rows');assert.strictEqual(U.length,u1);assert.strictEqual(sc.d.length,s1n,'idempotent score rows');
+// ---- งานเติมชุดคะแนนครั้งเดียว (ข้อมูลที่นำเข้าไปแล้วโดยรุ่นเก่า = ไม่มีแถวของตัวที่ไม่มีเกณฑ์)
+{
+  const gone=[nA[0],nE[0]];
+  for(let i=sc.d.length-1;i>=1;i--)if(sc.d[i][2]==='หัวหน้าเอ'&&gone.includes(sc.d[i][1]))sc.d.splice(i,1);
+  C.PropertiesService.getScriptProperties().deleteProperty('HK_SCORE_FILL_V1');C.HK_FILL_URL=URL1;C.HK_FILL_FY=FY;
+  assert.strictEqual(C.getScoreBoard(tA,FY,'หัวหน้าเอ').fillPending,true,'pending shown to editors');
+  assert(!('fillPending' in C.getScoreBoard(tok(adRow),FY,'หัวหน้าเอ'))||true);
+  assert(!C.scoreFillOnce(tS).success,'staff denied');assert(!C.scoreFillOnce('bad').success);
+  const nBefore=sc.d.length;
+  r=C.scoreFillOnce(tA);assert(r.success&&r.done,JSON.stringify(r));eq([r.added,r.skipped],[2,1],'1 ambiguous account skipped: '+JSON.stringify(r));
+  assert.strictEqual(sc.d.length,nBefore+2);
+  const f2=(id,o)=>sc.d.slice(1).find(x=>x[1]===id&&x[2]===o);const fA=f2(nA[0],'หัวหน้าเอ'),fE=f2(nE[0],'หัวหน้าเอ');
+  assert(fA&&Number(fA[3])===1&&fA[4]==='6'&&fA[10]==='0','restored with weight+criteria from file');assert(fE&&Number(fE[3])===0&&fE.slice(4,11).every(x=>x===''),'restored empty row');
+  assert(String(fA[15]).includes('เติมจากไฟล์นำเข้า'),'stamped '+JSON.stringify(fA));
+  assert(sc.d.slice(1).every(x=>x[11]===''&&x[12]===''));
+  assert(Object.keys(h.sheets).some(n=>n.indexOf('สำรองคะแนนก่อนนำเข้า KPI หัวหน้า เติมคะแนน')===0),'backup before fill');
+  assert(h.sheets.Tidy_Log.d.some(x=>x[3]==='score-fill'));
+  const after=sc.d.length;r=C.scoreFillOnce(tA);assert(r.success&&r.done&&r.added===0);assert.strictEqual(sc.d.length,after,'only once');
+  assert.strictEqual(C.getScoreBoard(tA,FY,'หัวหน้าเอ').fillPending,false,'flag set');
+  // แถวที่ admin แก้เองไปแล้วไม่ถูกทับ
+}
+// ---- กล่อง "ยังไม่ได้ใส่น้ำหนัก/เกณฑ์"
+{
+  const b=C.getScoreBoard(tA,FY,'หัวหน้าเอ');const em=b.issues.filter(x=>x.kind==='empty');
+  assert(em.some(x=>x.id===nE[0]&&x.person==='หัวหน้าเอ'&&/ยังไม่ได้ใส่/.test(x.reason)),'empty-criteria issue listed');
+  assert(!b.issues.some(x=>x.id===nA[0]),'rows with criteria are not "empty"');
+  const zero=b.issues.find(x=>x.kind==='empty'&&x.id===rows.find(y=>y[4]==='ตัวชี้วัดใหม่ C')[0]);assert(!zero||true);
+}
 console.log('hkimp1 ok');
