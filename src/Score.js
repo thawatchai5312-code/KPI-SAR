@@ -178,6 +178,9 @@ function scoreCompute_(kpi, row) {
 // ---------------------------------------------------------------- ผู้ใช้/สิทธิ์
 
 function scoreCanEdit_(user) { return isPrivileged_(user); }
+/** เข้าหน้าคะแนน KPI ได้: หัวหน้าหน่วยขึ้นไป (staff ไม่ได้) */
+function scoreAllowed_(user) { return user.tier !== "staff"; }
+var SCORE_DENIED = "หน้าคะแนน KPI สำหรับหัวหน้าหน่วยขึ้นไปเท่านั้น";
 
 /** บัญชีที่ผู้เรียกดูได้: admin/ผอ./QMR = ทุกคน · อื่น ๆ = ตัวเอง */
 function scoreTargetName_(user, person) {
@@ -209,9 +212,10 @@ function scoreKpiMap_(fy, wanted) {
 function scoreMeta(token, fy) {
   try {
     var user = requireUser_(token);
+    if (!scoreAllowed_(user)) return { success: true, fy: resolveFiscalYear_(fy), has: false, editor: false, allowed: false, total: 0 };
     fy = resolveFiscalYear_(fy);
     var rows = scoreRead_(scoreSheetIfAny_(), fy);
-    return { success: true, fy: fy, has: rows.some(function(r) { return r.owner === user.username; }), editor: scoreCanEdit_(user), total: scoreCanEdit_(user) ? rows.length : 0 };
+    return { success: true, allowed: true, fy: fy, has: rows.some(function(r) { return r.owner === user.username; }), editor: scoreCanEdit_(user), total: scoreCanEdit_(user) ? rows.length : 0 };
   } catch (e) {
     return { success: false, message: e.toString() };
   }
@@ -253,6 +257,7 @@ function scoreTotals_(rows) {
 function getScoreBoard(token, fy, person) {
   try {
     var user = requireUser_(token);
+    if (!scoreAllowed_(user)) return { success: false, message: SCORE_DENIED };
     fy = resolveFiscalYear_(fy);
     var target = scoreTargetName_(user, person);
     var all = scoreRead_(scoreSheetIfAny_(), fy);
@@ -268,10 +273,46 @@ function getScoreBoard(token, fy, person) {
       all.forEach(function(r) { if (!seen[r.owner]) { seen[r.owner] = true; people.push(r.owner); } });
       out.people = people.sort(function(a, b) { return a.localeCompare(b, "th"); });
     }
+    out.dir = scoreDir_(user, fy, all);
     return out;
   } catch (e) {
     return { success: false, message: e.toString() };
   }
+}
+
+/**
+ * ผังแถบซ้าย: [{ unit, people: [{ person, count, kpis: [{ id, name }] }] }] — admin/ผอ./QMR = ทุกคนที่มีชุดคะแนนในปีงบ · หัวหน้า = ตัวเอง
+ * หน่วย = หน่วยแรกของบัญชี (ไม่มี = "ไม่ระบุหน่วยงาน") · ไม่นับแถวที่ตัวชี้วัดถูกลบจากปีงบ
+ */
+function scoreDir_(user, fy, all) {
+  var rows = scoreCanEdit_(user) ? all : all.filter(function(r) { return r.owner === user.username; });
+  if (!rows.length) return [];
+  var wanted = {};
+  rows.forEach(function(r) { wanted[r.id] = true; });
+  var kmap = scoreKpiMap_(fy, wanted);
+  var us = getUsersSpreadsheet_().getSheetByName(USERS_SHEET_NAME);
+  var unitOf = {};
+  (us ? readUsers_(us) : []).forEach(function(u) { unitOf[u.username] = (u.depts && u.depts[0]) || ""; });
+  var byPerson = {}, order = [];
+  rows.forEach(function(r) {
+    if (!kmap[r.id]) return;
+    var p = byPerson[r.owner];
+    if (!p) { p = byPerson[r.owner] = { person: r.owner, count: 0, kpis: [] }; order.push(p); }
+    p.count++;
+    p.kpis.push({ id: r.id, name: kmap[r.id].name });
+  });
+  var byUnit = {}, units = [];
+  order.forEach(function(p) {
+    var unit = renameUnit_(unitOf[p.person] || "") || "ไม่ระบุหน่วยงาน";
+    if (!byUnit[unit]) { byUnit[unit] = { unit: unit, people: [] }; units.push(byUnit[unit]); }
+    byUnit[unit].people.push(p);
+  });
+  units.forEach(function(u) { u.people.sort(function(a, b) { return a.person.localeCompare(b.person, "th"); }); });
+  return units.sort(function(a, b) {
+    if (a.unit === "ไม่ระบุหน่วยงาน") return 1;
+    if (b.unit === "ไม่ระบุหน่วยงาน") return -1;
+    return a.unit.localeCompare(b.unit, "th");
+  });
 }
 
 // ---------------------------------------------------------------- แก้ไข (admin / ผอ./QMR)

@@ -36,7 +36,7 @@ const U=h.sheets.Users.d;U.slice(1).forEach(r=>{r[1]=C.hashPassword_('pw123456')
 const tok=r=>C.createSession_(r[0],r[1]);
 const ad=U.find(r=>r[2]==='admin'),tA=tok(ad);
 const mkUser=(n,tier)=>{const r=[n,C.hashPassword_('pw123456'),tier||'staff','','FALSE','',''];U.push(r);return r};
-const uM=mkUser('ทดสอบคะแนนก'),uN=mkUser('ทดสอบคะแนนข','head'),uE=mkUser('ทดสอบผอ','executive');
+const uM=mkUser('ทดสอบคะแนนก','head'),uS=mkUser('ทดสอบคะแนนสตาฟ'),uN=mkUser('ทดสอบคะแนนข','head'),uE=mkUser('ทดสอบผอ','executive');
 const item=(name,owner)=>({part:'OPD',category:'x',name,target:'≥ 80',years:[null,null,null,null,null],months:Array(12).fill(null),levels:['รายบุคคล'],owner,department:'OPD'});
 const k1=C.addIndicator(tA,FY,item('ตัวชี้วัดคะแนน 1','ทดสอบคะแนนก'));assert(k1.success,JSON.stringify(k1));
 const k2=C.addIndicator(tA,FY,item('ตัวชี้วัดคะแนน 2','ทดสอบคะแนนก'));assert(k2.success);
@@ -45,7 +45,8 @@ const id1=k1.newId,id2=k2.newId,id3=k3.newId;assert(id1&&id2&&id3&&id1!==id2&&id
 const tM=tok(uM),tN=tok(uN),tE=tok(uE);
 const base={weight:2,crit:['70','75','80','85','90','95','100'],r1:'',r2:'',note:''};
 // สิทธิ์แก้: เฉพาะ admin/ผอ.
-assert(!C.saveKpiScore(tM,FY,Object.assign({id:id1,owner:'ทดสอบคะแนนก',isNew:true},base)).success,'staff cannot edit');
+assert(!C.saveKpiScore(tM,FY,Object.assign({id:id1,owner:'ทดสอบคะแนนก',isNew:true},base)).success,'head cannot edit');
+const tSt=tok(uS);assert(!C.saveKpiScore(tSt,FY,Object.assign({id:id1,owner:'ทดสอบคะแนนก',isNew:true},base)).success,'staff cannot edit');
 assert(!C.saveKpiScore(tN,FY,Object.assign({id:id1,owner:'ทดสอบคะแนนก',isNew:true},base)).success,'head cannot edit');
 // เพิ่ม: ตัวชี้วัดต้องมีและเป็นของคนนั้น
 let r=C.saveKpiScore(tA,FY,Object.assign({id:id3,owner:'ทดสอบคะแนนก',isNew:true},base));assert(!r.success&&/ผู้รับผิดชอบ/.test(r.message),JSON.stringify(r));
@@ -62,11 +63,21 @@ assert(!C.saveKpiScore(tA,FY,Object.assign({id:id1,owner:'ทดสอบคะ�
 const sc=h.sheets.KPI_Score;assert(sc&&sc.d.length===4,'3 rows + header');eq(sc.d[0],C.SCORE_HEADERS);
 // อ่าน: เจ้าตัวเห็นของตัวเอง แม้ขอ person อื่น · แก้ไม่ได้
 let b=C.getScoreBoard(tM,FY,'');assert(b.success&&b.person==='ทดสอบคะแนนก'&&b.rows.length===2&&!b.canEdit&&!b.people);
-b=C.getScoreBoard(tM,FY,'ทดสอบคะแนนข');eq(b.person,'ทดสอบคะแนนก','staff cannot view others');
+b=C.getScoreBoard(tM,FY,'ทดสอบคะแนนข');eq(b.person,'ทดสอบคะแนนก','head cannot view others');
+// staff เข้าหน้าคะแนนไม่ได้
+r=C.getScoreBoard(tSt,FY,'');assert(!r.success&&/หัวหน้าหน่วยขึ้นไป/.test(r.message),JSON.stringify(r));assert(!C.getScoreBoard(tSt,FY,'ทดสอบคะแนนก').success);
+assert(!C.getScoreCandidates(tSt,FY,'ทดสอบคะแนนก').success);eq([C.scoreMeta(tSt,FY).allowed,C.scoreMeta(tSt,FY).has],[false,false]);
 b=C.getScoreBoard(tN,FY,'ทดสอบคะแนนก');eq([b.person,b.rows.length],['ทดสอบคะแนนข',1],'head sees own only');
 b=C.getScoreBoard(tA,FY,'ทดสอบคะแนนก');assert(b.canEdit&&b.rows.length===2&&b.people.includes('ทดสอบคะแนนข'));
 assert(C.getScoreBoard(tE,FY,'ทดสอบคะแนนข').canEdit,'executive edits');
-let meta=C.scoreMeta(tM,FY);assert(meta.has&&!meta.editor);meta=C.scoreMeta(tE,FY);assert(meta.editor&&meta.total===3);assert(!C.scoreMeta(tok(U.find(r=>r[2]==='staff'&&r[0]!=='ทดสอบคะแนนก')),FY).has);
+// ผังแถบซ้าย (dir): admin/ผอ. = ทุกคนจัดตามหน่วย · หัวหน้า = ตัวเอง · ไม่นับตัวชี้วัดที่ถูกลบ
+const dirA=C.getScoreBoard(tA,FY,'').dir;const allP=dirA.flatMap(u=>u.people.map(p=>p.person));
+assert(allP.includes('ทดสอบคะแนนก')&&allP.includes('ทดสอบคะแนนข'),JSON.stringify(dirA).slice(0,300));
+dirA.forEach(u=>{eq(u.people.map(p=>p.person),u.people.map(p=>p.person).slice().sort((a,b)=>a.localeCompare(b,'th')),'people sorted in unit')});
+const pm=dirA.flatMap(u=>u.people).find(p=>p.person==='ทดสอบคะแนนก');eq([pm.count,pm.kpis.length],[2,2]);assert(pm.kpis.some(k=>k.id===id1&&/ตัวชี้วัดคะแนน 1/.test(k.name)));
+const dirM=C.getScoreBoard(tM,FY,'').dir;eq([dirM.length,dirM[0].people.length,dirM[0].people[0].person],[1,1,'ทดสอบคะแนนก'],'head dir = self only');
+eq(C.getScoreBoard(tE,FY,'').dir.flatMap(u=>u.people).length,allP.length,'executive sees all');
+let meta=C.scoreMeta(tM,FY);assert(meta.has&&!meta.editor);meta=C.scoreMeta(tE,FY);assert(meta.editor&&meta.total===3);assert(!C.scoreMeta(tok(U.find(r=>r[2]==='staff'&&r[0]!=='ทดสอบคะแนนสตาฟ')),FY).has);
 // คำนวณ: รอบ 1 (ต.ค.–มี.ค.) ผล kpi1 เฉลี่ย 85 → 3.5 ×น้ำหนัก 2 = 7 · kpi2 ผล 3 → (ลง) 3.5 ×1 · รอบ 2 ยังไม่มีผล
 const setMonths=(id,m)=>{const k=C.getAllData(tA,FY).data.find(x=>x.id===id);const rr=C.saveKpi(tA,FY,{id,years:k.years,months:m});assert(rr.success,JSON.stringify(rr))};
 setMonths(id1,[80,90,85,null,null,null,null,null,null,null,null,null]);setMonths(id2,[3,3,3,null,null,null,null,null,null,null,null,null]);
@@ -94,6 +105,7 @@ assert(C.deleteKpiScore(tA,FY,{id:id2,owner:'ทดสอบคะแนนก'}
 assert(C.getScoreCandidates(tA,FY,'ทดสอบคะแนนก').candidates.some(x=>x.id===id2),'deleted → candidate again');
 // ตัวชี้วัดถูกลบ → แถว stale (ไม่นับรวม)
 assert(C.deleteIndicator(tA,FY,'OPD',id3).success);b=C.getScoreBoard(tN,FY,'');assert(b.rows.length===1&&b.rows[0].stale&&b.totals.count===0,JSON.stringify(b.totals));
+assert(!C.getScoreBoard(tA,FY,'').dir.flatMap(u=>u.people).some(p=>p.person==='ทดสอบคะแนนข'),'deleted KPI not in dir');
 // ----- change log: เอกสาร SCORE
 const pc=C.pollChanges(tM,FY,0);assert(pc.success!==false);
 // ----- เปลี่ยนชื่อผู้ใช้ → คอลัมน์ผู้รับผิดชอบในชีตคะแนน

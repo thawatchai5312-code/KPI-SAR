@@ -3,16 +3,19 @@ const {chromium}=require('playwright');
 const fs=require('fs');const path=require('path');const h=require('./harness7');const C=h.ctx;const assert=require('assert');
 const html=fs.readFileSync(path.join(__dirname,'../src/Index.html'),'utf8');
 const U=h.sheets.Users.d;U.slice(1).forEach(r=>{r[1]=C.hashPassword_('pw123456');r[4]='FALSE'});
-const mkUser=(n,tier)=>{const r=[n,C.hashPassword_('pw123456'),tier||'staff','','FALSE','',''];U.push(r);return r};
+const mkUser=(n,tier,d)=>{const r=[n,C.hashPassword_('pw123456'),tier||'staff',d||'','FALSE','',''];U.push(r);return r};
 const ad=U.find(r=>r[2]==='admin'),tA=C.createSession_(ad[0],ad[1]);
-const uM=mkUser('ทดสอบมานี'),uP=mkUser('ทดสอบปิติ');
+const uM=mkUser('ทดสอบมานี','head','OPD'),uP=mkUser('ทดสอบปิติ','head','IPD'),uSt=mkUser('ทดสอบสตาฟ');
 const item=(name,owner)=>({part:'OPD',category:'x',name,target:'≥ 80',years:[null,null,null,null,null],months:Array(12).fill(null),levels:['รายบุคคล'],owner,department:'OPD'});
+const idP=C.addIndicator(tA,2570,item('ตัวชี้วัดของปิติ','ทดสอบปิติ')).newId;
 const ids=[C.addIndicator(tA,2570,item('ตัวชี้วัดคะแนนทดสอบ ก','ทดสอบมานี')).newId,C.addIndicator(tA,2570,item('ตัวชี้วัดคะแนนทดสอบ ข','ทดสอบมานี')).newId,C.addIndicator(tA,2570,item('ตัวชี้วัดคะแนนทดสอบ ค','ทดสอบมานี')).newId];
 const base={weight:2,crit:['70','75','80','85','90','95','100'],r1:'',r2:'',note:''};
 assert(C.saveKpiScore(tA,2570,Object.assign({id:ids[0],owner:'ทดสอบมานี',isNew:true},base)).success);
 assert(C.saveKpiScore(tA,2570,Object.assign({id:ids[1],owner:'ทดสอบมานี',isNew:true},base,{weight:1,crit:['6','5','4','3','2','1','0']})).success);
+assert(C.saveKpiScore(tA,2570,Object.assign({id:idP,owner:'ทดสอบปิติ',isNew:true},base)).success);
 const k0=C.getAllData(tA,2570).data.find(x=>x.id===ids[0]);C.saveKpi(tA,2570,{id:ids[0],years:k0.years,months:[88,90,null,null,null,null,null,null,null,null,null,null]});
 const k1=C.getAllData(tA,2570).data.find(x=>x.id===ids[1]);C.saveKpi(tA,2570,{id:ids[1],years:k1.years,months:[3,3,null,null,null,null,null,null,null,null,null,null]});
+const idS=C.addIndicator(tA,2570,item('ตัวชี้วัดของสตาฟ','ทดสอบสตาฟ')).newId;assert(C.saveKpiScore(tA,2570,Object.assign({id:idS,owner:'ทดสอบสตาฟ',isNew:true},base)).success);
 const OUT=path.join(__dirname,'..');
 (async()=>{
  const b=await chromium.launch({executablePath:'/opt/pw-browsers/chromium'});
@@ -29,21 +32,49 @@ const OUT=path.join(__dirname,'..');
  await pm.evaluate(()=>switchMenu('score'));await pm.waitForSelector('#score-body table.sc-table',{timeout:15000});
  let txt=await pm.innerText('#score-body');
  assert(/ตัวชี้วัดคะแนนทดสอบ ก/.test(txt)&&/ตัวชี้วัดคะแนนทดสอบ ข/.test(txt)&&!/ตัวชี้วัดคะแนนทดสอบ ค/.test(txt),'own rows only');
- assert.strictEqual(await pm.locator('#score-person').count(),0,'staff has no person picker');assert.strictEqual(await pm.getByText('แก้ไขชุดคะแนน').count(),0,'staff cannot edit');
+ assert.strictEqual(await pm.locator('#score-person').count(),0,'head has no person picker');assert.strictEqual(await pm.getByText('แก้ไขชุดคะแนน').count(),0,'head cannot edit');
+ // แถบซ้าย (หัวหน้า): หน่วย OPD › ตัวเอง เท่านั้น
+ const sideM=await pm.evaluate(()=>[...document.querySelectorAll('#score-side-body .accordion-header span:first-child')].map(e=>e.textContent));assert.deepStrictEqual(sideM,['OPD']);
+ assert.deepStrictEqual(await pm.evaluate(()=>[...document.querySelectorAll('#score-side-body .category-header span:first-child')].map(e=>e.textContent)),['ทดสอบมานี'],'head sees only self in side');
+ assert.strictEqual(await pm.locator('#score-side').count(),1);
  // รอบ 1: ก เฉลี่ย 89 → 3.5 (≥85) ถ่วง 7 · ข ผล 3 → 3.5 ถ่วง 3.5 · รวม 10.5/15=70%
  assert(/10\.5/.test(txt)&&/70%/.test(txt),'totals shown: '+txt.slice(-300));
  assert(/คำนวณ/.test(txt),'calc badge');
  await pm.screenshot({path:path.join(OUT,'tests/out/ui74-self.png')}).catch(()=>{});
- // staff ที่ไม่มีชุดคะแนนไม่เห็นเมนู
- const other=U.find(r=>r[2]==='staff'&&r[0]!=='ทดสอบมานี'&&r[0]!=='ทดสอบปิติ');
+ // staff ไม่เห็นเมนูแม้มีชุดคะแนนของตัวเอง · staff ทั่วไปก็ไม่เห็น
+ const ps=await open('ทดสอบสตาฟ');await ps.waitForTimeout(800);
+ assert.strictEqual(await ps.evaluate(()=>getComputedStyle(document.getElementById('menu-score-btn')).display),'none','staff: no menu');
+ await ps.evaluate(()=>switchMenu('score'));await ps.waitForTimeout(800);
+ assert(!(await ps.evaluate(()=>score.data)),'staff gets no data');
+ const other=U.find(r=>r[2]==='staff'&&r[0]!=='ทดสอบสตาฟ');
  const po=await open(other[0]);await po.waitForTimeout(800);
  assert.strictEqual(await po.evaluate(()=>getComputedStyle(document.getElementById('menu-score-btn')).display),'none','no score → no menu');
  // ===== admin: เลือกบุคคล แก้ไข
  const pa=await open(ad[0]);
  assert.notStrictEqual(await pa.evaluate(()=>getComputedStyle(document.getElementById('menu-score-btn')).display),'none');
  await pa.evaluate(()=>switchMenu('score'));await pa.waitForSelector('#score-person',{timeout:15000});
- await pa.fill('#score-person','ทดสอบมานี');await pa.press('#score-person','Tab');
+ // แถบซ้าย: จัดตามหน่วย (IPD, OPD) · จำนวน KPI ข้างชื่อ
+ const units=await pa.evaluate(()=>[...document.querySelectorAll('#score-side-body .accordion-header span:first-child')].map(e=>e.textContent));assert(units.includes('OPD')&&units.includes('IPD'),JSON.stringify(units));
+ assert(units.indexOf('IPD')<units.indexOf('OPD'),'units sorted');
+ // admin ชุดตัวเองว่าง → เปิดคนแรกในผังให้อัตโนมัติ
+ await pa.waitForFunction(()=>score.data&&score.data.rows.length>0,null,{timeout:15000});
+ // ค้นหาชื่อ
+ await pa.fill('#score-q','มานี');assert.deepStrictEqual(await pa.evaluate(()=>[...document.querySelectorAll('#score-side-body .category-header span:first-child')].map(e=>e.textContent)),['ทดสอบมานี']);await pa.fill('#score-q','');
+ // กดชื่อคนอื่น (ปิติ) → ตารางเปลี่ยน
+ await pa.evaluate(()=>{document.querySelector('#score-side-body .category-header[data-p="ทดสอบปิติ"]').click()});
+ await pa.waitForFunction(()=>score.data&&score.data.person==='ทดสอบปิติ'&&score.data.rows.length===1,null,{timeout:15000});
+ // กดชื่อมานี → ตารางมานี + กางรายชื่อ KPI · กด KPI → เลื่อน/กะพริบแถว
+ await pa.evaluate(()=>{document.querySelector('#score-side-body .category-header[data-p="ทดสอบมานี"]').click()});
  await pa.waitForFunction(()=>score.data&&score.data.person==='ทดสอบมานี'&&score.data.rows.length===2,null,{timeout:15000});
+ assert(await pa.evaluate(()=>[...document.querySelectorAll('#score-side-body .category-block.open .kpi-link-item')].length===2),'KPI list opened under the person');
+ await pa.evaluate(id=>{document.querySelector('#score-side-body .kpi-link-item[data-id="'+id+'"]').click()},ids[1]);
+ await pa.waitForFunction(id=>[...document.querySelectorAll('#score-body tr.sc-flash')].some(r=>r.dataset.id===id),ids[1],{timeout:5000});
+ // ช่อง "เปิดชุดคะแนนของบัญชีอื่น" ยังใช้ได้
+ await pa.fill('#score-person','ทดสอบปิติ');await pa.press('#score-person','Tab');
+ await pa.waitForFunction(()=>score.data&&score.data.person==='ทดสอบปิติ',null,{timeout:15000});
+ await pa.evaluate(()=>{document.querySelector('#score-side-body .category-header[data-p="ทดสอบมานี"]').click()});
+ await pa.waitForFunction(()=>score.data&&score.data.person==='ทดสอบมานี'&&score.data.rows.length===2,null,{timeout:15000});
+ await pa.screenshot({path:path.join(OUT,'tests/out/ui74-side.png')}).catch(()=>{});
  // เปลี่ยนรอบ
  await pa.click('.sc-rbtn:nth-of-type(3)');txt=await pa.innerText('#score-body');assert(/คะแนน รอบ 2/.test(txt),'year columns');
  await pa.click('.sc-rbtn:nth-of-type(1)');
@@ -73,6 +104,6 @@ const OUT=path.join(__dirname,'..');
  await pp.waitForFunction(()=>getComputedStyle(document.getElementById('menu-score-btn')).display!=='none',null,{timeout:15000});
  assert(await pp.getAttribute('#menu-score-btn','aria-label')==='คะแนน KPI'&&await pp.getAttribute('#menu-score-btn','title')==='คะแนน KPI');
  await pp.evaluate(()=>switchMenu('score'));await pp.waitForSelector('#score-body table.sc-table',{timeout:15000});
- for(const p of [pm,pa,pp,po])assert.strictEqual(p.errs.length,0,JSON.stringify(p.errs));
+ for(const p of [pm,pa,pp,po,ps])assert.strictEqual(p.errs.length,0,JSON.stringify(p.errs));
  await b.close();console.log('UI74 OK');
 })().catch(e=>{console.error(e);process.exit(1)});
