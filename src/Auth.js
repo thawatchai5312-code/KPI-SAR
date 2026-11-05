@@ -113,6 +113,22 @@ function parseOwners_(text) {
 }
 
 /**
+ * ตำแหน่งหัวหน้าในช่องผู้รับผิดชอบ → [คำ] (มีคำว่า "หัวหน้า" และไม่ถูกแปลงเป็นชื่อคนด้วย OWNER_ALIASES/OWNER_SPLITS เช่น "หัวหน้าพยาบาล" = ชื่อคน)
+ * ผู้ใช้ Tier head / executive ที่เข้าเกณฑ์ถือเป็นผู้รับผิดชอบ (getKpiPermission_) · ไม่แก้ parseOwners_ (ใช้หลายที่)
+ */
+function ownerHeadTokens_(text) {
+  var out = [];
+  if (!text || text.toString().indexOf("หัวหน้า") === -1) return out;
+  text.toString().split("/").forEach(function(part) {
+    var t = part.trim();
+    if (!t || OWNER_SPLITS.hasOwnProperty(t)) return;
+    var n = OWNER_ALIASES.hasOwnProperty(t) ? OWNER_ALIASES[t] : t;
+    if (n.indexOf("หัวหน้า") !== -1 && out.indexOf(n) === -1) out.push(n);
+  });
+  return out;
+}
+
+/**
  * ชื่อกำกวม = ไม่มีบัญชีชื่อ "name" ตรงๆ แต่มีบัญชีขึ้นต้นด้วย "name " (ชื่อ นามสกุล) — คืนรายชื่อเต็มของบัญชีเหล่านั้น (ว่าง = ไม่กำกวม)
  * ใช้ตอนล็อกอิน (พิมพ์แต่ชื่อต้น) และตอนบันทึกช่องผู้รับผิดชอบ
  */
@@ -401,6 +417,7 @@ function buildAccountsFromOwners_(existingUsers) {
   var created = [];
   Object.keys(deptsByOwner).sort().forEach(function(name) {
     if (existing[name]) return;
+    if (name.indexOf("หัวหน้า") !== -1) return; // ตำแหน่งหัวหน้า (หัวหน้างาน/หัวหน้า ฯลฯ) ไม่ใช่ชื่อคน ไม่สร้างบัญชี
     if (nameMatchesFull_(name, allNames).length > 0) return; // ชื่อกำกวม (มีบัญชี "ชื่อ นามสกุล" แล้ว) — ไม่สร้างบัญชีชื่อต้นกลับมา
     var isExec = EXECUTIVE_NAMES.indexOf(name) !== -1;
     created.push(buildUser_(name, DEFAULT_PASSWORD, isExec ? "executive" : "staff", isExec ? [] : deptsByOwner[name], true));
@@ -636,6 +653,14 @@ function getKpiPermission_(user, kpi, fy) {
   if (!isOwner && (user.tier === "head" || user.tier === "executive" || user.tier === "admin") && user.depts.indexOf(NURSING_UNIT_NAME) !== -1) {
     // "หัวหน้าตึก" = ผู้ใช้ Tier head ขึ้นไปที่สังกัด NSO ทุกคน
     isOwner = (kpi.owner || "").toString().split("/").some(function(t) { return t.trim() === HEAD_WARD_TOKEN; });
+  }
+  var headTokens = (!isOwner && (user.tier === "head" || user.tier === "executive")) ? ownerHeadTokens_(kpi.owner) : [];
+  if (headTokens.length > 0) {
+    // ผู้รับผิดชอบเขียนว่า "หัวหน้า…" (หัวหน้าหน่วย/หัวหน้างาน/หัวหน้า ฯลฯ) = หัวหน้าและผู้บริหารที่หน่วยที่ระบุตรงกับช่องหน่วยงานของตัวชี้วัด
+    // ช่องหน่วยงานว่าง = ทุกคน (ยกเว้น "หัวหน้าตึก" ที่มีกติกา NSO ของตัวเองข้างบน — ไม่ขยายเป็นทุกคนเมื่อช่องว่าง)
+    var deptHit = kpiDepts.some(function(d) { return (user.depts || []).indexOf(d) !== -1; });
+    var generic = headTokens.some(function(t) { return t !== HEAD_WARD_TOKEN; });
+    isOwner = deptHit || (generic && kpiDepts.length === 0);
   }
   var levels = kpi.levels || normalizeLevels_(kpi.level);
   if (user.tier === "admin") return { view: true, editResults: true, editDetails: true, mine: isOwner, inDept: inDept, isOwner: isOwner };

@@ -151,6 +151,7 @@ function tidyMergeRows_(keepRow, dropRow) {
   r[LEVEL_COLUMN - 1] = sortLevels_(levels).join(", ");
   var owners = parseOwners_(r[25]).slice();
   parseOwners_(dropRow[25]).forEach(function(n) { if (owners.indexOf(n) === -1) owners.push(n); });
+  ownerHeadTokens_(keepRow[25]).concat(ownerHeadTokens_(dropRow[25])).forEach(function(n) { if (owners.indexOf(n) === -1) owners.push(n); }); // คง "หัวหน้า…" (parseOwners_ ตัด หัวหน้าหน่วย/หัวหน้าตึก/หัวหน้าฝ่าย ออก)
   r[25] = owners.join(" / ");
   var depts = parseDepts_(r[26]).slice();
   parseDepts_(dropRow[26]).forEach(function(d) { if (depts.indexOf(d) === -1) depts.push(d); });
