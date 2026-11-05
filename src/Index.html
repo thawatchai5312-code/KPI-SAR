@@ -258,6 +258,11 @@
     .mode-switch button.on { background: var(--primary-color); color: #fff; }
     .pager-size .btn { margin-left: 6px; }
     #kpi-list-area.table-mode { position: sticky; top: var(--tree-top, 70px); height: calc(100vh - var(--tree-top, 70px) - 10px); min-height: 360px; display: flex; flex-direction: column; }
+    .home-search { position: relative; display: inline-flex; align-items: center; flex: 1 1 240px; max-width: 420px; min-width: 180px; }
+    .home-search .editable-input { width: 100%; padding: 5px 28px 5px 10px; font-weight: 400; }
+    .home-search-x { position: absolute; right: 4px; border: 0; background: transparent; color: #64748b; cursor: pointer; font-size: 13px; padding: 2px 6px; border-radius: 6px; }
+    .home-search-x:hover { background: #e2e8f0; }
+    @media (max-width: 700px) { .home-search { flex-basis: 100%; max-width: none; } }
     .tbl-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 6px 12px; flex-wrap: wrap; background: #fff; border-radius: 10px; padding: 6px 10px; margin-bottom: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.06); font-size: 13px; font-weight: 700; color: #334155; }
     .tbl-groups { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; }
     .tbl-chip { border: 1px solid #cbd5e1; background: #f1f5f9; color: #64748b; border-radius: 999px; padding: 3px 10px; font-size: 12px; font-weight: 700; cursor: pointer; }
@@ -1713,9 +1718,9 @@
       const sig = [dbVersion, treeView, appliedFilters.mode, appliedFilters.scope].join('|');
       if (tblNoMap && tblNoDb === globalDatabase && tblNoSig === sig) return tblNoMap;
       const tree = {};
-      uniqueById(getOrderedKpis()).forEach(k => { ((tree[k.part] = tree[k.part] || {})[k.category] = tree[k.part][k.category] || []).push(k); });
+      uniqueById(getOrderedKpis(false, treeView, false, true)).forEach(k => { ((tree[k.part] = tree[k.part] || {})[k.category] = tree[k.part][k.category] || []).push(k); }); // เลขข้อไม่เปลี่ยนตามคำค้น
       const byKey = prNumbering(tree), byId = new Map();
-      uniqueById(getOrderedKpis()).forEach(k => byId.set(k.id, byKey.get(k.part + '||' + k.category + '||' + k.id)));
+      uniqueById(getOrderedKpis(false, treeView, false, true)).forEach(k => byId.set(k.id, byKey.get(k.part + '||' + k.category + '||' + k.id)));
       tblNoMap = byId; tblNoDb = globalDatabase; tblNoSig = sig;
       return byId;
     }
@@ -2264,6 +2269,15 @@
     function statusPasses(level, mode) { return STATUS_RANK[level] <= STATUS_RANK[mode]; }
     let homeStale = false; // ตัวกรองถูกเปลี่ยนที่หน้าสรุปรายงาน → หน้าแรกต้องวาดใหม่ตอนกลับไป
 
+    // ช่องค้นหาหน้าแรก (ชื่อตัวชี้วัด / ผู้รับผิดชอบ / หน่วยงาน): ใช้ร่วมกับตัวกรองเดิม · หลายคำ = ต้องเจอครบทุกคำ · ไม่ใช้กับหน้าสรุปรายงาน/ติดตามงาน
+    let homeQuery = '', homeQDraft = null, homeQTimer = null; // homeQDraft = ข้อความที่พิมพ์ค้างรอบันทึกเป็นคำค้น (กันวาดทับระหว่างรอ)
+    function homeQueryTerms() { return homeQuery.toLowerCase().split(/\s+/).filter(Boolean); }
+    function kpiMatchesQuery(k, terms) {
+      if (!terms.length) return true;
+      const hay = ((k.name || '') + ' ' + (k.owner || '') + ' ' + (k.department || '')).toLowerCase();
+      return terms.every(t => hay.indexOf(t) !== -1);
+    }
+
     function inScope(k, scope) {
       if (scope === 'mine') return !!k.isOwner;
       if (scope === 'unit') return !!(k.isOwner || k.inDept);
@@ -2280,8 +2294,10 @@
     function filterCounts() {
       const sc = { mine: 0, unit: 0, all: 0 }, st = { all: 0, red: 0, yellow: 0, green: 0 };
       const person = rptPersonOn();
+      const terms = currentTab === 'report' ? [] : homeQueryTerms(); // คำค้นหน้าแรกไม่กระทบตัวเลขในหน้าสรุปรายงาน
       (person ? rpt.personData : globalDatabase).forEach(k => {
         if (viewPlacements(k, treeView).length === 0) return;
+        if (!person && !kpiMatchesQuery(k, terms)) return;
         const s = kpiStatus(k).level;
         if (statusPasses(s, appliedFilters.mode)) SCOPE_BTNS.forEach(([v]) => { if (inScope(k, v)) sc[v]++; });
         if (person || inScope(k, appliedFilters.scope)) { st.all++; st[s]++; }
@@ -2346,7 +2362,12 @@
     }
 
     // ผู้ใช้กด "กลับไปแก้ต่อ" ตอนเปลี่ยนตัวกรอง → ตัวกรองยังเป็นค่าเดิม แค่วาดปุ่มใหม่ให้ตรง
-    function restoreTreeFilters() { renderFilterUi(); }
+    function restoreTreeFilters() {
+      renderFilterUi();
+      homeQDraft = null; clearTimeout(homeQTimer); // ผู้ใช้กด "กลับไปแก้ต่อ" → ช่องค้นหากลับเป็นคำค้นเดิม
+      const q = document.getElementById('home-q'); if (q) q.value = homeQuery;
+      const x = document.getElementById('home-q-clear'); if (x) x.style.display = homeQuery ? '' : 'none';
+    }
 
     // หมวด Part I–IV = หมวดหลักของ QA/SAR (ต้องเป็นตัวชี้วัดระดับ SAR หรือ QA-หน่วยงาน) อยู่บนสุดเสมอ ตามด้วยหมวดอื่นเรียงตามตัวอักษร
     const CORE_PART_RE = /^part\s+(iv|iii|ii|i)(?![a-z])/i;
@@ -2422,12 +2443,14 @@
     }
 
     // ตัวชี้วัดที่ผ่านตัวกรอง เรียงแบบเดียวกับผังรายการ: หมวดหลัก → หมวดย่อย → ลำดับในชีต
-    function getOrderedKpis(ignoreStatus = false, view = treeView, forReport = false) {
+    function getOrderedKpis(ignoreStatus = false, view = treeView, forReport = false, ignoreQuery = false) {
       const f = appliedFilters;
+      const terms = forReport || ignoreQuery ? [] : homeQueryTerms(); // คำค้นหน้าแรก
       const person = forReport && rptPersonOn(); // KPI รายบุคคล (หน้าสรุปรายงาน): ใช้ข้อมูลที่ดึงของคนนั้น ไม่ใช้ตัวกรองขอบเขต
       const src = person ? rpt.personData : globalDatabase;
       const list = src.filter(k => {
         if (!ignoreStatus && !statusPasses(kpiStatus(k).level, f.mode)) return false;
+        if (!person && !kpiMatchesQuery(k, terms)) return false;
         return person || inScope(k, f.scope);
       });
       const order = new Map(src.map((k, i) => [k.id, i]));
@@ -2472,12 +2495,13 @@
     // ค่าตั้งต้นตอนเข้าระบบ: staff เห็นเฉพาะที่ตัวเองรับผิดชอบ · หัวหน้าเห็นของหน่วยที่ดูแล · ผู้ดูแลและผู้บริหารเห็นทุกระดับ
     function applyDefaultFilters() {
       appliedFilters = { mode: 'green', scope: defaultScope() };
+      homeQuery = ''; homeQDraft = null; clearTimeout(homeQTimer);
       treeView = isPrivilegedUser() ? 'hosp' : 'unit'; // เจ้าหน้าที่/หัวหน้าเริ่มที่หมวดของหน่วยงาน · ผู้บริหาร/admin เริ่มที่ Part I–IV
       homeStale = false;
     }
 
     function pickInitialView() {
-      const has = v => getOrderedKpis(false, v).length > 0;
+      const has = v => getOrderedKpis(false, v, false, true).length > 0;
       if (has(treeView)) return;
       const next = [treeView === 'unit' ? 'hosp' : 'unit', 'hosp', 'unit', 'qa'].find(has);
       if (next) treeView = next;
@@ -2515,6 +2539,7 @@
     // ช่อง "เฉพาะของฉัน" (หน้าติดตามงาน): เอาติ๊กออก เตือนก่อนว่าตัวชี้วัดอื่นดูได้อย่างเดียว แก้ไขไม่ได้
     function emptyListMessage() {
       const f = appliedFilters;
+      if (homeQuery.trim()) return 'ไม่พบตัวชี้วัดที่ตรงกับ "' + esc(homeQuery.trim()) + '" ในมุมมองและตัวกรองที่เลือก<br><button type="button" class="btn btn-secondary btn-sm" style="margin-top:8px;" onclick="homeSearchSet(\'\')">✕ ล้างคำค้น</button>';
       if (f.mode === 'green' && f.scope === 'mine') {
         return 'ยังไม่มีตัวชี้วัดที่คุณรับผิดชอบในมุมมองนี้<br>กดปุ่ม "หน่วยของฉัน" หรือ "ทั้งหมด" เพื่อดูตัวชี้วัดอื่น';
       }
@@ -2527,6 +2552,7 @@
 
     function resetTreeFilters() {
       appliedFilters = { mode: 'green', scope: 'all' }; // แสดงทุกตัว/ทุกสถานะ
+      homeQuery = ''; homeQDraft = null; clearTimeout(homeQTimer);
     }
 
     // ===================== ผังรายการ (ซ้าย) =====================
@@ -2638,6 +2664,12 @@
       let list = cards();
       let idx = list.findIndex(k => k.id === id);
       let relisted = false; // ล้างตัวกรอง/สลับมุมมอง → รายการ (การ์ด/ตาราง) ที่วาดอยู่เป็นของเดิม ต้องวาดใหม่
+      if (idx === -1 && homeQuery) { // ถูกคำค้นซ่อนอยู่ → ล้างคำค้นก่อน (ยังไม่แตะตัวกรองอื่น)
+        homeQuery = ''; homeQDraft = null; clearTimeout(homeQTimer);
+        relisted = true;
+        list = cards();
+        idx = list.findIndex(k => k.id === id);
+      }
       if (idx === -1) {
         // ตัวที่ต้องการถูกตัวกรองซ่อนอยู่ (เช่น มาจากหน้าติดตามงาน) → ล้างตัวกรองก่อน
         resetTreeFilters();
@@ -2735,9 +2767,49 @@
       sel.value = String(pageSize);
     }
 
+    // ช่องค้นหาหน้าแรก (อยู่ในแถบบนสุดของรายการ ทั้งโหมดการ์ดและตาราง) — วาดซ้ำพร้อมรายการ จึงจำโฟกัส/ตำแหน่งเคอร์เซอร์ไว้คืนให้
+    function homeSearchHtml() {
+      const v = homeQDraft !== null ? homeQDraft : homeQuery;
+      return `<span class="home-search"><input type="text" id="home-q" class="editable-input" autocomplete="off" placeholder="🔍 ค้นหาชื่อตัวชี้วัด / ผู้รับผิดชอบ / หน่วยงาน…" aria-label="ค้นหาตัวชี้วัด" value="${esc(v)}" oninput="homeSearchInput(this, event)" onkeydown="if(event.key==='Escape'){homeSearchSet('')}"><button type="button" id="home-q-clear" class="home-search-x" title="ล้างคำค้น" aria-label="ล้างคำค้น" style="${v ? '' : 'display:none;'}" onclick="homeSearchSet('')">✕</button></span>`;
+    }
+    function homeSearchKeep() {
+      const q = document.getElementById('home-q');
+      return q && document.activeElement === q ? [q.selectionStart, q.selectionEnd] : null;
+    }
+    function homeSearchRestore(keep) {
+      if (!keep) return;
+      const q = document.getElementById('home-q');
+      if (!q) return;
+      q.focus({ preventScroll: true });
+      try { q.setSelectionRange(keep[0], keep[1]); } catch (e) { /* ชนิดช่องไม่รองรับ */ }
+    }
+    function homeSearchInput(el, ev) {
+      if (ev) ev.stopPropagation(); // ไม่ให้ตัวจับการพิมพ์ของรายการ (onEditInput) ทำงาน
+      homeQDraft = el.value;
+      const x = document.getElementById('home-q-clear'); if (x) x.style.display = el.value ? '' : 'none';
+      clearTimeout(homeQTimer);
+      const v = el.value;
+      homeQTimer = setTimeout(() => homeSearchSet(v), 300); // รอพิมพ์เสร็จก่อนวาดรายการใหม่
+    }
+    function homeSearchSet(v) {
+      clearTimeout(homeQTimer);
+      v = String(v || '');
+      if (v.trim().toLowerCase() === homeQuery.trim().toLowerCase() && v === homeQuery) { homeQDraft = null; return; }
+      if (currentTab !== 'home') { homeQuery = v; homeQDraft = null; homeStale = true; return; }
+      guardUnsaved(() => {
+        homeQuery = v; homeQDraft = null;
+        currentPage = 1;
+        const keep = homeSearchKeep();
+        renderTree();
+        renderList();
+        homeSearchRestore(keep);
+      });
+    }
+
     function renderList() {
       tblStop();
       const area = document.getElementById('kpi-list-area');
+      const keepQ = homeSearchKeep();
       const list = uniqueById(getOrderedKpis()); // ตัวชี้วัดละการ์ดใบเดียวในมุมมองที่เลือก
       if (globalDatabase.length === 0) {
         area.classList.remove('table-mode');
@@ -2746,15 +2818,16 @@
       }
       if (list.length === 0) {
         area.classList.remove('table-mode');
-        area.innerHTML = `<div class="panel"><div class="empty-state">${emptyListMessage()}</div></div>`;
+        area.innerHTML = `<div class="tbl-toolbar">${homeSearchHtml()}</div><div class="panel"><div class="empty-state">${emptyListMessage()}</div></div>`;
+        homeSearchRestore(keepQ);
         return;
       }
-      if (listMode === 'table') { renderTable(list); return; }
+      if (listMode === 'table') { renderTable(list); homeSearchRestore(keepQ); return; }
       area.classList.remove('table-mode');
       currentPage = Math.min(Math.max(1, currentPage), totalPages(list.length));
       const pageItems = list.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
-      let html = pagerHtml(list.length, true);
+      let html = `<div class="tbl-toolbar">${homeSearchHtml()}${homeQuery.trim() ? `<span class="hint" style="margin:0;">พบ ${list.length} ตัวชี้วัด ตามคำค้น</span>` : ''}</div>` + pagerHtml(list.length, true);
       let lastPart = null, lastCat = null;
       pageItems.forEach(kpi => {
         if (kpi.part !== lastPart || kpi.category !== lastCat) {
@@ -2767,6 +2840,7 @@
       area.innerHTML = html;
       area.classList.toggle('charts-hidden', !chartVisible);
       afterCardsRendered();
+      homeSearchRestore(keepQ);
     }
 
     // วาดการ์ดของตัวชี้วัดใหม่ทุกใบ (ตัวเดียวกันที่อยู่หลายหมวดจะอัปเดตพร้อมกัน)
@@ -7859,7 +7933,7 @@
       tblLast = { part: null, cat: null };
       const chips = TBL_GROUPS.map(g => `<button type="button" class="tbl-chip${tblHide.has(g[0]) ? '' : ' on'}" data-g="${g[0]}" onclick="tblToggleGroup('${g[0]}')" title="แสดง/ซ่อนคอลัมน์กลุ่ม ${g[1]}">${g[1]}</button>`).join('');
       const hideCls = TBL_GROUPS.filter(g => tblHide.has(g[0])).map(g => 'hide-' + g[0]).join(' ');
-      area.innerHTML = `<div class="tbl-toolbar"><span>📋 ตาราง · แสดง ${list.length} ตัวชี้วัด <span class="hint" style="margin:0;">(ชื่อตัวชี้วัดตรึงไว้ทางซ้าย · กดข้อความยาวเพื่อดู/ย่อ)</span></span><span class="tbl-groups"><span class="hint" style="margin:0;">คอลัมน์:</span>${chips}</span></div>
+      area.innerHTML = `<div class="tbl-toolbar">${homeSearchHtml()}<span>📋 ตาราง · แสดง ${list.length} ตัวชี้วัด${homeQuery.trim() ? ' <span class="hint" style="margin:0;">ตามคำค้น</span>' : ''} <span class="hint tbl-hint" style="margin:0;">(ชื่อตัวชี้วัดตรึงไว้ทางซ้าย · กดข้อความยาวเพื่อดู/ย่อ)</span></span><span class="tbl-groups"><span class="hint" style="margin:0;">คอลัมน์:</span>${chips}</span></div>
         <div class="tbl-wrap" id="tbl-wrap"><table class="kpi-table ${hideCls}" id="kpi-table"><colgroup>${TBL_COLS.map(c => `<col${c.g ? ` data-g="${c.g}"` : ''} style="width:${c.w}px">`).join('')}</colgroup><thead>${tblHeadHtml()}</thead><tbody></tbody></table></div>`;
       area.classList.add('table-mode');
       area.classList.remove('charts-hidden');
