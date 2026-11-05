@@ -104,8 +104,9 @@ function hkReadSource_(url) {
   url = (url || "").toString().trim();
   if (!/^https:\/\/docs\.google\.com\/spreadsheets\//.test(url)) throw new Error("ลิงก์ต้องเป็น Google ชีต (ขึ้นต้นด้วย https://docs.google.com/spreadsheets/) — ถ้าเป็นไฟล์ Excel ให้เปิดด้วย Google ชีตแล้วบันทึกเป็น Google ชีตก่อน");
   var ss;
-  try { ss = SpreadsheetApp.openByUrl(url); } catch (e) {
-    throw new Error("เปิดไฟล์ไม่ได้ — ตรวจว่าเป็น Google ชีต (ไม่ใช่ไฟล์ .xlsx) และแชร์ให้บัญชี Google ที่เป็นเจ้าของสคริปต์แล้ว");
+  var idm = /\/spreadsheets\/d\/([A-Za-z0-9_-]{20,})/.exec(url); // เปิดด้วยรหัสไฟล์ (ไม่ขึ้นกับรูปแบบท้ายลิงก์ เช่น /edit?usp=…)
+  try { ss = idm ? SpreadsheetApp.openById(idm[1]) : SpreadsheetApp.openByUrl(url); } catch (e) {
+    throw new Error("เปิดไฟล์ไม่ได้ — ตรวจว่าเป็น Google ชีต (ไม่ใช่ไฟล์ .xlsx) และแชร์ให้บัญชี Google ที่เป็นเจ้าของสคริปต์แล้ว (" + String(e && e.message ? e.message : e).slice(0, 160) + ")");
   }
   var sheets = ss.getSheets();
   if (sheets.length > HK_MAX_SHEETS) throw new Error("ไฟล์มีมากกว่า " + HK_MAX_SHEETS + " ชีต");
@@ -477,7 +478,7 @@ function hkSourceText_(template, url, target) {
 // ไม่สร้างตัวชี้วัด/บัญชี ไม่แตะข้อมูลอื่น · ทำครั้งเดียว (Script Property HK_SCORE_FILL_V1) · ลบโค้ดส่วนนี้ได้หลังทำเสร็จ
 var HK_FILL_FLAG = "HK_SCORE_FILL_V1";
 var HK_FILL_FY = 2570;
-var HK_FILL_URL = "https://docs.google.com/spreadsheets/d/18G-Q7Fr-7aDL2-mEEjuHR0DsxBrKeQGe3ETA2tmJzyk";
+var HK_FILL_URL = "https://docs.google.com/spreadsheets/d/18G-Q7Fr-7aDL2-mEEjuHR0DsxBrKeQGe3ETA2tmJzyk/edit";
 
 function hkFillPending_() { return !PropertiesService.getScriptProperties().getProperty(HK_FILL_FLAG); }
 
