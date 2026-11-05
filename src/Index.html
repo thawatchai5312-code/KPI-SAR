@@ -8395,9 +8395,10 @@
     function scoreLoad(silent) {
       if (!sessionToken) return;
       const token = sessionToken, seq = ++score.seq, fy = selectedFy;
-      if (!silent) { score.loading = true; scoreRender(); }
+      if (!silent) { score.loading = true; scoreRender(); showBusy(score.person ? 'กำลังโหลดคะแนน KPI ของ ' + score.person + '…' : 'กำลังโหลดคะแนน KPI…'); }
+      const wrap = silent ? (f => f) : unbusy; // โหลดแบบเห็น (เปิดหน้า/เปลี่ยนคน) = หน้าต่างรอโหลด · อัปเดตอัตโนมัติ = เงียบ
       google.script.run
-        .withSuccessHandler(res => {
+        .withSuccessHandler(wrap(res => {
           if (sessionToken !== token || seq !== score.seq || fy !== selectedFy) return;
           score.loading = false;
           if (!res || !res.success) { score.data = null; score.error = (res && res.message) || 'โหลดคะแนนไม่สำเร็จ'; scoreRender(); return; }
@@ -8407,8 +8408,8 @@
           if (res.dir) res.dir.forEach(u => { if (u.people.some(p => p.person === res.person)) score.openUnits.add(u.unit); });
           if (silent && score.editing) { scoreRenderSide(); return; } // กำลังแก้อยู่: ไม่วาดทับช่องที่กำลังพิมพ์
           scoreRender();
-        })
-        .withFailureHandler(() => { if (seq !== score.seq) return; score.loading = false; score.data = null; score.error = 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้'; scoreRender(); })
+        }))
+        .withFailureHandler(wrap(() => { if (seq !== score.seq) return; score.loading = false; score.data = null; score.error = 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้'; scoreRender(); }))
         .getScoreBoard(token, fy, score.person);
     }
 
@@ -8546,11 +8547,12 @@
     function scoreLoadThen(fn) { // โหลดตารางของคนที่เลือกแล้วทำต่อ
       const token = sessionToken, seq = ++score.seq, fy = selectedFy;
       score.loading = true;
-      google.script.run.withSuccessHandler(res => {
+      showBusy('กำลังโหลดคะแนน KPI ของ ' + score.person + '…');
+      google.script.run.withSuccessHandler(unbusy(res => {
         if (sessionToken !== token || seq !== score.seq) return;
         score.loading = false;
         if (res && res.success) { score.data = res; score.person = res.person; score.error = ''; scoreRender(); setTimeout(fn, 60); }
-      }).withFailureHandler(() => { score.loading = false; }).getScoreBoard(token, fy, score.person);
+      })).withFailureHandler(unbusy(() => { score.loading = false; showAlert('โหลดไม่สำเร็จ', '❌', 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้'); })).getScoreBoard(token, fy, score.person);
     }
 
     // กดรายการเกณฑ์ที่ต้องแก้ → เปิดชุดของคนนั้นในโหมดแก้ไข แล้วเลื่อนไปแถว

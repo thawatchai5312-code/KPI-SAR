@@ -61,12 +61,13 @@ const OUT=path.join(__dirname,'..');
  await pa.waitForFunction(()=>score.data&&score.data.rows.length>0,null,{timeout:15000});
  // ค้นหาชื่อ
  await pa.fill('#score-q','มานี');assert.deepStrictEqual(await pa.evaluate(()=>[...document.querySelectorAll('#score-side-body .category-header span:first-child')].map(e=>e.textContent)),['ทดสอบมานี']);await pa.fill('#score-q','');
- // กดชื่อคนอื่น (ปิติ) → ตารางเปลี่ยน
- await pa.evaluate(()=>{document.querySelector('#score-side-body .category-header[data-p="ทดสอบปิติ"]').click()});
  await pa.waitForFunction(()=>score.data&&score.data.person==='ทดสอบปิติ'&&score.data.rows.length===1,null,{timeout:15000});
- // กดชื่อมานี → ตารางมานี + กางรายชื่อ KPI · กด KPI → เลื่อน/กะพริบแถว
- await pa.evaluate(()=>{document.querySelector('#score-side-body .category-header[data-p="ทดสอบมานี"]').click()});
+ // กดชื่อมานี → ขึ้นหน้าต่างรอโหลด → ตารางมานี + กางรายชื่อ KPI · หน้าต่างรอโหลดหายเมื่อเสร็จ · กด KPI → เลื่อน/กะพริบแถว
+ // (ตัวจำลองเซิร์ฟเวอร์ตอบเร็ว — ตรวจจากข้อความที่ showBusy ตั้งไว้)
+ const busyNow=await pa.evaluate(()=>{document.getElementById('busy-text').innerText='';document.querySelector('#score-side-body .category-header[data-p="ทดสอบมานี"]').click();return document.getElementById('busy-text').innerText});
+ assert(/กำลังโหลดคะแนน KPI ของ ทดสอบมานี/.test(busyNow),'busy popup on person switch: '+busyNow);
  await pa.waitForFunction(()=>score.data&&score.data.person==='ทดสอบมานี'&&score.data.rows.length===2,null,{timeout:15000});
+ await pa.waitForFunction(()=>!document.getElementById('busy-overlay').classList.contains('show'),null,{timeout:5000});
  assert(await pa.evaluate(()=>[...document.querySelectorAll('#score-side-body .category-block.open .kpi-link-item')].length===2),'KPI list opened under the person');
  await pa.evaluate(id=>{document.querySelector('#score-side-body .kpi-link-item[data-id="'+id+'"]').click()},ids[1]);
  await pa.waitForFunction(id=>[...document.querySelectorAll('#score-body tr.sc-flash')].some(r=>r.dataset.id===id),ids[1],{timeout:5000});
