@@ -4185,7 +4185,7 @@
       const key = addSimKey(name);
       if (addSim.ackFor === key) { proceed(); return; }
       const ask = list => {
-        if (!list.length) { proceed(); return; }
+        if (!list.length) { addSim.ackFor = key; proceed(); return; }
         showConfirm('มีตัวชี้วัดชื่อคล้ายกันอยู่แล้ว ' + list.length + ' ตัว เช่น\n• ' + list.slice(0, 3).map(x => x.name + ' (' + (x.dept || '-') + ')').join('\n• ') + '\n\nยังต้องการเพิ่มเป็นตัวชี้วัดใหม่ใช่ไหม?', () => { addSim.ackFor = key; proceed(); });
       };
       if (!addSim.pending && addSimKey(addSim.name) === key) { ask(addSim.list); return; }

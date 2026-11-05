@@ -68,10 +68,12 @@ const loginFy=async pg=>{await pg.waitForSelector('#modal-fy',{state:'visible'})
  // ===== ฟอร์มเพิ่มตัวชี้วัด =====
  await pg.evaluate(()=>openAddKpiModal());await pg.waitForSelector('#add-kpi-name',{state:'visible'});
  await pg.fill('#add-kpi-name','ตัวชี้วัดซ้ำ ใหม่');
+ await pg.waitForFunction(()=>!addSim.pending&&addSimKey(addSim.name)===addSimKey(document.getElementById('add-kpi-name').value),null,{timeout:10000}); // รอผลตรวจชื่อคล้าย (หน่วง 0.5 วิ)
  await pg.evaluate(()=>{document.querySelectorAll('.add-level-cb').forEach(x=>{x.checked=(x.value==='รายบุคคล')});document.getElementById('add-kpi-levels').dispatchEvent(new Event('change'))});
  await pg.fill('#add-kpi-owner','ซ้ำทดสอบ');await pg.fill('#add-kpi-dept','OPD');
  await pg.evaluate(()=>submitAddKpi());await pg.waitForSelector('#modal-owner-pick',{state:'visible'});
  await pg.check('#owner-pick-body input[value="ซ้ำทดสอบ ธนาคุณ"]');await pg.click('#modal-owner-pick button:has-text("ตกลง")');
+ await pg.waitForSelector('#modal-confirm',{state:'visible',timeout:10000});assert(/ชื่อคล้ายกัน/.test(await pg.innerText('#modal-confirm')));await pg.click('#modal-confirm button[onclick*="closeConfirm(true)"]'); // ชื่อคล้ายตัวที่เพิ่มไว้ก่อนหน้า → ถามยืนยัน
  await pg.waitForFunction(()=>document.getElementById('modal-add-kpi').style.display==='none',null,{timeout:30000});
  const added=Y().find(r=>r[4]==='ตัวชี้วัดซ้ำ ใหม่');assert(added&&added[25]==='ซ้ำทดสอบ ธนาคุณ',JSON.stringify(added&&added[25]));
  // ปิดหน้า admin

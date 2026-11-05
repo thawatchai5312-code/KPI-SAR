@@ -70,6 +70,7 @@ const catsOf=r=>[[r[2],r[3]]].concat(String(r[36]||'').split('\n').filter(x=>x.i
  assert(await pg.isChecked('#add-kpi-fwd')&&/2570/.test(await pg.textContent('#add-kpi-fwd-text')));
  await pg.screenshot({path:OUT+'/ui58-add.png'});
  await pg.fill('#add-kpi-name','ตัวชี้วัดใหม่ส่งต่อทดสอบ');
+ await pg.waitForFunction(()=>!addSim.pending&&addSimKey(addSim.name)===addSimKey(document.getElementById('add-kpi-name').value),null,{timeout:10000}); // รอผลตรวจชื่อคล้าย (หน่วง 0.5 วิ)
  await pg.evaluate(()=>{document.querySelectorAll('.add-level-cb').forEach(x=>{x.checked=(x.value==='รายบุคคล')});document.getElementById('add-kpi-levels').dispatchEvent(new Event('change'))});
  await pg.fill('#add-kpi-owner','ผู้ทดสอบเพิ่ม');await pg.fill('#add-kpi-dept','MSO');
  await pg.evaluate(()=>submitAddKpi());

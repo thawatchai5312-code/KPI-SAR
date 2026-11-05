@@ -45,6 +45,7 @@ const html=fs.readFileSync(require('path').join(__dirname,'../src/Index.html'),'
  await pg.click('#btn-add-kpi'); await pg.waitForSelector('#modal-add-kpi',{state:'visible'});
  console.log('prefill owner/dept:',await pg.inputValue('#add-kpi-owner'),'/',await pg.inputValue('#add-kpi-dept'));
  await pg.fill('#add-kpi-name','ตัวชี้วัดใหม่ของฉัน');
+ await pg.waitForFunction(()=>!addSim.pending&&addSimKey(addSim.name)===addSimKey(document.getElementById('add-kpi-name').value),null,{timeout:10000}); // รอผลตรวจชื่อคล้าย (หน่วง 0.5 วิ)
  await pg.evaluate(()=>{document.querySelectorAll('.add-level-cb').forEach(c=>c.checked=c.value==='รายบุคคล');renderAddLevelCats();
    addCatRow('add-kpi-extra-cats');const r=document.querySelector('#add-kpi-extra-cats .cat-row');r.querySelector('.cat-part').value='Part I';r.querySelector('.cat-cat').value='ทดสอบ';});
  await pg.click('#modal-add-kpi button:has-text("บันทึกข้อมูล")'); await pg.waitForTimeout(300);

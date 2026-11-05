@@ -43,6 +43,7 @@ const U=h.sheets.Users.d; const setPw=(n,p)=>{const r=U.find(x=>x[0]===n);r[1]=C
  // add form bound to levels
  await pg.evaluate(()=>openAddKpiModal()); await pg.waitForTimeout(300);
  await pg.fill('#add-kpi-name','ทดสอบ ร้อยละผู้ป่วยได้รับการคัดแยกถูกต้อง'); await pg.fill('#add-kpi-dept','ER / NSO');
+ await pg.waitForFunction(()=>!addSim.pending&&addSimKey(addSim.name)===addSimKey(document.getElementById('add-kpi-name').value),null,{timeout:10000}); // รอผลตรวจชื่อคล้าย (หน่วง 0.5 วิ)
  await pg.check('.add-level-cb[value="QA-หน่วยงาน"]'); await pg.check('.add-level-cb[value="หน่วยงาน"]'); await pg.dispatchEvent('#add-kpi-levels','change'); await pg.waitForTimeout(200);
  const rows=await pg.evaluate(()=>[...document.querySelectorAll('#add-kpi-level-cats .lvc-row')].map(r=>r.innerText.replace(/\s+/g,' ').slice(0,60)));
  console.log('form rows',JSON.stringify(rows)); assert(rows.length===3);
@@ -52,7 +53,9 @@ const U=h.sheets.Users.d; const setPw=(n,p)=>{const r=U.find(x=>x[0]===n);r[1]=C
  assert(/SAR/.test(await pg.innerText('#modal-alert'))); await pg.click('#modal-alert button');
  await pg.selectOption('#add-kpi-level-cats .lvc-part','Part III');
  await pg.fill('#add-kpi-level-cats [data-key="sar-cat"]','III-1 การเข้าถึงและเข้ารับบริการ');
- await pg.click('#modal-add-kpi button:has-text("บันทึกข้อมูล")'); await pg.waitForTimeout(1500);
+ await pg.click('#modal-add-kpi button:has-text("บันทึกข้อมูล")');
+ await pg.waitForTimeout(400); if (await pg.isVisible('#modal-confirm')) await pg.click('#modal-confirm button[onclick*="closeConfirm(true)"]'); // ชื่อคล้ายตัวที่มีอยู่ → ถามยืนยันก่อนเพิ่ม (harness เก่าไม่มี Dup.js จึงไม่ถาม)
+ await pg.waitForTimeout(1500);
  const added=C.rowToKpi_(h.sheets['ปีงบ 2570'].d.find(r=>r[4]==='ทดสอบ ร้อยละผู้ป่วยได้รับการคัดแยกถูกต้อง'));
  console.log('added',added.cats.map(c=>c.part+'›'+c.category).join(' ; '),added.levels.join());
  assert(added.cats.some(c=>c.part==='Part III')&&added.cats.some(c=>c.part==='ER QA'&&/^มิติที่/.test(c.category))&&added.cats.some(c=>c.part==='ER'&&c.category==='Triage')&&!added.cats.some(c=>/NSO/.test(c.part)));
