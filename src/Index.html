@@ -144,6 +144,14 @@
     .sc-badge.calc { background: #dcfce7; color: #166534; }
     .sc-badge.manual { background: #dbeafe; color: #1e40af; }
     .sc-badge.warn { background: #fef3c7; color: #b45309; }
+    .sc-badge.wait { background: #f1f5f9; color: #475569; }
+    .sc-badge.part { background: #fff7ed; color: #c2410c; border: 1px dashed #fdba74; }
+    .sc-issues { margin: 0 0 10px; border: 1px solid #fcd34d; background: #fffbeb; border-radius: 10px; padding: 6px 10px; }
+    .sc-issues summary { cursor: pointer; font-weight: 700; color: #92400e; }
+    .sc-issue-list { max-height: 240px; overflow-y: auto; margin-top: 6px; }
+    .sc-issue { padding: 4px 6px; border-radius: 6px; cursor: pointer; font-size: 13px; }
+    .sc-issue:hover { background: #fef3c7; }
+    .sc-issue span { color: #92400e; }
     .sc-sum { margin: 10px 0 0; display: flex; flex-wrap: wrap; gap: 8px; }
     .sc-chip { background: #f0fdf4; border: 1px solid #86efac; border-radius: 10px; padding: 6px 12px; font-size: 13px; }
     .sc-chip b { font-size: 16px; color: #14532d; }
@@ -8352,7 +8360,7 @@
     // ===================== คะแนน KPI (หัวหน้าหน่วย) =====================
     // ดู: เจ้าตัว (ของตัวเอง) · admin และ ผอ./QMR ดูได้ทุกคน และแก้น้ำหนัก/เกณฑ์/คะแนนกรอกเองได้ · คิดคะแนนที่เซิร์ฟเวอร์ (Score.js) หน้าเว็บแค่แสดง
     const SC_LEVELS = ['2.0', '2.5', '3.0', '3.5', '4.0', '4.5', '5.0'];
-    const score = { meta: null, data: null, person: '', round: 0, editing: false, loading: false, seq: 0, mseq: 0, fy: null, cand: null, error: '', q: '', openUnits: new Set(), touched: false };
+    const score = { meta: null, data: null, person: '', round: 0, editing: false, loading: false, seq: 0, mseq: 0, fy: null, cand: null, error: '', q: '', openUnits: new Set(), touched: false, issuesOpen: false };
 
     function scoreReset() {
       score.meta = null; score.data = null; score.person = ''; score.round = 0; score.editing = false; score.loading = false;
@@ -8410,13 +8418,18 @@
       if (rd.source === 'manual') return '<span class="sc-badge manual">กรอกเอง</span>';
       if (rd.source === 'calc') return '<span class="sc-badge calc">คำนวณ</span>';
       if (rd.source === 'warn') return `<span class="sc-badge warn" title="${esc(rd.reason)}">⚠️ คำนวณไม่ได้</span>`;
+      if (rd.source === 'wait') return `<span class="sc-badge wait" title="${esc(rd.reason)}">⏳ รอครบรอบ</span>`;
       return '';
     }
-    function scoreScoreCell(rd) { return rd.source === 'none' ? '<span title="ยังไม่มีผลในรอบนี้">-</span>' : (rd.score === null ? '-' : esc(scoreFmt(rd.score))) + scoreBadge(rd); }
+    // ป้ายผลบางส่วน: ผลในรอบยังกรอกไม่ครบตามความถี่ (เช่น 3/6 เดือน) — คะแนนยังไม่ใช่คะแนนจริงของรอบ
+    function scorePartial(rd) { return rd.partial ? `<span class="sc-badge part" title="ผลในรอบนี้ยังกรอกไม่ครบ ${rd.filled}/${rd.expected} รอบเก็บข้อมูล${rd.ended ? ' (สิ้นรอบแล้ว)' : ''}">ผลบางส่วน ${rd.filled}/${rd.expected}</span>` : ''; }
+    function scoreScoreCell(rd) { return rd.source === 'none' ? '<span title="ยังไม่มีผลในรอบนี้">-</span>' : (rd.score === null ? '' : esc(scoreFmt(rd.score))) + scoreBadge(rd) + (rd.source !== 'wait' && rd.source !== 'manual' ? scorePartial(rd) : ''); }
 
     function scoreSumChips(t) {
       const chip = (label, x) => `<div class="sc-chip">${label}: <b>${x.sum === null ? '-' : esc(scoreFmt(x.sum))}</b> / ${esc(scoreFmt(t.full))}${x.pct === null ? '' : ' = <b>' + esc(scoreFmt(x.pct)) + '%</b>'}${x.scored !== undefined ? ' <span class="hint" style="margin:0;">(ให้คะแนนแล้ว ' + x.scored + '/' + t.count + ')</span>' : ''}</div>`;
-      return chip('รอบ 1', t.rounds[0]) + chip('รอบ 2', t.rounds[1]) + chip('ทั้งปี (เฉลี่ยรอบที่มีคะแนน)', t.year);
+      const only = x => x.pctScored === null || x.pctScored === undefined || x.pctScored === x.pct ? '' : `<div class="hint" style="margin:2px 0 0;">เฉพาะแถวที่มีคะแนนแล้ว: <b>${esc(scoreFmt(x.pctScored))}%</b></div>`;
+      const chip2 = (label, x) => chip(label, x).replace(/<\/div>$/, only(x) + '</div>');
+      return chip2('รอบ 1', t.rounds[0]) + chip2('รอบ 2', t.rounds[1]) + chip2('ทั้งปี (เฉลี่ยรอบที่มีคะแนน)', t.year);
     }
 
     function scoreViewTable(d) {
@@ -8428,7 +8441,7 @@
       d.rows.forEach((r, i) => {
         const cells = rd === 2
           ? `<td>${scoreScoreCell(r.rounds[0])}</td><td>${esc(scoreFmt(r.weighted[0]))}</td><td>${scoreScoreCell(r.rounds[1])}</td><td>${esc(scoreFmt(r.weighted[1]))}</td>`
-          : `<td>${esc(scoreResText(r.rounds[rd].result))}</td><td>${scoreScoreCell(r.rounds[rd])}</td><td>${esc(scoreFmt(r.weighted[rd]))}</td>`;
+          : `<td>${esc(scoreResText(r.rounds[rd].result))}${r.rounds[rd].partial && r.rounds[rd].source === 'manual' ? scorePartial(r.rounds[rd]) : ''}</td><td>${scoreScoreCell(r.rounds[rd])}</td><td>${esc(scoreFmt(r.weighted[rd]))}</td>`;
         const nm = r.stale ? esc(r.name) + `<div class="hint" style="margin:0;">⚠️ ${esc(r.stale)} (ไม่นับรวม)</div>` : `<a onclick="scoreGoKpi('${esc(r.id)}')" title="เปิดตัวชี้วัดนี้">${esc(r.name)}</a>`;
         h += `<tr class="${r.stale ? 'sc-stale' : ''}" data-id="${esc(r.id)}"><td>${i + 1}</td><td class="sc-name">${nm}${r.note ? '<div class="hint" style="margin:0;">📝 ' + esc(r.note) + '</div>' : ''}</td><td class="sc-tg">${esc(r.target) || '-'}</td><td>${esc(scoreFmt(r.weight))}</td>${r.crit.map(c => '<td>' + (esc(c) || '') + '</td>').join('')}${cells}</tr>`;
       });
@@ -8438,7 +8451,7 @@
     function scoreEditTable(d) {
       let h = `<div class="sc-wrap"><table class="sc-table"><thead><tr><th>ที่</th><th>ตัวชี้วัด</th><th>น้ำหนัก</th>${SC_LEVELS.map(l => '<th>' + l + '</th>').join('')}<th>คะแนนรอบ 1 (กรอกเอง)</th><th>คะแนนรอบ 2 (กรอกเอง)</th><th>หมายเหตุ</th><th></th></tr></thead><tbody>`;
       d.rows.forEach((r, i) => {
-        const ph = k => r.rounds[k].source === 'calc' ? 'คำนวณ ' + scoreFmt(r.rounds[k].score) : (r.rounds[k].source === 'warn' ? 'คำนวณไม่ได้' : 'ยังไม่มีผล');
+        const ph = k => r.rounds[k].source === 'calc' ? 'คำนวณ ' + scoreFmt(r.rounds[k].score) : (r.rounds[k].source === 'warn' ? 'คำนวณไม่ได้' : (r.rounds[k].source === 'wait' ? 'รอครบรอบ' : 'ยังไม่มีผล'));
         h += `<tr class="${r.stale ? 'sc-stale' : ''}" data-i="${i}" data-id="${esc(r.id)}"><td>${i + 1}</td><td class="sc-name">${esc(r.name)}<div class="hint" style="margin:0;">เป้า ${esc(r.target) || '-'} · วิธีสรุป ${esc(r.summaryMethod) || '-'}${r.stale ? ' · ⚠️ ' + esc(r.stale) : ''}</div></td>`
           + `<td><input id="sc-w-${i}" value="${esc(r.weight === null ? '' : r.weight)}" inputmode="decimal"></td>`
           + r.crit.map((c, k) => `<td><input id="sc-c-${i}-${k}" value="${esc(c)}" title="เกณฑ์คะแนน ${SC_LEVELS[k]}"></td>`).join('')
@@ -8462,6 +8475,10 @@
         + `<button type="button" class="btn btn-secondary btn-sm" onclick="scorePrint()" title="พิมพ์ตารางคะแนน" aria-label="พิมพ์ตารางคะแนน">🖨️ พิมพ์</button>`
         + (editor ? `<button type="button" class="btn btn-accent btn-sm" onclick="scoreToggleEdit()">${score.editing ? '✔ เสร็จสิ้นการแก้ไข' : '✏️ แก้ไขชุดคะแนน'}</button>` : '')
         + '</div>';
+      if (editor && d.issues && d.issues.length) {
+        h += `<details class="sc-issues"${score.issuesOpen ? ' open' : ''} ontoggle="score.issuesOpen=this.open"><summary>⚠️ เกณฑ์คะแนนที่ต้องแก้ ${d.issues.length} แถว (ทุกคน) — กดเพื่อดูรายการ</summary><div class="sc-issue-list">`
+          + d.issues.map((x, i) => `<div class="sc-issue" data-i="${i}" onclick="scoreIssueGo(this)"><b>${esc(x.person)}</b> · ${esc(x.name)} <span>— ${esc(x.reason)}</span></div>`).join('') + '</div></details>';
+      }
       if (editor && score.editing) {
         h += `<div class="sc-add"><select id="score-cand" class="editable-input">${scoreCandOptions()}</select><button type="button" class="btn btn-accent btn-sm" onclick="scoreAddRow()">➕ เพิ่มตัวชี้วัดเข้าชุดคะแนน</button><span class="hint" style="margin:0;">เลือกได้เฉพาะตัวชี้วัดที่บุคคลนี้เป็นผู้รับผิดชอบ · เกณฑ์ใส่ได้หลายแบบ เช่น 80, ≥ 85, &lt;75, มากกว่า 1, A</span></div>`;
       }
@@ -8469,7 +8486,7 @@
         h += `<div class="empty-state">${d.self ? 'ยังไม่มีชุดคะแนน KPI ของคุณในปีงบนี้' : 'ยังไม่มีชุดคะแนน KPI ของ ' + esc(d.person) + ' ในปีงบนี้'}${editor ? '<br>กด "✏️ แก้ไขชุดคะแนน" แล้วเพิ่มตัวชี้วัดได้เลย' : ''}</div>`;
       } else {
         h += (score.editing ? scoreEditTable(d) : scoreViewTable(d)) + `<div class="sc-sum">${scoreSumChips(d.totals)}</div>`
-          + '<p class="hint" style="margin-top:8px;">คะแนนคิดจากผลรายเดือนของรอบนั้นตามวิธีสรุปของตัวชี้วัด เทียบกับเกณฑ์ 2.0–5.0 · ต่ำกว่าเกณฑ์ 2.0 = 0 · ถ้ามี "กรอกเอง" จะใช้ค่าที่กรอกแทน · "ทั้งปี" = เฉลี่ยของรอบที่มีคะแนน</p>';
+          + '<p class="hint" style="margin-top:8px;">คะแนนคิดจากผลรายเดือนของรอบนั้นตามวิธีสรุปของตัวชี้วัด เทียบกับเกณฑ์ 2.0–5.0 · ต่ำกว่าเกณฑ์ 2.0 = 0 · ถ้ามี "กรอกเอง" จะใช้ค่าที่กรอกแทน · "ผลบางส่วน x/y" = ผลในรอบยังกรอกไม่ครบ · วิธีสรุป "ผลรวม" ยังไม่คิดคะแนนจนกว่าผลครบรอบหรือสิ้นรอบ · "ทั้งปี" = เฉลี่ยของรอบที่มีคะแนน</p>';
       }
       box.innerHTML = h;
     }
@@ -8534,6 +8551,13 @@
         score.loading = false;
         if (res && res.success) { score.data = res; score.person = res.person; score.error = ''; scoreRender(); setTimeout(fn, 60); }
       }).withFailureHandler(() => { score.loading = false; }).getScoreBoard(token, fy, score.person);
+    }
+
+    // กดรายการเกณฑ์ที่ต้องแก้ → เปิดชุดของคนนั้นในโหมดแก้ไข แล้วเลื่อนไปแถว
+    function scoreIssueGo(el) {
+      const x = score.data && score.data.issues && score.data.issues[Number(el.dataset.i)]; if (!x) return;
+      const go = () => { if (!score.editing) scoreToggleEdit(); setTimeout(() => scoreScrollTo(x.id), 60); };
+      if (x.person !== score.person) { score.touched = true; score.person = x.person; score.editing = false; score.cand = null; scoreLoadThen(go); } else go();
     }
 
     function scoreCandOptions() {
@@ -8736,7 +8760,7 @@
       const roundName = rd === 2 ? 'ทั้งปี' : 'รอบ ' + (rd + 1) + (rd === 0 ? ' (ต.ค.–มี.ค.)' : ' (เม.ย.–ก.ย.)');
       const live = d.rows.filter(r => !r.stale);
       const th = 'ที่,ตัวชี้วัด,เป้าหมาย,น้ำหนัก,' + SC_LEVELS.join(',') + (rd === 2 ? ',คะแนน รอบ 1,น้ำหนัก×คะแนน,คะแนน รอบ 2,น้ำหนัก×คะแนน' : ',ผลรอบ,คะแนน,น้ำหนัก×คะแนน');
-      const sc = r2 => r2.source === 'none' ? '-' : scoreFmt(r2.score) + (r2.source === 'manual' ? ' *' : (r2.source === 'warn' ? ' ?' : ''));
+      const sc = r2 => r2.source === 'none' ? '-' : (r2.source === 'wait' ? 'รอ' : scoreFmt(r2.score) + (r2.source === 'manual' ? ' *' : (r2.source === 'warn' ? ' ?' : '')) + (r2.partial && r2.source === 'calc' ? ' ~' : ''));
       let html = `<div class="pr-head"><div class="pr-hosp">โรงพยาบาลภูหลวง</div><div class="pr-sub">คะแนน KPI ปีงบประมาณ ${esc(d.fy)} · ${esc(roundName)}</div>
         <div class="pr-info">ผู้รับผิดชอบ: <b>${esc(d.person)}</b> · พิมพ์เมื่อ ${esc(printedAt)} · โดย ${esc(currentUser.username)}</div></div>
         <table class="pr-table" style="font-size:10.5pt;"><colgroup><col style="width:3%"><col style="width:${rd === 2 ? 25 : 28}%"><col style="width:8%"><col style="width:5%">${SC_LEVELS.map(() => '<col style="width:4.4%">').join('')}${rd === 2 ? '<col style="width:7%"><col style="width:8%"><col style="width:7%"><col style="width:8%">' : '<col style="width:7%"><col style="width:7%"><col style="width:8%">'}</colgroup>
@@ -8746,7 +8770,7 @@
         html += `<tr><td>${i + 1}</td><td class="pr-left pr-mname">${esc(r.name)}</td><td class="pr-target">${esc(r.target) || '-'}</td><td>${esc(scoreFmt(r.weight))}</td>${r.crit.map(c => '<td>' + esc(c) + '</td>').join('')}${tail}</tr>`;
       });
       const t = d.totals, one = rd === 2 ? t.year : t.rounds[rd];
-      html += `</tbody></table><div class="pr-text" style="margin-top:6px;"><b>คะแนนรวม ${one.sum === null ? '-' : esc(scoreFmt(one.sum))} / ${esc(scoreFmt(t.full))}${one.pct === null ? '' : ' = ' + esc(scoreFmt(one.pct)) + '%'}</b>${rd === 2 ? ' (เฉลี่ยของรอบที่มีคะแนน)' : ''}<br><span style="font-size:9.5pt;color:#475569;">* = คะแนนกรอกเอง · ? = คำนวณคะแนนไม่ได้ · ต่ำกว่าเกณฑ์ 2.0 = 0</span></div>`;
+      html += `</tbody></table><div class="pr-text" style="margin-top:6px;"><b>คะแนนรวม ${one.sum === null ? '-' : esc(scoreFmt(one.sum))} / ${esc(scoreFmt(t.full))}${one.pct === null ? '' : ' = ' + esc(scoreFmt(one.pct)) + '%'}</b>${rd === 2 ? ' (เฉลี่ยของรอบที่มีคะแนน)' : ''}<br><span style="font-size:9.5pt;color:#475569;">* = คะแนนกรอกเอง · ? = คำนวณคะแนนไม่ได้ · ~ = ผลบางส่วน (ยังกรอกไม่ครบรอบ) · รอ = วิธีสรุปผลรวมที่ยังไม่ครบรอบ · ต่ำกว่าเกณฑ์ 2.0 = 0</span></div>`;
       document.getElementById('print-page-style').textContent = '@page { size: A4 landscape; margin: 10mm; }';
       document.getElementById('print-root').innerHTML = html;
       const go = () => setTimeout(() => window.print(), 250);

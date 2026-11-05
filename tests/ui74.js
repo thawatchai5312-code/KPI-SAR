@@ -12,7 +12,7 @@ const ids=[C.addIndicator(tA,2570,item('ตัวชี้วัดคะแน�
 const base={weight:2,crit:['70','75','80','85','90','95','100'],r1:'',r2:'',note:''};
 assert(C.saveKpiScore(tA,2570,Object.assign({id:ids[0],owner:'ทดสอบมานี',isNew:true},base)).success);
 assert(C.saveKpiScore(tA,2570,Object.assign({id:ids[1],owner:'ทดสอบมานี',isNew:true},base,{weight:1,crit:['6','5','4','3','2','1','0']})).success);
-assert(C.saveKpiScore(tA,2570,Object.assign({id:idP,owner:'ทดสอบปิติ',isNew:true},base)).success);
+assert(C.saveKpiScore(tA,2570,Object.assign({id:idP,owner:'ทดสอบปิติ',isNew:true},base,{crit:['70','75','80','85','90','85','90']})).success); // เกณฑ์ไม่เรียง → อยู่ในรายการที่ต้องแก้
 const k0=C.getAllData(tA,2570).data.find(x=>x.id===ids[0]);C.saveKpi(tA,2570,{id:ids[0],years:k0.years,months:[88,90,null,null,null,null,null,null,null,null,null,null]});
 const k1=C.getAllData(tA,2570).data.find(x=>x.id===ids[1]);C.saveKpi(tA,2570,{id:ids[1],years:k1.years,months:[3,3,null,null,null,null,null,null,null,null,null,null]});
 const idS=C.addIndicator(tA,2570,item('ตัวชี้วัดของสตาฟ','ทดสอบสตาฟ')).newId;assert(C.saveKpiScore(tA,2570,Object.assign({id:idS,owner:'ทดสอบสตาฟ',isNew:true},base)).success);
@@ -40,6 +40,7 @@ const OUT=path.join(__dirname,'..');
  // รอบ 1: ก เฉลี่ย 89 → 3.5 (≥85) ถ่วง 7 · ข ผล 3 → 3.5 ถ่วง 3.5 · รวม 10.5/15=70%
  assert(/10\.5/.test(txt)&&/70%/.test(txt),'totals shown: '+txt.slice(-300));
  assert(/คำนวณ/.test(txt),'calc badge');
+ assert(/ผลบางส่วน 2\/6/.test(txt),'partial badge (2/6 months)');assert.strictEqual(await pm.locator('.sc-issues').count(),0,'head: no issues box');
  await pm.screenshot({path:path.join(OUT,'tests/out/ui74-self.png')}).catch(()=>{});
  // staff ไม่เห็นเมนูแม้มีชุดคะแนนของตัวเอง · staff ทั่วไปก็ไม่เห็น
  const ps=await open('ทดสอบสตาฟ');await ps.waitForTimeout(800);
@@ -69,6 +70,11 @@ const OUT=path.join(__dirname,'..');
  assert(await pa.evaluate(()=>[...document.querySelectorAll('#score-side-body .category-block.open .kpi-link-item')].length===2),'KPI list opened under the person');
  await pa.evaluate(id=>{document.querySelector('#score-side-body .kpi-link-item[data-id="'+id+'"]').click()},ids[1]);
  await pa.waitForFunction(id=>[...document.querySelectorAll('#score-body tr.sc-flash')].some(r=>r.dataset.id===id),ids[1],{timeout:5000});
+ // รายการเกณฑ์ที่ต้องแก้ (admin) → กดแล้วเปิดชุดของคนนั้นในโหมดแก้ไข + เลื่อนไปแถว
+ assert(/เกณฑ์คะแนนที่ต้องแก้ 1 แถว/.test(await pa.innerText('.sc-issues summary')));
+ await pa.click('.sc-issues summary');await pa.screenshot({path:path.join(OUT,'tests/out/ui74-issues.png')}).catch(()=>{});await pa.click('.sc-issue');
+ await pa.waitForFunction(id=>score.data&&score.data.person==='ทดสอบปิติ'&&score.editing&&[...document.querySelectorAll('#score-body tr.sc-flash')].some(r=>r.dataset.id===id),idP,{timeout:15000});
+ await pa.click('text=เสร็จสิ้นการแก้ไข');await pa.waitForTimeout(300);
  // ช่อง "เปิดชุดคะแนนของบัญชีอื่น" ยังใช้ได้
  await pa.fill('#score-person','ทดสอบปิติ');await pa.press('#score-person','Tab');
  await pa.waitForFunction(()=>score.data&&score.data.person==='ทดสอบปิติ',null,{timeout:15000});

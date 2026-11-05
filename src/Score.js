@@ -114,18 +114,18 @@ function scoreRoundResult_(months, lo, hi, method) {
   return texts.length ? texts[texts.length - 1] : null;
 }
 
-/** คะแนนจากผลรอบและเกณฑ์ 7 ช่อง → { ok, score, reason } */
-function scoreLevelFor_(result, crit, targetText) {
+/**
+ * ตรวจเกณฑ์ 7 ช่อง (ไม่ขึ้นกับผล) → { ok, kind: "num"|"text", up, nums, parsed } หรือ { ok: false, reason }
+ * ใช้ทั้งตอนคิดคะแนนและรายการ "เกณฑ์ที่ต้องแก้" (admin)
+ */
+function scoreCritCheck_(crit, targetText) {
   var parsed = crit.map(scoreParseCrit_);
-  if (typeof result === "string") {
-    var key = result.trim().toLowerCase(), best = -1;
-    parsed.forEach(function(c, i) { if (c && c.text !== undefined && c.text === key) best = i; });
-    if (best < 0) return { ok: false, reason: "ผลเป็นข้อความ \"" + result + "\" ไม่ตรงกับเกณฑ์ข้อความใด" };
-    return { ok: true, score: SCORE_LEVELS[best] };
+  var nums = [], texts = 0;
+  parsed.forEach(function(c, i) { if (c && c.num !== undefined) nums.push({ i: i, c: c }); else if (c && c.text !== undefined) texts++; });
+  if (!nums.length) {
+    if (texts) return { ok: true, kind: "text", parsed: parsed, nums: [] };
+    return { ok: false, reason: crit.some(function(c) { return c; }) ? "เกณฑ์อ่านไม่ได้ (เช่น หลายค่า/ช่วง/วันที่)" : "ไม่มีเกณฑ์คะแนน" };
   }
-  var nums = [];
-  parsed.forEach(function(c, i) { if (c && c.num !== undefined) nums.push({ i: i, c: c }); });
-  if (!nums.length) return { ok: false, reason: "เกณฑ์ไม่มีตัวเลขที่อ่านได้" };
   // ทิศทาง: ยิ่งสูงยิ่งดี / ยิ่งต่ำยิ่งดี — เทียบเลขช่องแรกกับช่องสุดท้าย · เท่ากัน/มีช่องเดียว ดูเครื่องหมายเป้าหมายของตัวชี้วัด
   var first = nums[0].c.num, lastN = nums[nums.length - 1].c.num, up;
   if (lastN > first) up = true;
@@ -137,8 +137,24 @@ function scoreLevelFor_(result, crit, targetText) {
   }
   for (var k = 1; k < nums.length; k++) {
     var a = nums[k - 1].c.num, b = nums[k].c.num;
-    if (up ? b < a : b > a) return { ok: false, reason: "ช่องเกณฑ์ไม่เรียงตามทิศทางเดียวกัน" };
+    if (up ? b < a : b > a) return { ok: false, reason: "ช่องเกณฑ์ไม่เรียงตามทิศทางเดียวกัน (ช่อง " + SCORE_LEVELS[nums[k].i].toFixed(1) + ")" };
   }
+  return { ok: true, kind: "num", up: up, nums: nums, parsed: parsed };
+}
+
+/** คะแนนจากผลรอบและเกณฑ์ 7 ช่อง → { ok, score, reason } */
+function scoreLevelFor_(result, crit, targetText) {
+  var parsed = crit.map(scoreParseCrit_);
+  if (typeof result === "string") {
+    var key = result.trim().toLowerCase(), best = -1;
+    parsed.forEach(function(c, i) { if (c && c.text !== undefined && c.text === key) best = i; });
+    if (best < 0) return { ok: false, reason: "ผลเป็นข้อความ \"" + result + "\" ไม่ตรงกับเกณฑ์ข้อความใด" };
+    return { ok: true, score: SCORE_LEVELS[best] };
+  }
+  var chk = scoreCritCheck_(crit, targetText);
+  if (!chk.ok) return { ok: false, reason: chk.reason };
+  if (chk.kind !== "num") return { ok: false, reason: "เกณฑ์ไม่มีตัวเลขที่อ่านได้" };
+  var nums = chk.nums, up = chk.up;
   var best2 = 0;
   nums.forEach(function(x) {
     var c = x.c, n = c.num, op = c.op || (up ? "≥" : "≤"), pass;
@@ -152,9 +168,31 @@ function scoreLevelFor_(result, crit, targetText) {
   return { ok: true, score: best2 }; // ไม่ผ่านช่องใดเลย = 0
 }
 
+var SCORE_FREQ_PERIODS = { "รายไตรมาส": [[0, 2], [3, 5], [6, 8], [9, 11]], "ครึ่งปี": [[0, 5], [6, 11]], "รายปี": [[0, 11]] };
+
+/** รอบ idx ของปีงบ fy จบแล้วหรือยัง (รอบ 1 จบ 31 มี.ค. · รอบ 2 จบ 30 ก.ย. ของปี ค.ศ. = fy − 543) */
+function scoreRoundEnded_(fy, idx) {
+  var y = Number(fy) - 543;
+  return new Date().getTime() >= new Date(y, idx === 0 ? 3 : 9, 1).getTime();
+}
+
+/** ความครบของผลในรอบ: รอบเก็บข้อมูลตามความถี่ที่จบในรอบนี้ (expected) · รอบที่กรอกแล้ว (filled — ตัวเลข/ข้อความ/"-") */
+function scoreRoundFill_(kpi, idx) {
+  var rg = SCORE_ROUNDS[idx], periods = SCORE_FREQ_PERIODS[kpi.frequency] || null, list = [];
+  if (periods) periods.forEach(function(p) { if (p[1] >= rg[0] && p[1] <= rg[1]) list.push(p); });
+  else for (var m = rg[0]; m <= rg[1]; m++) list.push([m, m]);
+  var filled = 0;
+  list.forEach(function(p) {
+    for (var i = p[0]; i <= p[1]; i++) { var v = kpi.months[i]; if (v !== null && v !== undefined && v !== "") { filled++; return; } }
+  });
+  return { expected: list.length, filled: filled };
+}
+
 /**
  * คิดคะแนนของแถว (ตัวชี้วัด kpi ที่ผู้รับผิดชอบคนนี้) → { weight, rounds: [{ result, score, source, reason }, ...2 รอบ], weighted: [รอบ1, รอบ2] }
  *  source: "manual" (กรอกเอง) · "calc" (คำนวณ) · "none" (ยังไม่มีผลในรอบ) · "warn" (คำนวณไม่ได้ ให้กรอกเอง)
+ *    · "wait" (วิธีสรุป "ผลรวม" ที่ผลยังไม่ครบรอบและรอบยังไม่จบ — ยังไม่คิด เพราะผลรวมบางส่วนดูดีเกินจริง)
+ *  partial = ผลยังไม่ครบตามความถี่ (filled < expected) → หน้าเว็บขึ้นป้าย "ผลบางส่วน x/y"
  */
 function scoreCompute_(kpi, row) {
   var rounds = [], weighted = [];
@@ -162,8 +200,13 @@ function scoreCompute_(kpi, row) {
   [row.r1, row.r2].forEach(function(manual, idx) {
     var rg = SCORE_ROUNDS[idx];
     var result = kpi ? scoreRoundResult_(kpi.months, rg[0], rg[1], kpi.summaryMethod) : null;
-    var out = { result: result, score: null, source: "none", reason: "" };
+    var fill = kpi ? scoreRoundFill_(kpi, idx) : { expected: 0, filled: 0 };
+    var ended = scoreRoundEnded_(row.fy, idx);
+    var out = { result: result, score: null, source: "none", reason: "", filled: fill.filled, expected: fill.expected, partial: result !== null && fill.filled < fill.expected, ended: ended };
     if (manual !== null) { out.score = manual; out.source = "manual"; }
+    else if (result !== null && out.partial && !ended && kpi && kpi.summaryMethod === "ผลรวม") {
+      out.source = "wait"; out.reason = "วิธีสรุปผลรวม — รอผลครบรอบ (" + fill.filled + "/" + fill.expected + ") หรือสิ้นรอบ";
+    }
     else if (result !== null) {
       var lv = scoreLevelFor_(result, row.crit, kpi ? kpi.target : "");
       if (lv.ok) { out.score = lv.score; out.source = "calc"; }
@@ -236,20 +279,23 @@ function scoreRowView_(row, kpi, ownerUser) {
 /** รวมคะแนน: รอบ 1 / รอบ 2 / ทั้งปี (= เฉลี่ยของรอบที่มีคะแนนรวม) */
 function scoreTotals_(rows) {
   var live = rows.filter(function(r) { return !r.stale; });
-  var full = 0, perRound = [], scored = [0, 0];
+  var full = 0, perRound = [], scored = [0, 0], fullScored = [0, 0];
   live.forEach(function(r) { full += (r.weight || 0) * 5; });
   for (var i = 0; i < 2; i++) {
     var sum = 0;
-    live.forEach(function(r) { if (r.weighted[i] !== null) { sum += r.weighted[i]; scored[i]++; } });
+    live.forEach(function(r) { if (r.weighted[i] !== null) { sum += r.weighted[i]; scored[i]++; fullScored[i] += (r.weight || 0) * 5; } });
     perRound.push(Math.round(sum * 100) / 100);
   }
+  // ร้อยละเฉพาะแถวที่มีคะแนนแล้ว (ระหว่างรอบ ร้อยละปกติจะต่ำเพราะเต็มนับแถวที่ยังไม่มีผลด้วย)
+  var pctOf = function(v, f) { return f > 0 ? Math.round(v / f * 10000) / 100 : null; };
   var pct = function(v) { return full > 0 ? Math.round(v / full * 10000) / 100 : null; };
   var yearAvail = [0, 1].filter(function(i) { return scored[i] > 0; });
   var yearSum = yearAvail.length ? Math.round(yearAvail.reduce(function(a, i) { return a + perRound[i]; }, 0) / yearAvail.length * 100) / 100 : null;
   return {
     full: Math.round(full * 100) / 100, count: live.length,
-    rounds: [{ sum: perRound[0], pct: pct(perRound[0]), scored: scored[0] }, { sum: perRound[1], pct: pct(perRound[1]), scored: scored[1] }],
-    year: { sum: yearSum, pct: yearSum === null ? null : pct(yearSum), rounds: yearAvail.length }
+    rounds: [{ sum: perRound[0], pct: pct(perRound[0]), scored: scored[0], pctScored: pctOf(perRound[0], fullScored[0]) }, { sum: perRound[1], pct: pct(perRound[1]), scored: scored[1], pctScored: pctOf(perRound[1], fullScored[1]) }],
+    year: { sum: yearSum, pct: yearSum === null ? null : pct(yearSum), rounds: yearAvail.length,
+      pctScored: yearAvail.length ? Math.round(yearAvail.reduce(function(a, i) { return a + pctOf(perRound[i], fullScored[i]); }, 0) / yearAvail.length * 100) / 100 : null }
   };
 }
 
@@ -274,6 +320,7 @@ function getScoreBoard(token, fy, person) {
       out.people = people.sort(function(a, b) { return a.localeCompare(b, "th"); });
     }
     out.dir = scoreDir_(user, fy, all);
+    if (scoreCanEdit_(user)) out.issues = scoreIssues_(fy, all);
     return out;
   } catch (e) {
     return { success: false, message: e.toString() };
@@ -313,6 +360,21 @@ function scoreDir_(user, fy, all) {
     if (b.unit === "ไม่ระบุหน่วยงาน") return -1;
     return a.unit.localeCompare(b.unit, "th");
   });
+}
+
+/** แถวที่เกณฑ์คำนวณไม่ได้ (ทุกคน · admin/ผอ./QMR) → [{ person, id, name, reason }] — ไม่นับตัวชี้วัดที่ถูกลบ */
+function scoreIssues_(fy, all) {
+  if (!all.length) return [];
+  var wanted = {};
+  all.forEach(function(r) { wanted[r.id] = true; });
+  var kmap = scoreKpiMap_(fy, wanted), out = [];
+  all.forEach(function(r) {
+    var k = kmap[r.id];
+    if (!k || !r.weight) return; // ไม่มีตัวชี้วัด / น้ำหนัก 0 = ไม่กระทบคะแนน
+    var chk = scoreCritCheck_(r.crit, k.target);
+    if (!chk.ok) out.push({ person: r.owner, id: r.id, name: k.name, reason: chk.reason });
+  });
+  return out.sort(function(a, b) { return a.person.localeCompare(b.person, "th") || a.name.localeCompare(b.name, "th"); });
 }
 
 // ---------------------------------------------------------------- แก้ไข (admin / ผอ./QMR)

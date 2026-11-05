@@ -24,7 +24,9 @@ eq([L(0,['มากกว่า 1','1','','','','','0']),L(2,['มากกว�
 eq([L(5,['6,6,6','5,5,5','4','3','2','1','0']),L(3,['6,6,6','5,5,5','4','3','2','1','0'])],[0,3.5],'multi-value cells skipped');
 // ไม่เรียงตามทิศ / ไม่มีเลข = คำนวณไม่ได้
 assert(/ไม่เรียง/.test(L(80,['70','90','80','85','90','95','100'])));
-assert(/ไม่มีตัวเลข/.test(L(80,['','','','','','',''])));
+assert(/ไม่มีเกณฑ์/.test(L(80,['','','','','','',''])));assert(/อ่านไม่ได้/.test(L(5,['6,6,6','5,5,5','','','','',''])));
+// ตรวจเกณฑ์อย่างเดียว (ใช้ทำรายการเกณฑ์ที่ต้องแก้)
+eq([C.scoreCritCheck_(['70','75','80','85','90','95','100'],'').ok,C.scoreCritCheck_(['','','','','','','ผ่าน'],'').kind,/ไม่เรียง/.test(C.scoreCritCheck_(['70','75','80','85','90','85','90'],'').reason)],[true,'text',true]);
 // ข้อความ
 eq([L('A',['D','C','B-','B','B+','A-','A']),L('ดีมาก',['พอใช้','','','ดี','','','ดีมาก']),L('Z',['D','C','B-','B','B+','A-','A'])].map(x=>String(x).slice(0,2)),['5','5','X:']);
 // ช่องเดียว: ดูเครื่องหมายเป้าหมาย
@@ -86,6 +88,28 @@ eq([R1.rounds[0].score,R1.rounds[0].source,R1.weighted[0],R1.rounds[1].source],[
 eq([R2.rounds[0].score,R2.weighted[0]],[3.5,3.5]);
 eq([b.totals.full,b.totals.rounds[0].sum,b.totals.rounds[0].scored,b.totals.rounds[1].scored,b.totals.year.sum],[15,10.5,2,0,10.5]);
 assert(Math.abs(b.totals.rounds[0].pct-70)<0.01,JSON.stringify(b.totals.rounds[0]));
+// ผลบางส่วน: รอบ 1 กรอก 3/6 เดือน → partial · ร้อยละเฉพาะที่มีคะแนน = 10.5/15 = 70 (ทั้งสองแถวมีคะแนน)
+eq([R1.rounds[0].partial,R1.rounds[0].filled,R1.rounds[0].expected],[true,3,6]);assert(Math.abs(b.totals.rounds[0].pctScored-70)<0.01);
+// วิธีสรุป "ผลรวม" + ผลไม่ครบ + รอบยังไม่จบ → wait (ยังไม่คิด) · ครบ 6 เดือน → คิด
+{const k=C.getAllData(tA,FY).data.find(x=>x.id===id2);let rr=C.saveKpi(tA,FY,{id:id2,years:k.years,months:k.months,summaryMethod:'ผลรวม'});assert(rr.success,JSON.stringify(rr));
+ const ended=C.scoreRoundEnded_(FY,0);let bb=C.getScoreBoard(tM,FY,'').rows.find(x=>x.id===id2);
+ if(!ended){eq([bb.rounds[0].source,bb.rounds[0].score,bb.weighted[0]],['wait',null,null],'sum + partial → wait')}
+ const k2=C.getAllData(tA,FY).data.find(x=>x.id===id2);rr=C.saveKpi(tA,FY,{id:id2,years:k2.years,months:[0,0,0,0,1,'-',null,null,null,null,null,null]});assert(rr.success);
+ bb=C.getScoreBoard(tM,FY,'').rows.find(x=>x.id===id2);eq([bb.rounds[0].partial,bb.rounds[0].source,bb.rounds[0].result,bb.rounds[0].score],[false,'calc',1,4.5],'complete round ("-" counts as filled) → calc');
+ // ร้อยละเฉพาะที่มีคะแนน: เมื่อรอบ 2 ไม่มีผล = null
+ assert(C.getScoreBoard(tM,FY,'').totals.rounds[1].pctScored===null);
+ // ความถี่รายไตรมาส: รอบ 1 ต้องมี 2 รอบเก็บ (ต.ค.–ธ.ค., ม.ค.–มี.ค.)
+ const k3=C.getAllData(tA,FY).data.find(x=>x.id===id2);rr=C.saveKpi(tA,FY,{id:id2,years:k3.years,months:[null,null,2,null,null,null,null,null,null,null,null,null],frequency:'รายไตรมาส',summaryMethod:'เฉลี่ย'});assert(rr.success);
+ bb=C.getScoreBoard(tM,FY,'').rows.find(x=>x.id===id2);eq([bb.rounds[0].filled,bb.rounds[0].expected,bb.rounds[0].partial,bb.rounds[0].source],[1,2,true,'calc']);
+ // รอบที่จบแล้ว: ปีงบที่ผ่านไปแล้ว = จบ
+ assert(C.scoreRoundEnded_(2560,1)&&!C.scoreRoundEnded_(2600,0));
+ rr=C.saveKpi(tA,FY,{id:id2,years:k3.years,months:[3,3,null,null,null,null,null,null,null,null,null,null],frequency:'รายเดือน'});assert(rr.success);}
+// รายการเกณฑ์ที่ต้องแก้ (admin/ผอ. เท่านั้น · ทุกคน)
+assert(C.saveKpiScore(tA,FY,Object.assign({id:id3,owner:'ทดสอบคะแนนข',baseRev:C.getScoreBoard(tA,FY,'ทดสอบคะแนนข').rows[0].rev},base,{weight:3,crit:['70','75','80','85','90','85','90']})).success);
+let iss=C.getScoreBoard(tA,FY,'').issues;assert(iss.some(x=>x.id===id3&&x.person==='ทดสอบคะแนนข'&&/ไม่เรียง/.test(x.reason)),JSON.stringify(iss));
+assert(C.getScoreBoard(tM,FY,'').issues===undefined,'head gets no issues list');
+assert(C.saveKpiScore(tA,FY,Object.assign({id:id3,owner:'ทดสอบคะแนนข',baseRev:C.getScoreBoard(tA,FY,'ทดสอบคะแนนข').rows[0].rev},base,{weight:3})).success);
+assert(!C.getScoreBoard(tA,FY,'').issues.some(x=>x.id===id3),'fixed → off the list');
 // คะแนนกรอกเอง ทับคะแนนคำนวณ · ⚠️ คำนวณไม่ได้
 r=C.saveKpiScore(tA,FY,Object.assign({id:id1,owner:'ทดสอบคะแนนก',baseRev:R1.rev},base,{r1:'5',r2:'3.5'}));assert(r.success&&r.changed,JSON.stringify(r));
 b=C.getScoreBoard(tM,FY,'');const R1b=b.rows.find(x=>x.id===id1);eq([R1b.rounds[0].score,R1b.rounds[0].source,R1b.rounds[1].score,R1b.rounds[1].source],[5,'manual',3.5,'manual']);
