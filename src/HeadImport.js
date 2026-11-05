@@ -477,7 +477,7 @@ function hkSourceText_(template, url, target) {
 // ไม่สร้างตัวชี้วัด/บัญชี ไม่แตะข้อมูลอื่น · ทำครั้งเดียว (Script Property HK_SCORE_FILL_V1) · ลบโค้ดส่วนนี้ได้หลังทำเสร็จ
 var HK_FILL_FLAG = "HK_SCORE_FILL_V1";
 var HK_FILL_FY = 2570;
-var HK_FILL_URL = "https://docs.google.com/spreadsheets/d/1QWBE3LztkMGoqdC3juBMs9dVmHCZtw4V0dvWDo4oocM";
+var HK_FILL_URL = "https://docs.google.com/spreadsheets/d/18G-Q7Fr-7aDL2-mEEjuHR0DsxBrKeQGe3ETA2tmJzyk";
 
 function hkFillPending_() { return !PropertiesService.getScriptProperties().getProperty(HK_FILL_FLAG); }
 
