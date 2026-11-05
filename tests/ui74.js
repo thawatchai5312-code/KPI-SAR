@@ -1,0 +1,78 @@
+// เมนู 🏅 คะแนน KPI: เจ้าตัวเห็นของตัวเอง (staff เห็นเมนูเมื่อมีชุดคะแนน) · admin เลือกบุคคล แก้น้ำหนัก/เกณฑ์/คะแนนกรอกเอง เพิ่ม-ลบ · พิมพ์ · โทรศัพท์แสดงไอคอน
+const {chromium}=require('playwright');
+const fs=require('fs');const path=require('path');const h=require('./harness7');const C=h.ctx;const assert=require('assert');
+const html=fs.readFileSync(path.join(__dirname,'../src/Index.html'),'utf8');
+const U=h.sheets.Users.d;U.slice(1).forEach(r=>{r[1]=C.hashPassword_('pw123456');r[4]='FALSE'});
+const mkUser=(n,tier)=>{const r=[n,C.hashPassword_('pw123456'),tier||'staff','','FALSE','',''];U.push(r);return r};
+const ad=U.find(r=>r[2]==='admin'),tA=C.createSession_(ad[0],ad[1]);
+const uM=mkUser('ทดสอบมานี'),uP=mkUser('ทดสอบปิติ');
+const item=(name,owner)=>({part:'OPD',category:'x',name,target:'≥ 80',years:[null,null,null,null,null],months:Array(12).fill(null),levels:['รายบุคคล'],owner,department:'OPD'});
+const ids=[C.addIndicator(tA,2570,item('ตัวชี้วัดคะแนนทดสอบ ก','ทดสอบมานี')).newId,C.addIndicator(tA,2570,item('ตัวชี้วัดคะแนนทดสอบ ข','ทดสอบมานี')).newId,C.addIndicator(tA,2570,item('ตัวชี้วัดคะแนนทดสอบ ค','ทดสอบมานี')).newId];
+const base={weight:2,crit:['70','75','80','85','90','95','100'],r1:'',r2:'',note:''};
+assert(C.saveKpiScore(tA,2570,Object.assign({id:ids[0],owner:'ทดสอบมานี',isNew:true},base)).success);
+assert(C.saveKpiScore(tA,2570,Object.assign({id:ids[1],owner:'ทดสอบมานี',isNew:true},base,{weight:1,crit:['6','5','4','3','2','1','0']})).success);
+const k0=C.getAllData(tA,2570).data.find(x=>x.id===ids[0]);C.saveKpi(tA,2570,{id:ids[0],years:k0.years,months:[88,90,null,null,null,null,null,null,null,null,null,null]});
+const k1=C.getAllData(tA,2570).data.find(x=>x.id===ids[1]);C.saveKpi(tA,2570,{id:ids[1],years:k1.years,months:[3,3,null,null,null,null,null,null,null,null,null,null]});
+const OUT=path.join(__dirname,'..');
+(async()=>{
+ const b=await chromium.launch({executablePath:'/opt/pw-browsers/chromium'});
+ const open=async(user,opt)=>{const ctx=await b.newContext(opt||{viewport:{width:1440,height:900}});const pg=await ctx.newPage();pg.errs=[];pg.on('pageerror',e=>pg.errs.push(e.message));
+  await pg.exposeFunction('__call',(fn,args)=>{try{return JSON.stringify(C[fn](...args)??null)}catch(e){return JSON.stringify({success:false,message:String(e)})}});
+  await pg.route('**/*',r=>r.request().url()==='http://app.test/'?r.fulfill({contentType:'text/html; charset=utf-8',body:html}):r.abort());
+  await pg.addInitScript(()=>{function mk(ok,fail){return new Proxy({},{get:(_,fn)=>{if(fn==='withSuccessHandler')return f=>mk(f,fail);if(fn==='withFailureHandler')return f=>mk(ok,f);return (...a)=>Promise.resolve().then(()=>window.__call(fn,a)).then(r=>ok&&ok(JSON.parse(r)))}})}window.google={script:{run:mk()}};});
+  await pg.goto('http://app.test/');
+  await pg.fill('#login-username',user);await pg.fill('#login-password','pw123456');await pg.click('#login-box-content button');await pg.waitForSelector('#modal-fy',{state:'visible'});await pg.selectOption('#fy-pick-select','2570');await pg.click('#modal-fy button');await pg.waitForSelector('#app-login-screen',{state:'hidden'});
+  await pg.waitForFunction(()=>document.querySelector('.kpi-card')||document.getElementById('kpi-table'),null,{timeout:60000});return pg};
+ // ===== เจ้าตัว (staff): เห็นเมนู + ของตัวเอง แก้ไม่ได้
+ const pm=await open('ทดสอบมานี');
+ await pm.waitForFunction(()=>getComputedStyle(document.getElementById('menu-score-btn')).display!=='none',null,{timeout:15000});
+ await pm.evaluate(()=>switchMenu('score'));await pm.waitForSelector('#score-body table.sc-table',{timeout:15000});
+ let txt=await pm.innerText('#score-body');
+ assert(/ตัวชี้วัดคะแนนทดสอบ ก/.test(txt)&&/ตัวชี้วัดคะแนนทดสอบ ข/.test(txt)&&!/ตัวชี้วัดคะแนนทดสอบ ค/.test(txt),'own rows only');
+ assert.strictEqual(await pm.locator('#score-person').count(),0,'staff has no person picker');assert.strictEqual(await pm.getByText('แก้ไขชุดคะแนน').count(),0,'staff cannot edit');
+ // รอบ 1: ก เฉลี่ย 89 → 3.5 (≥85) ถ่วง 7 · ข ผล 3 → 3.5 ถ่วง 3.5 · รวม 10.5/15=70%
+ assert(/10\.5/.test(txt)&&/70%/.test(txt),'totals shown: '+txt.slice(-300));
+ assert(/คำนวณ/.test(txt),'calc badge');
+ await pm.screenshot({path:path.join(OUT,'tests/out/ui74-self.png')}).catch(()=>{});
+ // staff ที่ไม่มีชุดคะแนนไม่เห็นเมนู
+ const other=U.find(r=>r[2]==='staff'&&r[0]!=='ทดสอบมานี'&&r[0]!=='ทดสอบปิติ');
+ const po=await open(other[0]);await po.waitForTimeout(800);
+ assert.strictEqual(await po.evaluate(()=>getComputedStyle(document.getElementById('menu-score-btn')).display),'none','no score → no menu');
+ // ===== admin: เลือกบุคคล แก้ไข
+ const pa=await open(ad[0]);
+ assert.notStrictEqual(await pa.evaluate(()=>getComputedStyle(document.getElementById('menu-score-btn')).display),'none');
+ await pa.evaluate(()=>switchMenu('score'));await pa.waitForSelector('#score-person',{timeout:15000});
+ await pa.fill('#score-person','ทดสอบมานี');await pa.press('#score-person','Tab');
+ await pa.waitForFunction(()=>score.data&&score.data.person==='ทดสอบมานี'&&score.data.rows.length===2,null,{timeout:15000});
+ // เปลี่ยนรอบ
+ await pa.click('.sc-rbtn:nth-of-type(3)');txt=await pa.innerText('#score-body');assert(/คะแนน รอบ 2/.test(txt),'year columns');
+ await pa.click('.sc-rbtn:nth-of-type(1)');
+ // โหมดแก้ไข: เพิ่มตัวชี้วัด ค
+ await pa.click('text=แก้ไขชุดคะแนน');await pa.waitForSelector('#sc-w-0');
+ await pa.waitForFunction(()=>score.cand&&score.cand.list&&score.cand.list.length>0,null,{timeout:15000});
+ await pa.selectOption('#score-cand',ids[2]);await pa.click('text=เพิ่มตัวชี้วัดเข้าชุดคะแนน');
+ await pa.waitForFunction(()=>score.data.rows.length===3,null,{timeout:15000});
+ // แก้น้ำหนักแถวแรก 2→4 + กรอกคะแนนรอบ 1 เอง 5
+ await pa.fill('#sc-w-0','4');await pa.fill('#sc-m1-0','5');await pa.click('tr[data-i="0"] button.btn-primary');
+ await pa.waitForFunction(()=>score.data.rows[0].weight===4&&score.data.rows[0].rounds[0].source==='manual',null,{timeout:15000});
+ // บันทึกเกณฑ์ผิด → ข้อความเตือน ไม่บันทึก
+ await pa.fill('#sc-m1-0','4.3');await pa.click('tr[data-i="0"] button.btn-primary');
+ await pa.waitForSelector('#modal-alert',{state:'visible'});assert(/0–5/.test(await pa.evaluate(()=>document.getElementById('modal-alert').innerText)));
+ await pa.evaluate(()=>{document.getElementById('modal-alert').style.display='none'});
+ // เอาแถวที่ 3 ออก
+ await pa.evaluate(()=>{scoreDeleteRow(2)});await pa.waitForSelector('#modal-confirm',{state:'visible'}).catch(()=>{});
+ await pa.evaluate(()=>{const b=document.querySelector('#modal-confirm .btn-danger,#modal-confirm .btn-primary');if(b)b.click()});
+ await pa.waitForFunction(()=>score.data.rows.length===2,null,{timeout:15000});
+ await pa.click('text=เสร็จสิ้นการแก้ไข');await pa.waitForTimeout(500);
+ // พิมพ์
+ await pa.evaluate(()=>{window.print=()=>{window.__printed=1}});await pa.evaluate(()=>scorePrint());await pa.waitForFunction(()=>window.__printed===1,null,{timeout:5000});
+ assert(/คะแนนรวม/.test(await pa.evaluate(()=>document.getElementById('print-root').innerText)),'print content');
+ await pa.screenshot({path:path.join(OUT,'tests/out/ui74-admin.png')}).catch(()=>{});
+ // ===== โทรศัพท์: ปุ่มเมนูแสดงแต่ไอคอน (อยู่ในกติกาเดิม)
+ const pp=await open('ทดสอบมานี',{viewport:{width:390,height:800},isMobile:true,hasTouch:true});
+ await pp.waitForFunction(()=>getComputedStyle(document.getElementById('menu-score-btn')).display!=='none',null,{timeout:15000});
+ assert(await pp.getAttribute('#menu-score-btn','aria-label')==='คะแนน KPI'&&await pp.getAttribute('#menu-score-btn','title')==='คะแนน KPI');
+ await pp.evaluate(()=>switchMenu('score'));await pp.waitForSelector('#score-body table.sc-table',{timeout:15000});
+ for(const p of [pm,pa,pp,po])assert.strictEqual(p.errs.length,0,JSON.stringify(p.errs));
+ await b.close();console.log('UI74 OK');
+})().catch(e=>{console.error(e);process.exit(1)});

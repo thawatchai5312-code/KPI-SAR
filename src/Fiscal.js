@@ -143,6 +143,11 @@ function carryOverDocsForNewYear_(fy) {
   } catch (e) {
     console.error("ดึงข้อความ SAR/CLT จากปีก่อนไม่สำเร็จ: " + e);
   }
+  try {
+    if (scoreCarryOver_(fy) > 0) bumpDataVersion_(fy, [], { username: "ระบบ" }, SCORE_DOC); // ลอกน้ำหนัก/เกณฑ์คะแนน KPI จากปีก่อน
+  } catch (e2) {
+    console.error("ลอกชุดคะแนน KPI จากปีก่อนไม่สำเร็จ: " + e2);
+  }
 }
 
 /** handler ของ trigger รายวัน 00:30 (ขึ้นปีงบใหม่ 1 ต.ค. สร้างชีตให้เอง) */

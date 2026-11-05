@@ -57,7 +57,7 @@ function renameUserPlan_(rawReq) {
   var req = rawReq || {};
   var from = (req.from || "").toString().trim();
   var to = renameUserClean_(req.to);
-  var plan = { from: from, to: to, errors: [], years: [], user: null, usersSheet: null, props: [] };
+  var plan = { from: from, to: to, errors: [], years: [], user: null, usersSheet: null, props: [], score: { sheet: null, rows: [] } };
   var us = getUsersSpreadsheet_().getSheetByName(USERS_SHEET_NAME);
   var users = us ? readUsers_(us) : [];
   var names = users.map(function(u) { return u.username; });
@@ -78,6 +78,11 @@ function renameUserPlan_(rawReq) {
     });
     plan.years.push({ fy: fy, sheet: d.sheet, total: d.rows.length, rows: rows });
   });
+  var ssheet = scoreSheetIfAny_(); // ชุดคะแนน KPI (KPI_Score): คอลัมน์ผู้รับผิดชอบ (C) ของทุกปีงบ
+  if (ssheet) {
+    plan.score.sheet = ssheet;
+    ssheet.getDataRange().getValues().forEach(function(r, i) { if (i > 0 && String(r[2]).trim() === from) plan.score.rows.push(i + 1); });
+  }
   var props = PropertiesService.getScriptProperties();
   [TOUR_HIDE_PREFIX, REPORT_PREFS_PREFIX].forEach(function(p) {
     var v = props.getProperty(p + from);
@@ -96,7 +101,8 @@ function renameUserSummary_(plan) {
     from: plan.from, to: plan.to, errors: plan.errors,
     tier: plan.user ? plan.user.tier : "", depts: plan.user ? plan.user.depts : [],
     years: years, total: total,
-    props: plan.props.length
+    props: plan.props.length,
+    score: plan.score.rows.length
   };
 }
 
@@ -119,6 +125,13 @@ function renameUserApply_(plan, admin) {
   });
   renameBackupSheets_(ss, RENAME_USER_BACKUP_PREFIX + "ปีงบ ", 3 * Math.max(1, plan.years.length));
 
+  if (plan.score.rows.length) { // สำรอง + เปลี่ยนชื่อในชีตคะแนน KPI
+    var sb = plan.score.sheet.copyTo(ss);
+    sb.setName(RENAME_USER_BACKUP_PREFIX + "คะแนน " + fileStamp);
+    sb.hideSheet();
+    renameBackupSheets_(ss, RENAME_USER_BACKUP_PREFIX + "คะแนน ", 3);
+    plan.score.rows.forEach(function(r) { plan.score.sheet.getRange(r, 3, 1, 1).setValue(plan.to); logRows.push([stamp, "", plan.from, "score-owner", plan.from, plan.to]); });
+  }
   plan.usersSheet.getRange(plan.user.row, 1, 1, 1).setValue(plan.to);
   plan.years.forEach(function(y) {
     out.years[y.fy] = y.rows.length;

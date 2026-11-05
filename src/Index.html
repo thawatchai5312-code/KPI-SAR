@@ -112,6 +112,33 @@
     .card-foot .stamp-line { margin-top: 0; }
     .charts-hidden .chart-wrap { display: none; }
     .kpi-link-item.in-view { box-shadow: inset 3px 0 0 #f59e0b; background: #fffbeb; }
+    /* คะแนน KPI (หัวหน้าหน่วย) */
+    #score-panel { padding: 14px; }
+    .sc-bar { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; margin-bottom: 10px; }
+    .sc-bar h3 { margin: 0; font-size: 17px; color: #14532d; }
+    .sc-bar input.editable-input { width: 220px; }
+    .sc-rbtn { padding: 5px 12px; border: 1px solid #94a3b8; background: #fff; border-radius: 999px; font: inherit; font-size: 13px; cursor: pointer; }
+    .sc-rbtn.on { background: #166534; color: #fff; border-color: #166534; font-weight: 700; }
+    .sc-wrap { overflow-x: auto; border: 1px solid #cbd5e1; border-radius: 8px; }
+    table.sc-table { border-collapse: collapse; width: 100%; font-size: 13px; }
+    table.sc-table th { background: #dcfce7; color: #14532d; border: 1px solid #94a3b8; padding: 4px 6px; white-space: nowrap; }
+    table.sc-table td { border: 1px solid #cbd5e1; padding: 4px 6px; text-align: center; }
+    table.sc-table td.sc-name { text-align: left; min-width: 260px; }
+    table.sc-table td.sc-name a { color: #0369a1; cursor: pointer; text-decoration: none; }
+    table.sc-table td.sc-tg { background: #fef3c7; font-weight: 700; white-space: nowrap; }
+    table.sc-table tr.sc-stale td { background: #f1f5f9; color: #64748b; }
+    table.sc-table tr.sc-total td { background: #f0fdf4; font-weight: 700; }
+    table.sc-table input { width: 100%; min-width: 54px; padding: 4px 3px; text-align: center; border: 1px solid #cbd5e1; border-radius: 6px; font: inherit; font-size: 13px; }
+    table.sc-table input.sc-n { min-width: 140px; text-align: left; }
+    .sc-badge { display: inline-block; font-size: 10.5px; padding: 1px 6px; border-radius: 999px; margin-left: 4px; font-weight: 600; }
+    .sc-badge.calc { background: #dcfce7; color: #166534; }
+    .sc-badge.manual { background: #dbeafe; color: #1e40af; }
+    .sc-badge.warn { background: #fef3c7; color: #b45309; }
+    .sc-sum { margin: 10px 0 0; display: flex; flex-wrap: wrap; gap: 8px; }
+    .sc-chip { background: #f0fdf4; border: 1px solid #86efac; border-radius: 10px; padding: 6px 12px; font-size: 13px; }
+    .sc-chip b { font-size: 16px; color: #14532d; }
+    .sc-add { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 10px 0; }
+    .sc-add select { min-width: 260px; max-width: 100%; }
     .page-view { display: none; animation: fadeIn 0.4s ease; }
     .page-view.active { display: block; }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
@@ -972,6 +999,7 @@
     <div class="nav-item" id="menu-report-btn" onclick="guardUnsaved(() => switchMenu('report'))" title="สรุปรายงาน" aria-label="สรุปรายงาน">📑<span class="lbl"> สรุปรายงาน</span></div>
     <div class="nav-item" id="menu-progress-btn" onclick="guardUnsaved(() => switchMenu('progress'))" title="ติดตามงาน" aria-label="ติดตามงาน">📋<span class="lbl"> ติดตามงาน</span></div>
     <div class="nav-item" id="menu-sar-btn" style="display: none;" onclick="guardUnsaved(() => switchMenu('sar'))" title="เอกสาร สรพ." aria-label="เอกสาร สรพ.">🏛️<span class="lbl"> เอกสาร สรพ.</span></div>
+    <div class="nav-item" id="menu-score-btn" style="display: none;" onclick="guardUnsaved(() => switchMenu('score'))" title="คะแนน KPI" aria-label="คะแนน KPI">🏅<span class="lbl"> คะแนน KPI</span></div>
     <div class="nav-spacer"></div>
     <div class="nav-actions">
       <div class="mode-switch" id="mode-switch" role="group" aria-label="รูปแบบการแสดงตัวชี้วัด">
@@ -1049,6 +1077,12 @@
         <div id="clt-controls"></div>
       </div>
       <div class="panel" id="clt-main"><div id="clt-editor"><div class="empty-state">กำลังโหลด…</div></div></div>
+    </div>
+  </div>
+
+  <div id="page-score" class="page-view">
+    <div class="panel" id="score-panel">
+      <div id="score-body"><div class="empty-state">กำลังโหลด…</div></div>
     </div>
   </div>
 
@@ -1826,6 +1860,7 @@
       document.getElementById('admin-settings-btn').style.display = currentUser.tier === 'admin' ? 'inline-block' : 'none';
       document.getElementById('btn-add-kpi').style.display = 'inline-block';
       document.getElementById('menu-sar-btn').style.display = sarCanUse() ? '' : 'none';
+      scoreMenuShow();
       document.getElementById('pw-warning-bar').style.display = currentUser.mustChange ? 'flex' : 'none';
     }
 
@@ -1852,7 +1887,7 @@
       xpClose();
       tblResetView();
       rptReset();
-      sarReset(); cltReset(); docTab = 'sar';
+      sarReset(); cltReset(); docTab = 'sar'; scoreReset();
       document.getElementById('menu-sar-btn').style.display = 'none';
       resetTreeFilters(); // ตัวกรองสถานะ/ขอบเขต กลับเป็นค่าเริ่มต้น ไม่ให้ติดไปยังผู้ใช้คนถัดไป
       homeStale = false;
@@ -1983,6 +2018,7 @@
           // เข้าระบบครั้งแรก: ให้เลือกปีงบก่อนเข้าใช้งาน ป้องกันหลงปี (หลังจากนั้นใช้ตัวเลือกปีงบบนแถบนำทางตามปกติ)
           if (!quiet) showFiscalYearPicker();
           linksLoad(); // เอกสารแนบโหลดแยกหลังข้อมูลตัวชี้วัด (ไม่ทำให้หน้าแรกช้า)
+          scoreOnYear(); // เมนู 🏅 คะแนน KPI: ตรวจว่าผู้ใช้มีชุดคะแนนในปีงบนี้ไหม
           if (afterLoad) afterLoad();
         }))
         .withFailureHandler(busyWrap((err) => {
@@ -2063,6 +2099,10 @@
         document.getElementById('menu-sar-btn').classList.add('active');
         document.getElementById('page-sar').classList.add('active');
         sarOpenPage();
+      } else if (tabName === 'score') {
+        document.getElementById('menu-score-btn').classList.add('active');
+        document.getElementById('page-score').classList.add('active');
+        scoreOpenPage();
       } else if (tabName === 'progress') {
         document.getElementById('menu-progress-btn').classList.add('active');
         document.getElementById('page-progress').classList.add('active');
@@ -5407,6 +5447,7 @@
       if (docs.indexOf('SAR') !== -1) sarDocsChanged();
       if (docs.indexOf('CLT') !== -1) cltDocsChanged();
       if (docs.indexOf('LINKS') !== -1) linksLoad();
+      if (docs.indexOf('SCORE') !== -1) scoreOnLive();
     }
     function docDirtyCount() { return sarDirtyIds().length + (cltDirty() ? 1 : 0); }
 
@@ -7381,6 +7422,7 @@
       dataV = res.v;
       if (res.same) return;
       if (res.docs && res.docs.length) docsChanged(res.docs); // ข้อความเอกสาร สรพ. ที่เครื่องอื่นบันทึก
+      if (currentTab === 'score' && !(res.docs && res.docs.indexOf('SCORE') !== -1)) scoreOnLive(); // ผลตัวชี้วัดเปลี่ยน → คะแนนที่คำนวณเปลี่ยนตาม
       const before = liveListSig();
       const idx = new Map(globalDatabase.map((k, i) => [k.id, i]));
       const changed = [], seen = new Set();
@@ -8267,6 +8309,231 @@
       window.removeEventListener('scroll', tourPlace, true);
       document.removeEventListener('keydown', tourKey);
       ['tour-blocker', 'tour-spot', 'tour-tip'].forEach(id => { const e = document.getElementById(id); if (e) e.remove(); });
+    }
+  </script>
+
+  <script>
+    // ===================== คะแนน KPI (หัวหน้าหน่วย) =====================
+    // ดู: เจ้าตัว (ของตัวเอง) · admin และ ผอ./QMR ดูได้ทุกคน และแก้น้ำหนัก/เกณฑ์/คะแนนกรอกเองได้ · คิดคะแนนที่เซิร์ฟเวอร์ (Score.js) หน้าเว็บแค่แสดง
+    const SC_LEVELS = ['2.0', '2.5', '3.0', '3.5', '4.0', '4.5', '5.0'];
+    const score = { meta: null, data: null, person: '', round: 0, editing: false, loading: false, seq: 0, mseq: 0, fy: null, cand: null, error: '' };
+
+    function scoreReset() {
+      score.meta = null; score.data = null; score.person = ''; score.round = 0; score.editing = false; score.loading = false;
+      score.seq++; score.mseq++; score.fy = null; score.cand = null; score.error = '';
+      const b = document.getElementById('menu-score-btn'); if (b) b.style.display = 'none';
+    }
+    function scoreIsEditor() { return !!currentUser && isPrivilegedUser(); }
+    function scoreCanUse() { return !!currentUser && (currentUser.tier !== 'staff' || !!(score.meta && score.meta.has)); }
+    function scoreMenuShow() { const b = document.getElementById('menu-score-btn'); if (b) b.style.display = scoreCanUse() ? '' : 'none'; }
+    function scoreLoadMeta() {
+      if (!sessionToken) return;
+      const token = sessionToken, mseq = ++score.mseq;
+      scoreMenuShow();
+      google.script.run
+        .withSuccessHandler(res => { if (sessionToken !== token || mseq !== score.mseq || !res || !res.success) return; score.meta = res; scoreMenuShow(); })
+        .withFailureHandler(() => {})
+        .scoreMeta(token, selectedFy);
+    }
+    function scoreOnYear() {
+      score.data = null; score.person = ''; score.editing = false; score.cand = null; score.fy = null;
+      scoreLoadMeta();
+      if (currentTab === 'score') scoreOpenPage();
+    }
+    function scoreOnLive() {
+      scoreLoadMeta();
+      if (currentTab === 'score' && !score.editing && !score.loading) scoreLoad(true);
+    }
+    function scoreOpenPage() {
+      if (score.fy !== selectedFy) { score.data = null; score.person = ''; score.editing = false; score.cand = null; score.fy = selectedFy; }
+      scoreLoad(false);
+    }
+    function scoreLoad(silent) {
+      if (!sessionToken) return;
+      const token = sessionToken, seq = ++score.seq, fy = selectedFy;
+      if (!silent) { score.loading = true; scoreRender(); }
+      google.script.run
+        .withSuccessHandler(res => {
+          if (sessionToken !== token || seq !== score.seq || fy !== selectedFy) return;
+          score.loading = false;
+          if (!res || !res.success) { score.data = null; score.error = (res && res.message) || 'โหลดคะแนนไม่สำเร็จ'; scoreRender(); return; }
+          score.error = ''; score.data = res; score.person = res.person;
+          if (silent && score.editing) return; // กำลังแก้อยู่: ไม่วาดทับช่องที่กำลังพิมพ์
+          scoreRender();
+        })
+        .withFailureHandler(() => { if (seq !== score.seq) return; score.loading = false; score.data = null; score.error = 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้'; scoreRender(); })
+        .getScoreBoard(token, fy, score.person);
+    }
+
+    function scoreFmt(v) { return v === null || v === undefined ? '-' : String(Math.round(v * 100) / 100); }
+    function scoreResText(v) { return v === null || v === undefined ? '-' : (typeof v === 'number' ? String(Math.round(v * 100) / 100) : String(v)); }
+    function scoreBadge(rd) {
+      if (rd.source === 'manual') return '<span class="sc-badge manual">กรอกเอง</span>';
+      if (rd.source === 'calc') return '<span class="sc-badge calc">คำนวณ</span>';
+      if (rd.source === 'warn') return `<span class="sc-badge warn" title="${esc(rd.reason)}">⚠️ คำนวณไม่ได้</span>`;
+      return '';
+    }
+    function scoreScoreCell(rd) { return rd.source === 'none' ? '<span title="ยังไม่มีผลในรอบนี้">-</span>' : (rd.score === null ? '-' : esc(scoreFmt(rd.score))) + scoreBadge(rd); }
+
+    function scoreSumChips(t) {
+      const chip = (label, x) => `<div class="sc-chip">${label}: <b>${x.sum === null ? '-' : esc(scoreFmt(x.sum))}</b> / ${esc(scoreFmt(t.full))}${x.pct === null ? '' : ' = <b>' + esc(scoreFmt(x.pct)) + '%</b>'}${x.scored !== undefined ? ' <span class="hint" style="margin:0;">(ให้คะแนนแล้ว ' + x.scored + '/' + t.count + ')</span>' : ''}</div>`;
+      return chip('รอบ 1', t.rounds[0]) + chip('รอบ 2', t.rounds[1]) + chip('ทั้งปี (เฉลี่ยรอบที่มีคะแนน)', t.year);
+    }
+
+    function scoreViewTable(d) {
+      const rd = score.round;
+      const head2 = rd === 2
+        ? '<th>คะแนน รอบ 1</th><th>น้ำหนัก×คะแนน</th><th>คะแนน รอบ 2</th><th>น้ำหนัก×คะแนน</th>'
+        : `<th>ผลรอบ ${rd + 1}</th><th>คะแนน</th><th>น้ำหนัก×คะแนน</th>`;
+      let h = `<div class="sc-wrap"><table class="sc-table"><thead><tr><th>ที่</th><th>ตัวชี้วัด</th><th>เป้าหมาย</th><th>น้ำหนัก</th>${SC_LEVELS.map(l => '<th>' + l + '</th>').join('')}${head2}</tr></thead><tbody>`;
+      d.rows.forEach((r, i) => {
+        const cells = rd === 2
+          ? `<td>${scoreScoreCell(r.rounds[0])}</td><td>${esc(scoreFmt(r.weighted[0]))}</td><td>${scoreScoreCell(r.rounds[1])}</td><td>${esc(scoreFmt(r.weighted[1]))}</td>`
+          : `<td>${esc(scoreResText(r.rounds[rd].result))}</td><td>${scoreScoreCell(r.rounds[rd])}</td><td>${esc(scoreFmt(r.weighted[rd]))}</td>`;
+        const nm = r.stale ? esc(r.name) + `<div class="hint" style="margin:0;">⚠️ ${esc(r.stale)} (ไม่นับรวม)</div>` : `<a onclick="scoreGoKpi('${esc(r.id)}')" title="เปิดตัวชี้วัดนี้">${esc(r.name)}</a>`;
+        h += `<tr class="${r.stale ? 'sc-stale' : ''}"><td>${i + 1}</td><td class="sc-name">${nm}${r.note ? '<div class="hint" style="margin:0;">📝 ' + esc(r.note) + '</div>' : ''}</td><td class="sc-tg">${esc(r.target) || '-'}</td><td>${esc(scoreFmt(r.weight))}</td>${r.crit.map(c => '<td>' + (esc(c) || '') + '</td>').join('')}${cells}</tr>`;
+      });
+      return h + '</tbody></table></div>';
+    }
+
+    function scoreEditTable(d) {
+      let h = `<div class="sc-wrap"><table class="sc-table"><thead><tr><th>ที่</th><th>ตัวชี้วัด</th><th>น้ำหนัก</th>${SC_LEVELS.map(l => '<th>' + l + '</th>').join('')}<th>คะแนนรอบ 1 (กรอกเอง)</th><th>คะแนนรอบ 2 (กรอกเอง)</th><th>หมายเหตุ</th><th></th></tr></thead><tbody>`;
+      d.rows.forEach((r, i) => {
+        const ph = k => r.rounds[k].source === 'calc' ? 'คำนวณ ' + scoreFmt(r.rounds[k].score) : (r.rounds[k].source === 'warn' ? 'คำนวณไม่ได้' : 'ยังไม่มีผล');
+        h += `<tr class="${r.stale ? 'sc-stale' : ''}" data-i="${i}"><td>${i + 1}</td><td class="sc-name">${esc(r.name)}<div class="hint" style="margin:0;">เป้า ${esc(r.target) || '-'} · วิธีสรุป ${esc(r.summaryMethod) || '-'}${r.stale ? ' · ⚠️ ' + esc(r.stale) : ''}</div></td>`
+          + `<td><input id="sc-w-${i}" value="${esc(r.weight === null ? '' : r.weight)}" inputmode="decimal"></td>`
+          + r.crit.map((c, k) => `<td><input id="sc-c-${i}-${k}" value="${esc(c)}" title="เกณฑ์คะแนน ${SC_LEVELS[k]}"></td>`).join('')
+          + `<td><input id="sc-m1-${i}" value="${esc(r.manual[0] === null ? '' : r.manual[0])}" placeholder="${esc(ph(0))}" inputmode="decimal"></td>`
+          + `<td><input id="sc-m2-${i}" value="${esc(r.manual[1] === null ? '' : r.manual[1])}" placeholder="${esc(ph(1))}" inputmode="decimal"></td>`
+          + `<td><input class="sc-n" id="sc-n-${i}" value="${esc(r.note)}"></td>`
+          + `<td style="white-space:nowrap;"><button type="button" class="btn btn-primary btn-sm" onclick="scoreSaveRow(${i})" title="บันทึกแถวนี้" aria-label="บันทึกแถวนี้">💾</button> <button type="button" class="btn btn-danger btn-sm" onclick="scoreDeleteRow(${i})" title="เอาออกจากชุดคะแนน" aria-label="เอาออกจากชุดคะแนน">🗑️</button></td></tr>`;
+      });
+      return h + '</tbody></table></div>';
+    }
+
+    function scoreRender() {
+      const box = document.getElementById('score-body'); if (!box) return;
+      const d = score.data;
+      if (!d) { box.innerHTML = '<div class="empty-state">' + (score.loading ? 'กำลังโหลด…' : esc(score.error || 'ไม่มีข้อมูล')) + '</div>'; return; }
+      const editor = !!d.canEdit;
+      const dl = editor ? Array.from(new Set((d.people || []).concat(acDir.users || []))).sort((a, b) => a.localeCompare(b, 'th')).map(n => `<option value="${esc(n)}"></option>`).join('') : '';
+      const who = editor
+        ? `👤 <input type="text" id="score-person" class="editable-input" list="score-people-dl" value="${esc(d.person)}" placeholder="พิมพ์/เลือกชื่อบุคคล" onchange="scorePickPerson(this.value)"><datalist id="score-people-dl">${dl}</datalist>`
+        : `👤 <b>${esc(d.person)}</b>`;
+      const rbtn = (i, t) => `<button type="button" class="sc-rbtn${score.round === i ? ' on' : ''}" onclick="scoreSetRound(${i})">${t}</button>`;
+      let h = `<div class="sc-bar"><h3>🏅 คะแนน KPI ปีงบ ${esc(d.fy)}</h3>${who}<span>${rbtn(0, 'รอบ 1 (ต.ค.–มี.ค.)')} ${rbtn(1, 'รอบ 2 (เม.ย.–ก.ย.)')} ${rbtn(2, 'ทั้งปี')}</span>`
+        + `<button type="button" class="btn btn-secondary btn-sm" onclick="scorePrint()" title="พิมพ์ตารางคะแนน" aria-label="พิมพ์ตารางคะแนน">🖨️ พิมพ์</button>`
+        + (editor ? `<button type="button" class="btn btn-accent btn-sm" onclick="scoreToggleEdit()">${score.editing ? '✔ เสร็จสิ้นการแก้ไข' : '✏️ แก้ไขชุดคะแนน'}</button>` : '')
+        + '</div>';
+      if (editor && score.editing) {
+        h += `<div class="sc-add"><select id="score-cand" class="editable-input">${scoreCandOptions()}</select><button type="button" class="btn btn-accent btn-sm" onclick="scoreAddRow()">➕ เพิ่มตัวชี้วัดเข้าชุดคะแนน</button><span class="hint" style="margin:0;">เลือกได้เฉพาะตัวชี้วัดที่บุคคลนี้เป็นผู้รับผิดชอบ · เกณฑ์ใส่ได้หลายแบบ เช่น 80, ≥ 85, &lt;75, มากกว่า 1, A</span></div>`;
+      }
+      if (d.rows.length === 0) {
+        h += `<div class="empty-state">${d.self ? 'ยังไม่มีชุดคะแนน KPI ของคุณในปีงบนี้' : 'ยังไม่มีชุดคะแนน KPI ของ ' + esc(d.person) + ' ในปีงบนี้'}${editor ? '<br>กด "✏️ แก้ไขชุดคะแนน" แล้วเพิ่มตัวชี้วัดได้เลย' : ''}</div>`;
+      } else {
+        h += (score.editing ? scoreEditTable(d) : scoreViewTable(d)) + `<div class="sc-sum">${scoreSumChips(d.totals)}</div>`
+          + '<p class="hint" style="margin-top:8px;">คะแนนคิดจากผลรายเดือนของรอบนั้นตามวิธีสรุปของตัวชี้วัด เทียบกับเกณฑ์ 2.0–5.0 · ต่ำกว่าเกณฑ์ 2.0 = 0 · ถ้ามี "กรอกเอง" จะใช้ค่าที่กรอกแทน · "ทั้งปี" = เฉลี่ยของรอบที่มีคะแนน</p>';
+      }
+      box.innerHTML = h;
+    }
+
+    function scoreCandOptions() {
+      if (!score.cand) return '<option value="">กำลังโหลดรายการ…</option>';
+      if (score.cand.error) return '<option value="">' + esc(score.cand.error) + '</option>';
+      if (!score.cand.list.length) return '<option value="">(ไม่มีตัวชี้วัดที่เพิ่มได้แล้ว)</option>';
+      return '<option value="">— เลือกตัวชี้วัด (' + score.cand.list.length + ') —</option>' + score.cand.list.map(c => `<option value="${esc(c.id)}">${esc(c.name)}${c.target ? ' (เป้า ' + esc(c.target) + ')' : ''}</option>`).join('');
+    }
+    function scoreLoadCands() {
+      const token = sessionToken, person = score.person, fy = selectedFy;
+      score.cand = null;
+      google.script.run
+        .withSuccessHandler(res => {
+          if (sessionToken !== token || person !== score.person) return;
+          score.cand = res && res.success ? { list: res.candidates } : { error: (res && res.message) || 'โหลดรายการไม่สำเร็จ', list: [] };
+          const sel = document.getElementById('score-cand'); if (sel) sel.innerHTML = scoreCandOptions();
+        })
+        .withFailureHandler(() => { score.cand = { error: 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้', list: [] }; const sel = document.getElementById('score-cand'); if (sel) sel.innerHTML = scoreCandOptions(); })
+        .getScoreCandidates(token, fy, person);
+    }
+
+    function scoreSetRound(i) { score.round = i; scoreRender(); }
+    function scorePickPerson(v) {
+      v = String(v || '').trim();
+      if (!v || v === score.person) return;
+      score.person = v; score.editing = false; score.cand = null; scoreLoad(false);
+    }
+    function scoreToggleEdit() {
+      score.editing = !score.editing;
+      scoreRender();
+      if (score.editing) scoreLoadCands(); else scoreLoad(true);
+    }
+    function scoreGoKpi(id) { switchMenu('home'); goToKpi(id); }
+
+    function scoreRowPayload(i) {
+      const r = score.data.rows[i], v = id => { const el = document.getElementById(id); return el ? el.value : ''; };
+      return { id: r.id, owner: r.owner, weight: v('sc-w-' + i), crit: SC_LEVELS.map((_, k) => v('sc-c-' + i + '-' + k)), r1: v('sc-m1-' + i), r2: v('sc-m2-' + i), note: v('sc-n-' + i), baseRev: r.rev };
+    }
+    function scoreSaveRow(i) {
+      const p = scoreRowPayload(i), token = sessionToken, fy = selectedFy;
+      showBusy('กำลังบันทึกคะแนน…');
+      google.script.run.withSuccessHandler(unbusy(res => scoreAfterSaveGo(res, 'บันทึกแล้ว')))
+        .withFailureHandler(unbusy(err => showAlert('บันทึกไม่สำเร็จ', '❌', String(err))))
+        .saveKpiScore(token, fy, p);
+    }
+    function scoreAfterSaveGo(res, okMsg) {
+      if (res && res.success) { showToast(res.changed === false ? 'ℹ️ ไม่มีการเปลี่ยนแปลง' : '✅ ' + okMsg); scoreReloadEditing(); return; }
+      if (res && res.conflict) { showAlert('แก้ไขชนกัน', '⚠️', res.message); scoreReloadEditing(); return; }
+      showAlert('บันทึกไม่สำเร็จ', '❌', (res && res.message) || 'ไม่ทราบสาเหตุ');
+    }
+    function scoreReloadEditing() { // โหลดใหม่แล้ววาด (ยังอยู่ในโหมดแก้ไข)
+      const token = sessionToken, seq = ++score.seq, fy = selectedFy;
+      google.script.run.withSuccessHandler(res => {
+        if (sessionToken !== token || seq !== score.seq) return;
+        if (res && res.success) { score.data = res; score.person = res.person; scoreRender(); if (score.editing) scoreLoadCands(); }
+      }).withFailureHandler(() => {}).getScoreBoard(token, fy, score.person);
+    }
+    function scoreAddRow() {
+      const sel = document.getElementById('score-cand'); const id = sel ? sel.value : '';
+      if (!id) { showToast('เลือกตัวชี้วัดก่อน'); return; }
+      const token = sessionToken, fy = selectedFy;
+      showBusy('กำลังเพิ่ม…');
+      google.script.run.withSuccessHandler(unbusy(res => scoreAfterSaveGo(res, 'เพิ่มเข้าชุดคะแนนแล้ว')))
+        .withFailureHandler(unbusy(err => showAlert('เพิ่มไม่สำเร็จ', '❌', String(err))))
+        .saveKpiScore(token, fy, { id: id, owner: score.person, isNew: true, weight: 1, crit: ['', '', '', '', '', '', ''], r1: '', r2: '', note: '' });
+    }
+    function scoreDeleteRow(i) {
+      const r = score.data.rows[i], token = sessionToken, fy = selectedFy;
+      showConfirm('เอาตัวชี้วัดนี้ออกจากชุดคะแนนของ ' + r.owner + '?\n"' + r.name + '"\n(ไม่ลบตัวชี้วัด — เพิ่มกลับได้)', () => {
+        showBusy('กำลังเอาออก…');
+        google.script.run.withSuccessHandler(unbusy(res => scoreAfterSaveGo(res, 'เอาออกแล้ว')))
+          .withFailureHandler(unbusy(err => showAlert('ไม่สำเร็จ', '❌', String(err))))
+          .deleteKpiScore(token, fy, { id: r.id, owner: r.owner });
+      });
+    }
+
+    function scorePrint() {
+      const d = score.data;
+      if (!d || !d.rows.length) { showAlert('ไม่มีข้อมูลให้พิมพ์', '⚠️', 'ยังไม่มีชุดคะแนนของบุคคลนี้ในปีงบนี้'); return; }
+      const rd = score.round;
+      const printedAt = new Date().toLocaleString('th-TH', { dateStyle: 'long', timeStyle: 'short' });
+      const roundName = rd === 2 ? 'ทั้งปี' : 'รอบ ' + (rd + 1) + (rd === 0 ? ' (ต.ค.–มี.ค.)' : ' (เม.ย.–ก.ย.)');
+      const live = d.rows.filter(r => !r.stale);
+      const th = 'ที่,ตัวชี้วัด,เป้าหมาย,น้ำหนัก,' + SC_LEVELS.join(',') + (rd === 2 ? ',คะแนน รอบ 1,น้ำหนัก×คะแนน,คะแนน รอบ 2,น้ำหนัก×คะแนน' : ',ผลรอบ,คะแนน,น้ำหนัก×คะแนน');
+      const sc = r2 => r2.source === 'none' ? '-' : scoreFmt(r2.score) + (r2.source === 'manual' ? ' *' : (r2.source === 'warn' ? ' ?' : ''));
+      let html = `<div class="pr-head"><div class="pr-hosp">โรงพยาบาลภูหลวง</div><div class="pr-sub">คะแนน KPI ปีงบประมาณ ${esc(d.fy)} · ${esc(roundName)}</div>
+        <div class="pr-info">ผู้รับผิดชอบ: <b>${esc(d.person)}</b> · พิมพ์เมื่อ ${esc(printedAt)} · โดย ${esc(currentUser.username)}</div></div>
+        <table class="pr-table" style="font-size:10.5pt;"><colgroup><col style="width:3%"><col style="width:${rd === 2 ? 25 : 28}%"><col style="width:8%"><col style="width:5%">${SC_LEVELS.map(() => '<col style="width:4.4%">').join('')}${rd === 2 ? '<col style="width:7%"><col style="width:8%"><col style="width:7%"><col style="width:8%">' : '<col style="width:7%"><col style="width:7%"><col style="width:8%">'}</colgroup>
+        <thead><tr>${th.split(',').map(t => '<th>' + esc(t) + '</th>').join('')}</tr></thead><tbody>`;
+      live.forEach((r, i) => {
+        const tail = rd === 2 ? `<td>${esc(sc(r.rounds[0]))}</td><td>${esc(scoreFmt(r.weighted[0]))}</td><td>${esc(sc(r.rounds[1]))}</td><td>${esc(scoreFmt(r.weighted[1]))}</td>` : `<td>${esc(scoreResText(r.rounds[rd].result))}</td><td>${esc(sc(r.rounds[rd]))}</td><td>${esc(scoreFmt(r.weighted[rd]))}</td>`;
+        html += `<tr><td>${i + 1}</td><td class="pr-left pr-mname">${esc(r.name)}</td><td class="pr-target">${esc(r.target) || '-'}</td><td>${esc(scoreFmt(r.weight))}</td>${r.crit.map(c => '<td>' + esc(c) + '</td>').join('')}${tail}</tr>`;
+      });
+      const t = d.totals, one = rd === 2 ? t.year : t.rounds[rd];
+      html += `</tbody></table><div class="pr-text" style="margin-top:6px;"><b>คะแนนรวม ${one.sum === null ? '-' : esc(scoreFmt(one.sum))} / ${esc(scoreFmt(t.full))}${one.pct === null ? '' : ' = ' + esc(scoreFmt(one.pct)) + '%'}</b>${rd === 2 ? ' (เฉลี่ยของรอบที่มีคะแนน)' : ''}<br><span style="font-size:9.5pt;color:#475569;">* = คะแนนกรอกเอง · ? = คำนวณคะแนนไม่ได้ · ต่ำกว่าเกณฑ์ 2.0 = 0</span></div>`;
+      document.getElementById('print-page-style').textContent = '@page { size: A4 landscape; margin: 10mm; }';
+      document.getElementById('print-root').innerHTML = html;
+      const go = () => setTimeout(() => window.print(), 250);
+      if (document.fonts && document.fonts.ready) document.fonts.ready.then(go); else go();
     }
   </script>
 </body>
