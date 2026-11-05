@@ -1,0 +1,53 @@
+// นำเข้า KPI หัวหน้าหน่วย (หน้าต่าง 🏅): ตรวจไฟล์ → ต้องเลือกชื่อคล้าย/หน่วยงาน → ยืนยัน → ตัวชี้วัด + ชุดคะแนนเข้าระบบ (ข้อมูลสมมติ)
+const {chromium}=require('playwright');
+const fs=require('fs');const path=require('path');const h=require('./harness7');const C=h.ctx;const assert=require('assert');
+const html=fs.readFileSync(path.join(__dirname,'../src/Index.html'),'utf8');
+const U=h.sheets.Users.d;U.slice(1).forEach(r=>{r[1]=C.hashPassword_('pw123456');r[4]='FALSE'});
+const mkUser=(n,tier,d)=>{const r=[n,C.hashPassword_('pw123456'),tier||'staff',d||'','FALSE','',''];U.push(r);return r};
+const ad=U.find(r=>r[2]==='admin'),tA=C.createSession_(ad[0],ad[1]);mkUser('หัวหน้าเอ','head','OPD');
+const ex=C.addIndicator(tA,2570,{part:'OPD',category:'x',name:'ร้อยละความสมบูรณ์ของเวชระเบียนทดสอบ',target:'≥ 80',years:[null,null,null,null,null],months:Array(12).fill(null),levels:['รายบุคคล'],owner:'หัวหน้าเอ',department:'OPD'});assert(ex.success);
+const W=['70','75','80','85','90','95','100'],crit=a=>a.concat(Array(7-a.length).fill(''));
+const sheet=(name,rows)=>[[name,'','','','','ช่วงคะแนน'],['ลำดับ','ตัวชี้วัด','Template','ค่าเป้าหมาย','น้ำหนัก','2.0','2.5','3.0','3.5','4.0','4.5','5.0']].concat(rows.map((r,i)=>[(i+1)+'.0',r[0],r[4]||'',r[1],r[2]].concat(crit(r[3]||[]))));
+const sh=(n,v)=>({getName:()=>n,getDataRange:()=>({getDisplayValues:()=>v,getValues:()=>v})});
+const FILE=[sh('หัวหน้าเอ',sheet('นายหัวหน้าเอ ทดสอบ',[['ร้อยละความสมบูรณ์เวชระเบียนทดสอบ','≥ 90%','2',W],['ตัวชี้วัดใหม่ UI','≥ 85%','1',W,'นิยาม UI']])),sh('หัวหน้าใหม่',sheet('นางหัวหน้าใหม่ UI',[['ตัวชี้วัดใหม่ UI','≥ 85%','3',W]]))];
+const URL1='https://docs.google.com/spreadsheets/d/HKUI/edit';const orig=C.SpreadsheetApp.openByUrl;C.SpreadsheetApp.openByUrl=u=>u===URL1?{getSheets:()=>FILE}:orig(u);
+const OUT=path.join(__dirname,'..');
+(async()=>{
+ const b=await chromium.launch({executablePath:'/opt/pw-browsers/chromium'});
+ const pg=await b.newPage({viewport:{width:1440,height:950}});const errs=[];pg.on('pageerror',e=>errs.push(e.message));
+ await pg.exposeFunction('__call',(fn,args)=>{try{return JSON.stringify(C[fn](...args)??null)}catch(e){return JSON.stringify({success:false,message:String(e)})}});
+ await pg.route('**/*',r=>r.request().url()==='http://app.test/'?r.fulfill({contentType:'text/html; charset=utf-8',body:html}):r.abort());
+ await pg.addInitScript(()=>{function mk(ok,fail){return new Proxy({},{get:(_,fn)=>{if(fn==='withSuccessHandler')return f=>mk(f,fail);if(fn==='withFailureHandler')return f=>mk(ok,f);return (...a)=>Promise.resolve().then(()=>window.__call(fn,a)).then(r=>ok&&ok(JSON.parse(r)))}})}window.google={script:{run:mk()}};});
+ await pg.goto('http://app.test/');
+ await pg.fill('#login-username',ad[0]);await pg.fill('#login-password','pw123456');await pg.click('#login-box-content button');await pg.waitForSelector('#modal-fy',{state:'visible'});await pg.selectOption('#fy-pick-select','2570');await pg.click('#modal-fy button');await pg.waitForSelector('#app-login-screen',{state:'hidden'});
+ await pg.waitForFunction(()=>document.querySelector('.kpi-card')||document.getElementById('kpi-table'),null,{timeout:60000});
+ assert(await pg.evaluate(()=>document.body.innerHTML.includes('openHeadImport()')),'menu item exists');
+ await pg.evaluate(()=>{window.confirm=()=>true;openHeadImport()});
+ assert.strictEqual(await pg.inputValue('#hk-fy'),'2570','default fy 2570');
+ await pg.fill('#hk-url',URL1);await pg.click('#modal-hk button:has-text("ตรวจไฟล์")');
+ await pg.waitForSelector('#hk-body .pimp-sum',{timeout:30000});
+ let txt=await pg.innerText('#hk-body');
+ assert(/ชื่อคล้ายกับ/.test(txt)&&/หัวหน้าใหม่/.test(txt),'similar + fresh person');
+ assert(await pg.locator('#hk-commit-btn').isDisabled(),'blocked until choices');
+ await pg.screenshot({path:path.join(OUT,'tests/out/ui75-preview.png')}).catch(()=>{});
+ // เลือก: ชื่อคล้าย = ใช้ตัวเดิม · ระบุหน่วยงานของคนใหม่
+ await pg.click('input[type=radio][onchange*="use"]');await pg.waitForFunction(()=>hk.preview&&hk.preview.stats.ask===0,null,{timeout:30000});
+ assert(await pg.locator('#hk-commit-btn').isDisabled(),'still blocked: unit needed');
+ await pg.fill('input[placeholder="หน่วยงาน"][data-k="หัวหน้าใหม่"]','หน่วยใหม่ UI');await pg.press('input[placeholder="หน่วยงาน"][data-k="หัวหน้าใหม่"]','Tab');
+ await pg.waitForFunction(()=>hk.preview&&hk.preview.stats.blockers===0,null,{timeout:30000});
+ assert(await pg.locator('#hk-commit-btn').isEnabled());
+ await pg.screenshot({path:path.join(OUT,'tests/out/ui75-ready.png')}).catch(()=>{});
+ await pg.click('#hk-commit-btn');
+ await pg.waitForSelector('#modal-confirm',{state:'visible'}).catch(()=>{});
+ await pg.evaluate(()=>{const bt=document.querySelector('#modal-confirm .btn-primary,#modal-confirm .btn-danger');if(bt)bt.click()});
+ await pg.waitForFunction(()=>/✅/.test(document.getElementById('hk-body').innerText),null,{timeout:60000});
+ // ตรวจผลที่เซิร์ฟเวอร์
+ const rows=h.sheets['ปีงบ 2570'].d;const nk=rows.find(x=>x[4]==='ตัวชี้วัดใหม่ UI');
+ assert(nk&&/หัวหน้าเอ/.test(nk[25])&&/หัวหน้าใหม่/.test(nk[25]),'shared new KPI with both owners: '+(nk&&nk[25]));
+ const old=rows.find(x=>String(x[0]).trim()===ex.newId);assert.strictEqual(old[25],'หัวหน้าเอ','existing KPI kept (similar → use)');
+ const sc=h.sheets.KPI_Score.d.slice(1);assert(sc.some(x=>x[1]===nk[0]&&x[2]==='หัวหน้าใหม่'&&Number(x[3])===3),'score row (weight 3) for new head');
+ assert(sc.some(x=>x[1]===ex.newId&&x[2]==='หัวหน้าเอ'&&Number(x[3])===2),'score row for existing KPI');
+ assert(U.some(r=>r[0]==='หัวหน้าใหม่'&&r[2]==='head'),'new head account');
+ console.log('errors',errs);assert.strictEqual(errs.length,0);
+ await b.close();console.log('UI75 OK');
+})().catch(e=>{console.error(e);process.exit(1)});

@@ -1141,6 +1141,7 @@
               <button type="button" role="menuitem" onclick="importMenuClose();openNsoImport()">📥 นำเข้า/อัปเดตตัวชี้วัดฝ่ายการพยาบาล (NSO)</button>
               <button type="button" role="menuitem" onclick="importMenuClose();openPct()">📥 นำเข้าตัวชี้วัด PCT</button>
               <button type="button" role="menuitem" onclick="importMenuClose();openPersonalImport()">👤 นำเข้าตัวชี้วัดรายบุคคลจาก Google Sheet</button>
+              <button type="button" role="menuitem" onclick="importMenuClose();openHeadImport()">🏅 นำเข้า KPI หัวหน้าหน่วยจาก Google Sheet</button>
             </div></span>
           <button class="btn btn-accent" onclick="openTidy()">🧹 จัดระเบียบข้อมูล</button>
           <button class="btn btn-accent" onclick="openRename()">✏️ เปลี่ยนชื่อ</button>
@@ -1183,6 +1184,25 @@
       <div class="modal-footer" style="display: flex; justify-content: space-between;">
         <button class="btn btn-secondary" onclick="document.getElementById('modal-pimp').style.display='none'">ปิด</button>
         <button class="btn btn-primary" id="pimp-commit-btn" onclick="pimpCommit()" disabled>📥 นำเข้า</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modal-hk" class="modal-overlay">
+    <div class="modal-card" style="max-width: 1100px; width: 97%;">
+      <div class="modal-header">🏅 นำเข้า KPI หัวหน้าหน่วยจาก Google Sheet</div>
+      <div class="modal-body" style="max-height: 72vh; overflow-y: auto;">
+        <p class="hint" style="margin-bottom: 6px;">ไฟล์ Excel (.xlsx) ให้เปิดด้วย Google ชีต → บันทึกเป็น Google ชีต แล้ววางลิงก์ · ชีตละ 1 คน (อ่านเฉพาะรายการ KPI หลัก ข้าม "KPI กลาง") · ตัวชี้วัดที่มีในระบบแล้วใช้ตัวเดิม เพิ่มผู้รับผิดชอบ · น้ำหนัก/เกณฑ์คะแนนลงชุดคะแนน KPI · ขั้นตรวจไฟล์ยังไม่เขียนข้อมูลใดๆ</p>
+        <div style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center;">
+          <input type="text" id="hk-url" class="editable-input" autocomplete="off" placeholder="https://docs.google.com/spreadsheets/d/…" style="flex: 1; min-width: 240px;" onkeydown="if(event.key==='Enter'){event.preventDefault();hkCheck(false);}">
+          <label style="white-space:nowrap;">ปีงบ <select id="hk-fy" class="editable-input" style="width:auto;"></select></label>
+          <button class="btn btn-secondary" type="button" onclick="hkCheck(false)">🔍 ตรวจไฟล์</button>
+        </div>
+        <div id="hk-body"><div class="empty-state">วางลิงก์แล้วกด "ตรวจไฟล์"</div></div>
+      </div>
+      <div class="modal-footer" style="display: flex; justify-content: space-between;">
+        <button class="btn btn-secondary" onclick="document.getElementById('modal-hk').style.display='none'">ปิด</button>
+        <button class="btn btn-primary" id="hk-commit-btn" onclick="hkCommit()" disabled>📥 นำเข้า</button>
       </div>
     </div>
   </div>
@@ -8511,6 +8531,122 @@
       });
     }
 
+
+    // ===================== นำเข้า KPI หัวหน้าหน่วย (admin) =====================
+    // ตรวจไฟล์ (ไม่เขียน) → เลือกชีต/บัญชี/หน่วยงาน/ตัวชี้วัดที่ชื่อคล้าย → ยืนยัน (เซิร์ฟเวอร์ทำแผนซ้ำเอง รับเฉพาะการตัดสินใจ) — HeadImport.js
+    let hk = { url: '', fy: 0, preview: null, sheets: {}, people: {}, choice: {}, skip: {}, targets: {}, busy: false };
+    function hkDecisions() {
+      const groups = {};
+      Object.keys(hk.choice).forEach(k => { groups[k] = { action: hk.choice[k] }; });
+      Object.keys(hk.skip).forEach(k => { if (hk.skip[k]) groups[k] = { action: 'skip' }; });
+      return { sheets: hk.sheets, people: hk.people, groups: groups, targets: hk.targets };
+    }
+    function openHeadImport() {
+      if (!currentUser || currentUser.tier !== 'admin') return;
+      hk = { url: '', fy: 0, preview: null, sheets: {}, people: {}, choice: {}, skip: {}, targets: {}, busy: false };
+      const years = (fiscalYears || []).map(Number).sort((a, b) => b - a);
+      const want = years.indexOf(2570) !== -1 ? 2570 : (currentFy || years[0]);
+      document.getElementById('hk-fy').innerHTML = years.map(y => `<option value="${y}"${y === want ? ' selected' : ''}>${y}</option>`).join('');
+      document.getElementById('hk-url').value = '';
+      document.getElementById('hk-body').innerHTML = '<div class="empty-state">วางลิงก์แล้วกด "ตรวจไฟล์"</div>';
+      document.getElementById('hk-commit-btn').disabled = true;
+      document.getElementById('modal-hk').style.display = 'flex';
+    }
+    function hkCheck(again) {
+      if (!sessionToken) return;
+      const url = again ? hk.url : document.getElementById('hk-url').value.trim();
+      if (!url) { showAlert('ยังไม่ได้วางลิงก์', 'ℹ️', 'วางลิงก์ Google ชีตของไฟล์ KPI หัวหน้าหน่วยก่อนครับ'); return; }
+      const fy = again ? hk.fy : Number(document.getElementById('hk-fy').value);
+      if (!again) hk = { url: url, fy: fy, preview: null, sheets: {}, people: {}, choice: {}, skip: {}, targets: {}, busy: false };
+      const token = sessionToken;
+      document.getElementById('hk-commit-btn').disabled = true;
+      showBusy('กำลังอ่านไฟล์และตรวจกับข้อมูลในระบบ… (ไฟล์ใหญ่อาจใช้เวลาครู่หนึ่ง)', 300000);
+      google.script.run
+        .withSuccessHandler(unbusy(res => {
+          if (sessionToken !== token) return;
+          if (!res || !res.success) { document.getElementById('hk-body').innerHTML = '<div class="empty-state">' + esc((res && res.message) || 'ตรวจไฟล์ไม่สำเร็จ') + '</div>'; hk.preview = null; return; }
+          hk.preview = res.preview; hkRender();
+        }))
+        .withFailureHandler(unbusy(err => { document.getElementById('hk-body').innerHTML = '<div class="empty-state">' + esc(String(err)) + '</div>'; }))
+        .headKpiPreview(token, hk.url, hk.fy, hkDecisions());
+    }
+    function hkRender() {
+      const pv = hk.preview; if (!pv) return;
+      const st = pv.stats;
+      const chips = [`ปีงบ ${pv.fy}`, `${st.sheets} ชีต · ${st.people} คน`, `ตัวชี้วัดในไฟล์ ${st.kpis}`, `ใช้ตัวเดิม ${st.use}` + (st.same ? ` (ไม่ต้องแก้ ${st.same})` : ''), `สร้างใหม่ ${st.created}`, st.skip ? `ข้าม ${st.skip}` : '', `แถวคะแนนใหม่ ${st.scoreNew}`, st.monthsFill ? `เติมผลรายเดือน ${st.monthsFill} ช่อง` : '', `บัญชีใหม่ ${st.newAccounts}`]
+        .filter(Boolean).map(t => `<span>${esc(t)}</span>`).join('')
+        + (st.ask ? `<span class="warn">⚠️ ชื่อคล้าย ต้องเลือก ${st.ask}</span>` : '') + (st.review ? `<span class="warn">⚠️ เป้าหมายที่ควรตรวจ ${st.review}</span>` : '');
+      const sheets = pv.sheets.map(s => `<tr class="${s.rows ? (s.checked ? '' : 'skip') : 'skip'}"><td style="width:28px;"><input type="checkbox" ${s.checked ? 'checked' : ''} ${s.rows ? '' : 'disabled'} data-t="${esc(s.title)}" onchange="hkSheet(this)"></td><td>${esc(s.title)}</td><td>${esc(s.person)}</td><td>${s.rows}</td><td>${s.rows ? (s.hasScore ? 'มีน้ำหนัก/เกณฑ์คะแนน' : 'ไม่มีน้ำหนัก/เกณฑ์') : esc(s.reason || 'ข้าม')}</td></tr>`).join('');
+      const people = pv.people.map(p => {
+        const cur = p.created ? '__new__' : (p.username || '');
+        const auto = p.status === 'same' ? `ใช้บัญชีที่พบ (${esc(p.username)})` : p.status === 'multi' ? '— เลือกบัญชี —' : 'สร้างบัญชีใหม่';
+        const opts = `<option value="">${auto}</option><option value="__new__"${cur === '__new__' && p.status !== 'fresh' ? ' selected' : ''}>+ สร้างบัญชี head ใหม่</option>` + pv.userNames.map(n => `<option value="${esc(n)}"${n === cur && cur !== '' ? ' selected' : ''}>${esc(n)}</option>`).join('');
+        const note = p.created ? `จะสร้างบัญชี <b>${esc(p.username)}</b> (head · รหัสตั้งต้น 11038)` : (p.username ? 'ใช้บัญชี <b>' + esc(p.username) + '</b>' : '<span style="color:#9a3412;">ต้องเลือกบัญชี</span>');
+        return `<tr class="${p.needsChoice || p.needUnit ? 'warn' : ''}"><td>${esc(p.fullName)}</td><td>${esc(p.sheets.join(', '))}</td><td><select class="editable-input" data-k="${esc(p.key)}" onchange="hkPerson(this)">${opts}</select><div>${note}</div></td>`
+          + `<td><input type="text" class="editable-input" style="width:120px;" value="${esc(p.unit)}" placeholder="หน่วยงาน" data-k="${esc(p.key)}" onchange="hkUnit(this)">${p.needUnit ? '<div style="color:#9a3412;">ต้องระบุ (มี KPI ใหม่)</div>' : ''}</td></tr>`;
+      }).join('');
+      const groups = pv.groups.map(g => {
+        const skipped = g.action === 'skip';
+        let stt;
+        if (g.status === 'exact') stt = g.same ? '✅ มีอยู่แล้ว (ผู้รับผิดชอบครบ)' : `✅ มีอยู่แล้ว — เพิ่มผู้รับผิดชอบ <b>${esc(g.addOwners.join(', '))}</b>`;
+        else if (g.status === 'similar') stt = `⚠️ ชื่อคล้ายกับ «${esc(g.match.name)}» (${Math.round(g.match.score * 100)}%)<br>
+          <label><input type="radio" name="hk-c-${esc(g.key)}" data-k="${esc(g.key)}" ${g.action === 'use' ? 'checked' : ''} onchange="hkChoice(this,'use')"> ใช้ตัวเดิม</label>
+          <label style="margin-left:8px;"><input type="radio" name="hk-c-${esc(g.key)}" data-k="${esc(g.key)}" ${g.action === 'new' ? 'checked' : ''} onchange="hkChoice(this,'new')"> สร้างใหม่</label>`;
+        else stt = '🆕 ใหม่';
+        if (g.sub) stt += '<div style="color:#9a3412;">⚠️ ชื่อประกอบจากหัวข้อกลุ่ม — ตรวจชื่อหลังนำเข้า</div>';
+        const tgt = g.action === 'new' || g.action === 'ask'
+          ? `<input type="text" class="editable-input pimp-tgt" value="${esc(g.target.value)}" data-k="${esc(g.key)}" onchange="hkTarget(this)" placeholder="เช่น ≥ 90">` + (!g.target.sure && g.target.original ? `<div style="color:#9a3412;">⚠️ ${esc(g.target.note)}<br><i>เดิม: ${esc(g.target.original)}</i></div>` : '') + (g.targetDiffers ? `<div style="color:#9a3412;">เป้าหมายต่างกันระหว่างคน: ${esc(g.targetDiffers.join(' | '))}</div>` : '')
+          : '<span style="color:#64748b;">คงของเดิม</span>';
+        return `<tr class="${skipped ? 'skip' : (g.action === 'ask' ? 'warn' : '')}"><td><input type="checkbox" ${skipped ? '' : 'checked'} data-k="${esc(g.key)}" onchange="hkSkip(this)"></td><td>${esc(g.name)}</td><td>${esc(g.owners.join(', '))}</td><td>${stt}</td><td>${tgt}</td><td>${g.scoreN}${g.monthsFill ? ' · เดือน ' + g.monthsFill : ''}</td></tr>`;
+      }).join('');
+      document.getElementById('hk-body').innerHTML = `<div class="pimp-sum">${chips}</div>
+        <h4 style="margin: 8px 0 2px;">📄 ชีตในไฟล์</h4><table class="pimp-tbl"><thead><tr><th></th><th>ชื่อชีต</th><th>ชื่อในชีต</th><th>KPI</th><th>หมายเหตุ</th></tr></thead><tbody>${sheets}</tbody></table>
+        <h4 style="margin: 8px 0 2px;">👥 ผู้รับผิดชอบ</h4><table class="pimp-tbl"><thead><tr><th>ชื่อในไฟล์</th><th>ชีต</th><th>บัญชีในระบบ</th><th>หน่วยงาน (ของ KPI ใหม่)</th></tr></thead><tbody>${people}</tbody></table>
+        <h4 style="margin: 8px 0 2px;">📋 ตัวชี้วัด</h4><table class="pimp-tbl"><thead><tr><th style="width:28px;"></th><th>ตัวชี้วัด</th><th>ผู้รับผิดชอบ (บัญชี)</th><th>สถานะ</th><th>เป้าหมาย (แก้ได้)</th><th>คะแนน/เดือน</th></tr></thead><tbody>${groups}</tbody></table>
+        <p class="hint">KPI ใหม่: ระดับ "รายบุคคล" · หมวดจัดตามหน่วยงานอัตโนมัติ · Template → ที่มา/สูตร · ผลรายเดือนนำเข้าเฉพาะที่เป็นตัวเลข · ไม่นำเข้าคะแนนรอบที่กรอกในไฟล์ · น้ำหนัก/เกณฑ์ลงเมนู 🏅 คะแนน KPI (มีแล้วไม่ทับ) · รันซ้ำได้</p>`;
+      const btn = document.getElementById('hk-commit-btn');
+      btn.disabled = st.blockers > 0 || (st.created + st.use + st.scoreNew === 0);
+      btn.innerText = st.blockers > 0 ? `ต้องเลือกอีก ${st.blockers} รายการ` : `📥 นำเข้า (ใหม่ ${st.created} · ใช้ตัวเดิม ${st.use})`;
+    }
+    function hkSheet(el) { hk.sheets[el.dataset.t] = el.checked; hkCheck(true); }
+    function hkPerson(el) {
+      const k = el.dataset.k, v = el.value, cur = hk.people[k] || {};
+      if (v === '') { delete cur.choice; delete cur.username; } else if (v === '__new__') { cur.choice = 'new'; delete cur.username; } else { cur.choice = 'existing'; cur.username = v; }
+      hk.people[k] = cur; hkCheck(true);
+    }
+    function hkUnit(el) { const k = el.dataset.k; hk.people[k] = Object.assign(hk.people[k] || {}, { unit: el.value.trim() }); hkCheck(true); }
+    function hkChoice(el, v) { hk.choice[el.dataset.k] = v; hkCheck(true); }
+    function hkSkip(el) { hk.skip[el.dataset.k] = !el.checked; hkCheck(true); }
+    function hkTarget(el) { hk.targets[el.dataset.k] = el.value.trim(); hkCheck(true); }
+    function hkCommit() {
+      const pv = hk.preview; if (!pv || pv.stats.blockers > 0) return;
+      const st = pv.stats;
+      showConfirm(`นำเข้า KPI หัวหน้าหน่วย เข้าปีงบ ${pv.fy}\n• สร้างตัวชี้วัดใหม่ ${st.created} ตัว · ใช้ตัวเดิม ${st.use} ตัว (เพิ่มผู้รับผิดชอบ)\n• แถวคะแนนใหม่ ${st.scoreNew}` + (st.newAccounts ? `\n• สร้างบัญชี head ใหม่ ${st.newAccounts} บัญชี (รหัสผ่านตั้งต้น 11038)` : '') + '\n\nระบบสำรองชีตก่อนเขียน — ยืนยันนำเข้าหรือไม่?', () => {
+        if (hk.busy) return;
+        hk.busy = true;
+        const token = sessionToken;
+        document.getElementById('hk-commit-btn').disabled = true;
+        showBusy('กำลังนำเข้า… อย่าปิดหน้านี้', 480000);
+        google.script.run
+          .withSuccessHandler(unbusy(res => {
+            hk.busy = false;
+            if (sessionToken !== token) return;
+            if (!res || !res.success) { showAlert('นำเข้าไม่สำเร็จ', '❌', (res && res.message) || 'ลองใหม่อีกครั้ง'); hkCheck(true); return; }
+            document.getElementById('hk-body').innerHTML = `<div class="empty-state" style="text-align:left;"><b>✅ ${esc(res.message)}</b>`
+              + (res.monthsFilled ? `<div style="margin-top:6px;">เติมผลรายเดือน ${res.monthsFilled} ช่อง</div>` : '')
+              + (res.accounts && res.accounts.length ? `<div style="margin-top:8px;">บัญชีที่สร้างใหม่ (รหัสผ่านตั้งต้น 11038): <b>${res.accounts.map(a => esc(a.username)).join(', ')}</b></div>` : '')
+              + `<div style="margin-top:8px;">ตรวจชื่อ/หมวดของตัวชี้วัดใหม่ และดูชุดคะแนนที่เมนู 🏅 คะแนน KPI ครับ</div></div>`;
+            document.getElementById('hk-commit-btn').disabled = true;
+            hk.preview = null;
+            fetchAllDataFromServer(true);
+            loadSettingsUsers();
+            acLoad();
+            scoreLoadMeta();
+          }))
+          .withFailureHandler(unbusy(err => { hk.busy = false; showAlert('นำเข้าไม่สำเร็จ', '❌', String(err)); }))
+          .headKpiCommit(token, hk.url, hk.fy, hkDecisions());
+      });
+    }
     function scorePrint() {
       const d = score.data;
       if (!d || !d.rows.length) { showAlert('ไม่มีข้อมูลให้พิมพ์', '⚠️', 'ยังไม่มีชุดคะแนนของบุคคลนี้ในปีงบนี้'); return; }

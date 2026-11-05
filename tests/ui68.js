@@ -30,7 +30,7 @@ C.SpreadsheetApp.openByUrl=u=>u===URL?{getSheets:()=>[{getDataRange:()=>({getVal
  assert(!(await pg.isVisible('#import-menu')),'menu closed by default');
  assert.strictEqual(await pg.locator('#modal-settings button:has-text("นำเข้าตัวชี้วัดจาก")').count(),0,'old standalone buttons are gone');
  await pg.click('#import-menu-btn');assert(await pg.isVisible('#import-menu'));
- assert.strictEqual(await pg.locator('#import-menu button').count(),3);
+ assert.strictEqual(await pg.locator('#import-menu button').count(),4);
  await pg.screenshot({path:OUT+'/ui68-menu.png'});
  await pg.keyboard.press('Escape');assert(!(await pg.isVisible('#import-menu')),'Esc closes');
  await pg.click('#import-menu-btn');await pg.mouse.click(8,8);
