@@ -12,7 +12,7 @@ class Sheet{
   _rng(r,c,nr,nc){const s=this;const o={
     getValues(){s._ensure(r+nr-1,c+nc-1);return s.d.slice(r-1,r-1+nr).map(x=>x.slice(c-1,c-1+nc))},
     getValue(){s._ensure(r,c);return s.d[r-1][c-1]},
-    setValues(v){s._ensure(r+nr-1,c+nc-1);v.forEach((row,i)=>row.forEach((x,j)=>s.d[r-1+i][c-1+j]=x));return o},
+    setValues(v){if(v.length!==nr||v.some(x=>x.length!==nc))throw new Error("setValues: ข้อมูลมี "+v.length+"x"+(v[0]||[]).length+" แต่ช่วงมี "+nr+"x"+nc+" (เหมือน Google Sheets จริง)");s._ensure(r+nr-1,c+nc-1);v.forEach((row,i)=>row.forEach((x,j)=>s.d[r-1+i][c-1+j]=x));return o},
     setValue(v){s._ensure(r+nr-1,c+nc-1);for(let i=0;i<nr;i++)for(let j=0;j<nc;j++)s.d[r-1+i][c-1+j]=v;return o},
     clearContent(){s._ensure(r+nr-1,c+nc-1);for(let i=0;i<nr;i++)for(let j=0;j<nc;j++)s.d[r-1+i][c-1+j]='';return o},
     setFontWeight(){return o},setBackground(){return o},setHorizontalAlignment(){return o},setNumberFormat(){return o}};return o}

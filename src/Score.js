@@ -436,7 +436,7 @@ function saveKpiScore(token, fy, p) {
       sheet.getRange(cur.row, 14, 1, 1).setNumberFormat("@");
       var same = scoreRev_([fy, id, owner].concat(vals)) === cur.rev;
       if (same) return { success: true, changed: false };
-      sheet.getRange(cur.row, 4, 1, 13).setValues([vals]);
+      sheet.getRange(cur.row, 4, 1, vals.length).setValues([vals]); // D–N: น้ำหนัก + เกณฑ์ 7 + คะแนนกรอกเอง 2 + หมายเหตุ = 11 คอลัมน์
       sheet.getRange(cur.row, 15, 1, 2).setValues([[stamp, user.username]]);
     } else {
       if (!p.isNew) return { success: false, message: "ไม่พบแถวนี้ (อาจถูกลบไปแล้ว)" };
