@@ -1,8 +1,10 @@
 const fs=require('fs'),vm=require('vm'),crypto=require('crypto'),path=require('path');
 const FX=path.join(__dirname,'fixtures');
 const L=JSON.parse(fs.readFileSync(FX+'/live7/data.json','utf8'));L.nso=JSON.parse(fs.readFileSync(FX+'/live4/data.json','utf8')).nso;
+// ชีตจริงแปลงข้อความที่หน้าตาเหมือนสูตร/ร้อยละ/วันที่เองถ้าเซลล์ไม่ได้ตั้งรูปแบบ "ข้อความ" (@) — จดไว้ใน sheet.autoConv ให้เทสต์ตรวจ
+const risky=v=>typeof v==='string'&&(/^[=+]/.test(v)||/^-?\d[\d,]*(\.\d+)?%$/.test(v)||/^\d{1,2}\/\d{1,2}(\/\d+)?$/.test(v));
 class Sheet{
-  constructor(name,data){this.name=name;this.d=data;this.maxCols=Math.max(36,...data.map(r=>r.length));}
+  constructor(name,data){this.name=name;this.d=data;this.maxCols=Math.max(36,...data.map(r=>r.length));this.fmt={};this.autoConv=[];}
   getMaxColumns(){return this.maxCols} insertColumnsAfter(p,n){this.maxCols+=n}
   getName(){return this.name} setName(n){this.name=n}
   _ensure(r,c){while(this.d.length<r)this.d.push([]);for(let i=0;i<r;i++)while(this.d[i].length<c)this.d[i].push('')}
@@ -12,12 +14,12 @@ class Sheet{
   _rng(r,c,nr,nc){const s=this;const o={
     getValues(){s._ensure(r+nr-1,c+nc-1);return s.d.slice(r-1,r-1+nr).map(x=>x.slice(c-1,c-1+nc))},
     getValue(){s._ensure(r,c);return s.d[r-1][c-1]},
-    setValues(v){if(v.length!==nr||v.some(x=>x.length!==nc))throw new Error("setValues: ข้อมูลมี "+v.length+"x"+(v[0]||[]).length+" แต่ช่วงมี "+nr+"x"+nc+" (เหมือน Google Sheets จริง)");s._ensure(r+nr-1,c+nc-1);v.forEach((row,i)=>row.forEach((x,j)=>s.d[r-1+i][c-1+j]=x));return o},
-    setValue(v){s._ensure(r+nr-1,c+nc-1);for(let i=0;i<nr;i++)for(let j=0;j<nc;j++)s.d[r-1+i][c-1+j]=v;return o},
+    setValues(v){v.forEach((row,i)=>row.forEach((x,j)=>{if(risky(x)&&s.fmt[(r+i)+','+(c+j)]!=='@')s.autoConv.push({r:r+i,c:c+j,v:x})}));if(v.length!==nr||v.some(x=>x.length!==nc))throw new Error("setValues: ข้อมูลมี "+v.length+"x"+(v[0]||[]).length+" แต่ช่วงมี "+nr+"x"+nc+" (เหมือน Google Sheets จริง)");s._ensure(r+nr-1,c+nc-1);v.forEach((row,i)=>row.forEach((x,j)=>s.d[r-1+i][c-1+j]=x));return o},
+    setValue(v){for(let i=0;i<nr;i++)for(let j=0;j<nc;j++)if(risky(v)&&s.fmt[(r+i)+','+(c+j)]!=='@')s.autoConv.push({r:r+i,c:c+j,v});s._ensure(r+nr-1,c+nc-1);for(let i=0;i<nr;i++)for(let j=0;j<nc;j++)s.d[r-1+i][c-1+j]=v;return o},
     clearContent(){s._ensure(r+nr-1,c+nc-1);for(let i=0;i<nr;i++)for(let j=0;j<nc;j++)s.d[r-1+i][c-1+j]='';return o},
-    setFontWeight(){return o},setBackground(){return o},setHorizontalAlignment(){return o},setNumberFormat(){return o}};return o}
+    setFontWeight(){return o},setBackground(){return o},setHorizontalAlignment(){return o},setNumberFormat(f){for(let i=0;i<nr;i++)for(let j=0;j<nc;j++)s.fmt[(r+i)+','+(c+j)]=f;return o}};return o}
   hideSheet(){this.hidden=true} copyTo(ss){const c=new Sheet('Copy of '+this.name,JSON.parse(JSON.stringify(this.d),(k,v)=>v));c.maxCols=this.maxCols;sheets[c.name]=c;return c}
-  setFrozenRows(){} appendRow(r){this.d.push(r)} deleteRow(n){this.d.splice(n-1,1)}
+  setFrozenRows(){} appendRow(r){r.forEach((x,j)=>{if(risky(x))this.autoConv.push({r:this.d.length+1,c:j+1,v:x})});this.d.push(r)} deleteRow(n){this.d.splice(n-1,1)}
 }
 const mk=(n,d)=>{const sh=new Sheet(n,d.map(r=>r.map(v=>v===null?'':v)));return sh};
 const H=L.hdr;const sheets={'ปีงบ 2569':mk('ปีงบ 2569',[H].concat(L['2569'])),'ปีงบ 2570':mk('ปีงบ 2570',[H].concat(L['2570'])),

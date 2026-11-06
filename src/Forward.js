@@ -158,7 +158,7 @@ function fwdAddToYear_(user, ty, fy, newRow, newId, cats, privileged) {
   for (var m = 0; m < MONTHLY_COLS; m++) row[ANNUAL_FIRST_COL - 1 + 5 + m] = "";
   var part = row[2].toString().trim(), cat = row[3].toString().trim();
   row[1] = data.filter(function(r) { return r[2] && r[2].toString().trim() === part && r[3] && r[3].toString().trim() === cat; }).length + 1;
-  sheet.appendRow(row);
+  appendKpiRow_(sheet, row);
   if (cats.length > 1 && !sheet.getRange(1, EXTRA_CATS_COL).getValue()) {
     sheet.getRange(1, EXTRA_CATS_COL).setValue(EXTRA_CATS_HEADER).setFontWeight("bold").setBackground("#e0f2fe").setHorizontalAlignment("center");
   }

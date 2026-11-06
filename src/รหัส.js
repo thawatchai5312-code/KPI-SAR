@@ -473,16 +473,21 @@ function saveKpiCore_(user, fy, item) {
       for (var m = 0; m < 12; m++) {
         newMonths.push(item.months ? resultValue_(item.months[m], true) : old.months[m]);
       }
-      if (newYears.join("|") !== old.years.join("|") || newMonths.join("|") !== old.months.join("|")) changed = true;
-      var resultCells = newYears.concat(newMonths);
-      resultCells.forEach(function(v, i) { if (typeof v === "string" && v !== NO_CASE_) sheet.getRange(row, ANNUAL_FIRST_COL + i).setNumberFormat("@"); }); // ข้อความ (เช่น A, 1/2): กันชีตแปลงเป็นตัวเลข/วันที่
-      sheet.getRange(row, ANNUAL_FIRST_COL, 1, 17).setValues([resultCells]);
+      var resultsChanged = newYears.join("|") !== old.years.join("|") || newMonths.join("|") !== old.months.join("|");
+      if (resultsChanged) {
+        changed = true;
+        // เขียนผลเฉพาะเมื่อมีการเปลี่ยน — ไม่เขียนซ้ำค่าเดิม (ค่าที่ชีตเก็บเป็นข้อความ/เลขไทยถูกเขียนกลับเป็นรูปแบบอื่นแล้วรุ่นแถวเปลี่ยนเงียบๆ ทำให้เครื่องอื่นขึ้นแก้ชนหลอก)
+        var resultCells = newYears.concat(newMonths);
+        resultCells.forEach(function(v, i) { if (typeof v === "string" && v !== NO_CASE_) sheet.getRange(row, ANNUAL_FIRST_COL + i).setNumberFormat("@"); }); // ข้อความ (เช่น A, 1/2): กันชีตแปลงเป็นตัวเลข/วันที่
+        sheet.getRange(row, ANNUAL_FIRST_COL, 1, 17).setValues([resultCells]);
+      }
     }
 
     if (hasDetails) {
       var tpl = item.templateDetails !== undefined ? item.templateDetails : old.templateDetails;
       var src = item.dataSource !== undefined ? item.dataSource : old.dataSource;
-      var detailsChanged = (tpl || "").trim() !== arabicDigits_(old.templateDetails) || (src || "").trim() !== arabicDigits_(old.dataSource);
+      var tplChanged = (tpl || "").trim() !== arabicDigits_(old.templateDetails), srcChanged = (src || "").trim() !== arabicDigits_(old.dataSource);
+      var detailsChanged = tplChanged || srcChanged;
       if (detailsChanged) {
         changed = true;
         // บันทึกเวลาอัปเดตการวิเคราะห์ (ใช้ดูว่าปีงบนี้ได้ทบทวนรายละเอียดแล้วหรือยัง)
@@ -491,26 +496,29 @@ function saveKpiCore_(user, fy, item) {
           sheet.getRange(1, ANALYSIS_COL).setValue(ANALYSIS_HEADER).setFontWeight("bold").setBackground("#e0f2fe").setHorizontalAlignment("center");
         }
       }
-      sheet.getRange(row, 24).setValue(tpl || "");
-      sheet.getRange(row, 25).setValue(src || "");
+      // เขียนเฉพาะเมื่อข้อความต่างจากที่เก็บอยู่ และตั้งรูปแบบ "ข้อความ" ก่อน (กันชีตแปลงข้อความที่ขึ้นต้นด้วย = + หรือหน้าตาเหมือนตัวเลข/วันที่ เป็นสูตร/ตัวเลข/วันที่)
+      // (เทียบกับค่าดิบในชีต: เลขไทย → อารบิกยังถูกเขียนแปลงให้ แม้ไม่นับเป็นการแก้ — รุ่นแถวที่เปลี่ยนเงียบๆ ถูกแจ้งด้านล่าง)
+      var rawText = function(c) { var v = data[rowIndex][c]; return v === undefined || v === null ? "" : v.toString(); };
+      if (rawText(23) !== (tpl || "")) sheet.getRange(row, 24).setNumberFormat("@").setValue(tpl || "");
+      if (rawText(24) !== (src || "")) sheet.getRange(row, 25).setNumberFormat("@").setValue(src || "");
     }
 
     // ชื่อ/เป้าหมาย/ผู้รับผิดชอบ/หน่วยงาน: ผู้ที่แก้รายละเอียดได้ (ผู้รับผิดชอบ/หัวหน้าหน่วยในปีงบปัจจุบัน หรือ admin/ผอ./QMR)
     if (perm.editDetails) {
       if (item.name !== undefined && item.name.toString().trim() !== "" && item.name.toString().trim() !== arabicDigits_(old.name)) {
-        sheet.getRange(row, 5).setValue(item.name.toString().trim());
+        sheet.getRange(row, 5).setNumberFormat("@").setValue(item.name.toString().trim());
         changed = true;
       }
       if (item.target !== undefined && item.target.toString().trim() !== arabicDigits_(old.target)) {
-        sheet.getRange(row, 6).setValue(item.target.toString().trim());
+        sheet.getRange(row, 6).setNumberFormat("@").setValue(item.target.toString().trim()); // เป้าหมาย: `= 0` / `80%` / `1/2` ต้องเก็บเป็นข้อความ
         changed = true;
       }
       if (item.owner !== undefined && item.owner.toString().trim() !== old.owner) {
-        sheet.getRange(row, 26).setValue(item.owner.toString().trim());
+        sheet.getRange(row, 26).setNumberFormat("@").setValue(item.owner.toString().trim());
         changed = true;
       }
       if (deptAfter !== old.department) {
-        sheet.getRange(row, 27).setValue(deptAfter);
+        sheet.getRange(row, 27).setNumberFormat("@").setValue(deptAfter);
         changed = true;
       }
     }
@@ -562,7 +570,10 @@ function saveKpiCore_(user, fy, item) {
       bumpDataVersion_(annualChanges.length > 0 ? "*" : fy, [old.id], user); // ผลทั้งปีเขียนลงชีตปีอื่นด้วย
     }
 
-    var fresh = rowToKpi_(sheet.getRange(row, 1, 1, KPI_COLS).getValues()[0]);
+    var freshRaw = sheet.getRange(row, 1, 1, KPI_COLS).getValues()[0];
+    var fresh = rowToKpi_(freshRaw);
+    // กันเหนียว: ไม่มีการเปลี่ยนแปลง แต่แถวในชีตเปลี่ยนจริง (เช่น ผลจาก propagate) → แจ้งเครื่องอื่นให้ใช้รุ่นล่าสุด (ไม่ลงเวลาแก้ไข ไม่ส่งต่อปีถัดไป)
+    if (!changed && fresh.rev !== old.rev) bumpDataVersion_(fy, [old.id], user);
     return {
       success: true,
       changed: changed,
@@ -736,7 +747,7 @@ function addIndicator(token, fy, newItem) {
     var built = buildNewKpiRow_(user, fy, sheet, data, newItem, privileged);
     if (built.error) return { success: false, message: built.error };
     var newRow = built.row, newId = built.newId, cats = built.cats;
-    sheet.appendRow(newRow);
+    appendKpiRow_(sheet, newRow);
     if (cats.length > 1 && !sheet.getRange(1, EXTRA_CATS_COL).getValue()) {
       sheet.getRange(1, EXTRA_CATS_COL).setValue(EXTRA_CATS_HEADER).setFontWeight("bold").setBackground("#e0f2fe").setHorizontalAlignment("center");
     }
@@ -752,6 +763,16 @@ function addIndicator(token, fy, newItem) {
   } finally {
     if (lock) lock.releaseLock();
   }
+}
+
+/**
+ * เพิ่มแถวตัวชี้วัดท้ายชีต (ใต้ script lock) — ตั้งรูปแบบ "ข้อความ" ให้ชื่อ/เป้าหมาย/รายละเอียด/ที่มา/ผู้รับผิดชอบ/หน่วยงานก่อนเขียน
+ * (appendRow ปล่อยให้ชีตแปลงข้อความเอง: `= 0` → สูตร, `80%` → 0.8, `1/2` → วันที่) · ช่องอื่น (ผล/ตัวเลข) คงรูปแบบเดิม
+ */
+function appendKpiRow_(sheet, row) {
+  var r = sheet.getLastRow() + 1;
+  [5, 6, 24, 25, 26, 27].forEach(function(c) { sheet.getRange(r, c).setNumberFormat("@"); });
+  sheet.getRange(r, 1, 1, row.length).setValues([row]);
 }
 
 // ลบตัวชี้วัดออกจากปีงบที่เลือกเท่านั้น (ปีงบอื่นยังเก็บไว้เป็นประวัติ) — เฉพาะ admin, ผอ., QMR
