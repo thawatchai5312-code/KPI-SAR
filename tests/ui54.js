@@ -35,7 +35,7 @@ const GOOD='https://drive.google.com/file/d/1SarDoc/view';
  const order=await pg.evaluate(s=>{const el=document.querySelector(s),labs=[...el.closest('.sar-right').querySelectorAll('.pr-label')].map(x=>x.textContent);return labs},sel);
  assert(/รายละเอียด/.test(order[0])&&/เอกสารแนบ/.test(order[1])&&/ไม่แสดงในเอกสารที่ Export/.test(order[1])&&/PDCA/.test(order[2]),JSON.stringify(order));
  // กำลังพิมพ์ PDCA อยู่ แล้วเครื่องอื่นแนบลิงก์ → ลิงก์ขึ้นในที่เดิม ข้อความที่พิมพ์ไม่หาย
- const ta='#sar-box-'+id+' .sar-pdca';
+ const ta='.sar-box[data-box="'+id+'"] .sar-pdca';
  await pg.click(ta);await pg.fill(ta,'กำลังพิมพ์ร่าง PDCA');
  const r=C.saveKpiLink(tA,fy,{title:'แนวทาง STEMI ฉบับรวม',url:GOOD,note:'หน้า 3–5',ids:[id,ck.id]});assert(r.success,JSON.stringify(r));
  await pg.evaluate(()=>livePoll());
@@ -49,7 +49,7 @@ const GOOD='https://drive.google.com/file/d/1SarDoc/view';
  await pg.evaluate(s=>document.querySelector(s).scrollIntoView({block:'center'}),sel);await pg.waitForTimeout(300);
  await pg.screenshot({path:OUT+'/ui54-sar.png'});
  // ยกเลิกร่างที่พิมพ์ (ไม่ให้ค้างเตือน)
- await pg.click('#sar-box-'+id+' .sar-revert');
+ await pg.click('.sar-box[data-box="'+id+'"] .sar-revert');
  // ---- CLT: หน้าผลลัพธ์ตัวชี้วัด ใต้กราฟ
  await pg.click('#doc-tabs .doc-tab[data-doc=clt]');await pg.waitForSelector('#clt-tree .clt-link');
  const key='D|STEMI|R|'+ck.id;

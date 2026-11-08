@@ -41,7 +41,7 @@ async function open(b,user,opts={}){
  const pg=await open(b,ad);
  assert(await pg.evaluate(()=>getComputedStyle(document.getElementById('menu-sar-btn')).display!=='none'),'admin has SAR menu');
  await pg.click('#menu-sar-btn');await pg.waitForSelector('#sar-pager-top .pager');
- let s1=await pg.evaluate(()=>({loaded:sar.loaded,fy:sar.fy,parts:[...document.querySelectorAll('#sar-paper .pr-part')].map(e=>e.textContent),blocks:document.querySelectorAll('#sar-paper .sar-block,#sar-paper .pr-ref').length,
+ let s1=await pg.evaluate(()=>({loaded:sar.loaded,fy:sar.fy,parts:[...document.querySelectorAll('#sar-paper .pr-part')].map(e=>e.textContent),blocks:document.querySelectorAll('#sar-paper .sar-block').length,
    tables:document.querySelectorAll('#sar-paper table.pr-table').length,ths:[...document.querySelectorAll('#sar-paper table.pr-table')[0].querySelectorAll('th')].map(e=>e.textContent),
    monthly:/ต\.ค\./.test(document.getElementById('sar-paper').textContent)&&/ผลลัพธ์รายเดือน/.test(document.getElementById('sar-paper').textContent),owner:/ผู้รับผิดชอบ/.test(document.getElementById('sar-paper').textContent),
    charts:document.querySelectorAll('#sar-paper .pr-chart svg').length,info:document.querySelector('#sar-pager-top .pager-info').textContent,
@@ -91,28 +91,28 @@ async function open(b,user,opts={}){
  assert(first.saveDisabled&&!first.revertShown,'clean state: save disabled');
  const ta=pg.locator(`#sar-paper .sar-pdca[data-id="${first.id}"]`);
  await ta.fill('ปัญหาที่พบ ๒๕๗๐ ทดสอบ\n\nการพัฒนาที่ผ่านมา x');
- assert(await pg.evaluate(id=>!document.querySelector(`#sar-box-${CSS.escape(id)} .sar-save`).disabled&&document.getElementById('sar-box-'+id).classList.contains('dirty'),first.id),'dirty after typing');
+ assert(await pg.evaluate(id=>!document.querySelector(`.sar-box[data-box="${id}"] .sar-save`).disabled&&document.querySelector('.sar-box[data-box="'+id+'"]').classList.contains('dirty'),first.id),'dirty after typing');
  // ออกจากหน้าโดยไม่บันทึก → ถาม
  await pg.click('#menu-home-btn');await pg.waitForSelector('#modal-confirm',{state:'visible'});assert(/ยังไม่ได้บันทึก 1 รายการ/.test(await pg.textContent("#confirm-message")));
  await pg.click('#modal-confirm .btn-secondary');await pg.waitForTimeout(200);assert((await pg.evaluate(()=>currentTab))==='sar','stay on SAR after cancel');
  assert((await pg.inputValue(`#sar-paper .sar-pdca[data-id="${first.id}"]`)).startsWith('ปัญหาที่พบ ๒๕๗๐'),'draft kept');
  // ยกเลิกการแก้ไข
- await pg.click(`#sar-box-${first.id} .sar-revert`);await pg.waitForTimeout(200);assert((await pg.inputValue(`#sar-paper .sar-pdca[data-id="${first.id}"]`))==='','reverted');
+ await pg.click(`.sar-box[data-box="${first.id}"] .sar-revert`);await pg.waitForTimeout(200);assert((await pg.inputValue(`#sar-paper .sar-pdca[data-id="${first.id}"]`))==='','reverted');
  await pg.fill(`#sar-paper .sar-pdca[data-id="${first.id}"]`,'ปัญหาที่พบ ๒๕๗๐ ทดสอบ\n\nการพัฒนาที่ผ่านมา x');
- await pg.click(`#sar-box-${first.id} .sar-save`);await pg.waitForFunction(id=>sar.pdca[id]&&sar.pdca[id].rev===1,first.id);
+ await pg.click(`.sar-box[data-box="${first.id}"] .sar-save`);await pg.waitForFunction(id=>sar.pdca[id]&&sar.pdca[id].rev===1,first.id);
  let sv=C.getSarDoc(tA,fy).pdca[first.id];assert(sv.text==='ปัญหาที่พบ 2570 ทดสอบ\n\nการพัฒนาที่ผ่านมา x'&&sv.rev===1&&sv.by===ad[0],JSON.stringify(sv));
  assert((await pg.inputValue(`#sar-paper .sar-pdca[data-id="${first.id}"]`)).startsWith('ปัญหาที่พบ 2570'),'normalized text shown after save');
- assert((await pg.textContent(`#sar-box-${first.id} .sar-stamp`)).includes('โดย '+ad[0]));
+ assert((await pg.textContent(`.sar-box[data-box="${first.id}"] .sar-stamp`)).includes('โดย '+ad[0]));
  assert(await pg.evaluate(()=>!document.querySelector('.sar-box.dirty')),'clean after save');
  // ปุ่มช่วยกรอก
  const second=await pg.evaluate(id=>[...document.querySelectorAll('#sar-paper .sar-pdca')].map(t=>t.dataset.id).find(x=>x!==id),first.id);
- await pg.click(`#sar-box-${second} .sar-heads`);assert((await pg.inputValue(`#sar-paper .sar-pdca[data-id="${second}"]`)).startsWith('ปัญหาที่พบ\n\nการวางแผนและการกำหนดมาตรฐาน\n\nการปฏิบัติตามแผน\n\nการตรวจสอบผลลัพธ์และวิเคราะห์สาเหตุ\n\nการปรับปรุงมาตรฐานและแผนพัฒนาต่อเนื่อง'),'insert 5 PDCA headings');
- await pg.click(`#sar-box-${second} .sar-revert`);
+ await pg.click(`.sar-box[data-box="${second}"] .sar-heads`);assert((await pg.inputValue(`#sar-paper .sar-pdca[data-id="${second}"]`)).startsWith('ปัญหาที่พบ\n\nการวางแผนและการกำหนดมาตรฐาน\n\nการปฏิบัติตามแผน\n\nการตรวจสอบผลลัพธ์และวิเคราะห์สาเหตุ\n\nการปรับปรุงมาตรฐานและแผนพัฒนาต่อเนื่อง'),'insert 5 PDCA headings');
+ await pg.click(`.sar-box[data-box="${second}"] .sar-revert`);
 
  // ---- 3. แก้ชนกัน: ผอ. บันทึกก่อน แล้ว admin (ฐานรุ่นเก่า) บันทึก → แถบเตือน
  const r=C.saveSarPdca(tE,fy,first.id,'ผอ.แก้ก่อนนะ',1);assert(r.success,JSON.stringify(r));
  await pg.fill(`#sar-paper .sar-pdca[data-id="${first.id}"]`,'ของ admin แก้ต่อ (รุ่นเก่า)');
- await pg.click(`#sar-box-${first.id} .sar-save`);await pg.waitForSelector('#modal-alert',{state:'visible'});assert(/ถูกแก้ไขโดย/.test(await pg.textContent('#modal-alert')),'conflict alert');
+ await pg.click(`.sar-box[data-box="${first.id}"] .sar-save`);await pg.waitForSelector('#modal-alert',{state:'visible'});assert(/ถูกแก้ไขโดย/.test(await pg.textContent('#modal-alert')),'conflict alert');
  await pg.click('#modal-alert button');await pg.waitForSelector('.sar-remote');
  const rem=await pg.evaluate(()=>({t:document.querySelector('.sar-remote-text').textContent,btns:[...document.querySelectorAll('.sar-remote-actions button')].map(b=>b.textContent),mine:document.querySelector('.sar-pdca').value}));
  assert(rem.t==='ผอ.แก้ก่อนนะ'&&rem.btns.length===3,JSON.stringify(rem));assert(C.getSarDoc(tA,fy).pdca[first.id].text==='ผอ.แก้ก่อนนะ','conflict wrote nothing');
@@ -120,13 +120,13 @@ async function open(b,user,opts={}){
  // "แก้ต่อจากของฉัน": ฐานรุ่นล่าสุด draft ยังอยู่ → บันทึกผ่าน
  await pg.click('.sar-remote-actions button:has-text("แก้ต่อจากของฉัน")');await pg.waitForTimeout(200);
  assert(await pg.evaluate(id=>sar.drafts.get(id)==='ของ admin แก้ต่อ (รุ่นเก่า)'&&sar.pdca[id].rev===2&&!document.querySelector('.sar-remote'),first.id),'draft kept, base = latest');
- await pg.click(`#sar-box-${first.id} .sar-save`);await pg.waitForFunction(id=>sar.pdca[id].rev===3,first.id);assert(C.getSarDoc(tA,fy).pdca[first.id].text==='ของ admin แก้ต่อ (รุ่นเก่า)');
+ await pg.click(`.sar-box[data-box="${first.id}"] .sar-save`);await pg.waitForFunction(id=>sar.pdca[id].rev===3,first.id);assert(C.getSarDoc(tA,fy).pdca[first.id].text==='ของ admin แก้ต่อ (รุ่นเก่า)');
  // "ใช้ข้อความล่าสุด" / "บันทึกทับ" จากอีกชนกัน
  C.saveSarPdca(tE,fy,first.id,'ผอ. รอบสอง',3);
- await pg.fill(`#sar-paper .sar-pdca[data-id="${first.id}"]`,'ของ admin รอบสอง');await pg.click(`#sar-box-${first.id} .sar-save`);await pg.waitForSelector('#modal-alert',{state:'visible'});await pg.click('#modal-alert button');await pg.waitForSelector('.sar-remote');
+ await pg.fill(`#sar-paper .sar-pdca[data-id="${first.id}"]`,'ของ admin รอบสอง');await pg.click(`.sar-box[data-box="${first.id}"] .sar-save`);await pg.waitForSelector('#modal-alert',{state:'visible'});await pg.click('#modal-alert button');await pg.waitForSelector('.sar-remote');
  await pg.click('.sar-remote-actions button:has-text("ใช้ข้อความล่าสุด")');await pg.waitForTimeout(200);assert((await pg.inputValue(`#sar-paper .sar-pdca[data-id="${first.id}"]`))==='ผอ. รอบสอง'&&await pg.evaluate(()=>sar.drafts.size===0),'use theirs');
  C.saveSarPdca(tE,fy,first.id,'ผอ. รอบสาม',4);
- await pg.fill(`#sar-paper .sar-pdca[data-id="${first.id}"]`,'ของ admin ทับ');await pg.click(`#sar-box-${first.id} .sar-save`);await pg.waitForSelector('#modal-alert',{state:'visible'});await pg.click('#modal-alert button');await pg.waitForSelector('.sar-remote');
+ await pg.fill(`#sar-paper .sar-pdca[data-id="${first.id}"]`,'ของ admin ทับ');await pg.click(`.sar-box[data-box="${first.id}"] .sar-save`);await pg.waitForSelector('#modal-alert',{state:'visible'});await pg.click('#modal-alert button');await pg.waitForSelector('.sar-remote');
  await pg.click('.sar-remote-actions button:has-text("บันทึกทับ")');await pg.waitForFunction(id=>sar.pdca[id].text==='ของ admin ทับ',first.id);assert(C.getSarDoc(tA,fy).pdca[first.id].text==='ของ admin ทับ','force overwrite');
 
  // ---- 4. อัปเดตอัตโนมัติ: เครื่องอื่นบันทึก → หน้านี้เห็นเอง (ไม่ทับที่กำลังแก้)
@@ -135,9 +135,9 @@ async function open(b,user,opts={}){
  assert((await pg.inputValue(`#sar-paper .sar-pdca[data-id="${second}"]`))==='จากเครื่องอื่น','live text shown');
  await pg.fill(`#sar-paper .sar-pdca[data-id="${second}"]`,'ผมกำลังพิมพ์อยู่');
  C.saveSarPdca(tE,fy,second,'เครื่องอื่นแก้อีก',1);
- await pg.evaluate(()=>livePoll());await pg.waitForSelector(`#sar-box-${second} .sar-remote`,{timeout:8000});
+ await pg.evaluate(()=>livePoll());await pg.waitForSelector(`.sar-box[data-box="${second}"] .sar-remote`,{timeout:8000});
  assert(await pg.evaluate(id=>sar.drafts.get(id)==='ผมกำลังพิมพ์อยู่',second),'draft not overwritten by live update');
- await pg.click(`#sar-box-${second} .sar-remote-actions button:has-text("ใช้ข้อความล่าสุด")`);await pg.waitForTimeout(200);
+ await pg.click(`.sar-box[data-box="${second}"] .sar-remote-actions button:has-text("ใช้ข้อความล่าสุด")`);await pg.waitForTimeout(200);
 
  // ---- 5. ตัวกรอง / หมวด / ขนาดหน้า
  await pg.check('#sar-only-todo');await pg.waitForTimeout(200);
@@ -145,7 +145,7 @@ async function open(b,user,opts={}){
  assert(todo.n>0&&todo.withText===0,'todo filter: only empty PDCA '+JSON.stringify(todo));
  await pg.uncheck('#sar-only-todo');
  await pg.selectOption('#sar-pager-top .pager-size select','30');await pg.waitForTimeout(500);
- const n30=await pg.evaluate(()=>document.querySelectorAll('#sar-paper .sar-block,#sar-paper .pr-ref').length);assert(n30>10&&n30<=30,'30 per page '+n30);
+ const n30=await pg.evaluate(()=>document.querySelectorAll('#sar-paper .sar-block').length);assert(n30>10&&n30<=30,'30 per page '+n30);
  await pg.selectOption('#sar-pager-top .pager-size select','10');await pg.waitForTimeout(300);
  // ติ๊กหมวดออก: ทั้ง Part I → เอกสารเริ่มที่ Part II แต่เลขข้อรันต่อใหม่
  await pg.evaluate(()=>{const c=document.querySelector('#sar-cat-list .sar-part[data-part="Part I"]');c.checked=false;sarTogglePart(c)});await pg.waitForTimeout(300);
@@ -166,7 +166,7 @@ async function open(b,user,opts={}){
  const xml=execFileSync('unzip',['-p',file,'word/document.xml'],{maxBuffer:1<<29}).toString('utf8');
  const styles=execFileSync('unzip',['-p',file,'word/styles.xml']).toString('utf8');
  const media=execFileSync('unzip',['-Z1',file]).toString().split('\n').filter(x=>/^word\/media\//.test(x));
- const nCharts=await pg.evaluate(()=>{const t=sarTreeOf(sarChosen());const seen=new Set();let n=0;sarFlat(t).forEach(k=>{if(!seen.has(k.id)){seen.add(k.id);if(sarHasResults(k))n++}});return n});
+ const nCharts=await pg.evaluate(()=>{const t=sarTreeOf(sarChosen());let n=0;sarFlat(t).forEach(k=>{if(sarHasResults(k))n++});return n});
  const mid=await pg.evaluate(id=>({a:sarSaved(id).text}),first.id);
  const drawings=(xml.match(/<w:drawing>/g)||[]).length;console.log('docx',Math.round(fs.statSync(file).size/1024)+'KB','charts',drawings,'/',nCharts,'(media files',media.length+')','tables',(xml.match(/<w:tbl>/g)||[]).length);
  assert(/<w:pgSz w:w="16838" w:h="11906" w:orient="landscape"\/>/.test(xml),'A4 landscape');
@@ -175,7 +175,7 @@ async function open(b,user,opts={}){
  assert(xml.includes('ผอ. รอบสาม')===false,'only latest text');
  assert(!/[๐-๙]/.test(xml.replace(/<[^>]+>/g,'')),'arabic digits only');
  assert(styles.includes('TH SarabunPSK')&&xml.includes('w:szCs')&&xml.includes('w:bCs'),'TH SarabunPSK + complex-script size/bold');
- assert(drawings===nCharts&&nCharts>200&&media.length>100,'one chart per kpi with data (identical charts share a media file)');
+ assert(drawings===nCharts&&nCharts>200&&media.length>100,'one chart per placement with data (identical charts share a media file)');
  assert(/ตัวชี้วัด\/ผลลัพธ์ \(แสดงกราฟ\)/.test(xml)&&/การวิเคราะห์ผลลัพธ์ตามตัวชี้วัดที่สำคัญและ PDCA/.test(xml),'analysis table headers');
  assert(!/ผลลัพธ์รายเดือน|ผู้รับผิดชอบดูแล|ที่มาแหล่งข้อมูล/.test(xml),'no monthly/owner/source in docx');
  assert(!xml.includes('ตัวย่อยของตัวชี้วัด รพ. (SAR)'),'import note stripped');
@@ -184,7 +184,7 @@ async function open(b,user,opts={}){
  assert(det&&!xml.includes(det),'details text of a kpi is not in docx: '+det);
  // กดพร้อมที่ยังไม่บันทึก → ไม่ export
  await pg.fill(`#sar-paper .sar-pdca[data-id="${first.id}"]`,'ยังไม่บันทึก');await pg.click('#sar-export-btn');await pg.waitForSelector('#modal-alert',{state:'visible'});assert(/ยังไม่ได้บันทึก/.test(await pg.textContent('#modal-alert')));await pg.click('#modal-alert button');
- await pg.click(`#sar-box-${first.id} .sar-revert`);
+ await pg.click(`.sar-box[data-box="${first.id}"] .sar-revert`);
  assert(pg.errs.length===0,'page errors: '+pg.errs.join(' | '));
  await pg.context().close();
 
@@ -197,7 +197,7 @@ async function open(b,user,opts={}){
  const mine=await ph.evaluate(()=>({ta:document.querySelectorAll('#sar-paper .sar-pdca').length,ro:document.querySelectorAll('#sar-paper .sar-stamp').length-document.querySelectorAll('#sar-paper .sar-pdca').length,all:[...document.querySelectorAll('#sar-paper .sar-block')].length}));
  assert(mine.ta>0&&mine.ta===mine.all,'only-mine shows only editable: '+JSON.stringify(mine));
  const hid=await ph.evaluate(()=>document.querySelector('#sar-paper .sar-pdca').dataset.id);
- await ph.fill(`#sar-paper .sar-pdca[data-id="${hid}"]`,'หัวหน้าเขียน');await ph.click(`#sar-box-${hid} .sar-save`);await ph.waitForFunction(id=>sar.pdca[id]&&sar.pdca[id].by,hid);
+ await ph.fill(`#sar-paper .sar-pdca[data-id="${hid}"]`,'หัวหน้าเขียน');await ph.click(`.sar-box[data-box="${hid}"] .sar-save`);await ph.waitForFunction(id=>sar.pdca[id]&&sar.pdca[id].by,hid);
  assert(C.getSarDoc(tA,fy).pdca[hid].by===head[0]);
  await ph.screenshot({path:OUT+'/sar-3-head.png'});
  assert(ph.errs.length===0,'head page errors: '+ph.errs.join(' | '));

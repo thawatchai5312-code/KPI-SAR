@@ -237,6 +237,11 @@
     td { padding: 5px 6px; font-size: 13px; border-bottom: 1px solid #e2e8f0; text-align: center; border-right: 1px solid #f1f5f9; }
     tr:hover td { background: #f8fafc; }
     .cell-input { width: 100%; min-width: 46px; padding: 5px 3px !important; text-align: center; }
+    .dup-badge { background: #fef3c7 !important; color: #92400e !important; border-color: #fcd34d !important; }
+.clt-multi { flex: none; margin-left: 3px; font-size: 12px; }
+    .clt-multi-note.dup { background: #fef3c7; color: #92400e; }
+    .tbl-multi { display: block; margin-top: 3px; font-size: 11px; line-height: 1.35; color: #0e7490; font-weight: 600; white-space: normal; }
+    .tbl-multi.dup-badge { background: none !important; color: #b45309 !important; }
     .res-empty { color: #aab4c3; font-size: 0.85em; font-weight: 400; }
     .cell-input::placeholder { color: #b8c1ce; font-size: 0.85em; font-weight: 400; opacity: 1; }
     .res-legend { background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 8px; padding: 6px 10px; margin: 6px 0; font-size: 12px; line-height: 1.6; color: #475569; font-weight: 400; }
@@ -1745,7 +1750,7 @@
     // คิดจากตัวชี้วัดทั้งหมดของหมวด (ไม่ขึ้นกับตัวกรอง) เลขจึงคงที่ · คำนวณใหม่เมื่อข้อมูลเปลี่ยน (dbVersion)
     let dbVersion = 0, kpiNoCache = null, kpiNoDb = null, kpiNoVer = -1;
     function kpiNumber(kpi) {
-      if (listMode === 'table' && currentTab === 'home') { const v = tblNumbers().get(kpi.id); if (v !== undefined) return v; } // ตาราง: เลขรันต่อเนื่องทั้งรายการ เหมือนหน้าสรุปรายงาน
+      if (listMode === 'table' && currentTab === 'home') { const v = tblNumbers().get(kpi.part + '||' + kpi.category + '||' + kpi.id); if (v !== undefined) return v; } // ตาราง: เลขรันต่อเนื่องทั้งรายการ เหมือนหน้าสรุปรายงาน
       if (kpiNoDb !== globalDatabase || kpiNoVer !== dbVersion) {
         kpiNoCache = new Map(); kpiNoDb = globalDatabase; kpiNoVer = dbVersion;
         const blocks = {};
@@ -1771,11 +1776,10 @@
       const sig = [dbVersion, treeView, appliedFilters.mode, appliedFilters.scope].join('|');
       if (tblNoMap && tblNoDb === globalDatabase && tblNoSig === sig) return tblNoMap;
       const tree = {};
-      uniqueById(getOrderedKpis(false, treeView, false, true)).forEach(k => { ((tree[k.part] = tree[k.part] || {})[k.category] = tree[k.part][k.category] || []).push(k); }); // เลขข้อไม่เปลี่ยนตามคำค้น
-      const byKey = prNumbering(tree), byId = new Map();
-      uniqueById(getOrderedKpis(false, treeView, false, true)).forEach(k => byId.set(k.id, byKey.get(k.part + '||' + k.category + '||' + k.id)));
-      tblNoMap = byId; tblNoDb = globalDatabase; tblNoSig = sig;
-      return byId;
+      getOrderedKpis(false, treeView, false, true).forEach(k => { ((tree[k.part] = tree[k.part] || {})[k.category] = tree[k.part][k.category] || []).push(k); }); // เลขข้อไม่เปลี่ยนตามคำค้น
+      const byKey = prNumbering(tree); // กุญแจ part||หมวด||รหัส — ตัวที่อยู่หลายหมวดได้เลขต่อหมวด
+      tblNoMap = byKey; tblNoDb = globalDatabase; tblNoSig = sig;
+      return byKey;
     }
     // เลขหน้าชื่อ: ตัวหลัก "4." · ตัวย่อย "4.1"
     function kpiNoLabel(kpi) {
@@ -2712,22 +2716,23 @@
     }
 
     function goToKpi(id, key) {
-      const cards = () => uniqueById(getOrderedKpis()); // การ์ด: ตัวชี้วัดละใบเดียวในมุมมองนี้
+      const cards = () => getOrderedKpis(); // การ์ด/แถว: ต่อหมวด (ตัวที่อยู่หลายหมวดมีหลายใบ)
+      const find = l => { const i = key ? l.findIndex(k => k.key === key) : -1; return i !== -1 ? i : l.findIndex(k => k.id === id); }; // กดจากหมวดไหน ไปใบของหมวดนั้น
       let list = cards();
-      let idx = list.findIndex(k => k.id === id);
+      let idx = find(list);
       let relisted = false; // ล้างตัวกรอง/สลับมุมมอง → รายการ (การ์ด/ตาราง) ที่วาดอยู่เป็นของเดิม ต้องวาดใหม่
       if (idx === -1 && homeQuery) { // ถูกคำค้นซ่อนอยู่ → ล้างคำค้นก่อน (ยังไม่แตะตัวกรองอื่น)
         homeQuery = ''; homeQDraft = null; clearTimeout(homeQTimer);
         relisted = true;
         list = cards();
-        idx = list.findIndex(k => k.id === id);
+        idx = find(list);
       }
       if (idx === -1) {
         // ตัวที่ต้องการถูกตัวกรองซ่อนอยู่ (เช่น มาจากหน้าติดตามงาน) → ล้างตัวกรองก่อน
         resetTreeFilters();
         relisted = true;
         list = cards();
-        idx = list.findIndex(k => k.id === id);
+        idx = find(list);
       }
       if (idx === -1) {
         // ไม่อยู่ในมุมมองปัจจุบัน → สลับไปมุมมองแรกที่มีตัวนี้
@@ -2736,7 +2741,7 @@
         treeView = v;
         relisted = true;
         list = cards();
-        idx = list.findIndex(k => k.id === id);
+        idx = find(list);
         if (idx === -1) return;
       }
       const k = list[idx];
@@ -2786,7 +2791,7 @@
       const btn = (label, p, disabled, active) =>
         `<button class="page-btn${active ? ' active' : ''}" ${disabled ? 'disabled' : `onclick="goPage(${p})"`}>${label}</button>`;
       return `<div class="pager">
-        <span class="pager-info">แสดง ${from}–${to} จาก ${n} ตัวชี้วัด</span>
+        <span class="pager-info">แสดง ${from}–${to} จาก ${n} ${n === listUniqCount ? 'ตัวชี้วัด' : 'รายการ (' + listUniqCount + ' ตัวชี้วัด — ตัวที่อยู่หลายหมวดขึ้นทุกหมวด)'}</span>
         <span class="pager-buttons">
           ${btn('«', 1, currentPage === 1)}${btn('‹', currentPage - 1, currentPage === 1)}
           ${nums.map(p => p === '…' ? '<span class="page-gap">…</span>' : btn(p, p, false, p === currentPage)).join('')}
@@ -2857,11 +2862,29 @@
       });
     }
 
+    // ตัวที่อยู่หลายหมวดขึ้นการ์ด/แถวทุกหมวด: หมวดแรกในรายการ = ตัวหลัก หมวดถัดไปติดป้าย "ซ้ำ"
+    let listFirst = new Map(), listUniqCount = 0;
+    function buildListFirst(list) {
+      listFirst = new Map();
+      list.forEach(p => { if (!listFirst.has(p.id)) listFirst.set(p.id, p); });
+      listUniqCount = listFirst.size;
+    }
+    function listCountText(list) { return list.length === listUniqCount ? list.length + ' ตัวชี้วัด' : list.length + ' รายการ (' + listUniqCount + ' ตัวชี้วัด)'; }
+    function dupPlaceText(p) { const no = kpiNoLabel(p); return (no ? 'ข้อ ' + no + ' ' : '') + partLabel(p.part) + ' › ' + p.category; }
+    // ป้ายบนการ์ด/แถว: หมวดแรก = 🔗 อยู่ใน n หมวด · หมวดถัดไป = 🔁 ซ้ำ — ตัวเดียวกับ …
+    function multiTagHtml(kpi, cls) {
+      const cats = kpiCats(kpi), first = listFirst.get(kpi.id);
+      if (first && first.key !== kpi.key) return `<span class="${cls} dup-badge" title="ตัวชี้วัดเดียวกัน ข้อมูลเหมือนกันทุกหมวด แก้ที่หมวดไหนก็เปลี่ยนทุกหมวด">🔁 ซ้ำ — ตัวเดียวกับ ${esc(dupPlaceText(first))}</span>`;
+      if (cats.length > 1) return `<span class="${cls} multi-badge" title="ตัวชี้วัดเดียวกัน แก้ที่หมวดไหนก็เปลี่ยนทุกหมวด">🔗 อยู่ใน ${cats.length} หมวด: ${esc(cats.map(c => c.part + ' › ' + c.category).join(' · '))}</span>`;
+      return '';
+    }
+
     function renderList() {
       tblStop();
       const area = document.getElementById('kpi-list-area');
       const keepQ = homeSearchKeep();
-      const list = uniqueById(getOrderedKpis()); // ตัวชี้วัดละการ์ดใบเดียวในมุมมองที่เลือก
+      const list = getOrderedKpis(); // การ์ด/แถวต่อหมวด: ตัวที่อยู่หลายหมวดขึ้นเต็มทุกหมวด (ติดป้ายซ้ำที่หมวดถัดไป)
+      buildListFirst(list);
       if (globalDatabase.length === 0) {
         area.classList.remove('table-mode');
         area.innerHTML = '<div class="panel"><div class="empty-state">ไม่พบข้อมูลตัวชี้วัดในปีงบนี้</div></div>';
@@ -2878,7 +2901,7 @@
       currentPage = Math.min(Math.max(1, currentPage), totalPages(list.length));
       const pageItems = list.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
-      let html = `<div class="tbl-toolbar">${homeSearchHtml()}${homeQuery.trim() ? `<span class="hint" style="margin:0;">พบ ${list.length} ตัวชี้วัด ตามคำค้น</span>` : ''}</div>` + pagerHtml(list.length, true);
+      let html = `<div class="tbl-toolbar">${homeSearchHtml()}${homeQuery.trim() ? `<span class="hint" style="margin:0;">พบ ${listCountText(list)} ตามคำค้น</span>` : ''}</div>` + pagerHtml(list.length, true);
       let lastPart = null, lastCat = null;
       pageItems.forEach(kpi => {
         if (kpi.part !== lastPart || kpi.category !== lastCat) {
@@ -3068,7 +3091,7 @@
               <span class="st-badge ${stt.level}">${stt.icon} ${stt.label}</span>
               <span class="meta-badge">หมวดหมู่: ${esc(kpi.category)}</span>
               ${kpi.parentId && globalDatabase.some(x => x.id === kpi.parentId) ? `<span class="meta-badge parent-badge" data-pid="${esc(kpi.parentId)}" onclick="goToParent(this)" title="กดเพื่อไปที่ตัวชี้วัดแม่">↳ ตัวย่อยของ ${esc(parentLabel(kpi))}</span>` : ''}
-              ${kpiCats(kpi).length > 1 ? `<span class="meta-badge multi-badge" title="ตัวชี้วัดเดียวกัน แก้ที่หมวดไหนก็เปลี่ยนทุกหมวด">🔗 อยู่ใน ${kpiCats(kpi).length} หมวด: ${esc(kpiCats(kpi).map(c => c.part + ' › ' + c.category).join(' · '))}</span>` : ''}
+              ${multiTagHtml(kpi, 'meta-badge')}
               <span class="meta-badge" title="ทุกระดับ: ${esc((kpi.levels || [kpi.level]).join(', '))}">ระดับ: ${esc(kpi.level)}${(kpi.levels || []).length > 1 ? ' (+' + (kpi.levels.length - 1) + ')' : ''}</span>
               <span class="meta-badge">ปีงบ: ${selectedFy}${selectedFy === currentFy ? ' (ปัจจุบัน)' : ''}</span>
               ${kpi.frequency && kpi.frequency !== 'รายเดือน' ? `<span class="meta-badge">ความถี่: ${esc(kpi.frequency)}</span>` : ''}
@@ -3241,7 +3264,7 @@
     function updateTreeInView() {
       const first = currentCardKey();
       const firstCard = first ? document.getElementById('card-' + cssId(first)) : null;
-      document.querySelectorAll('.kpi-link-item').forEach(el => el.classList.toggle('in-view', !!firstCard && el.dataset.id === firstCard.dataset.id));
+      document.querySelectorAll('.kpi-link-item').forEach(el => el.classList.toggle('in-view', !!firstCard && el.dataset.key === firstCard.dataset.key));
       if (treeInitFocus && first && isWideScreen()) { // กางหมวดแรกให้ 1 ครั้ง หลังจากนั้นไม่ขยับเอง
         treeInitFocus = false;
         if (openParts.size === 0) focusTreeOn(first);
@@ -5532,21 +5555,16 @@
 
     // "ข้อ 3. Part II › 9 มาตรฐานสำคัญจำเป็น" ของแต่ละหมวดที่ตัวชี้วัดอยู่ในรายงาน
     function prPlaceText(p) { return 'ข้อ ' + p.no + ' ' + partLabel(p.part) + ' › ' + p.category; }
-    function prPlacesNote(pl) {
-      return `<div class="pr-note">🔗 ตัวชี้วัดเดียวกัน อยู่ในรายงานนี้ ${pl.length} หมวด: ${pl.map(p => esc(prPlaceText(p))).join(' · ')}</div>`;
-    }
-
-    // ตัวชี้วัดที่ขึ้นรายละเอียดไปแล้วในหมวดก่อนหน้า: บอกชื่อ/หมวด และชี้ไปหมวดที่มีรายละเอียด/ที่มา
-    function prRefBlock(k, pl) {
-      return `<div class="pr-block pr-ref"><div class="pr-kpi-title">${prNoLabel(k)} ${esc(k.name)}</div>
-        <div class="pr-meta">หมวด: ${esc(k.category)} · เป้าหมาย: <b>${esc(k.target) || '-'}</b> · ปีงบประมาณ ${selectedFy}</div>
-        <div class="pr-note">🔗 เป็นตัวชี้วัดเดียวกับ ${esc(prPlaceText(pl[0]))} — รายละเอียด/การวิเคราะห์ และที่มา/สูตรคำนวณ ดูที่หมวดนั้น<br>อยู่ในรายงานนี้ ${pl.length} หมวด: ${pl.map(p => esc(prPlaceText(p))).join(' · ')}</div></div>`;
+    function prPlacesNote(pl, k) {
+      const all = pl.map(p => esc(prPlaceText(p))).join(' · ');
+      if (k && (pl[0].part !== k.part || pl[0].category !== k.category)) return `<div class="pr-note">🔁 ซ้ำ — ตัวเดียวกับ ${esc(prPlaceText(pl[0]))} (ข้อมูลเหมือนกันทุกหมวด) · อยู่ในรายงานนี้ ${pl.length} หมวด: ${all}</div>`;
+      return `<div class="pr-note">🔗 ตัวชี้วัดเดียวกัน อยู่ในรายงานนี้ ${pl.length} หมวด: ${all}</div>`;
     }
 
     function prBlock(k, opts, landscape, pl) {
       const yl = [selectedFy - 4, selectedFy - 3, selectedFy - 2, selectedFy - 1, selectedFy];
       let h = `<div class="pr-block"><div class="pr-kpi-title">${prNoLabel(k)} ${esc(k.name)}</div>
-        <div class="pr-meta">หมวด: ${esc(k.category)}${k.parentId && globalDatabase.some(x => x.id === k.parentId) ? ' · ตัวย่อยของ ' + esc(prParentLabel(k)) : ''} · ระดับ: ${esc(k.level)} · เป้าหมาย: <b>${esc(k.target) || '-'}</b> · ปีงบประมาณ ${selectedFy}</div>${pl && pl.length > 1 ? prPlacesNote(pl) : ''}`;
+        <div class="pr-meta">หมวด: ${esc(k.category)}${k.parentId && globalDatabase.some(x => x.id === k.parentId) ? ' · ตัวย่อยของ ' + esc(prParentLabel(k)) : ''} · ระดับ: ${esc(k.level)} · เป้าหมาย: <b>${esc(k.target) || '-'}</b> · ปีงบประมาณ ${selectedFy}</div>${pl && pl.length > 1 ? prPlacesNote(pl, k) : ''}`;
       if (opts.chart) {
         h += `<div class="pr-chart">${generateSvgLineChart(k.years, k.target, yl)}</div>
           <table class="pr-table" style="font-size:${landscape ? '10.5pt' : '9pt'};"><thead><tr>${thMonthsNames.map(m => `<th>${m}</th>`).join('')}<th>สรุป</th></tr></thead>
@@ -5605,8 +5623,8 @@
           html += `<div class="pr-cat">${esc(cat)}</div>`;
           if (opts.table) html += prMainTables(kpis, landscape);
           if (perKpi) html += kpis.map(k => {
-            const pl = places.get(k.id), first = pl[0];
-            return first.part === part && first.category === cat ? prBlock(k, opts, landscape, pl) : prRefBlock(k, pl);
+            const pl = places.get(k.id);
+            return prBlock(k, opts, landscape, pl); // ตัวที่อยู่หลายหมวด: ขึ้นเต็มทุกหมวด หมวดถัดไปติดป้ายซ้ำ
           }).join('');
         });
       });
@@ -5857,29 +5875,37 @@
     }
 
     // ---------- สรุป PDCA: แก้ / บันทึก ----------
-    function sarBox(id) { return document.getElementById('sar-box-' + id); }
+    // ตัวชี้วัดเดียวกันที่อยู่หลายหมวดมีกล่อง PDCA หลายกล่อง (ข้อความเดียวกัน) — ทุกกล่องของรหัสนั้นต้องตรงกัน
+    function sarBoxes(id) { return Array.from(document.querySelectorAll('.sar-box')).filter(b => b.dataset.box === id); }
+    function sarBox(id) { // กล่องที่ผู้ใช้กำลังใช้ (ปุ่ม/ช่องที่โฟกัสอยู่) ไม่มี = กล่องแรก
+      const act = document.activeElement && document.activeElement.closest ? document.activeElement.closest('.sar-box') : null;
+      return act && act.dataset.box === id ? act : (sarBoxes(id)[0] || null);
+    }
     // แถบเตือน "คนอื่นเพิ่งบันทึก" ใส่ในกล่องที่เปิดอยู่ทันที (ไม่วาดหน้าใหม่ — ผู้ใช้อาจกำลังพิมพ์อยู่)
     function sarPlaceRemote(id) {
-      const box = sarBox(id), r = sar.remote.get(id);
-      if (!box || !r) return;
-      const old = box.querySelector('.sar-remote');
-      if (old) old.outerHTML = sarRemoteHtml(id, r); else box.insertAdjacentHTML('afterbegin', sarRemoteHtml(id, r));
+      const r = sar.remote.get(id);
+      if (!r) return;
+      sarBoxes(id).forEach(box => {
+        const old = box.querySelector('.sar-remote');
+        if (old) old.outerHTML = sarRemoteHtml(id, r); else box.insertAdjacentHTML('afterbegin', sarRemoteHtml(id, r));
+      });
     }
     function sarSyncBox(id) {
-      const box = sarBox(id);
-      if (!box) return;
       const dirty = sar.drafts.has(id);
-      box.classList.toggle('dirty', dirty);
-      box.querySelector('.sar-save').disabled = !dirty;
-      box.querySelector('.sar-revert').style.display = dirty ? '' : 'none';
+      sarBoxes(id).forEach(box => {
+        box.classList.toggle('dirty', dirty);
+        box.querySelector('.sar-save').disabled = !dirty;
+        box.querySelector('.sar-revert').style.display = dirty ? '' : 'none';
+      });
     }
     function sarInput(el) {
       const id = el.dataset.id;
       if (el.value === sarSaved(id).text) sar.drafts.delete(id); else sar.drafts.set(id, el.value);
+      sarBoxes(id).forEach(b => { const t = b.querySelector('.sar-pdca'); if (t && t !== el && t.value !== el.value) t.value = el.value; }); // กล่องอื่นของตัวเดียวกันตามทันที
       sarSyncBox(id);
     }
     function sarSetText(id, text) {
-      const ta = sarBox(id) && sarBox(id).querySelector('.sar-pdca');
+      const box = sarBox(id), ta = box && box.querySelector('.sar-pdca');
       if (!ta) return;
       ta.value = text; sarInput(ta); ta.focus();
     }
@@ -6001,7 +6027,7 @@
       const draft = sar.drafts.get(id), dirty = draft !== undefined, remote = sar.remote.get(id);
       const idAttr = `data-id="${esc(id)}"`;
       const small = (cls, fn, label, hide) => `<button type="button" class="btn btn-secondary btn-sm ${cls}" ${idAttr} onclick="${fn}(this.dataset.id)"${hide ? ' style="display:none"' : ''}>${label}</button>`;
-      return `<div class="sar-box${dirty ? ' dirty' : ''}" id="sar-box-${esc(id)}">${remote ? sarRemoteHtml(id, remote) : ''}
+      return `<div class="sar-box${dirty ? ' dirty' : ''}" data-box="${esc(id)}">${remote ? sarRemoteHtml(id, remote) : ''}
         <textarea class="editable-input sar-pdca" rows="8" ${idAttr} oninput="sarInput(this)" placeholder="วิเคราะห์ผลลัพธ์และ PDCA ของตัวชี้วัดนี้ — กด ➕ ใส่หัวข้อ เพื่อเริ่มตามหัวข้อ PDCA">${esc(dirty ? draft : s.text)}</textarea>
         <div class="sar-actions">
           <button type="button" class="btn btn-primary btn-sm sar-save" ${idAttr} onclick="sarSave(this.dataset.id)"${dirty ? '' : ' disabled'}>💾 บันทึก</button>
@@ -6015,15 +6041,10 @@
     }
 
     function sarBlockHtml(k, pl, yl) {
-      const first = pl[0];
-      if (first.part !== k.part || first.category !== k.category) {
-        return `<div class="pr-block pr-ref"><div class="pr-kpi-title">${prNoLabel(k)} ${esc(k.name)}</div>
-          <div class="pr-note">🔗 เป็นตัวชี้วัดเดียวกับ ${esc(prPlaceText(first))} — การวิเคราะห์และ PDCA ดูที่หมวดนั้น</div></div>`;
-      }
       return `<div class="pr-block sar-block"><div class="sar-grid">
         <div class="sar-left"><div class="pr-kpi-title">${prNoLabel(k)} ${esc(k.name)}</div>
           <div class="pr-meta">เป้าหมาย: <b>${esc(k.target) || '-'}</b> · ปีงบประมาณ ${selectedFy}</div>
-          ${pl.length > 1 ? prPlacesNote(pl) : ''}
+          ${pl.length > 1 ? prPlacesNote(pl, k) : ''}
           ${sarHasResults(k) ? `<div class="pr-chart">${generateSvgLineChart(k.years, k.target, yl)}</div>` : '<div class="pr-text">ยังไม่มีข้อมูลผลลัพธ์</div>'}</div>
         <div class="sar-right"><div class="pr-label">รายละเอียด/การวิเคราะห์ตัวชี้วัด <span class="sar-noexport">(ไม่แสดงในเอกสารที่ Export — สำหรับให้หัวหน้าดูข้อมูล)</span></div><div class="pr-text">${esc(sarDetails(k)) || '-'}</div>
           <div class="pr-label">📎 เอกสารแนบ <span class="sar-noexport">(ไม่แสดงในเอกสารที่ Export)</span></div><div class="doc-links" data-links-ro="${esc(k.id)}">${linkRoBodyHtml(k.id)}</div>
@@ -6213,6 +6234,7 @@
       const wB = [6900, 8498];
       const imgW = 440, imgH = Math.round(440 * 230 / 600);
       let done = 0;
+      const pngCache = new Map();
       const total = uniqueById(chosen).filter(k => sarHasResults(k)).length;
       const analysisRows = async (kpis, part, cat, pvCat) => {
         const rows = [new D.TableRow({ tableHeader: true, cantSplit: true, children: [
@@ -6221,21 +6243,21 @@
         for (const k of kpis) {
           const pl = places.get(k.id), first = pl[0];
           const title = para(prNoLabel(k) + ' ' + k.name, { bold: true, size: 15, color: '14532D', after: 40 });
-          if (first.part !== part || first.category !== cat) {
-            rows.push(new D.TableRow({ cantSplit: true, children: [cell([title], wB[0]), cell([para('ดูตัวชี้วัดเดียวกันที่ ' + prPlaceText(first), { size: 14, italics: true, color: '1E3A8A', after: 0 })], wB[1])] }));
-            if (pvCat) pvCat.rows.push({ title: prNoLabel(k) + ' ' + k.name, ref: 'ดูตัวชี้วัดเดียวกันที่ ' + prPlaceText(first) });
-            continue;
-          }
+          const placesNote = pl.length > 1 ? (first.part !== part || first.category !== cat ? 'ซ้ำ — ตัวเดียวกับ ' + prPlaceText(first) + ' (ข้อมูลเหมือนกัน) · ' : '') + 'ตัวชี้วัดเดียวกันอยู่ ' + pl.length + ' หมวด: ' + pl.map(p => prPlaceText(p)).join(' · ') : ''; // ตัวที่อยู่หลายหมวดขึ้นเต็มทุกหมวด
           const left = [title, para('เป้าหมาย: ' + (k.target || '-') + ' · ปีงบประมาณ ' + selectedFy, { size: 13, color: '475569', after: 60 })];
-          if (pl.length > 1) left.push(para('ตัวชี้วัดเดียวกันอยู่ ' + pl.length + ' หมวด: ' + pl.map(p => prPlaceText(p)).join(' · '), { size: 12, italics: true, color: '1E3A8A', after: 60 }));
+          if (placesNote) left.push(para(placesNote, { size: 12, italics: true, color: '1E3A8A', after: 60 }));
           if (sarHasResults(k)) {
-            if (++done % 5 === 0) { docBusyText('กำลังสร้างกราฟ ' + done + ' / ' + total + '…'); await docYield(); }
-            left.push(new D.Paragraph({ alignment: D.AlignmentType.CENTER, children: [new D.ImageRun({ type: 'png', data: await sarChartPng(k, yl), transformation: { width: imgW, height: imgH },
+            let png = pngCache.get(k.id); // ตัวเดียวกันที่ซ้ำหลายหมวด สร้างกราฟครั้งเดียว
+            if (!png) {
+              if (++done % 5 === 0) { docBusyText('กำลังสร้างกราฟ ' + done + ' / ' + total + '…'); await docYield(); }
+              png = await sarChartPng(k, yl); pngCache.set(k.id, png);
+            }
+            left.push(new D.Paragraph({ alignment: D.AlignmentType.CENTER, children: [new D.ImageRun({ type: 'png', data: png, transformation: { width: imgW, height: imgH },
               altText: { name: 'chart', title: k.name, description: 'กราฟผลลัพธ์ 5 ปี ' + k.name } })] }));
           } else left.push(para('ยังไม่มีข้อมูลผลลัพธ์', { size: 14, italics: true, color: '64748B' }));
           const right = lines(sarSaved(k.id).text, { size: 14 }); // เฉพาะข้อความวิเคราะห์/PDCA ที่กรอก (รายละเอียด/การวิเคราะห์เดิมไม่ลงเอกสาร)
           if (pvCat) pvCat.rows.push({ title: prNoLabel(k) + ' ' + k.name, target: 'เป้าหมาย: ' + (k.target || '-') + ' · ปีงบประมาณ ' + selectedFy,
-            places: pl.length > 1 ? 'ตัวชี้วัดเดียวกันอยู่ ' + pl.length + ' หมวด: ' + pl.map(p => prPlaceText(p)).join(' · ') : '',
+            places: placesNote,
             svg: sarHasResults(k) ? generateSvgLineChart(k.years, k.target, yl) : '', text: String(sarSaved(k.id).text || '').trim() });
           rows.push(new D.TableRow({ cantSplit: true, children: [cell(left, wB[0]), cell(right, wB[1])] })); // ไม่ตัดแถวข้ามหน้า (แถวสูงเกิน 1 หน้า Word ตัดเอง)
         }
@@ -6361,6 +6383,18 @@
     const CLT_PM_PROCS = ['Access & Entry', 'Assessment', 'Diagnosis', 'Plan of care', 'Care', 'Discharge planning', 'General care', 'Care of high risk', 'Nutrition', 'Rehabilitation', 'Information & Empowerment', 'Continuity of care', 'Health promotion'];
     const CLT_DIM_PROC = { A: 'Access & Entry', B: 'Continuity of care', C: 'Plan of care', D: 'Care', E: 'Care', F: 'Care of high risk', G: 'Information & Empowerment', H: 'Health promotion' };
     function cltIds(v) { return String(v || '').split(',').map(x => x.trim()).filter(Boolean); }
+    // ตัวชี้วัดที่อยู่หลายกลุ่มโรค: กลุ่มแรก = 🔗 อยู่ใน n กลุ่มโรค · กลุ่มถัดไป = 🔁 ซ้ำ (ข้อความวิเคราะห์ยังแยกต่อกลุ่มโรค) — เฉพาะบนจอ
+    function cltMultiInfo(k, g) {
+      if (!k || !k.groups || k.groups.length < 2) return null;
+      const order = cltGroups(), at = x => { const i = order.indexOf(x); return i === -1 ? 1e9 : i; };
+      const sorted = k.groups.slice().sort((a, b) => at(a) - at(b));
+      return { dup: sorted[0] !== g, first: sorted[0], all: sorted };
+    }
+    function cltMultiText(k, g) {
+      const m = cltMultiInfo(k, g);
+      if (!m) return '';
+      return m.dup ? '🔁 ซ้ำ — ตัวเดียวกับในกลุ่ม ' + m.first + ' (ข้อความวิเคราะห์แยกต่อกลุ่มโรค)' : '🔗 อยู่ใน ' + m.all.length + ' กลุ่มโรค: ' + m.all.join(' · ');
+    }
     function cltKpiById(id) { return clt.kpis.find(k => k.id === id) || null; }
     function cltRowWidth(key) { return /\|driver$/.test(key) ? 8 : /\|pm$/.test(key) ? 5 : (cltSpecOf(key).cols || []).length; }
     function cltNormRows(key, rows) {
@@ -6481,7 +6515,7 @@
             if (s.type === 'results') {
               cltKpisOf(g).forEach(k => {
                 const key = 'D|' + g + '|R|' + k.id, on = !ex.has(g + '|' + k.id);
-                h += `<div class="clt-kpi-row${on ? '' : ' clt-off'}"><input type="checkbox" data-g="${esc(g)}" data-k="${esc(k.id)}" ${on ? 'checked' : ''}${canPick ? '' : ' disabled'} onchange="cltPickKpi(this.dataset.g, this.dataset.k, this.checked)" title="${canPick ? 'ติ๊ก = ใส่ตัวชี้วัดนี้ในเอกสาร' : 'เลือกได้เฉพาะผู้ดูแลระบบ (admin)'}">${link(key, '📈 ' + esc(prShort(k.name, 48)), mark(key))}${on ? '' : '<span class="clt-offtag">ไม่ใส่ในเอกสาร</span>'}</div>`;
+                h += `<div class="clt-kpi-row${on ? '' : ' clt-off'}"><input type="checkbox" data-g="${esc(g)}" data-k="${esc(k.id)}" ${on ? 'checked' : ''}${canPick ? '' : ' disabled'} onchange="cltPickKpi(this.dataset.g, this.dataset.k, this.checked)" title="${canPick ? 'ติ๊ก = ใส่ตัวชี้วัดนี้ในเอกสาร' : 'เลือกได้เฉพาะผู้ดูแลระบบ (admin)'}">${link(key, '📈 ' + esc(prShort(k.name, 48)), mark(key))}${on ? '' : '<span class="clt-offtag">ไม่ใส่ในเอกสาร</span>'}${cltMultiText(k, g) ? `<span class="clt-multi" title="${esc(cltMultiText(k, g))}">${cltMultiInfo(k, g).dup ? '🔁' : '🔗'}</span>` : ''}</div>`;
               });
             } else { const key = 'D|' + g + '|' + s.f; h += link(key, esc(s.title), s.type === 'flow' ? '' : mark(key)); }
           });
@@ -6766,7 +6800,8 @@
       const yl = sarYearLabels(), key = s.key;
       const val = clt.draft && clt.draft.key === key ? clt.draft.text : cltItem(key).text;
       const dim = cltDimOf(k), fixed = /^[A-H]$/.test(cltItem('DIM|' + k.id).text);
-      return `<div class="pr-meta">เป้าหมาย: <b>${esc(k.target) || '-'}</b> · ผลทั้งปี ${yl.map((y, i) => y + ': <b>' + (prNumH(k.years[i]) || 'ว่าง') + '</b>').join(' · ')}</div>
+      const mt = cltMultiText(k, s.group);
+      return `${mt ? `<div class="pr-note clt-multi-note${cltMultiInfo(k, s.group).dup ? ' dup' : ''}">${esc(mt)}</div>` : ''}<div class="pr-meta">เป้าหมาย: <b>${esc(k.target) || '-'}</b> · ผลทั้งปี ${yl.map((y, i) => y + ': <b>' + (prNumH(k.years[i]) || 'ว่าง') + '</b>').join(' · ')}</div>
         ${k.years.some(v => v !== null) ? `<div class="pr-chart" style="max-width:640px;">${generateSvgLineChart(k.years, k.target, yl)}</div>` : ''}
         <div class="form-group"><label>📎 เอกสารแนบ <span class="sar-noexport">(ไม่แสดงในไฟล์ที่ Export)</span></label><div class="doc-links" data-links-ro="${esc(k.id)}">${linkRoBodyHtml(k.id)}</div></div>
         <div class="form-group"><label>มิติคุณภาพ ${fixed ? '' : '(ระบบเดาจากชื่อ — เลือกเพื่อกำหนดเอง)'}</label>
@@ -7760,7 +7795,7 @@
       return [k.rev, k.canEditResults, k.canEditDetails, k.isOwner, k.inDept, k.mine, JSON.stringify(k.cats), (k.lockedYears || []).join()].join('|');
     }
     function liveListSig() {
-      return globalDatabase.length ? uniqueById(getOrderedKpis()).map(k => k.key).join('\n') : '';
+      return globalDatabase.length ? getOrderedKpis().map(k => k.key).join('\n') : '';
     }
 
     function liveApply(res) {
@@ -8033,6 +8068,8 @@
       const c = {};
       c.no = { h: esc(kpiNoLabel(kpi)) };
       c.name = canDet ? { h: `<textarea id="ed-name" class="editable-input tbl-in" rows="3">${esc(kpi.name)}</textarea>` } : Object.assign({ h: clamp(kpi.name, '-', 'tbl-name' + (isSub ? ' sub' : '')) }, lockD_);
+      const mTag = multiTagHtml(kpi, 'tbl-multi');
+      if (mTag) c.name.h += mTag;
       c.st = { h: `<span class="st-badge ${stt.level}" style="margin:0;" title="${esc(stt.reasons.join(' · '))}">${stt.icon} ${stt.label}</span>` };
       c.tg = canDet ? { h: `<input type="text" id="ed-target" class="editable-input tbl-in" value="${esc(kpi.target)}">` } : Object.assign({ h: esc(kpi.target) || '-' }, lockD_);
       kpi.years.forEach((v, i) => { c['y' + i] = canRes ? { h: yearInputHtml(kpi, i, v), num0: 1 } : Object.assign({ h: resShow(v) }, lockR_); });
@@ -8160,7 +8197,7 @@
       tblLast = { part: null, cat: null };
       const chips = TBL_GROUPS.map(g => `<button type="button" class="tbl-chip${tblHide.has(g[0]) ? '' : ' on'}" data-g="${g[0]}" onclick="tblToggleGroup('${g[0]}')" title="แสดง/ซ่อนคอลัมน์กลุ่ม ${g[1]}">${g[1]}</button>`).join('');
       const hideCls = TBL_GROUPS.filter(g => tblHide.has(g[0])).map(g => 'hide-' + g[0]).join(' ');
-      area.innerHTML = `<div class="tbl-toolbar">${homeSearchHtml()}<span>📋 ตาราง · แสดง ${list.length} ตัวชี้วัด${homeQuery.trim() ? ' <span class="hint" style="margin:0;">ตามคำค้น</span>' : ''} <span class="hint tbl-hint" style="margin:0;">(ชื่อตัวชี้วัดตรึงไว้ทางซ้าย · กดข้อความยาวเพื่อดู/ย่อ)</span></span><span class="tbl-groups"><span class="hint" style="margin:0;">คอลัมน์:</span>${chips}</span></div>${list.some(k => k.canEditResults) ? resLegendHtml().replace('class="res-legend"', 'class="res-legend tbl-legend"') : ''}
+      area.innerHTML = `<div class="tbl-toolbar">${homeSearchHtml()}<span>📋 ตาราง · แสดง ${listCountText(list)}${homeQuery.trim() ? ' <span class="hint" style="margin:0;">ตามคำค้น</span>' : ''} <span class="hint tbl-hint" style="margin:0;">(ชื่อตัวชี้วัดตรึงไว้ทางซ้าย · กดข้อความยาวเพื่อดู/ย่อ)</span></span><span class="tbl-groups"><span class="hint" style="margin:0;">คอลัมน์:</span>${chips}</span></div>${list.some(k => k.canEditResults) ? resLegendHtml().replace('class="res-legend"', 'class="res-legend tbl-legend"') : ''}
         <div class="tbl-wrap" id="tbl-wrap"><table class="kpi-table ${hideCls}" id="kpi-table"><colgroup>${TBL_COLS.map(c => `<col${c.g ? ` data-g="${c.g}"` : ''} style="width:${c.w}px">`).join('')}</colgroup><thead>${tblHeadHtml()}</thead><tbody></tbody></table></div>`;
       area.classList.add('table-mode');
       area.classList.remove('charts-hidden');

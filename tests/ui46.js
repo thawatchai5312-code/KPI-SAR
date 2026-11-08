@@ -16,25 +16,25 @@ const tA=C.createSession_(ad[0],ad[1]);
  await pg.waitForSelector('#kpi-table');
 
  // ---- 1. home table: first batch quickly, the rest in background, nothing lost
- const first=await pg.evaluate(()=>({rows:document.querySelectorAll('tr.kpi-row').length,pending:tblPending.length,total:uniqueById(getOrderedKpis()).length}));
+ const first=await pg.evaluate(()=>({rows:document.querySelectorAll('tr.kpi-row').length,pending:tblPending.length,total:getOrderedKpis().length}));
  console.log('first batch',JSON.stringify(first));
  await pg.waitForFunction(()=>tblPending.length===0,null,{timeout:20000});
- const done=await pg.evaluate(()=>({rows:document.querySelectorAll('tr.kpi-row').length,total:uniqueById(getOrderedKpis()).length,ids:new Set([...document.querySelectorAll('tr.kpi-row')].map(r=>r.dataset.key)).size,cats:document.querySelectorAll('tr.tbl-cat').length}));
+ const done=await pg.evaluate(()=>({rows:document.querySelectorAll('tr.kpi-row').length,total:getOrderedKpis().length,ids:new Set([...document.querySelectorAll('tr.kpi-row')].map(r=>r.dataset.key)).size,cats:document.querySelectorAll('tr.tbl-cat').length}));
  assert(done.rows===done.total&&done.ids===done.total,JSON.stringify(done));
  // chunking really defers rows (unit view = 666 rows)
  await pg.evaluate(()=>{setScopeFilter('all');setTreeView('unit')});
- const ch=await pg.evaluate(()=>{renderList();return {rows:document.querySelectorAll('tr.kpi-row').length,pending:tblPending.length,total:uniqueById(getOrderedKpis()).length}});
+ const ch=await pg.evaluate(()=>{renderList();return {rows:document.querySelectorAll('tr.kpi-row').length,pending:tblPending.length,total:getOrderedKpis().length}});
  assert(ch.rows<=60&&ch.pending===ch.total-ch.rows&&ch.pending>400,'first batch only: '+JSON.stringify(ch));console.log('unit first batch',ch.rows,'pending',ch.pending);
  await pg.waitForFunction(()=>tblPending.length===0,null,{timeout:20000});
  // ---- 2. continuous numbering in table + left tree (hosp: main only; unit: with subs)
  for(const view of ['hosp','unit']){
    await pg.evaluate(v=>{setScopeFilter('all');setTreeView(v)},view);await pg.waitForFunction(()=>tblPending.length===0,null,{timeout:20000});await pg.waitForTimeout(300);
-   const nums=await pg.evaluate(()=>[...document.querySelectorAll('tr.kpi-row')].map(r=>({id:r.dataset.id,no:r.querySelector('.c-no').textContent.trim()})));
+   const nums=await pg.evaluate(()=>[...document.querySelectorAll('tr.kpi-row')].map(r=>({id:r.dataset.key,no:r.querySelector('.c-no').textContent.trim()})));
    let main=0;nums.forEach((n,i)=>{const p=n.no.replace(/\.$/,'').split('.');if(p.length===1){assert.strictEqual(+p[0],++main,view+' main seq at '+i+' '+n.no)}else assert(nums.slice(0,i).some(x=>x.no.replace(/\.$/,'')===p.slice(0,-1).join('.')),view+' sub '+n.no+' has parent before')});
    assert(main>30&&new Set(nums.map(n=>n.no)).size===nums.length,view+' unique numbers');
    // left tree shows the same number as the table for the same KPI
    await pg.evaluate(()=>{document.querySelectorAll('.accordion-part,.accordion-cat').forEach(e=>e.classList.add('open'));openParts.clear();openCats.clear();getOrderedKpis().forEach(p=>{openParts.add(p.part);openCats.add(p.part+'||'+p.category)});renderTree()});
-   const tree=await pg.evaluate(()=>[...document.querySelectorAll('.kpi-link-item')].slice(0,400).map(el=>({id:el.dataset.id,t:el.textContent.trim().split(' ')[0]})));
+   const tree=await pg.evaluate(()=>[...document.querySelectorAll('.kpi-link-item')].slice(0,400).map(el=>({id:el.dataset.key,t:el.textContent.trim().split(' ')[0]})));
    const m=new Map(nums.map(n=>[n.id,n.no.replace(/\.$/,'')]));let checked=0;
    tree.forEach(t=>{if(m.has(t.id)){assert.strictEqual(t.t.replace(/\.$/,'').replace(/[^\d.]/g,''),m.get(t.id),view+' tree vs table '+t.t+' '+m.get(t.id));checked++}});
    assert(checked>20,view+' checked '+checked);

@@ -42,14 +42,14 @@ async function open(b,user){
  await pg.click('#sar-controls .doc-carry-btn');await pg.waitForSelector('#modal-confirm',{state:'visible'});assert(/ปีงบ 2570/.test(await pg.textContent('#confirm-message')));
  await pg.click('#modal-confirm .btn-danger');await pg.waitForSelector('#modal-alert',{state:'visible'});
  const msg=await pg.textContent('#modal-alert');assert(/SAR 1 ตัวชี้วัด/.test(msg)&&/CLT 3 หัวข้อ/.test(msg),msg);await pg.click('#modal-alert button');
- await pg.waitForSelector('#sar-box-'+id+' .doc-draft');
- assert(/ร่างจากปีงบ 2569/.test(await pg.textContent('#sar-box-'+id+' .doc-draft')));
- assert.strictEqual(await pg.inputValue('#sar-box-'+id+' .sar-pdca'),'ปัญหาที่พบ ปีก่อน');
+ await pg.waitForSelector('.sar-box[data-box="'+id+'"] .doc-draft');
+ assert(/ร่างจากปีงบ 2569/.test(await pg.textContent('.sar-box[data-box="'+id+'"] .doc-draft')));
+ assert.strictEqual(await pg.inputValue('.sar-box[data-box="'+id+'"] .sar-pdca'),'ปัญหาที่พบ ปีก่อน');
  const prog1=await pg.evaluate(()=>document.getElementById('sar-progress').textContent.replace(/\s+/g,' '));assert.strictEqual(prog1,prog0,'draft not counted as done');
  await pg.screenshot({path:OUT+'/ui51-sar-draft.png'});
  // ปุ่มยืนยัน
- await pg.click('#sar-box-'+id+' .sar-confirm');await pg.waitForFunction(i=>!document.querySelector('#sar-box-'+i+' .doc-draft'),id);
- assert(new RegExp('โดย '+ad[0]).test(await pg.textContent('#sar-box-'+id+' .sar-stamp')));
+ await pg.click('.sar-box[data-box="'+id+'"] .sar-confirm');await pg.waitForFunction(i=>!document.querySelector('.sar-box[data-box="'+i+'"] .doc-draft'),id);
+ assert(new RegExp('โดย '+ad[0]).test(await pg.textContent('.sar-box[data-box="'+id+'"] .sar-stamp')));
  const prog2=await pg.evaluate(()=>document.getElementById('sar-progress').textContent.replace(/\s+/g,' '));assert.notStrictEqual(prog2,prog0,'counted after confirm: '+prog0+' → '+prog2);
  // ---- CLT
  await pg.click('#doc-tabs .doc-tab[data-doc=clt]');await pg.waitForSelector('#clt-tree .clt-link');

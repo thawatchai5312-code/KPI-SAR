@@ -19,7 +19,7 @@ const U=h.sheets.Users.d; const r=U.find(x=>x[0]==='Admin'); r[1]=C.hashPassword
    const blocks=[...div.querySelectorAll('.pr-block')].filter(bk=>bk.querySelector('.pr-kpi-title').textContent.includes(multi.name));
    const unique=uniqueById(rptChosen()).length, pls=rptChosen().length;
    return {name:multi.name,cats:kpiCats(multi).filter(c=>isCorePart(c.part)).map(c=>c.part+' › '+c.category),rows:rows.length,full:blocks.filter(x=>!x.classList.contains('pr-ref')).length,ref:blocks.filter(x=>x.classList.contains('pr-ref')).length,
-     note:(blocks[0].querySelector('.pr-note')||{}).textContent,refNote:(blocks.find(x=>x.classList.contains('pr-ref'))||{querySelector:()=>({})}).querySelector('.pr-note').textContent,
+     note:(blocks[0].querySelector('.pr-note')||{}).textContent,dupNote:(blocks[1].querySelector('.pr-note')||{}).textContent,
      detailInRef:blocks.filter(x=>x.classList.contains('pr-ref')).some(x=>x.querySelector('.pr-label')),
      info:div.querySelector('.pr-info').textContent,unique,pls,
      allBlocks:div.querySelectorAll('.pr-block').length,fullBlocks:div.querySelectorAll('.pr-block:not(.pr-ref)').length};
@@ -27,13 +27,13 @@ const U=h.sheets.Users.d; const r=U.find(x=>x[0]==='Admin'); r[1]=C.hashPassword
  console.log(JSON.stringify(res,null,1));
  const n=res.cats.length;
  assert(res.rows===2*n,'results rows (annual+monthly) per category');
- assert(res.full===1&&res.ref===n-1&&!res.detailInRef);
- assert(res.note.includes(n+' หมวด')&&res.refNote.includes('เป็นตัวชี้วัดเดียวกับ'));
- assert(res.fullBlocks===res.unique&&res.allBlocks===res.pls&&res.info.includes(res.unique+' ตัวชี้วัด'));
+ assert(res.full===n&&res.ref===0&&res.allBlocks===res.pls,'ทุกหมวดขึ้นเต็ม');
+ assert(res.note.includes(n+' หมวด')&&/ซ้ำ — ตัวเดียวกับ/.test(res.dupNote),'ป้ายซ้ำที่หมวดถัดไป');
+ assert(res.fullBlocks===res.pls&&res.info.includes(res.unique+' ตัวชี้วัด'));
  // preview on screen shows the note too
  await pg.evaluate(()=>{rpt.size=50;rpt.page=1;rptRenderPreview()});await pg.waitForTimeout(600);
  const prev=await pg.evaluate(()=>document.querySelectorAll('#rp-paper .pr-note').length); console.log('preview notes',prev); assert(prev>0);
- await pg.evaluate(()=>{const p=document.getElementById('rp-paper');p.innerHTML=buildPrintHtml(rpt.opts,true);const el=p.querySelector('.pr-block.pr-ref');const pv=[...p.querySelectorAll('.pr-block:not(.pr-ref) .pr-note')][0];window.__y=[pv.getBoundingClientRect().top+scrollY,el.getBoundingClientRect().top+scrollY];}); await pg.waitForTimeout(300);
+ await pg.evaluate(()=>{const p=document.getElementById('rp-paper');p.innerHTML=buildPrintHtml(rpt.opts,true);const el=[...p.querySelectorAll('.pr-block')].find(b=>/ซ้ำ — ตัวเดียวกับ/.test(b.textContent));const pv=[...p.querySelectorAll('.pr-block .pr-note')][0];window.__y=[pv.getBoundingClientRect().top+scrollY,el.getBoundingClientRect().top+scrollY];}); await pg.waitForTimeout(300);
  const ys=await pg.evaluate(()=>window.__y); for(const [i,y] of ys.entries()){await pg.evaluate(y=>window.scrollTo(0,y-200),y);await pg.waitForTimeout(200);await pg.screenshot({path:'ui38-'+i+'.png'});}
  assert(errs.length===0,errs.join()); await b.close(); console.log('ALL OK');
 })().catch(e=>{console.error(e);process.exit(1)});
