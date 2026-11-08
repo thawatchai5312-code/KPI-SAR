@@ -1,20 +1,20 @@
 /**
  * ⤵ ดึงข้อมูลจากปีงบก่อนหน้า (ต่อตัวชี้วัด — ปุ่มบนการ์ด/แถวตาราง): จับคู่กับชีตปีงบ (ปีนี้ − 1) ด้วยรหัสตัวชี้วัดเท่านั้น
- *  - ผลทั้งปีย้อนหลัง 4 ปี (ช่อง G–J): เติมเฉพาะช่องที่ว่าง ← ผลทั้งปีของปีก่อน · ผลของปีที่แล้ว (ปีงบ − 1) ถ้าปีก่อนยังว่างแต่มีผลรายเดือนครบ 12 เดือน = คำนวณตามวิธีสรุปของตัวชี้วัด
- *    สิทธิ์ = แก้ผลได้ (editResults) · ปีที่มีชีตต้นทางอยู่ (lockedYears) แก้ได้เฉพาะ admin, ผอ., QMR เหมือนการแก้ปกติ
+ *  - จับคู่ด้วยรหัส · รหัสไม่เจอ (ตัวชี้วัดที่เพิ่ม/นำเข้าใหม่ในปีนี้) = ชื่อตรงกันเป๊ะ (`pimpKey_`) และมีตัวเดียวในปีก่อน (ตัวนั้นต้องไม่มีรหัสอยู่ในปีนี้) — หน้าตัวอย่างบอกว่าจับคู่ด้วยชื่อ
+ *  - ผลทั้งปีย้อนหลัง 4 ปี (ช่อง G–J): เติมเฉพาะช่องที่ว่าง ← ผลทั้งปีของปีก่อน · ผลของปีที่แล้ว (ปีงบ − 1) ถ้าปีก่อนยังว่าง = คำนวณจากผลรายเดือนของปีก่อนตามวิธีสรุป (เฉพาะเดือนที่มีตัวเลข)
+ *    สิทธิ์ = แก้ผลได้ (editResults) · ปีที่ล็อก (มีชีตต้นทาง) ก็ดึงได้ เพราะค่าที่ดึงมาจากชีตปีนั้นเอง (การพิมพ์แก้เองในช่องปีที่ล็อกยังจำกัดเฉพาะ admin/ผอ./QMR)
  *  - รายละเอียด/การวิเคราะห์ (คอลัมน์ X): เติมเมื่อปีนี้ว่าง · ไม่ลงเวลา "อัปเดตการวิเคราะห์" (ผู้รับผิดชอบต้องทบทวนและบันทึกเอง)
  *  - ลิงก์เอกสารแนบ (KPI_Links): คัดลอกลิงก์ที่ผูกกับตัวชี้วัดนี้ในปีก่อนมาผูกปีนี้ (ลิงก์ URL เดียวกันที่มีแล้ว = ผูกเพิ่มรหัสนี้/ไม่ซ้ำ) · สิทธิ์ = แก้รายละเอียดได้ (editDetails)
  *  - ไม่ดึง: ชื่อ เป้าหมาย หน่วยงาน ผู้รับผิดชอบ ที่มา/สูตร ผลรายเดือน
  *  - pullPrevPreview = ดูก่อน (ไม่เขียน) · pullPrevCommit = เขียนจริงใต้ script lock + ตรวจรุ่น (baseRev) + bumpDataVersion_
  */
 
-/** ค่าสรุปผลจากผลรายเดือนครบ 12 เดือน (มีเลขอย่างน้อย 1 ค่า) ตามวิธีสรุป — ไม่ครบ/ไม่มีเลข = null */
+/** ค่าสรุปผลจากผลรายเดือนตามวิธีสรุป — ใช้เฉพาะเดือนที่มีตัวเลข (ว่าง / "-" ไม่มีเคส / ข้อความ ไม่นับ) · ไม่มีตัวเลขเลย = null */
 function pullPrevMonthlySummary_(months, method) {
   var nums = [];
   for (var i = 0; i < 12; i++) {
     var v = months[i];
-    if (v === null || v === undefined || v === "") return null;
-    if (typeof v === "number") nums.push(v);
+    if (typeof v === "number" && isFinite(v)) nums.push(v);
   }
   if (nums.length === 0) return null; // ไม่มีตัวเลขเลย (เช่น เป็นข้อความล้วน) = ไม่คำนวณผลทั้งปีให้
   var sum = nums.reduce(function(a, b) { return a + b; }, 0), out;
@@ -36,6 +36,26 @@ function pullPrevRow_(sheet, id) {
   return null;
 }
 
+/** รหัสไม่เจอในปีก่อน → หาด้วยชื่อที่ตรงกันเป๊ะ (`pimpKey_`) มีตัวเดียว และรหัสของตัวนั้นต้องไม่มีอยู่ในปีนี้ (กันจับผิดตัว) · ไม่เจอ/กำกวม = null */
+function pullPrevByName_(curSheet, prevSheet, name) {
+  var key = pimpKey_(name);
+  if (!key) return null;
+  var curIds = {};
+  curSheet.getDataRange().getValues().forEach(function(r, i) { if (i > 0 && r[0]) curIds[r[0].toString().trim()] = true; });
+  var data = prevSheet.getDataRange().getValues(), hits = [];
+  for (var i = 1; i < data.length; i++) {
+    var rid = data[i][0] ? data[i][0].toString().trim() : "";
+    if (!rid || pimpKey_(data[i][4]) !== key) continue;
+    hits.push(i);
+  }
+  if (hits.length !== 1) return null;
+  var hid = data[hits[0]][0].toString().trim();
+  if (curIds[hid]) return null;
+  var r = data[hits[0]].slice();
+  while (r.length < KPI_COLS) r.push("");
+  return { index: hits[0], row: r };
+}
+
 /** วางแผนสิ่งที่จะดึง (ไม่เขียน) → { error } หรือแผน */
 function pullPrevPlan_(user, fy, id) {
   id = (id || "").toString().trim();
@@ -51,11 +71,10 @@ function pullPrevPlan_(user, fy, id) {
   if (!perm.editResults && !perm.editDetails) return { error: "ไม่มีสิทธิ์แก้ไขตัวชี้วัดนี้" };
   var prevFy = fy - 1, prevSheet = getFiscalSheet_(prevFy);
   if (!prevSheet) return { error: "ไม่พบชีตปีงบ " + prevFy + " (ไม่มีปีงบก่อนหน้าให้ดึง)" };
-  var prevHit = pullPrevRow_(prevSheet, id);
-  if (!prevHit) return { error: "ปีงบ " + prevFy + " ไม่มีตัวชี้วัดรหัสนี้ (จับคู่ด้วยรหัสเท่านั้น)" };
-  var prev = rowToKpi_(prevHit.row);
-  var privileged = isPrivileged_(user);
-  var sources = getAnnualSources_(fy);
+  var prevHit = pullPrevRow_(prevSheet, id), matchBy = "id";
+  if (!prevHit) { prevHit = pullPrevByName_(sheet, prevSheet, cur.name); matchBy = "name"; }
+  if (!prevHit) return { error: "ปีงบ " + prevFy + " ไม่มีตัวชี้วัดนี้ (ไม่พบทั้งรหัสเดียวกันและชื่อที่ตรงกัน)" };
+  var prev = rowToKpi_(prevHit.row), prevId = prev.id;
 
   // ผลทั้งปี: ช่องปี y (0..3 = ปีงบ−4…ปีงบ−1) ของปีนี้ = ช่อง y+1 ของชีตปีก่อน
   var years = [];
@@ -70,8 +89,7 @@ function pullPrevPlan_(user, fy, id) {
     if (cur.years[y] !== null) item.action = "keep";
     else if (pv === null) item.action = "none";
     else if (!perm.editResults) item.action = "noperm";
-    else if (!privileged && sources[y] && sources[y][id]) item.action = "locked";
-    else item.action = "fill";
+    else item.action = "fill"; // ปีที่ล็อกก็ดึงได้ — ค่ามาจากชีตปีก่อนเอง จึงไม่ขัดกับข้อมูลต้นทาง
     years.push(item);
   }
 
@@ -84,7 +102,7 @@ function pullPrevPlan_(user, fy, id) {
 
   // ลิงก์เอกสารแนบ
   var linkSheet = kpiLinkSheetIfAny_();
-  var prevLinks = kpiLinkRead_(linkSheet, prevFy).filter(function(l) { return l.ids.indexOf(id) !== -1; });
+  var prevLinks = kpiLinkRead_(linkSheet, prevFy).filter(function(l) { return l.ids.indexOf(prevId) !== -1; });
   var curLinks = kpiLinkRead_(linkSheet, fy);
   var links = prevLinks.map(function(p) {
     var same = curLinks.filter(function(l) { return l.url === p.url; })[0] || null;
@@ -97,12 +115,12 @@ function pullPrevPlan_(user, fy, id) {
 
   var todo = years.filter(function(y) { return y.action === "fill"; }).length + (details.action === "fill" ? 1 : 0) +
     links.filter(function(l) { return l.action === "new" || l.action === "attach"; }).length;
-  return { fy: fy, prevFy: prevFy, id: id, sheet: sheet, row: curHit.index + 1, cur: cur, perm: perm, years: years, details: details, links: links, todo: todo };
+  return { fy: fy, prevFy: prevFy, id: id, sheet: sheet, row: curHit.index + 1, cur: cur, perm: perm, years: years, details: details, links: links, todo: todo, matchBy: matchBy, prevName: prev.name };
 }
 
 function pullPrevPublic_(plan) {
   return {
-    fy: plan.fy, prevFy: plan.prevFy, id: plan.id, rev: plan.cur.rev, todo: plan.todo, name: plan.cur.name,
+    fy: plan.fy, prevFy: plan.prevFy, id: plan.id, rev: plan.cur.rev, todo: plan.todo, name: plan.cur.name, matchBy: plan.matchBy, prevName: plan.prevName,
     years: plan.years,
     details: { action: plan.details.action, text: plan.details.action === "none" ? "" : plan.details.text.slice(0, 300), length: plan.details.text.length },
     links: plan.links.map(function(l) { return { title: l.title, action: l.action }; })
@@ -141,7 +159,7 @@ function pullPrevCommit(token, fy, id, baseRev) {
       if (y.action === "fill") { annualChanges.push({ id: plan.id, year: y.year, value: y.value, skipFy: null }); done.years++; }
     });
     if (plan.details.action === "fill") { // ไม่ลงเวลาอัปเดตการวิเคราะห์ (ANALYSIS_COL) — ให้ผู้รับผิดชอบทบทวนแล้วบันทึกเอง
-      sheet.getRange(row, 24).setValue(plan.details.text);
+      sheet.getRange(row, 24).setNumberFormat("@").setValue(plan.details.text); // ข้อความ: กันชีตแปลงเป็นสูตร/วันที่
       done.details = 1;
     }
     propagateAnnual_(annualChanges);

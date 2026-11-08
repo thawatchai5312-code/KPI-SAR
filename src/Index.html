@@ -3590,7 +3590,7 @@
         return `<div class="pull-row ${t[0]}">${esc(l.title)}: ${t[0] === 'ok' ? '<b>' + t[1] + '</b>' : t[1]}</div>`;
       }).join('') : '<div class="pull-row skip">ไม่มีเอกสารแนบในปีก่อน</div>';
       document.getElementById('pull-title').innerText = '⤵ ดึงข้อมูลจากปีงบ ' + p.prevFy;
-      document.getElementById('pull-body').innerHTML = `<div style="font-weight:700; margin-bottom:8px;">${esc(p.name)}</div>
+      document.getElementById('pull-body').innerHTML = `<div style="font-weight:700; margin-bottom:8px;">${esc(p.name)}</div>${p.matchBy === 'name' ? `<div class="pull-row skip" style="margin-bottom:8px;">ℹ️ จับคู่ด้วย<b>ชื่อ</b>กับตัวชี้วัดปีงบ ${esc(p.prevFy)} "${esc(p.prevName)}" (รหัสไม่ตรงกัน) — ตรวจว่าเป็นตัวเดียวกันก่อนยืนยัน</div>` : ''}
         <div class="pull-sec"><h4>📊 ผลทั้งปีย้อนหลัง</h4>${p.years.map(yRow).join('')}</div>
         <div class="pull-sec"><h4>📝 รายละเอียด / การวิเคราะห์</h4>${dRow}</div>
         <div class="pull-sec"><h4>📎 เอกสารแนบ</h4>${lRows}</div>

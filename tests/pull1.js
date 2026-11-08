@@ -18,20 +18,24 @@ const pv=(t)=>{const r=C.pullPrevPreview(t,FY,kp.id);assert(r.success,JSON.strin
 // ---- ไม่มีอะไรให้ดึง
 reset();let p=pv(tS);assert.strictEqual(p.todo,0);
 let r=C.pullPrevCommit(tS,FY,kp.id,p.rev);assert(r.success&&r.changed===false&&/ไม่มีข้อมูลใหม่/.test(r.message),JSON.stringify(r));
-// ---- ผลทั้งปี: ปีก่อนมี 5 ช่อง (ปี−5…ปี−1) → ปีนี้ช่อง 0..2 เติมได้ · ช่อง 3 (ปีที่แล้ว) ล็อก (มีชีตต้นทาง) สำหรับ staff
+// ---- ผลทั้งปี: ปีก่อนมี 5 ช่อง (ปี−5…ปี−1) → ปีนี้เติมช่องที่ว่าง · ช่อง 3 (ปีที่แล้ว มีชีตต้นทาง) staff ก็ดึงได้ (ค่ามาจากชีตปีนั้นเอง)
 reset();prev[6]=10;prev[7]=20;prev[8]=30;prev[9]=40;prev[10]=50;cur[7]=99; // ช่องปีนี้ idx1 มีค่าอยู่แล้ว → ต้องไม่ทับ
-p=pv(tS);eq(p.years.map(y=>y.action),['fill','keep','fill','locked'],JSON.stringify(p.years));
+p=pv(tS);eq(p.years.map(y=>y.action),['fill','keep','fill','fill'],JSON.stringify(p.years));
 eq(p.years.map(y=>y.value),[20,30,40,50]);
-r=C.pullPrevCommit(tS,FY,kp.id,p.rev);assert(r.success&&r.changed&&r.done.years===2,JSON.stringify(r));
-eq([cur[6],cur[7],cur[8],cur[9]],[20,99,40,''],'filled 0 and 2 only; 1 kept; 3 locked for staff');
+r=C.pullPrevCommit(tS,FY,kp.id,p.rev);assert(r.success&&r.changed&&r.done.years===3,JSON.stringify(r));
+eq([cur[6],cur[7],cur[8],cur[9]],[20,99,40,50],'filled empty cells (incl. locked year) · 1 kept');
 // ---- admin: ปีที่ล็อกเติมได้ · ปีก่อนว่างแต่รายเดือนครบ → คำนวณตามวิธีสรุป
 reset();prev[10]='';for(let i=11;i<=22;i++)prev[i]=i%2?'-':10; // ครบ 12 เดือน (ครึ่งหนึ่ง "-")
 const method=C.getAllData(tA,FY).data.find(k=>k.id===kp.id).summaryMethod;
 p=pv(tA);assert.strictEqual(p.years[3].action,'fill');
 const exp=method==='ผลรวม'?60:10;assert.strictEqual(p.years[3].value,exp,'summary by '+method);assert(/คำนวณ/.test(p.years[3].via));
 r=C.pullPrevCommit(tA,FY,kp.id,p.rev);assert(r.success&&r.changed,JSON.stringify(r));assert.strictEqual(cur[9],exp);assert.strictEqual(prev[10],exp,'propagated to previous sheet K');
-// รายเดือนไม่ครบ → ไม่คำนวณ
-reset();prev[10]='';for(let i=11;i<=21;i++)prev[i]=5;prev[22]='';p=pv(tA);assert.strictEqual(p.years[3].action,'none');
+// รายเดือนไม่ครบ → ใช้เฉพาะเดือนที่มีตัวเลข (staff ดึงได้)
+reset();prev[10]='';prev[11]=10;prev[12]=20;prev[13]='-';prev[14]='';prev[15]=30;prev[16]='ข้อความ';p=pv(tS);assert.strictEqual(p.years[3].action,'fill');
+const exp2=method==='ผลรวม'?60:method==='เดือนล่าสุด'?30:20;assert.strictEqual(p.years[3].value,exp2,'average/sum/last over filled numeric months only ('+method+')');
+eq([C.pullPrevMonthlySummary_([10,20,'-',null,'',30,'A',null,null,null,null,null],'เฉลี่ย'),C.pullPrevMonthlySummary_([10,20,'-',null,'',30,'A',null,null,null,null,null],'ผลรวม'),C.pullPrevMonthlySummary_([10,20,'-',null,'',30,'A',null,null,null,null,null],'เดือนล่าสุด'),C.pullPrevMonthlySummary_([1,2,4,null,null,null,null,null,null,null,null,null],'เฉลี่ย'),C.pullPrevMonthlySummary_(Array(12).fill(null),'เฉลี่ย'),C.pullPrevMonthlySummary_(['-','A',null,null,null,null,null,null,null,null,null,null],'เฉลี่ย')],[20,60,30,2.33,null,null],'summary helper');
+// ไม่มีตัวเลขเลย → ไม่คำนวณ
+reset();prev[10]='';prev[11]='-';p=pv(tA);assert.strictEqual(p.years[3].action,'none');
 // ---- รายละเอียด
 reset();prev[23]='รายละเอียดปีก่อน';p=pv(tS);assert.strictEqual(p.details.action,'fill');
 const aBefore=cur[C.ANALYSIS_COL-1];
@@ -59,4 +63,21 @@ assert(!C.pullPrevPreview(tS,2569,kp.id).success,'no previous sheet (2568)');
 // ---- ตรวจรุ่น
 reset();prev[23]='x';p=pv(tS);cur[23]='';cur[4]=cur[4]+' แก้';r=C.pullPrevCommit(tS,FY,kp.id,p.rev);
 assert(r.success===false&&r.conflict===true,'stale rev → conflict '+JSON.stringify(r).slice(0,100));cur[4]=cur[4].replace(' แก้','');
+// ---- จับคู่ด้วยชื่อ (รหัสไม่ตรง — ตัวที่เพิ่ม/นำเข้าใหม่ในปีนี้)
+{
+  const adm=U.find(u=>u[2]==='admin')[0];
+  const mkK=(fy,name)=>{const x=C.addIndicator(tA,fy,{part:'OPD',category:'x',name,target:'≥ 80',years:[null,null,null,null,null],months:Array(12).fill(null),levels:['รายบุคคล'],owner:adm,department:'OPD',forward:false});assert(x.success,JSON.stringify(x));return x.newId};
+  const P1=mkK(2569,'ทดสอบดึงด้วยชื่อ ตัวชี้วัดเฉพาะ'),N1=mkK(FY,'ทดสอบดึงด้วยชื่อ ตัวชี้วัดเฉพาะ');assert(P1!==N1);
+  const pr=rowOf(2569,P1);pr[11]=40;pr[12]=60;pr[23]='วิเคราะห์ปีก่อน (ชื่อ)';
+  let q=C.pullPrevPreview(tA,FY,N1);assert(q.success,JSON.stringify(q));q=q.preview;
+  assert.strictEqual(q.matchBy,'name');assert.strictEqual(q.years[3].action,'fill');assert.strictEqual(q.details.action,'fill');
+  const rr=C.pullPrevCommit(tA,FY,N1,q.rev);assert(rr.success&&rr.changed,JSON.stringify(rr));
+  assert.strictEqual(rowOf(FY,N1)[23],'วิเคราะห์ปีก่อน (ชื่อ)');assert(rowOf(FY,N1)[9]!==''&&rowOf(FY,N1)[9]!==null,'annual filled from previous year months');
+  // ชื่อซ้ำ 2 ตัวในปีก่อน → กำกวม ไม่จับคู่
+  mkK(2569,'ทดสอบดึงด้วยชื่อ กำกวม');mkK(2569,'ทดสอบดึงด้วยชื่อ กำกวม');const N2=mkK(FY,'ทดสอบดึงด้วยชื่อ กำกวม');
+  const e2=C.pullPrevPreview(tA,FY,N2);assert(!e2.success&&/ไม่พบทั้งรหัสเดียวกันและชื่อที่ตรงกัน/.test(e2.message),JSON.stringify(e2));
+  // ตัวในปีก่อนที่ชื่อตรง แต่รหัสมีอยู่ในปีนี้ (เป็นอีกตัวหนึ่ง) → ไม่จับคู่
+  const x3=C.addIndicator(tA,2569,{part:'OPD',category:'x',name:'ทดสอบดึงด้วยชื่อ มีทั้งสองปี',target:'≥ 80',years:[null,null,null,null,null],months:Array(12).fill(null),levels:['รายบุคคล'],owner:adm,department:'OPD',forward:true});assert(x3.success);
+  const N3=mkK(FY,'ทดสอบดึงด้วยชื่อ มีทั้งสองปี');const e3=C.pullPrevPreview(tA,FY,N3);assert(!e3.success,'name match must not pick a KPI whose id exists this year');
+}
 console.log('pull1 ok');
