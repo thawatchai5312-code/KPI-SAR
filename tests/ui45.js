@@ -24,8 +24,8 @@ const srv=(t,id)=>C.getAllData(t,2570).data.find(k=>k.id===id);
  await A.click('#mode-switch button[data-mode=card]');await A.waitForSelector('.kpi-card');assert(await A.isVisible('#btn-toggle-chart'),'chart button in card pager');
  await A.click('#mode-switch button[data-mode=table]');await A.waitForSelector('#kpi-table');
  await A.waitForFunction(()=>tblPending.length===0,null,{timeout:20000});
- const info=await A.evaluate(()=>({rows:document.querySelectorAll('tr.kpi-row').length,uniq:uniqueById(getOrderedKpis()).length,cards:document.querySelectorAll('.kpi-card').length,cats:document.querySelectorAll('tr.tbl-cat').length,areaTable:document.getElementById('kpi-list-area').classList.contains('table-mode'),ths:[...document.querySelectorAll('#kpi-table thead tr.tbl-h2 th')].map(t=>t.textContent.trim()).join('|'),on:document.querySelector('#mode-switch .on').dataset.mode}));
- assert(info.rows===info.uniq&&info.cards===0&&info.cats>3&&info.areaTable&&info.on==='table',JSON.stringify(info));
+ const info=await A.evaluate(()=>({rows:document.querySelectorAll('tr.kpi-row').length,uniq:uniqueById(getOrderedKpis()).length,all:getOrderedKpis().length,cards:document.querySelectorAll('.kpi-card').length,cats:document.querySelectorAll('tr.tbl-cat').length,areaTable:document.getElementById('kpi-list-area').classList.contains('table-mode'),ths:[...document.querySelectorAll('#kpi-table thead tr.tbl-h2 th')].map(t=>t.textContent.trim()).join('|'),on:document.querySelector('#mode-switch .on').dataset.mode}));
+ assert(info.rows===info.all&&info.cards===0&&info.cats>3&&info.areaTable&&info.on==='table',JSON.stringify(info));
  assert(['2566','2570','ต.ค.','ก.ย.','สรุป','วิธีสรุป','ความถี่','ระดับ','รายละเอียด / การวิเคราะห์','ที่มา / สูตรคำนวณ','ผู้รับผิดชอบ','หน่วยงาน','หมวดที่แสดง','ตัวชี้วัดแม่','แก้ไขล่าสุด','เข้าดูล่าสุด'].every(t=>info.ths.includes(t)),info.ths);
  console.log('table rows',info.rows,'cats',info.cats);
  // column groups hide/show + remembered

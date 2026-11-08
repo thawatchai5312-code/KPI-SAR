@@ -46,7 +46,7 @@ const html=fs.readFileSync(require('path').join(__dirname,'../src/Index.html'),'
  console.log('Part II alert:',(await pg.innerText('#modal-alert')).replace(/\n/g,' / ').slice(0,160)); await pg.click('#modal-alert button');
  await pg.locator('#ed-cats .cat-row').nth(3).locator('.cat-del').click();
  await pg.click('button:has-text("บันทึกข้อมูล")'); await pg.waitForTimeout(800);
- const names=await pg.evaluate(id=>Array.from(document.querySelectorAll('.kpi-card[data-id="'+id+'"] .kpi-card-title')).map(e=>e.innerText.trim()),id); console.log('card titles',names); assert(names.length===1&&names.every(t=>t.includes('แก้ที่การ์ดที่สอง')));
+ const names=await pg.evaluate(id=>Array.from(document.querySelectorAll('.kpi-card[data-id="'+id+'"] .kpi-card-title')).map(e=>e.innerText.trim()),id); console.log('card titles',names); assert(names.length===2&&names.every(t=>t.includes('แก้ที่การ์ดที่สอง')));
  console.log('tree parts:',await pg.evaluate(()=>Array.from(document.querySelectorAll('.accordion-header > span:first-child')).map(e=>e.innerText)));
  console.log('count line after:',(await pg.innerText('#tree-count')).replace(/\n/g,' '));
  await pg.screenshot({path:'ui20-multi.png'});

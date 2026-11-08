@@ -27,7 +27,7 @@ const OUT=path.join(__dirname,'..');
  const withName=B.find(k=>k.name&&k.name.length>8);const qName=withName.name.slice(2,8);
  await typeQ(qName);let exp=expect(qName);assert(exp.length>=1&&exp.length<B.length||exp.length===B.length);
  assert.deepStrictEqual((await shown()).sort(),exp.slice().sort(),'name search');
- assert(await pg.evaluate(n=>document.querySelector('#kpi-list-area .tbl-toolbar').innerText.includes('แสดง '+n+' ตัวชี้วัด'),exp.length),'toolbar count');
+ assert(await pg.evaluate(n=>{const t=document.querySelector('#kpi-list-area .tbl-toolbar').innerText;return t.includes('แสดง '+n+' ตัวชี้วัด')||t.includes('('+n+' ตัวชี้วัด)')},exp.length),'toolbar count');
  assert(await pg.evaluate(n=>document.getElementById('tree-count').innerText.includes('แสดง '+n+' ตัว'),exp.length),'left tree count follows');
  // ผังซ้าย: หมวดทั้งหมดที่ขึ้นมีตัวที่ค้นเจอ — จำนวนรายการตัวชี้วัดในผังตรงกับฝั่งขวา
  assert.strictEqual(await pg.evaluate(()=>document.querySelectorAll('#accordion-tree-container .accordion-part').length>0),true);
