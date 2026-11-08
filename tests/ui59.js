@@ -33,7 +33,7 @@ async function open(b,user){
  const kp=C.getAllData(tA,2570).data.find(x=>x.canEditResults&&x.months.every(v=>v===null)&&/^[^&<>"'\\]+$/.test(x.name));assert(kp,'kpi');
  // ฟังก์ชันสรุป: "-" ไม่นับ · 0 นับ · ทั้งหมด "-" = "-"
  const sum=await pg.evaluate(()=>[calculateMonthlySummary([80,'-',90,null,null,null,null,null,null,null,null,null],'เฉลี่ย'),calculateMonthlySummary([80,0,null,null,null,null,null,null,null,null,null,null],'เฉลี่ย'),calculateMonthlySummary(['-','-',null,null,null,null,null,null,null,null,null,null],'เฉลี่ย'),calculateMonthlySummary([5,'-',7,'-',null,null,null,null,null,null,null,null],'ผลรวม'),calculateMonthlySummary([5,'-',7,'-',null,null,null,null,null,null,null,null],'เดือนล่าสุด'),prNum('-'),prNum(0),prNum(null)]);
- assert.deepStrictEqual(sum,['85.00','40.00','-','12','7','-',0,'-'],JSON.stringify(sum));
+ assert.deepStrictEqual(sum,['85.00','40.00','<span class="res-empty">ว่าง</span>','12','7','-',0,''],JSON.stringify(sum));
  // สถานะ: เดือนที่ถึงกำหนดเป็น "-" = กรอกแล้ว ไม่ขึ้นแดง "ผลยังว่าง"
  const st=await pg.evaluate(()=>{expectedMonthIdx=()=>1;const base={frequency:'รายเดือน',years:[null,null,null,null,null],templateDetails:'x',analysisUpdatedAt:'1',dataSource:'y'};const mk=(m0,m1)=>Object.assign({},base,{months:[m0,m1,null,null,null,null,null,null,null,null,null,null]});return [kpiStatus(mk(5,null)).level,kpiStatus(mk(5,'-')).level,kpiStatus(mk('-','-')).level,kpiStatus(mk(null,null)).level,kpiStatus(Object.assign(mk('-',null),{frequency:'รายไตรมาส'})).level]});
  assert.strictEqual(st[0],'red');assert.strictEqual(st[1],'green');assert.strictEqual(st[2],'green');assert.strictEqual(st[3],'red');
@@ -50,7 +50,7 @@ async function open(b,user){
  await pg.evaluate(()=>setListMode('card'));await pg.waitForSelector('.kpi-card');
  await pg.evaluate(id=>goToKpi(id),kp.id);await pg.waitForTimeout(600);await pg.evaluate(id=>{startEditNow(id)},kp.id);await pg.waitForSelector('#ed-m1');
  assert.strictEqual(await pg.inputValue('#ed-m1'),'-');assert.strictEqual(await pg.inputValue('#ed-m2'),'0');assert.strictEqual(await pg.inputValue('#ed-m4'),'');
- assert(/พิมพ์ - ถ้าเดือนนั้นไม่มีเคส/.test(await pg.textContent('.kpi-card.editing, .kpi-card')),'hint');
+ assert(/ผลเป็นศูนย์จริง[\s\S]*เดือนนั้นไม่มีเคส[\s\S]*ยังไม่กรอก/.test(await pg.textContent('.kpi-card.editing, .kpi-card')),'hint');
  await pg.screenshot({path:OUT+'/ui59-card.png'});
  // ช่องผลรับข้อความได้ (เช่น abc) แต่ยาวเกิน 60 ตัว → เตือน ไม่บันทึก
  await pg.fill('#ed-m4','x'.repeat(70));await pg.evaluate(()=>saveKpiEdit());

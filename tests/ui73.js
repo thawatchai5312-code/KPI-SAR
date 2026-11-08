@@ -44,7 +44,7 @@ const OUT=path.join(__dirname,'..');
  assert(/ดีมาก/.test(card)&&/B-/.test(card),'card shows text results');
  // สรุปรายเดือน (เฉลี่ยใช้เฉพาะตัวเลข: (80+1234)/2=657.00 · เดือนล่าสุด = 1234)
  const sm=await pg.evaluate(()=>[calculateMonthlySummary(['A',80,'B-',1234,'-',null],'เฉลี่ย'),calculateMonthlySummary(['A',80,'B-',1234,'-',null],'ผลรวม'),calculateMonthlySummary(['A',80,'B-',1234,'-',null],'เดือนล่าสุด'),calculateMonthlySummary(['A',null,'B-'],'เฉลี่ย'),calculateMonthlySummary([null,'<b>x</b>'],'เดือนล่าสุด'),calculateMonthlySummary(['-',null],'เฉลี่ย')]);
- assert.deepStrictEqual(sm,['657.00','1314','1234','B-','&lt;b&gt;x&lt;/b&gt;','-']);
+ assert.deepStrictEqual(sm,['657.00','1314','1234','B-','&lt;b&gt;x&lt;/b&gt;','<span class="res-empty">ว่าง</span>']);
  // กราฟ: ข้อความล้วน = SVG ข้อความ · ปนกัน = จุดเฉพาะตัวเลข + ป้ายข้อความ · ไม่มี NaN
  const svgs=await pg.evaluate(()=>[generateSvgLineChart(['A','B',null,null,null],'≥ 80',[1,2,3,4,5]),generateSvgLineChart([null,null,null,'ดีมาก',90],'≥ 80',[1,2,3,4,5]),generateSvgLineChart([10,20,30,40,50],'≥ 80',[1,2,3,4,5])]);
  assert(/ไม่มีกราฟ/.test(svgs[0])&&!/NaN/.test(svgs[0]));assert(/ดีมาก/.test(svgs[1])&&/<circle/.test(svgs[1])&&!/NaN/.test(svgs[1]));assert(!/NaN/.test(svgs[2]));
