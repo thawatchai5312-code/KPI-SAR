@@ -42,7 +42,7 @@ async function open(b,user){
  const btn=pg.locator('.kpi-card[data-id="'+kp.id+'"] button:has-text("ปีงบก่อน")');assert.strictEqual(await btn.count(),1,'card button');
  await btn.click();await pg.waitForSelector('#modal-pull',{state:'visible'});
  const txt=await pg.innerText('#pull-body');
- assert(/ผลทั้งปี 2566: เติม 22/.test(txt)&&/ผลทั้งปี 2567: เติม 33/.test(txt)&&/ผลทั้งปี 2568: เติม 44/.test(txt)&&/ข้าม — ปีที่ล็อก/.test(txt)&&/เติม/.test(txt)&&/รายละเอียดจากปีก่อน/.test(txt),txt);
+ assert(/ผลทั้งปี 2566: เติม 22/.test(txt)&&/ผลทั้งปี 2567: เติม 33/.test(txt)&&/ผลทั้งปี 2568: เติม 44/.test(txt)&&/ผลทั้งปี 2569: เติม 55/.test(txt)&&/เติม/.test(txt)&&/รายละเอียดจากปีก่อน/.test(txt),txt);
  await pg.screenshot({path:'ui65-modal.png'});
  // ยกเลิก = ไม่เขียนอะไร
  await pg.click('#modal-pull button:has-text("ยกเลิก")');assert.strictEqual(cur[7],'');
@@ -50,7 +50,7 @@ async function open(b,user){
  await btn.click();await pg.waitForSelector('#modal-pull',{state:'visible'});await pg.click('#pull-go');
  await pg.waitForFunction(id=>{const k=globalDatabase.find(x=>x.id===id);return k&&k.templateDetails==='รายละเอียดจากปีก่อน'},kp.id,{timeout:30000});
  const got=await pg.evaluate(id=>{const k=globalDatabase.find(x=>x.id===id);return k.years.slice(0,4)},kp.id);
- assert.deepStrictEqual(got,[22,33,44,null],JSON.stringify(got));
+ assert.deepStrictEqual(got,[22,33,44,55],JSON.stringify(got));
  assert.strictEqual(cur[6],22);
  // ดึงซ้ำ: ไม่มีอะไรใหม่ (ปุ่มยืนยันกดไม่ได้)
  await btn.click();await pg.waitForSelector('#modal-pull',{state:'visible'});
