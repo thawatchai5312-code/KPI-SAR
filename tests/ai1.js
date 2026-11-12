@@ -1,7 +1,7 @@
 // ผู้ช่วย AI (Gemini): ตั้งค่า/เพดาน · สิทธิ์ · payload (ไม่ส่งผู้รับผิดชอบ/ชื่อผู้ใช้) · ข้อเท็จจริงที่คำนวณ · ลบเลขระบุตัว · ไฟล์แนบ · แชทตามสิทธิ์ — จำลอง Gemini ไม่เรียกจริง
 const h=require('./harness7');const C=h.ctx;const assert=require('assert');
 const U=h.sheets.Users.d;const FY=2570;
-U.slice(1).forEach(r=>{r[1]=C.hashPassword_('pw123456');r[4]='FALSE'});
+U.slice(1).forEach(r=>{r[1]=C.hashPassword_('123456');r[4]='FALSE'});
 const tok=r=>C.createSession_(r[0],r[1]);
 const ad=U.find(r=>r[2]==='admin'),tA=tok(ad);
 

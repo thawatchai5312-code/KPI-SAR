@@ -2,8 +2,8 @@
 const {chromium}=require('playwright');
 const fs=require('fs');const path=require('path');const h=require('./harness7');const C=h.ctx;const assert=require('assert');
 const html=fs.readFileSync(path.join(__dirname,'../src/Index.html'),'utf8');
-const U=h.sheets.Users.d;U.slice(1).forEach(r=>{r[1]=C.hashPassword_('pw123456');r[4]='FALSE'});
-const mkUser=(n,tier,d)=>{const r=[n,C.hashPassword_('pw123456'),tier||'staff',d||'','FALSE','',''];U.push(r);return r};
+const U=h.sheets.Users.d;U.slice(1).forEach(r=>{r[1]=C.hashPassword_('123456');r[4]='FALSE'});
+const mkUser=(n,tier,d)=>{const r=[n,C.hashPassword_('123456'),tier||'staff',d||'','FALSE','',''];U.push(r);return r};
 const ad=U.find(r=>r[2]==='admin'),tA=C.createSession_(ad[0],ad[1]);
 const uM=mkUser('ทดสอบมานี','head','OPD'),uP=mkUser('ทดสอบปิติ','head','IPD'),uSt=mkUser('ทดสอบสตาฟ');
 const item=(name,owner)=>({part:'OPD',category:'x',name,target:'≥ 80',years:[null,null,null,null,null],months:Array(12).fill(null),levels:['รายบุคคล'],owner,department:'OPD'});
@@ -24,7 +24,7 @@ const OUT=path.join(__dirname,'..');
   await pg.route('**/*',r=>r.request().url()==='http://app.test/'?r.fulfill({contentType:'text/html; charset=utf-8',body:html}):r.abort());
   await pg.addInitScript(()=>{function mk(ok,fail){return new Proxy({},{get:(_,fn)=>{if(fn==='withSuccessHandler')return f=>mk(f,fail);if(fn==='withFailureHandler')return f=>mk(ok,f);return (...a)=>Promise.resolve().then(()=>window.__call(fn,a)).then(r=>ok&&ok(JSON.parse(r)))}})}window.google={script:{run:mk()}};});
   await pg.goto('http://app.test/');
-  await pg.fill('#login-username',user);await pg.fill('#login-password','pw123456');await pg.click('#login-box-content button');await pg.waitForSelector('#modal-fy',{state:'visible'});await pg.selectOption('#fy-pick-select','2570');await pg.click('#modal-fy button');await pg.waitForSelector('#app-login-screen',{state:'hidden'});
+  await pg.fill('#login-username',user);await pg.fill('#login-password','123456');await pg.click('#login-box-content button');await pg.waitForSelector('#modal-fy',{state:'visible'});await pg.selectOption('#fy-pick-select','2570');await pg.click('#modal-fy button');await pg.waitForSelector('#app-login-screen',{state:'hidden'});
   await pg.waitForFunction(()=>document.querySelector('.kpi-card')||document.getElementById('kpi-table'),null,{timeout:60000});return pg};
  // ===== เจ้าตัว (staff): เห็นเมนู + ของตัวเอง แก้ไม่ได้
  const pm=await open('ทดสอบมานี');

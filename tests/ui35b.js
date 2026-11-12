@@ -6,8 +6,8 @@ const html=fs.readFileSync(require('path').join(__dirname,'../src/Index.html'),'
 const U=h.sheets.Users.d; const setPw=(n,p)=>{const r=U.find(x=>x[0]===n);r[1]=C.hashPassword_(p);r[4]='FALSE'};
 (async()=>{
  C.PropertiesService.getScriptProperties().setProperty('HEAD_SEED_V1','done');
- setPw('Admin','pw123456');
- const er=U.find(r=>r[2]==='staff'&&/(^|,)ER(,|$)/.test(r[3])); setPw(er[0],'pw123456');
+ setPw('Admin','123456');
+ const er=U.find(r=>r[2]==='staff'&&/(^|,)ER(,|$)/.test(r[3])); setPw(er[0],'123456');
  const at=C.createSession_('Admin',U.find(r=>r[0]==='Admin')[1]); assert(C.tidyCommit(at).success);
  const b=await chromium.launch({executablePath:'/opt/pw-browsers/chromium'});
  const mk=async()=>{const pg=await b.newPage({viewport:{width:1440,height:900}});const errs=[];pg.on('pageerror',e=>errs.push(e.message));pg._errs=errs;
@@ -16,7 +16,7 @@ const U=h.sheets.Users.d; const setPw=(n,p)=>{const r=U.find(x=>x[0]===n);r[1]=C
   await pg.addInitScript(()=>{function mk(ok,fail){return new Proxy({},{get:(_,fn)=>{if(fn==='withSuccessHandler')return f=>mk(f,fail);if(fn==='withFailureHandler')return f=>mk(ok,f);return (...a)=>window.__call(fn,a).then(r=>ok&&ok(JSON.parse(r)))}})}window.google={script:{run:mk()}};});
   await pg.goto('http://app.test/');return pg};
  const login=async(pg,u,p)=>{await pg.fill('#login-username',u);await pg.fill('#login-password',p);await pg.click('#login-box-content button');await pg.waitForSelector('#modal-fy',{state:'visible'});await pg.selectOption('#fy-pick-select','2570');await pg.click('#modal-fy button');await pg.waitForSelector('#app-login-screen',{state:'hidden'});await pg.waitForTimeout(500)};
- const pg=await mk(); await login(pg,'Admin','pw123456');
+ const pg=await mk(); await login(pg,'Admin','123456');
  // QA view
  await pg.evaluate(()=>{appliedFilters.scope='all';setTreeView('qa')}); await pg.waitForTimeout(700);
  const qa=await pg.evaluate(()=>({parts:[...document.querySelectorAll('#accordion-tree-container .accordion-header > span:first-child')].map(e=>e.textContent),
@@ -64,7 +64,7 @@ const U=h.sheets.Users.d; const setPw=(n,p)=>{const r=U.find(x=>x[0]===n);r[1]=C
  const tags=await pg.evaluate(()=>[...document.querySelectorAll('#ed-cats .cat-kind')].map(e=>e.textContent.trim()));
  console.log('edit tags',tags.join(',')); assert(tags.length===3&&tags.some(t=>/QA/.test(t)));
  // staff ER: unit view default, sees ER headings
- const pg2=await mk(); await login(pg2,er[0],'pw123456');
+ const pg2=await mk(); await login(pg2,er[0],'123456');
  const sv=await pg2.evaluate(()=>({view:treeView,parts:[...new Set(getOrderedKpis(false,'unit').map(p=>p.part))],qa:[...new Set(getOrderedKpis(false,'qa').map(p=>partLabel(p.part)))]}));
  console.log('staff',er[0],JSON.stringify(sv)); assert(sv.view==='unit');
  await pg2.screenshot({path:'ui35-staff.png'});

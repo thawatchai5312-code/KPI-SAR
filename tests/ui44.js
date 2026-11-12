@@ -2,7 +2,7 @@
 const {chromium}=require('playwright');
 const fs=require('fs');const h=require('./harness7');const C=h.ctx;const assert=require('assert');
 const html=fs.readFileSync(require('path').join(__dirname,'../src/Index.html'),'utf8');
-const U=h.sheets.Users.d;const ad=U.find(r=>r[2]==='admin');ad[1]=C.hashPassword_('pw123456');ad[4]='FALSE';
+const U=h.sheets.Users.d;const ad=U.find(r=>r[2]==='admin');ad[1]=C.hashPassword_('123456');ad[4]='FALSE';
 (async()=>{
  const b=await chromium.launch({executablePath:'/opt/pw-browsers/chromium'});
  const pg=await b.newPage({viewport:{width:1440,height:900}});const errs=[];pg.on('pageerror',e=>errs.push(e.message));
@@ -13,7 +13,7 @@ const U=h.sheets.Users.d;const ad=U.find(r=>r[2]==='admin');ad[1]=C.hashPassword
  const seen=()=>pg.evaluate(()=>window.__seen.slice());
  const shown=()=>pg.isVisible('#busy-overlay');
  await pg.evaluate(()=>{window.__delay.getAllData=600});
- await pg.fill('#login-username',ad[0]);await pg.fill('#login-password','pw123456');await pg.click('#login-box-content button');
+ await pg.fill('#login-username',ad[0]);await pg.fill('#login-password','123456');await pg.click('#login-box-content button');
  await pg.waitForSelector('#modal-fy',{state:'visible'});
  assert((await seen()).includes('getAllData:NO'),'first login load has no pop-up (own full screen) '+await seen());
  // FY pick → pop-up

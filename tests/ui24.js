@@ -3,10 +3,10 @@ const fs=require('fs');const h=require('./harness');const assert=require('assert
 const ff=require('./lib/font');
 const html=fs.readFileSync(require('path').join(__dirname,'../src/Index.html'),'utf8').replace("let listMode = 'table';","let listMode = 'card';").replace("listMode = defaultListMode(); tblHide.clear(); TBL_DEFAULT_HIDE","listMode = 'card'; tblHide.clear(); TBL_DEFAULT_HIDE").replace('</head>','<style>'+ff('thai')+ff('latin')+'</style></head>');
 (async()=>{
- h.ctx.authenticateUser('Admin','Admin11038'); h.ctx.authenticateUser('Admin','Admin11038');
- for(const u of ['มานี','อรทัย','ผอ.']){const t=h.ctx.authenticateUser(u,'11038'); h.ctx.changePassword(t.token,'11038','secret99');}
+ h.ctx.authenticateUser('Admin','123456'); h.ctx.authenticateUser('Admin','123456');
+ for(const u of ['มานี','อรทัย','ผอ.']){const t=h.ctx.authenticateUser(u,'11038'); h.ctx.changePassword(t.token,'11038','654321');}
  // a staff with no KPIs
- const at=h.ctx.authenticateUser('Admin','Admin11038'); const users=h.ctx.getUsersForAdmin(at.token).users; users.push({username:'คนใหม่',tier:'staff',depts:'',isNew:true}); h.ctx.saveUsersForAdmin(at.token,users,[]); const tn=h.ctx.authenticateUser('คนใหม่','11038'); h.ctx.changePassword(tn.token,'11038','secret99');
+ const at=h.ctx.authenticateUser('Admin','123456'); const users=h.ctx.getUsersForAdmin(at.token).users; users.push({username:'คนใหม่',tier:'staff',depts:'',isNew:true}); h.ctx.saveUsersForAdmin(at.token,users,[]); const tn=h.ctx.authenticateUser('คนใหม่','11038'); h.ctx.changePassword(tn.token,'11038','654321');
  const b=await chromium.launch({executablePath:'/opt/pw-browsers/chromium'});
  const mkpage=async(vw=1440,vh=900)=>{
   const pg=await b.newPage({viewport:{width:vw,height:vh}});
@@ -23,7 +23,7 @@ const html=fs.readFileSync(require('path').join(__dirname,'../src/Index.html'),'
  await pg.fill('#login-username','ปิติ'); await pg.fill('#login-password','11038'); await pg.click('#login-box-content button');
  await pg.waitForSelector('#modal-change-password',{state:'visible'});
  const oldTok=await pg.evaluate(()=>sessionToken);
- await pg.fill('#chpw-old','11038'); await pg.fill('#chpw-new','brandnew77'); await pg.fill('#chpw-confirm','brandnew77'); await pg.click('#chpw-submit');
+ await pg.fill('#chpw-old','11038'); await pg.fill('#chpw-new','246810'); await pg.fill('#chpw-confirm','246810'); await pg.click('#chpw-submit');
  await pg.waitForSelector('#modal-alert',{state:'visible'}); await pg.click('#modal-alert button');
  await pg.waitForSelector('#modal-fy',{state:'visible'}); const newTok=await pg.evaluate(()=>sessionToken); console.log('token replaced:',oldTok!==newTok);
  assert(oldTok!==newTok); await pg.click('#modal-fy button'); await pg.waitForSelector('#app-login-screen',{state:'hidden'});

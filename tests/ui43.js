@@ -2,7 +2,7 @@
 const {chromium}=require('playwright');
 const fs=require('fs');const h=require('./harness7');const C=h.ctx;const assert=require('assert');
 const html=fs.readFileSync(require('path').join(__dirname,'../src/Index.html'),'utf8').replace("let listMode = 'table';","let listMode = 'card';").replace("listMode = defaultListMode(); tblHide.clear(); TBL_DEFAULT_HIDE","listMode = 'card'; tblHide.clear(); TBL_DEFAULT_HIDE");
-const U=h.sheets.Users.d;const st=U.find(r=>r[2]==='staff'&&/(^|,)ER(,|$)/.test(r[3]));st[1]=C.hashPassword_('pw123456');st[4]='FALSE';
+const U=h.sheets.Users.d;const st=U.find(r=>r[2]==='staff'&&/(^|,)ER(,|$)/.test(r[3]));st[1]=C.hashPassword_('123456');st[4]='FALSE';
 (async()=>{
  const b=await chromium.launch({executablePath:'/opt/pw-browsers/chromium'});
  const pg=await b.newPage({viewport:{width:1440,height:900}});const errs=[];pg.on('pageerror',e=>errs.push(e.message));
@@ -10,7 +10,7 @@ const U=h.sheets.Users.d;const st=U.find(r=>r[2]==='staff'&&/(^|,)ER(,|$)/.test(
  await pg.route('**/*',r=>r.request().url()==='http://app.test/'?r.fulfill({contentType:'text/html; charset=utf-8',body:html}):r.abort());
  await pg.addInitScript(()=>{function mk(ok,fail){return new Proxy({},{get:(_,fn)=>{if(fn==='withSuccessHandler')return f=>mk(f,fail);if(fn==='withFailureHandler')return f=>mk(ok,f);return (...a)=>window.__call(fn,a).then(r=>ok&&ok(JSON.parse(r)))}})}window.google={script:{run:mk()}};});
  await pg.goto('http://app.test/');
- await pg.fill('#login-username',st[0]);await pg.fill('#login-password','pw123456');await pg.click('#login-box-content button');await pg.waitForSelector('#modal-fy',{state:'visible'});await pg.selectOption('#fy-pick-select','2569');await pg.click('#modal-fy button');await pg.waitForSelector('#app-login-screen',{state:'hidden'});
+ await pg.fill('#login-username',st[0]);await pg.fill('#login-password','123456');await pg.click('#login-box-content button');await pg.waitForSelector('#modal-fy',{state:'visible'});await pg.selectOption('#fy-pick-select','2569');await pg.click('#modal-fy button');await pg.waitForSelector('#app-login-screen',{state:'hidden'});
  await pg.waitForTimeout(500);
  const k=await pg.evaluate(()=>globalDatabase.find(x=>x.canEditResults&&x.canEditDetails&&x.isOwner));assert(k,'owner kpi editable in 2569');
  const ro=await pg.evaluate(()=>globalDatabase.filter(x=>!x.isOwner&&!x.canEditResults).length);console.log('editable in 2569:',await pg.evaluate(()=>globalDatabase.filter(x=>x.canEditResults).length),'read-only others:',ro);

@@ -4,7 +4,7 @@ const fs=require('fs');const path=require('path');
 const h=require('./harness7');const C=h.ctx;const assert=require('assert');
 const html=fs.readFileSync(path.join(__dirname,'../src/Index.html'),'utf8');
 const U=h.sheets.Users.d;const fy=2570;
-U.slice(1).forEach(r=>{r[1]=C.hashPassword_('pw123456');r[4]='FALSE'});
+U.slice(1).forEach(r=>{r[1]=C.hashPassword_('123456');r[4]='FALSE'});
 const ad=U.find(r=>r[2]==='admin'),stf=U.find(r=>r[2]==='staff');
 const OUT=process.cwd();
 const MON=['ต.ค.','พ.ย.','ธ.ค.','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.'];
@@ -23,7 +23,7 @@ C.SpreadsheetApp.openByUrl=u=>u===URL?{getSheets:()=>[{getDataRange:()=>({getVal
  await pg.route('**/*',r=>r.request().url()==='http://app.test/'?r.fulfill({contentType:'text/html; charset=utf-8',body:html}):r.abort());
  await pg.addInitScript(()=>{function mk(ok,fail){return new Proxy({},{get:(_,fn)=>{if(fn==='withSuccessHandler')return f=>mk(f,fail);if(fn==='withFailureHandler')return f=>mk(ok,f);return (...a)=>Promise.resolve().then(()=>window.__call(fn,a)).then(r=>ok&&ok(JSON.parse(r)))}})}window.google={script:{run:mk()}};});
  await pg.goto('http://app.test/');
- await pg.fill('#login-username',ad[0]);await pg.fill('#login-password','pw123456');await pg.click('#login-box-content button');await pg.waitForSelector('#modal-fy',{state:'visible'});await pg.selectOption('#fy-pick-select',String(fy));await pg.click('#modal-fy button');await pg.waitForSelector('#app-login-screen',{state:'hidden'});
+ await pg.fill('#login-username',ad[0]);await pg.fill('#login-password','123456');await pg.click('#login-box-content button');await pg.waitForSelector('#modal-fy',{state:'visible'});await pg.selectOption('#fy-pick-select',String(fy));await pg.click('#modal-fy button');await pg.waitForSelector('#app-login-screen',{state:'hidden'});
  await pg.waitForFunction(()=>document.getElementById('kpi-table')||document.querySelector('.kpi-card'),null,{timeout:60000});
  await pg.click('#admin-settings-btn');await pg.waitForSelector('#modal-settings',{state:'visible'});await pg.waitForTimeout(400);
  // เมนูยุบ

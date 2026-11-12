@@ -2,7 +2,7 @@
 const h=require('./harness7');const C=h.ctx;const assert=require('assert');
 const U=h.sheets.Users.d;const pick=(tier,dept)=>U.find(r=>r[2]===tier&&(!dept||new RegExp('(^|,)'+dept+'(,|$)').test(r[3])));
 const ad=pick('admin'),st=pick('staff','ER'),ex=pick('executive');
-[ad,st,ex].forEach(r=>{r[1]=C.hashPassword_('pw123456');r[4]='FALSE'});
+[ad,st,ex].forEach(r=>{r[1]=C.hashPassword_('123456');r[4]='FALSE'});
 const tA=C.createSession_(ad[0],ad[1]),tS=C.createSession_(st[0],st[1]);
 const g=C.getAllData(tA,2570);assert(g.success);assert(g.dataV===0,'no log yet → 0');
 assert(g.data.every(k=>typeof k.rev==='string'&&k.rev.length>3),'rev on every kpi');

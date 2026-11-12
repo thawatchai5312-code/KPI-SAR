@@ -6,7 +6,7 @@ const html=fs.readFileSync(path.join(__dirname,'../src/Index.html'),'utf8');
 const U=h.sheets.Users.d;const fy=2570;
 const pick=(tier,dept)=>U.find(r=>r[2]===tier&&(!dept||new RegExp('(^|,)'+dept+'(,|$)').test(r[3])));
 const ad=pick('admin'),ex=pick('executive'),hp=pick('head','PCT'),hn=U.find(r=>r[2]==='head'&&!/(^|,)PCT(,|$)/.test(r[3]));
-[ad,ex,hp,hn].forEach(r=>{r[1]=C.hashPassword_('pw123456');r[4]='FALSE'});
+[ad,ex,hp,hn].forEach(r=>{r[1]=C.hashPassword_('123456');r[4]='FALSE'});
 const tA=C.createSession_(ad[0],ad[1]),tE=C.createSession_(ex[0],ex[1]);
 const OUT=process.cwd();
 async function open(b,user){
@@ -17,12 +17,12 @@ async function open(b,user){
    return r.abort()});
  await pg.addInitScript(()=>{function mk(ok,fail){return new Proxy({},{get:(_,fn)=>{if(fn==='withSuccessHandler')return f=>mk(f,fail);if(fn==='withFailureHandler')return f=>mk(ok,f);return (...a)=>Promise.resolve().then(()=>window.__call(fn,a)).then(r=>ok&&ok(JSON.parse(r)))}})}window.google={script:{run:mk()}};});
  await pg.goto('http://app.test/');
- await pg.fill('#login-username',user[0]);await pg.fill('#login-password','pw123456');await pg.click('#login-box-content button');await pg.waitForSelector('#modal-fy',{state:'visible'});await pg.selectOption('#fy-pick-select',String(fy));await pg.click('#modal-fy button');await pg.waitForSelector('#app-login-screen',{state:'hidden'});
+ await pg.fill('#login-username',user[0]);await pg.fill('#login-password','123456');await pg.click('#login-box-content button');await pg.waitForSelector('#modal-fy',{state:'visible'});await pg.selectOption('#fy-pick-select',String(fy));await pg.click('#modal-fy button');await pg.waitForSelector('#app-login-screen',{state:'hidden'});
  await pg.waitForFunction(()=>document.getElementById('kpi-table')||document.querySelector('.kpi-card'),null,{timeout:60000});await pg.evaluate(()=>{if(listMode!=='table')setListMode('table')});await pg.waitForSelector('#kpi-table'); // staff start on cards (tier default): these tests exercise the table
  return pg;
 }
 const GOOD='https://drive.google.com/file/d/1Owner/view';
-const info=(r)=>{r[1]=C.hashPassword_('pw123456');r[4]='FALSE';const t=C.createSession_(r[0],r[1]);const d=C.getAllData(t,fy);return {r,t,d:d.data}};
+const info=(r)=>{r[1]=C.hashPassword_('123456');r[4]='FALSE';const t=C.createSession_(r[0],r[1]);const d=C.getAllData(t,fy);return {r,t,d:d.data}};
 // staff ที่เป็นผู้รับผิดชอบโดยตรง (ชื่อตัวเองในช่องผู้รับผิดชอบ) ของตัวชี้วัดอย่างน้อย 1 ตัว
 const S=U.filter(r=>r[2]==='staff').map(info).find(x=>x.d.some(k=>k.canEditDetails&&String(k.owner).split('/').map(s=>s.trim()).includes(x.r[0])));assert(S,'fixture staff owner');
 const A=S.d.find(k=>k.canEditDetails&&String(k.owner).split('/').map(s=>s.trim()).includes(S.r[0]));const a=A.id,oldOwner=A.owner,oldCats=JSON.parse(JSON.stringify(A.cats&&A.cats.length?A.cats:[{part:A.part,category:A.category}]));

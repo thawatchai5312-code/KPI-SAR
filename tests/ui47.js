@@ -11,9 +11,9 @@ const pick=(tier,dept)=>U.find(r=>r[2]===tier&&(!dept||new RegExp('(^|,)'+dept+'
 const ad=pick('admin'),ex=pick('executive'),st=pick('staff');
 // หัวหน้าที่แก้ได้บางตัว (ไม่ใช่ทั้งหมด) ของ Part I–IV
 const fy=2570;let head=null;
-for(const hd of U.filter(u=>u[2]==='head')){hd[1]=C.hashPassword_('pw123456');hd[4]='FALSE';const t=C.createSession_(hd[0],hd[1]);const d=C.getAllData(t,fy).data.filter(k=>C.inCorePart_(k));if(d.some(k=>k.canEditDetails)&&d.some(k=>!k.canEditDetails)){head=hd;break}}
+for(const hd of U.filter(u=>u[2]==='head')){hd[1]=C.hashPassword_('123456');hd[4]='FALSE';const t=C.createSession_(hd[0],hd[1]);const d=C.getAllData(t,fy).data.filter(k=>C.inCorePart_(k));if(d.some(k=>k.canEditDetails)&&d.some(k=>!k.canEditDetails)){head=hd;break}}
 assert(head);
-[ad,ex,st].forEach(r=>{r[1]=C.hashPassword_('pw123456');r[4]='FALSE'});
+[ad,ex,st].forEach(r=>{r[1]=C.hashPassword_('123456');r[4]='FALSE'});
 const tA=C.createSession_(ad[0],ad[1]),tE=C.createSession_(ex[0],ex[1]);
 const OUT=process.cwd();
 async function open(b,user,opts={}){
@@ -25,7 +25,7 @@ async function open(b,user,opts={}){
    return r.abort()});
  await pg.addInitScript(()=>{window.__delay={};function mk(ok,fail){return new Proxy({},{get:(_,fn)=>{if(fn==='withSuccessHandler')return f=>mk(f,fail);if(fn==='withFailureHandler')return f=>mk(ok,f);return (...a)=>new Promise(r=>setTimeout(r,window.__delay[fn]||0)).then(()=>window.__call(fn,a)).then(r=>ok&&ok(JSON.parse(r)))}})}window.google={script:{run:mk()}};});
  await pg.goto('http://app.test/');
- await pg.fill('#login-username',user[0]);await pg.fill('#login-password','pw123456');await pg.click('#login-box-content button');await pg.waitForSelector('#modal-fy',{state:'visible'});await pg.selectOption('#fy-pick-select',String(fy));await pg.click('#modal-fy button');await pg.waitForSelector('#app-login-screen',{state:'hidden'});
+ await pg.fill('#login-username',user[0]);await pg.fill('#login-password','123456');await pg.click('#login-box-content button');await pg.waitForSelector('#modal-fy',{state:'visible'});await pg.selectOption('#fy-pick-select',String(fy));await pg.click('#modal-fy button');await pg.waitForSelector('#app-login-screen',{state:'hidden'});
  await pg.waitForFunction(()=>document.getElementById('kpi-table')||document.querySelector('.kpi-card'),null,{timeout:60000});await pg.evaluate(()=>{if(listMode!=='table')setListMode('table')});await pg.waitForSelector('#kpi-table'); // staff start on cards (tier default): these tests exercise the table
  return pg;
 }

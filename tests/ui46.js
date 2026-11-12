@@ -3,7 +3,7 @@
 const {chromium}=require('playwright');
 const fs=require('fs');const h=require('./harness7');const C=h.ctx;const assert=require('assert');
 const html=fs.readFileSync(require('path').join(__dirname,'../src/Index.html'),'utf8');
-const U=h.sheets.Users.d;const ad=U.find(r=>r[2]==='admin');ad[1]=C.hashPassword_('pw123456');ad[4]='FALSE';
+const U=h.sheets.Users.d;const ad=U.find(r=>r[2]==='admin');ad[1]=C.hashPassword_('123456');ad[4]='FALSE';
 const tA=C.createSession_(ad[0],ad[1]);
 (async()=>{
  const b=await chromium.launch({executablePath:'/opt/pw-browsers/chromium'});
@@ -12,7 +12,7 @@ const tA=C.createSession_(ad[0],ad[1]);
  await pg.route('**/*',r=>r.request().url()==='http://app.test/'?r.fulfill({contentType:'text/html; charset=utf-8',body:html}):r.abort());
  await pg.addInitScript(()=>{window.__delay={};window.__drop={};function mk(ok,fail){return new Proxy({},{get:(_,fn)=>{if(fn==='withSuccessHandler')return f=>mk(f,fail);if(fn==='withFailureHandler')return f=>mk(ok,f);return (...a)=>new Promise(r=>setTimeout(r,window.__delay[fn]||0)).then(()=>window.__call(fn,a)).then(r=>ok&&ok(JSON.parse(r)))}})}window.google={script:{run:mk()}};});
  await pg.goto('http://app.test/');
- await pg.fill('#login-username',ad[0]);await pg.fill('#login-password','pw123456');await pg.click('#login-box-content button');await pg.waitForSelector('#modal-fy',{state:'visible'});await pg.selectOption('#fy-pick-select','2570');await pg.click('#modal-fy button');await pg.waitForSelector('#app-login-screen',{state:'hidden'});
+ await pg.fill('#login-username',ad[0]);await pg.fill('#login-password','123456');await pg.click('#login-box-content button');await pg.waitForSelector('#modal-fy',{state:'visible'});await pg.selectOption('#fy-pick-select','2570');await pg.click('#modal-fy button');await pg.waitForSelector('#app-login-screen',{state:'hidden'});
  await pg.waitForSelector('#kpi-table');
 
  // ---- 1. home table: first batch quickly, the rest in background, nothing lost

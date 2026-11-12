@@ -3,7 +3,7 @@
 const h=require('./harness7');const C=h.ctx;const assert=require('assert');
 const eq=(x,y,m)=>assert.strictEqual(JSON.stringify(x),JSON.stringify(y),m);
 const U=h.sheets.Users.d;
-U.slice(1).forEach(r=>{r[1]=C.hashPassword_('pw123456');r[4]='FALSE'});
+U.slice(1).forEach(r=>{r[1]=C.hashPassword_('123456');r[4]='FALSE'});
 const tok=r=>C.createSession_(r[0],r[1]);
 const adminRow=U.find(r=>r[2]==='admin'),tA=tok(adminRow);
 const staffRow=U.find(r=>r[2]==='staff'),tS=tok(staffRow);
@@ -168,5 +168,5 @@ all=C.getAllData(tA,2570);eq(all.unitRenames.MSO,NEWU);eq(all.unitRenames['ง�
 assert(Object.keys(h.sheets).some(n=>n.indexOf('สำรองผู้ใช้ก่อนเปลี่ยนชื่อหน่วย ')===0&&h.sheets[n].hidden));
 assert(h.sheets.Tidy_Log.d.some(x=>x[3]==='rename-unit'&&/MSO → MSOใหม่/.test(x[4])));assert(h.sheets.Tidy_Log.d.some(x=>x[3]==='user-dept'));
 // คนไม่ใช่ admin เปลี่ยนไม่ได้ · ผู้ใช้ที่ถูกเปลี่ยนหน่วยยัง login ได้และเห็นหน่วยใหม่
-const lg=C.authenticateUser(memberRow[0],'pw123456');assert(lg.success&&lg.user.depts.includes(NEWU)&&!lg.user.depts.includes(UNIT),JSON.stringify(lg.user));
+const lg=C.authenticateUser(memberRow[0],'123456');assert(lg.success&&lg.user.depts.includes(NEWU)&&!lg.user.depts.includes(UNIT),JSON.stringify(lg.user));
 console.log('rename1 ok');

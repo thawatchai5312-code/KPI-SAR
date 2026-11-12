@@ -1,7 +1,7 @@
 const {ctx,sheets}=require('./harness');const assert=require('assert');
 const RealDate=Date; let fake=new RealDate('2026-10-21T03:00:00Z');
 ctx.Date=class extends RealDate{constructor(...a){a.length?super(...a):super(fake)} static now(){return fake.getTime()}};
-ctx.authenticateUser('Admin','Admin11038'); const a=ctx.authenticateUser('Admin','Admin11038');
+ctx.authenticateUser('Admin','123456'); const a=ctx.authenticateUser('Admin','123456');
 const st=ctx.authenticateUser('มานี','11038'); const row=(fy,id)=>sheets['ปีงบ '+fy].d.find(r=>r[0]===id);
 const all=ctx.getAllData(a.token,2570).data; assert(all.every(k=>k.frequency==='รายเดือน'&&k.analysisUpdatedAt===''));
 const k=ctx.getAllData(st.token,2570).data.find(x=>x.mine);

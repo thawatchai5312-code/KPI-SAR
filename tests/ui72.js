@@ -5,7 +5,7 @@ const fs=require('fs');const path=require('path');
 const h=require('./harness7');const C=h.ctx;const assert=require('assert');
 const html=fs.readFileSync(path.join(__dirname,'../src/Index.html'),'utf8');
 const U=h.sheets.Users.d;const fy=2570;
-const ad=U.find(r=>r[2]==='admin');ad[1]=C.hashPassword_('pw123456');ad[4]='FALSE';
+const ad=U.find(r=>r[2]==='admin');ad[1]=C.hashPassword_('123456');ad[4]='FALSE';
 const saved=[];const origSave=C.saveReportPrefs;C.saveReportPrefs=function(t,p){saved.push(JSON.parse(JSON.stringify(p)));return origSave.apply(this,arguments)};
 const OUT=path.join(__dirname,'..');
 (async()=>{
@@ -15,7 +15,7 @@ const OUT=path.join(__dirname,'..');
  await pg.route('**/*',r=>{const u=r.request().url();if(u==='http://app.test/')return r.fulfill({contentType:'text/html; charset=utf-8',body:html});return r.abort()});
  await pg.addInitScript(()=>{function mk(ok,fail){return new Proxy({},{get:(_,fn)=>{if(fn==='withSuccessHandler')return f=>mk(f,fail);if(fn==='withFailureHandler')return f=>mk(ok,f);return (...a)=>Promise.resolve().then(()=>window.__call(fn,a)).then(r=>ok&&ok(JSON.parse(r)))}})}window.google={script:{run:mk()}};});
  await pg.goto('http://app.test/');
- await pg.fill('#login-username',ad[0]);await pg.fill('#login-password','pw123456');await pg.click('#login-box-content button');await pg.waitForSelector('#modal-fy',{state:'visible'});await pg.selectOption('#fy-pick-select',String(fy));await pg.click('#modal-fy button');await pg.waitForSelector('#app-login-screen',{state:'hidden'});
+ await pg.fill('#login-username',ad[0]);await pg.fill('#login-password','123456');await pg.click('#login-box-content button');await pg.waitForSelector('#modal-fy',{state:'visible'});await pg.selectOption('#fy-pick-select',String(fy));await pg.click('#modal-fy button');await pg.waitForSelector('#app-login-screen',{state:'hidden'});
  await pg.waitForFunction(()=>document.getElementById('kpi-table')||document.querySelector('.kpi-card'),null,{timeout:60000});
  await pg.waitForFunction(()=>acDir.heads&&acDir.heads.length>0,null,{timeout:20000});
  await pg.evaluate(()=>switchMenu('report'));await pg.waitForSelector('#rp-person');await pg.waitForFunction(()=>document.querySelectorAll('#rp-paper table').length>0,null,{timeout:60000});

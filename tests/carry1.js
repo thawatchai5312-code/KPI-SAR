@@ -5,7 +5,7 @@ C.Date=class extends RealDate{constructor(...a){a.length?super(...a):super(fake)
 const U=h.sheets.Users.d;
 const pick=(tier,dept)=>U.find(r=>r[2]===tier&&(!dept||new RegExp('(^|,)'+dept+'(,|$)').test(r[3])));
 const ad=pick('admin'),ex=pick('executive'),st=pick('staff');
-[ad,ex,st].forEach(r=>{r[1]=C.hashPassword_('pw123456');r[4]='FALSE'});
+[ad,ex,st].forEach(r=>{r[1]=C.hashPassword_('123456');r[4]='FALSE'});
 const tA=C.createSession_(ad[0],ad[1]),tE=C.createSession_(ex[0],ex[1]),tS=C.createSession_(st[0],st[1]);
 const FY=2570,NEW=2571,D70='ร่างจากปีงบ 2570';
 const docRows=(fy,doc)=>h.sheets.SAR_Doc.d.slice(1).filter(r=>r[0]===fy&&r[1]===doc);

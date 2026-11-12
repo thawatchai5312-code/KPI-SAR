@@ -2,7 +2,7 @@ const {chromium}=require('playwright');
 const fs=require('fs');const h=require('./harness2');const C=h.ctx;const assert=require('assert');
 const ff=require('./lib/font');
 const html=fs.readFileSync(require('path').join(__dirname,'../src/Index.html'),'utf8').replace("let listMode = 'table';","let listMode = 'card';").replace("listMode = defaultListMode(); tblHide.clear(); TBL_DEFAULT_HIDE","listMode = 'card'; tblHide.clear(); TBL_DEFAULT_HIDE").replace('</head>','<style>'+ff('thai')+ff('latin')+'</style></head>');
-const U=h.sheets.Users.d; const r0=U.find(x=>x[0]==='Admin'); r0[1]=C.hashPassword_('pw123456'); r0[4]='FALSE';
+const U=h.sheets.Users.d; const r0=U.find(x=>x[0]==='Admin'); r0[1]=C.hashPassword_('123456'); r0[4]='FALSE';
 (async()=>{
  C.PropertiesService.getScriptProperties().setProperty('HEAD_SEED_V1','done');
  const at=C.createSession_('Admin',r0[1]); assert(C.nsoImportCommit(at).success);
@@ -12,7 +12,7 @@ const U=h.sheets.Users.d; const r0=U.find(x=>x[0]==='Admin'); r0[1]=C.hashPasswo
  await pg.route('**/*',r=>r.request().url()==='http://app.test/'?r.fulfill({contentType:'text/html; charset=utf-8',body:html}):r.abort());
  await pg.addInitScript(()=>{function mk(ok,fail){return new Proxy({},{get:(_,fn)=>{if(fn==='withSuccessHandler')return f=>mk(f,fail);if(fn==='withFailureHandler')return f=>mk(ok,f);return (...a)=>window.__call(fn,a).then(r=>ok&&ok(JSON.parse(r)))}})}window.google={script:{run:mk()}};});
  await pg.goto('http://app.test/');
- await pg.fill('#login-username','Admin');await pg.fill('#login-password','pw123456');await pg.click('#login-box-content button');await pg.waitForSelector('#modal-fy',{state:'visible'});await pg.click('#modal-fy button');await pg.waitForSelector('#app-login-screen',{state:'hidden'});await pg.waitForTimeout(400);
+ await pg.fill('#login-username','Admin');await pg.fill('#login-password','123456');await pg.click('#login-box-content button');await pg.waitForSelector('#modal-fy',{state:'visible'});await pg.click('#modal-fy button');await pg.waitForSelector('#app-login-screen',{state:'hidden'});await pg.waitForTimeout(400);
  await pg.evaluate(()=>setTreeView('unit')); await pg.evaluate(()=>switchMenu('report')); await pg.waitForTimeout(1500);
  const chk=(sel)=>pg.evaluate(sel=>{const rows=[...document.querySelectorAll(sel+' table.pr-table')].filter(t=>t.querySelector('th').innerText.trim()==='ที่').flatMap(t=>[...t.querySelectorAll('tbody tr')]);const out={main:0,sub:0,badMain:0,badSub:0,otherBold:0};
    rows.forEach(tr=>{const tds=[...tr.children];const num=tds[0],name=tds[1];const isSub=num.innerText.includes('.')&&/[0-9]\.[0-9]/.test(num.innerText);

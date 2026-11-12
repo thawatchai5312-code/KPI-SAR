@@ -2,9 +2,9 @@
 const h=require('./harness7');const C=h.ctx;const assert=require('assert');
 const eq=(x,y,m)=>assert.strictEqual(JSON.stringify(x),JSON.stringify(y),m);
 const FY=2570;
-const U=h.sheets.Users.d;U.slice(1).forEach(r=>{r[1]=C.hashPassword_('pw123456');r[4]='FALSE'});
+const U=h.sheets.Users.d;U.slice(1).forEach(r=>{r[1]=C.hashPassword_('123456');r[4]='FALSE'});
 const tok=r=>C.createSession_(r[0],r[1]);
-const mk=(n,tier,d)=>{const r=[n,C.hashPassword_('pw123456'),tier,d||'','FALSE','',''];U.push(r);return r};
+const mk=(n,tier,d)=>{const r=[n,C.hashPassword_('123456'),tier,d||'','FALSE','',''];U.push(r);return r};
 const hA=mk('หัวหน้าทดสอบเอ','head','HOWA'),hB=mk('หัวหน้าทดสอบบี','head','HOWB'),ex0=mk('ผู้บริหารทดสอบ0','executive',''),ex1=mk('ผู้บริหารทดสอบ1','executive','HOWA'),st=mk('เจ้าหน้าที่ทดสอบ','staff','HOWA'),nso=mk('หัวหน้าทดสอบเอ็นเอสโอ','head','NSO');
 const adRow=U.find(r=>r[2]==='admin');
 const user=r=>C.requireUser_(tok(r));

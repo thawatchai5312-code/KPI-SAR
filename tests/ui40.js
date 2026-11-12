@@ -4,9 +4,9 @@ const fs=require('fs');const h=require('./harness5');const C=h.ctx;const assert=
 const html=fs.readFileSync(require('path').join(__dirname,'../src/Index.html'),'utf8');
 const U=h.sheets.Users.d;const pick=(tier,dept)=>U.find(r=>r[2]===tier&&(!dept||new RegExp('(^|,)'+dept+'(,|$)').test(r[3])));
 const st=pick('staff','ER'),hd=pick('head','ER'),ad=pick('admin');
-[st,hd,ad].forEach(r=>{r[1]=C.hashPassword_('pw123456');r[4]='FALSE'});
+[st,hd,ad].forEach(r=>{r[1]=C.hashPassword_('123456');r[4]='FALSE'});
 const SNAP=()=>JSON.stringify(h.sheets['ปีงบ 2570'].d)+JSON.stringify(h.sheets['ปีงบ 2569'].d);
-const ex=pick('executive'); if(ex){ex[1]=C.hashPassword_('pw123456');ex[4]='FALSE';}
+const ex=pick('executive'); if(ex){ex[1]=C.hashPassword_('123456');ex[4]='FALSE';}
 (async()=>{
  const b=await chromium.launch({executablePath:'/opt/pw-browsers/chromium'});
  const mk=async(w,hh)=>{const pg=await b.newPage({viewport:{width:w||1440,height:hh||900}});const errs=[];pg.on('pageerror',e=>errs.push(e.message));pg._errs=errs;
@@ -14,7 +14,7 @@ const ex=pick('executive'); if(ex){ex[1]=C.hashPassword_('pw123456');ex[4]='FALS
   await pg.route('**/*',r=>r.request().url()==='http://app.test/'?r.fulfill({contentType:'text/html; charset=utf-8',body:html}):r.abort());
   await pg.addInitScript(()=>{function mk(ok,fail){return new Proxy({},{get:(_,fn)=>{if(fn==='withSuccessHandler')return f=>mk(f,fail);if(fn==='withFailureHandler')return f=>mk(ok,f);return (...a)=>window.__call(fn,a).then(r=>ok&&ok(JSON.parse(r)))}})}window.google={script:{run:mk()}};});
   await pg.goto('http://app.test/');return pg};
- const login=async(pg,u)=>{await pg.fill('#login-username',u);await pg.fill('#login-password','pw123456');await pg.click('#login-box-content button');await pg.waitForSelector('#modal-fy',{state:'visible'});await pg.selectOption('#fy-pick-select','2570');await pg.click('#modal-fy button');await pg.waitForSelector('#app-login-screen',{state:'hidden'});};
+ const login=async(pg,u)=>{await pg.fill('#login-username',u);await pg.fill('#login-password','123456');await pg.click('#login-box-content button');await pg.waitForSelector('#modal-fy',{state:'visible'});await pg.selectOption('#fy-pick-select','2570');await pg.click('#modal-fy button');await pg.waitForSelector('#app-login-screen',{state:'hidden'});};
  const welcome=pg=>pg.waitForSelector('#modal-tour-welcome',{state:'visible',timeout:3000}).then(()=>true,()=>false);
  // fy change from the top bar must not show the welcome popup
  let pg=await mk(); await login(pg,st[0]);

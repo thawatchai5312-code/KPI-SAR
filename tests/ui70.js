@@ -5,7 +5,7 @@ const h=require('./harness7');const C=h.ctx;const assert=require('assert');
 // เซิร์ฟเวอร์จริงใส่ meta viewport ให้ใน doGet (addMetaTag) — จำลองเหมือนกัน ไม่งั้นมือถือจำลองใช้ความกว้าง 980px
 const html=fs.readFileSync(path.join(__dirname,'../src/Index.html'),'utf8').replace('<head>','<head><meta name="viewport" content="width=device-width, initial-scale=1">');
 const U=h.sheets.Users.d;const fy=2570;const OUT=process.cwd();
-U.slice(1).forEach(r=>{r[1]=C.hashPassword_('pw123456');r[4]='FALSE'});
+U.slice(1).forEach(r=>{r[1]=C.hashPassword_('123456');r[4]='FALSE'});
 const ad=U.find(r=>r[2]==='admin');
 async function open(b,ctxOpts){
  const ctx=await b.newContext(ctxOpts);const pg=await ctx.newPage();pg.errs=[];pg.on('pageerror',e=>pg.errs.push(e.message));
@@ -13,7 +13,7 @@ async function open(b,ctxOpts){
  await pg.route('**/*',r=>r.request().url()==='http://app.test/'?r.fulfill({contentType:'text/html; charset=utf-8',body:html}):r.abort());
  await pg.addInitScript(()=>{function mk(ok,fail){return new Proxy({},{get:(_,fn)=>{if(fn==='withSuccessHandler')return f=>mk(f,fail);if(fn==='withFailureHandler')return f=>mk(ok,f);return (...a)=>Promise.resolve().then(()=>window.__call(fn,a)).then(r=>ok&&ok(JSON.parse(r)))}})}window.google={script:{run:mk()}};});
  await pg.goto('http://app.test/');
- await pg.fill('#login-username',ad[0]);await pg.fill('#login-password','pw123456');await pg.click('#login-box-content button');await pg.waitForSelector('#modal-fy',{state:'visible'});await pg.selectOption('#fy-pick-select',String(fy));await pg.click('#modal-fy button');await pg.waitForSelector('#app-login-screen',{state:'hidden'});
+ await pg.fill('#login-username',ad[0]);await pg.fill('#login-password','123456');await pg.click('#login-box-content button');await pg.waitForSelector('#modal-fy',{state:'visible'});await pg.selectOption('#fy-pick-select',String(fy));await pg.click('#modal-fy button');await pg.waitForSelector('#app-login-screen',{state:'hidden'});
  await pg.waitForFunction(()=>document.getElementById('kpi-table')||document.querySelector('.kpi-card'),null,{timeout:60000});
  await pg.evaluate(()=>{document.querySelectorAll('.modal-overlay').forEach(m=>m.style.display='none')});
  return pg;

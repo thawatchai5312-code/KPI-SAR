@@ -6,14 +6,14 @@ const U=h.sheets.Users.d; const setPw=(n,p)=>{const r=U.find(x=>x[0]===n);r[1]=C
 (async()=>{
  C.PropertiesService.getScriptProperties().setProperty('HEAD_SEED_V1','done');
  const st=U.find(r=>r[2]==='staff'&&/(^|,)ER(,|$)/.test(r[3])), hd=U.find(r=>r[2]==='head'&&/(^|,)ER(,|$)/.test(r[3])), ex=U.find(r=>r[2]==='executive');
- [st,hd,ex,U.find(r=>r[0]==='Admin')].forEach(r=>setPw(r[0],'pw123456'));
+ [st,hd,ex,U.find(r=>r[0]==='Admin')].forEach(r=>setPw(r[0],'123456'));
  const b=await chromium.launch({executablePath:'/opt/pw-browsers/chromium'});
  const mk=async()=>{const pg=await b.newPage({viewport:{width:1440,height:900}});const errs=[];pg.on('pageerror',e=>errs.push(e.message));pg._errs=errs;
   await pg.exposeFunction('__call',(fn,args)=>{try{return JSON.stringify(C[fn](...args)??null)}catch(e){return JSON.stringify({success:false,message:String(e)})}});
   await pg.route('**/*',r=>r.request().url()==='http://app.test/'?r.fulfill({contentType:'text/html; charset=utf-8',body:html}):r.abort());
   await pg.addInitScript(()=>{function mk(ok,fail){return new Proxy({},{get:(_,fn)=>{if(fn==='withSuccessHandler')return f=>mk(f,fail);if(fn==='withFailureHandler')return f=>mk(ok,f);return (...a)=>window.__call(fn,a).then(r=>ok&&ok(JSON.parse(r)))}})}window.google={script:{run:mk()}};});
   await pg.goto('http://app.test/');return pg};
- const login=async(pg,u)=>{await pg.fill('#login-username',u);await pg.fill('#login-password','pw123456');await pg.click('#login-box-content button');await pg.waitForSelector('#modal-fy',{state:'visible'});await pg.selectOption('#fy-pick-select','2570');await pg.click('#modal-fy button');await pg.waitForSelector('#app-login-screen',{state:'hidden'});await pg.waitForTimeout(500)};
+ const login=async(pg,u)=>{await pg.fill('#login-username',u);await pg.fill('#login-password','123456');await pg.click('#login-box-content button');await pg.waitForSelector('#modal-fy',{state:'visible'});await pg.selectOption('#fy-pick-select','2570');await pg.click('#modal-fy button');await pg.waitForSelector('#app-login-screen',{state:'hidden'});await pg.waitForTimeout(500)};
  const S=pg=>pg.evaluate(()=>{const n=b=>Number((b.querySelector('.fb-n')||{}).textContent);
    return {scope:appliedFilters.scope,view:treeView,sc:Object.fromEntries([...document.querySelectorAll('#tree-filterbar [data-scope]')].map(b=>[b.dataset.scope,n(b)])),
    on:[...document.querySelectorAll('#tree-filterbar .fb-btn[data-scope].on, #tree-filterbar .fb-btn.cut')].map(b=>b.dataset.scope||b.dataset.status),

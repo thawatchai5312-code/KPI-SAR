@@ -8,7 +8,7 @@ const U=h.sheets.Users.d;const fy=2570;
 const DOCX_LIB=path.join(__dirname,'fixtures/lib/docx.iife.js'),PPTX_LIB=path.join(__dirname,'fixtures/lib/pptxgen.bundle.js');assert(fs.existsSync(DOCX_LIB)&&fs.existsSync(PPTX_LIB),'missing libs');
 const pick=(tier,dept)=>U.find(r=>r[2]===tier&&(!dept||new RegExp('(^|,)'+dept+'(,|$)').test(r[3])));
 const ad=pick('admin'),ex=pick('executive'),hp=pick('head','PCT'),hn=U.find(r=>r[2]==='head'&&!/(^|,)PCT(,|$)/.test(r[3]));
-[ad,ex,hp,hn].forEach(r=>{r[1]=C.hashPassword_('pw123456');r[4]='FALSE'});
+[ad,ex,hp,hn].forEach(r=>{r[1]=C.hashPassword_('123456');r[4]='FALSE'});
 const tA=C.createSession_(ad[0],ad[1]),tE=C.createSession_(ex[0],ex[1]);
 const OUT=process.cwd();
 async function open(b,user){
@@ -22,16 +22,16 @@ async function open(b,user){
    return r.abort()});
  await pg.addInitScript(()=>{function mk(ok,fail){return new Proxy({},{get:(_,fn)=>{if(fn==='withSuccessHandler')return f=>mk(f,fail);if(fn==='withFailureHandler')return f=>mk(ok,f);return (...a)=>Promise.resolve().then(()=>window.__call(fn,a)).then(r=>ok&&ok(JSON.parse(r)))}})}window.google={script:{run:mk()}};});
  await pg.goto('http://app.test/');
- await pg.fill('#login-username',user[0]);await pg.fill('#login-password','pw123456');await pg.click('#login-box-content button');await pg.waitForSelector('#modal-fy',{state:'visible'});await pg.selectOption('#fy-pick-select',String(fy));await pg.click('#modal-fy button');await pg.waitForSelector('#app-login-screen',{state:'hidden'});
+ await pg.fill('#login-username',user[0]);await pg.fill('#login-password','123456');await pg.click('#login-box-content button');await pg.waitForSelector('#modal-fy',{state:'visible'});await pg.selectOption('#fy-pick-select',String(fy));await pg.click('#modal-fy button');await pg.waitForSelector('#app-login-screen',{state:'hidden'});
  await pg.waitForFunction(()=>document.getElementById('kpi-table')||document.querySelector('.kpi-card'),null,{timeout:60000});
  return pg;
 }
 (async()=>{
  const br=await chromium.launch({executablePath:'/opt/pw-browsers/chromium'});
- U.slice(1).forEach(r=>{r[1]=C.hashPassword_('pw123456');r[4]='FALSE'});
+ U.slice(1).forEach(r=>{r[1]=C.hashPassword_('123456');r[4]='FALSE'});
  const Y=y=>h.sheets['ปีงบ '+y].d,rowOf=(y,id)=>Y(y).slice(1).find(r=>String(r[0]).trim()===id);
  const stf=U.find(r=>r[2]==='staff'&&C.getAllData(C.createSession_(r[0],r[1]),fy).data.some(k=>k.canEditResults&&k.canEditDetails&&rowOf(2569,k.id)));
- stf[1]=C.hashPassword_('pw123456');stf[4]='FALSE';
+ stf[1]=C.hashPassword_('123456');stf[4]='FALSE';
  const kp=C.getAllData(C.createSession_(stf[0],stf[1]),fy).data.find(k=>k.canEditResults&&k.canEditDetails&&rowOf(2569,k.id));
  const cur=rowOf(fy,kp.id),prev=rowOf(2569,kp.id);
  for(let i=6;i<=10;i++){cur[i]='';prev[i]=''}cur[23]='';

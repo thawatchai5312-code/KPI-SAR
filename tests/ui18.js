@@ -3,10 +3,10 @@ const fs=require('fs');const h=require('./harness');const assert=require('assert
 const ff=require('./lib/font');
 const html=fs.readFileSync(require('path').join(__dirname,'../src/Index.html'),'utf8').replace("let listMode = 'table';","let listMode = 'card';").replace("listMode = defaultListMode(); tblHide.clear(); TBL_DEFAULT_HIDE","listMode = 'card'; tblHide.clear(); TBL_DEFAULT_HIDE").replace('</head>','<style>'+ff('thai')+ff('latin')+'</style></head>');
 (async()=>{
- h.ctx.authenticateUser('Admin','Admin11038'); h.ctx.authenticateUser('Admin','Admin11038');
- for(const u of ['มานี','อรทัย','ผอ.']){const t=h.ctx.authenticateUser(u,'11038'); h.ctx.changePassword(t.token,'11038','secret99');}
+ h.ctx.authenticateUser('Admin','123456'); h.ctx.authenticateUser('Admin','123456');
+ for(const u of ['มานี','อรทัย','ผอ.']){const t=h.ctx.authenticateUser(u,'11038'); h.ctx.changePassword(t.token,'11038','654321');}
  // a staff with no KPIs
- const at=h.ctx.authenticateUser('Admin','Admin11038'); const users=h.ctx.getUsersForAdmin(at.token).users; users.push({username:'คนใหม่',tier:'staff',depts:'',isNew:true}); h.ctx.saveUsersForAdmin(at.token,users,[]); const tn=h.ctx.authenticateUser('คนใหม่','11038'); h.ctx.changePassword(tn.token,'11038','secret99');
+ const at=h.ctx.authenticateUser('Admin','123456'); const users=h.ctx.getUsersForAdmin(at.token).users; users.push({username:'คนใหม่',tier:'staff',depts:'',isNew:true}); h.ctx.saveUsersForAdmin(at.token,users,[]); const tn=h.ctx.authenticateUser('คนใหม่','11038'); h.ctx.changePassword(tn.token,'11038','654321');
  const b=await chromium.launch({executablePath:'/opt/pw-browsers/chromium'});
  const mkpage=async(vw=1440,vh=900)=>{
   const pg=await b.newPage({viewport:{width:vw,height:vh}});
@@ -19,7 +19,7 @@ const html=fs.readFileSync(require('path').join(__dirname,'../src/Index.html'),'
  const total=pg=>pg.evaluate(()=>getOrderedKpis().length);
 
  // ---- staff
- let pg=await mkpage(); await login(pg,'มานี','secret99');
+ let pg=await mkpage(); await login(pg,'มานี','654321');
  assert(await pg.locator('#tree-search').count()===0); console.log('search box removed');
  assert(await pg.isVisible('#btn-add-kpi')); console.log('add button visible for staff');
  // progress follows default
@@ -57,7 +57,7 @@ const html=fs.readFileSync(require('path').join(__dirname,'../src/Index.html'),'
  console.log('parts in tree:',order); assert(order.includes('หมวดของมานี'));
  console.log('errors',pg._errs); await pg.close();
  // ---- admin: ordering
- pg=await mkpage(); await login(pg,'Admin','Admin11038');
+ pg=await mkpage(); await login(pg,'Admin','123456');
  await pg.evaluate(()=>{globalDatabase.push(Object.assign({},globalDatabase[0],{cats:undefined,id:'z1',part:'หมวด ก',category:'a'}),Object.assign({},globalDatabase[0],{cats:undefined,id:'z2',part:'Part V',category:'a'}),Object.assign({},globalDatabase[0],{cats:undefined,id:'z3',part:'Alpha',category:'a'}));renderTree();});
  const parts=()=>pg.evaluate(()=>Array.from(document.querySelectorAll('.accordion-header > span:first-child')).map(e=>e.innerText));
  const ordH=await parts(); console.log('admin hosp order',ordH); assert(ordH.join()==='Part I,Part II,Part III,Part IV');
@@ -65,7 +65,7 @@ const html=fs.readFileSync(require('path').join(__dirname,'../src/Index.html'),'
  assert(ordU.join()===ordU.slice().sort((x,y)=>x.localeCompare(y,'th')).join()&&ordU.includes('Alpha')&&ordU.includes('Part V')&&!ordU.includes('Part I'));
  console.log('admin errors',pg._errs); await pg.close();
  // ---- executive
- pg=await mkpage(); await login(pg,'ผอ.','secret99');
+ pg=await mkpage(); await login(pg,'ผอ.','654321');
  const ex=await pg.evaluate(()=>({n:globalDatabase.length,ok:globalDatabase.every(k=>k.mine||(isCorePart(k.part)&&hasHospitalLevel(k.levels))),mine:appliedFilters.scope!=='all'}));
  console.log('exec',ex); assert(ex.ok&&!ex.mine); console.log('exec errors',pg._errs); await pg.close();
  await b.close(); console.log('UI18 OK');

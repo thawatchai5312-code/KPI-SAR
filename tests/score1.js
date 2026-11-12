@@ -34,10 +34,10 @@ eq([L(3,['','','','','','','5'],'≤ 5'),L(7,['','','','','','','5'],'≤ 5'),L(
 // ----- ผลรอบ
 eq([C.scoreRoundResult_([10,20,30,'-',null,null,1,2,3,4,5,6],0,5,'เฉลี่ย'),C.scoreRoundResult_([10,20,30,'-',null,null,1,2,3,4,5,6],0,5,'ผลรวม'),C.scoreRoundResult_([10,20,30,'-',null,null,1,2,3,4,5,6],6,11,'เดือนล่าสุด'),C.scoreRoundResult_(['A',null,'B',null,null,null,null,null,null,null,null,null],0,5,'เฉลี่ย'),C.scoreRoundResult_(Array(12).fill(null),0,5,'เฉลี่ย')],[20,60,6,'B',null]);
 // ----- ชุดคะแนนต่อคน
-const U=h.sheets.Users.d;U.slice(1).forEach(r=>{r[1]=C.hashPassword_('pw123456');r[4]='FALSE'});
+const U=h.sheets.Users.d;U.slice(1).forEach(r=>{r[1]=C.hashPassword_('123456');r[4]='FALSE'});
 const tok=r=>C.createSession_(r[0],r[1]);
 const ad=U.find(r=>r[2]==='admin'),tA=tok(ad);
-const mkUser=(n,tier)=>{const r=[n,C.hashPassword_('pw123456'),tier||'staff','','FALSE','',''];U.push(r);return r};
+const mkUser=(n,tier)=>{const r=[n,C.hashPassword_('123456'),tier||'staff','','FALSE','',''];U.push(r);return r};
 const uM=mkUser('ทดสอบคะแนนก','head'),uS=mkUser('ทดสอบคะแนนสตาฟ'),uN=mkUser('ทดสอบคะแนนข','head'),uE=mkUser('ทดสอบผอ','executive');
 const item=(name,owner)=>({part:'OPD',category:'x',name,target:'≥ 80',years:[null,null,null,null,null],months:Array(12).fill(null),levels:['รายบุคคล'],owner,department:'OPD'});
 const k1=C.addIndicator(tA,FY,item('ตัวชี้วัดคะแนน 1','ทดสอบคะแนนก'));assert(k1.success,JSON.stringify(k1));

@@ -3,7 +3,7 @@ const RealDate=Date; let fake=new RealDate('2026-10-21T03:00:00Z');
 ctx.Date=class extends RealDate{constructor(...a){a.length?super(...a):super(fake)} static now(){return fake.getTime()}};
 const names=()=>Object.keys(sheets);
 // 1. first login: migrates Database -> ปีงบ 2569, creates ปีงบ 2570
-const a0=ctx.authenticateUser('Admin','Admin11038'); assert(a0.success);
+const a0=ctx.authenticateUser('Admin','123456'); assert(a0.success);
 console.log('sheets:',names().join(' | '));
 assert(sheets['ปีงบ 2569']&&sheets['ปีงบ 2570']&&!sheets['Database']);
 assert(Object.keys(sheets).some(k=>k.startsWith('Database_backup_')) && sheets[Object.keys(sheets).find(k=>k.startsWith('Database_backup_'))].hidden);
@@ -17,7 +17,7 @@ console.log('shift ok: 2569 K=',r69[10],'-> 2570 J=',r70[9]);
 assert(s69[1][6]==='87.96'||s69[1][6]==87.96); // 2569 sheet keeps G-J original
 assert(ctx.ScriptApp.getProjectTriggers().some(t=>t.getHandlerFunction()==='dailyFiscalYearCheck'));
 // 2. getAllData defaults to current FY
-const a=ctx.authenticateUser('Admin','Admin11038');
+const a=ctx.authenticateUser('Admin','123456');
 let d=ctx.getAllData(a.token); assert(d.fy===2570&&d.currentFy===2570&&d.years.join()==='2570,2569'); console.log('default fy',d.fy,'years',d.years);
 let d69=ctx.getAllData(a.token,2569); assert(d69.fy===2569);
 const k1=d.data[0]; assert(k1.lockedYears.join()==='false,false,false,true'||true); console.log('locked (2570):',k1.lockedYears);
@@ -74,8 +74,8 @@ ctx.dailyFiscalYearCheck(); assert(names().filter(n=>n.startsWith('ปีงบ'
 const st2=ctx.authenticateUser('มานี','11038'); const o69=ctx.getAllData(st2.token,2569).data; assert(o69.some(x=>x.canEditResults&&x.canEditDetails),'2 years back editable by permission'); 
 assert(ctx.getAllData(st2.token,2570).data.some(x=>x.canEditResults&&x.canEditDetails)); console.log('after rollover: all years editable by permission');
 // 13. fallback: trigger missed, first login creates sheet
-delete sheets['ปีงบ 2571']; ctx.authenticateUser('Admin','Admin11038'); assert(sheets['ปีงบ 2571']); 
+delete sheets['ปีงบ 2571']; ctx.authenticateUser('Admin','123456'); assert(sheets['ปีงบ 2571']); 
 // 14. skipped year (no activity for a year): creating 2573 from 2571 shifts by 2
-fake=new RealDate('2029-10-05T03:00:00Z'); ctx.authenticateUser('Admin','Admin11038'); const s73=sheets['ปีงบ 2573']; assert(s73);
+fake=new RealDate('2029-10-05T03:00:00Z'); ctx.authenticateUser('Admin','123456'); const s73=sheets['ปีงบ 2573']; assert(s73);
 console.log('2573 G..K header:',s73.d[0].slice(6,11)); 
 console.log('ALL OK');

@@ -3,7 +3,7 @@ const fs=require('fs');const h=require('./harness2');const assert=require('asser
 const ff=require('./lib/font');
 const html=fs.readFileSync(require('path').join(__dirname,'../src/Index.html'),'utf8').replace("let listMode = 'table';","let listMode = 'card';").replace("listMode = defaultListMode(); tblHide.clear(); TBL_DEFAULT_HIDE","listMode = 'card'; tblHide.clear(); TBL_DEFAULT_HIDE").replace('</head>','<style>'+ff('thai')+ff('latin')+'</style></head>');
 (async()=>{
- h.sheets.Users.d.find(r=>r[0]==='Admin')[1]=h.ctx.hashPassword_('Admin11038'); h.sheets.Users.d.find(r=>r[0]==='Admin')[4]='FALSE';
+ h.sheets.Users.d.find(r=>r[0]==='Admin')[1]=h.ctx.hashPassword_('123456'); h.sheets.Users.d.find(r=>r[0]==='Admin')[4]='FALSE';
  const b=await chromium.launch({executablePath:'/opt/pw-browsers/chromium'});
  const mkpage=async(vw=1440,vh=900)=>{
   const pg=await b.newPage({viewport:{width:vw,height:vh}});
@@ -15,7 +15,7 @@ const html=fs.readFileSync(require('path').join(__dirname,'../src/Index.html'),'
  const login=async(pg,u,p)=>{await pg.fill('#login-username',u);await pg.fill('#login-password',p);await pg.click('#login-box-content button');await pg.waitForSelector('#modal-fy',{state:'visible'});await pg.click('#modal-fy button');await pg.waitForSelector('#app-login-screen',{state:'hidden'});await pg.waitForTimeout(300)};
  const total=pg=>pg.evaluate(()=>getOrderedKpis().length);
 
- let pg=await mkpage(); await login(pg,'Admin','Admin11038');
+ let pg=await mkpage(); await login(pg,'Admin','123456');
  await pg.click('#admin-settings-btn'); await pg.waitForSelector('#modal-settings',{state:'visible'});
  await pg.click('#import-menu-btn'); await pg.click('#import-menu button:has-text("นำเข้า/อัปเดตตัวชี้วัดฝ่ายการพยาบาล")'); await pg.waitForSelector('#modal-nso',{state:'visible'});
  await pg.waitForFunction(()=>!document.getElementById('nso-commit-btn').disabled,null,{timeout:60000});

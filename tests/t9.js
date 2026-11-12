@@ -1,5 +1,5 @@
 const {ctx,sheets}=require('./harness');const assert=require('assert');
-ctx.authenticateUser('Admin','Admin11038'); const a=ctx.authenticateUser('Admin','Admin11038');
+ctx.authenticateUser('Admin','123456'); const a=ctx.authenticateUser('Admin','123456');
 const users=ctx.getUsersForAdmin(a.token).users; console.log(users.filter(u=>/PCU|ER/.test(u.depts)).map(u=>u.username+':'+u.tier+':'+u.depts).join(' | '));
 const S=sheets['ปีงบ 2570'].d;
 const head=ctx.authenticateUser('อรทัย','11038'); // ER head

@@ -11,10 +11,10 @@ let g=C.dupFindGroups_(rows,{});
 eq(g.map(x=>[x.ids,x.kind,x.crossUnit]),[[['z1','z2'],'same',false],[['c1','c2'],'similar',false],[['a1','a2','b1'],'same',true]],'groups: same-unit first, cross-unit last, parent-child excluded');
 g=C.dupFindGroups_(rows,{[C.dupPairKey_('z1','z2')]:true});assert(!g.some(x=>x.ids.includes('z1')),'ignored pair');
 // ----- ข้อมูลจริงในชีตทดสอบ
-const U=h.sheets.Users.d;U.slice(1).forEach(r=>{r[1]=C.hashPassword_('pw123456');r[4]='FALSE'});
+const U=h.sheets.Users.d;U.slice(1).forEach(r=>{r[1]=C.hashPassword_('123456');r[4]='FALSE'});
 const tok=r=>C.createSession_(r[0],r[1]);
 const ad=U.find(r=>r[2]==='admin'),tA=tok(ad);
-const mkUser=(n,tier,d)=>{const r=[n,C.hashPassword_('pw123456'),tier||'staff',d||'','FALSE','',''];U.push(r);return r};
+const mkUser=(n,tier,d)=>{const r=[n,C.hashPassword_('123456'),tier||'staff',d||'','FALSE','',''];U.push(r);return r};
 const uS=mkUser('ทดสอบซ้ำสตาฟ','staff'),tS=tok(uS);['ทดสอบซ้ำก','ทดสอบซ้ำข','ทดสอบซ้ำค'].forEach(n=>mkUser(n,'staff'));
 const Y=fy=>h.sheets['ปีงบ '+fy].d;const rowOf=(fy,id)=>Y(fy).slice(1).find(r=>String(r[0]).trim()===id);
 const FY=2569,NEW=2570;

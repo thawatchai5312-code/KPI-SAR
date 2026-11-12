@@ -1,5 +1,5 @@
 const {ctx,sheets}=require('./harness');const assert=require('assert');
-ctx.authenticateUser('Admin','Admin11038'); const a=ctx.authenticateUser('Admin','Admin11038');
+ctx.authenticateUser('Admin','123456'); const a=ctx.authenticateUser('Admin','123456');
 const S=n=>sheets['ปีงบ '+n].d, find=(fy,id)=>S(fy).find(r=>r[0]===id);
 // mine flag: owner staff, head via dept, executive by name only
 const st=ctx.authenticateUser('มานี','11038'); const list=ctx.getAllData(st.token,2570).data;

@@ -4,10 +4,10 @@ const fs=require('fs');const h=require('./harness');const assert=require('assert
 const ff=require('./lib/font');
 const html=fs.readFileSync(require('path').join(__dirname,'../src/Index.html'),'utf8').replace("let listMode = 'table';","let listMode = 'card';").replace("listMode = defaultListMode(); tblHide.clear(); TBL_DEFAULT_HIDE","listMode = 'card'; tblHide.clear(); TBL_DEFAULT_HIDE").replace('</head>','<style>'+ff('thai')+ff('latin')+'</style></head>');
 (async()=>{
- h.ctx.authenticateUser('Admin','Admin11038'); h.ctx.authenticateUser('Admin','Admin11038');
- for(const u of ['มานี','อรทัย','ผอ.']){const t=h.ctx.authenticateUser(u,'11038'); h.ctx.changePassword(t.token,'11038','secret99');}
+ h.ctx.authenticateUser('Admin','123456'); h.ctx.authenticateUser('Admin','123456');
+ for(const u of ['มานี','อรทัย','ผอ.']){const t=h.ctx.authenticateUser(u,'11038'); h.ctx.changePassword(t.token,'11038','654321');}
  // a staff with no KPIs
- const at=h.ctx.authenticateUser('Admin','Admin11038'); const users=h.ctx.getUsersForAdmin(at.token).users; users.push({username:'คนใหม่',tier:'staff',depts:'',isNew:true}); h.ctx.saveUsersForAdmin(at.token,users,[]); const tn=h.ctx.authenticateUser('คนใหม่','11038'); h.ctx.changePassword(tn.token,'11038','secret99');
+ const at=h.ctx.authenticateUser('Admin','123456'); const users=h.ctx.getUsersForAdmin(at.token).users; users.push({username:'คนใหม่',tier:'staff',depts:'',isNew:true}); h.ctx.saveUsersForAdmin(at.token,users,[]); const tn=h.ctx.authenticateUser('คนใหม่','11038'); h.ctx.changePassword(tn.token,'11038','654321');
  const b=await chromium.launch({executablePath:'/opt/pw-browsers/chromium'});
  const mkpage=async(vw=1440,vh=900)=>{
   const pg=await b.newPage({viewport:{width:vw,height:vh}});
@@ -23,7 +23,7 @@ const html=fs.readFileSync(require('path').join(__dirname,'../src/Index.html'),'
  const C=h.ctx;
  const state=pg=>pg.evaluate(()=>({tab:currentTab,levels:appliedFilters.scope,view:treeView,orient:rpt.orient,count:document.getElementById('rp-count')&&document.getElementById('rp-count').innerText,unchecked:rpt.unchecked.size,blocks:document.querySelectorAll('#rp-paper .pr-block').length,rows:document.querySelectorAll('#rp-paper tbody tr').length,more:document.getElementById('rp-more').innerText.slice(0,80),paperW:document.getElementById('rp-paper').getBoundingClientRect().width,cls:document.getElementById('rp-paper').className,zoom:document.getElementById('rp-paper').style.zoom}));
  // ---- staff: open page, defaults
- let pg=await mkpage(1440,900); await login(pg,'มานี','secret99');
+ let pg=await mkpage(1440,900); await login(pg,'มานี','654321');
  await pg.click('#menu-report-btn'); await pg.waitForSelector('#rp-cat-list label'); await pg.waitForTimeout(500);
  let st=await state(pg); console.log('open',JSON.stringify(st)); assert(st.tab==='report'&&st.levels==='mine'&&st.blocks>0);
  assert(await pg.evaluate(()=>document.getElementById('menu-report-btn').classList.contains('active')&&!document.getElementById('menu-home-btn').classList.contains('active')));
@@ -46,7 +46,7 @@ const html=fs.readFileSync(require('path').join(__dirname,'../src/Index.html'),'
  await pg.screenshot({path:'ui28-portrait.png'});
  // prefs saved server-side per user
  await pg.waitForTimeout(1200);
- let saved=C.getReportPrefs(C.authenticateUser('มานี','secret99').token); console.log('saved',JSON.stringify(saved)); assert(saved.prefs&&saved.prefs.orient==='portrait'&&saved.prefs.opts.chart===false&&saved.prefs.unchecked.length===1);
+ let saved=C.getReportPrefs(C.authenticateUser('มานี','654321').token); console.log('saved',JSON.stringify(saved)); assert(saved.prefs&&saved.prefs.orient==='portrait'&&saved.prefs.opts.chart===false&&saved.prefs.unchecked.length===1);
  // ปุ่ม Export PDF มุมขวาบนถูกเอาออกแล้ว — พิมพ์จากปุ่มในแถบซ้ายของหน้าสรุปรายงาน (intercept print)
  await pg.evaluate(()=>{window.__printed=0; window.print=()=>{window.__printed++}});
  assert(await pg.evaluate(()=>!document.getElementById('btn-export-pdf')&&typeof exportPdfClick==='undefined'),'top Export PDF button removed');
@@ -62,15 +62,15 @@ const html=fs.readFileSync(require('path').join(__dirname,'../src/Index.html'),'
  st=await state(pg); assert(st.orient==='portrait'&&st.unchecked===1&&st.blocks>0);
  console.log('errors',pg._errs); await pg.close();
  // ---- same user logs in again (fresh page): remembered
- pg=await mkpage(1440,900); await login(pg,'มานี','secret99'); await pg.click('#menu-report-btn'); await pg.waitForSelector('#rp-cat-list label'); await pg.waitForTimeout(500);
+ pg=await mkpage(1440,900); await login(pg,'มานี','654321'); await pg.click('#menu-report-btn'); await pg.waitForSelector('#rp-cat-list label'); await pg.waitForTimeout(500);
  st=await state(pg); console.log('relogin',JSON.stringify(st)); assert(st.orient==='portrait'&&st.unchecked===1&&st.cls==='portrait');
  await pg.close();
  // ---- other user not affected
- pg=await mkpage(1440,900); await login(pg,'อรทัย','secret99'); await pg.click('#menu-report-btn'); await pg.waitForSelector('#rp-cat-list label'); await pg.waitForTimeout(500);
+ pg=await mkpage(1440,900); await login(pg,'อรทัย','654321'); await pg.click('#menu-report-btn'); await pg.waitForSelector('#rp-cat-list label'); await pg.waitForTimeout(500);
  st=await state(pg); console.log('other user',JSON.stringify(st)); assert(st.orient==='landscape'&&st.unchecked===0);
  await pg.close();
  // ---- admin: scope all, large set, paged preview
- pg=await mkpage(1440,900); await login(pg,'Admin','Admin11038'); await pg.click('#menu-report-btn'); await pg.waitForSelector('#rp-cat-list label'); await pg.waitForTimeout(800);
+ pg=await mkpage(1440,900); await login(pg,'Admin','123456'); await pg.click('#menu-report-btn'); await pg.waitForSelector('#rp-cat-list label'); await pg.waitForTimeout(800);
  st=await state(pg); console.log('admin',JSON.stringify(st)); assert(st.levels==='all'&&st.blocks>=10);
  const t0=await pg.evaluate(()=>document.querySelector('#rp-paper .pr-kpi-title').textContent); await pg.evaluate(()=>rptGoPage(2)); await pg.waitForTimeout(800); st=await state(pg); const t1=await pg.evaluate(()=>document.querySelector('#rp-paper .pr-kpi-title').textContent); console.log('page 2',st.blocks,t0.slice(0,20),'→',t1.slice(0,20)); assert(st.blocks>=1&&t1!==t0,'paged preview');
  // clear all -> empty message, select all back
@@ -79,7 +79,7 @@ const html=fs.readFileSync(require('path').join(__dirname,'../src/Index.html'),'
  await pg.evaluate(()=>{window.__printed=0; window.print=()=>{window.__printed++}}); await pg.click('#rp-side > button.btn-primary'); await pg.waitForTimeout(400); assert(await pg.evaluate(()=>window.__printed)===0&&await pg.evaluate(()=>getComputedStyle(document.getElementById('modal-alert')).display)==='flex');
  console.log('admin errors',pg._errs); await pg.close();
  // ---- mobile
- pg=await mkpage(390,844); await login(pg,'มานี','secret99'); await pg.click('#menu-report-btn'); await pg.waitForSelector('#rp-cat-list label'); await pg.waitForTimeout(600);
+ pg=await mkpage(390,844); await login(pg,'มานี','654321'); await pg.click('#menu-report-btn'); await pg.waitForSelector('#rp-cat-list label'); await pg.waitForTimeout(600);
  st=await state(pg); const mw=await pg.evaluate(()=>({sw:document.documentElement.scrollWidth,tog:getComputedStyle(document.querySelector('.rp-toggle')).display})); console.log('mobile',JSON.stringify(st),JSON.stringify(mw)); assert(mw.sw<=391&&mw.tog==='block'&&Number(st.zoom)<1);
  await pg.screenshot({path:'ui28-mobile.png'}); console.log('mobile errors',pg._errs); await pg.close();
  await b.close(); console.log('UI28 OK');

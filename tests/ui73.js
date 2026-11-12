@@ -2,7 +2,7 @@
 const {chromium}=require('playwright');
 const fs=require('fs');const path=require('path');const h=require('./harness7');const C=h.ctx;const assert=require('assert');
 const html=fs.readFileSync(path.join(__dirname,'../src/Index.html'),'utf8').replace("let listMode = 'table';","let listMode = 'card';").replace("listMode = defaultListMode(); tblHide.clear(); TBL_DEFAULT_HIDE","listMode = 'card'; tblHide.clear(); TBL_DEFAULT_HIDE");
-const U=h.sheets.Users.d;const ad=U.find(r=>r[2]==='admin');ad[1]=C.hashPassword_('pw123456');ad[4]='FALSE';
+const U=h.sheets.Users.d;const ad=U.find(r=>r[2]==='admin');ad[1]=C.hashPassword_('123456');ad[4]='FALSE';
 const tA=C.createSession_(ad[0],ad[1]);
 const X=C.getAllData(tA,2570).data.find(k=>k.canEditResults&&k.months.every(v=>v===null)&&k.years.every(v=>v===null));assert(X,'kpi without results');
 const OUT=path.join(__dirname,'..');
@@ -13,7 +13,7 @@ const OUT=path.join(__dirname,'..');
  await pg.route('**/*',r=>r.request().url()==='http://app.test/'?r.fulfill({contentType:'text/html; charset=utf-8',body:html}):r.abort());
  await pg.addInitScript(()=>{function mk(ok,fail){return new Proxy({},{get:(_,fn)=>{if(fn==='withSuccessHandler')return f=>mk(f,fail);if(fn==='withFailureHandler')return f=>mk(ok,f);return (...a)=>Promise.resolve().then(()=>window.__call(fn,a)).then(r=>ok&&ok(JSON.parse(r)))}})}window.google={script:{run:mk()}};});
  await pg.goto('http://app.test/');
- await pg.fill('#login-username',ad[0]);await pg.fill('#login-password','pw123456');await pg.click('#login-box-content button');await pg.waitForSelector('#modal-fy',{state:'visible'});await pg.selectOption('#fy-pick-select','2570');await pg.click('#modal-fy button');await pg.waitForSelector('#app-login-screen',{state:'hidden'});
+ await pg.fill('#login-username',ad[0]);await pg.fill('#login-password','123456');await pg.click('#login-box-content button');await pg.waitForSelector('#modal-fy',{state:'visible'});await pg.selectOption('#fy-pick-select','2570');await pg.click('#modal-fy button');await pg.waitForSelector('#app-login-screen',{state:'hidden'});
  await pg.waitForFunction(()=>document.querySelector('.kpi-card'),null,{timeout:60000});
  // ฟังก์ชันกลาง (หน้าเว็บ) ตรงกับเซิร์ฟเวอร์
  const vals=await pg.evaluate(()=>[resultValue('80%',true),resultValue('1,234',false),resultValue('๘๐',true),resultValue('A',true),resultValue('-',true),resultValue('-',false),resultValue('NA',true),resultValue('',true),resultValue('x'.repeat(80),true).length]);

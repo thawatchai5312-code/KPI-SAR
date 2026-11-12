@@ -4,7 +4,7 @@ const {chromium}=require('playwright');
 const fs=require('fs');const h=require('./harness7');const C=h.ctx;const assert=require('assert');
 const html=fs.readFileSync(require('path').join(__dirname,'../src/Index.html'),'utf8');
 const U=h.sheets.Users.d;const st=U.find(r=>r[2]==='staff'&&/(^|,)ER(,|$)/.test(r[3])),ad=U.find(r=>r[2]==='admin');
-[st,ad].forEach(r=>{r[1]=C.hashPassword_('pw123456');r[4]='FALSE'});
+[st,ad].forEach(r=>{r[1]=C.hashPassword_('123456');r[4]='FALSE'});
 const tS=C.createSession_(st[0],st[1]),tA=C.createSession_(ad[0],ad[1]);
 const srv=(t,id)=>C.getAllData(t,2570).data.find(k=>k.id===id);
 (async()=>{
@@ -14,7 +14,7 @@ const srv=(t,id)=>C.getAllData(t,2570).data.find(k=>k.id===id);
   await pg.route('**/*',r=>r.request().url()==='http://app.test/'?r.fulfill({contentType:'text/html; charset=utf-8',body:html}):r.abort());
   await pg.addInitScript(()=>{window.__delay={};function mk(ok,fail){return new Proxy({},{get:(_,fn)=>{if(fn==='withSuccessHandler')return f=>mk(f,fail);if(fn==='withFailureHandler')return f=>mk(ok,f);return (...a)=>new Promise(r=>setTimeout(r,window.__delay[fn]||0)).then(()=>window.__call(fn,a)).then(r=>ok&&ok(JSON.parse(r)))}})}window.google={script:{run:mk()}};});
   await pg.goto('http://app.test/');return pg};
- const login=async(pg,u)=>{await pg.fill('#login-username',u);await pg.fill('#login-password','pw123456');await pg.click('#login-box-content button');await pg.waitForSelector('#modal-fy',{state:'visible'});await pg.selectOption('#fy-pick-select','2570');await pg.click('#modal-fy button');await pg.waitForSelector('#app-login-screen',{state:'hidden'});await pg.waitForTimeout(500);};
+ const login=async(pg,u)=>{await pg.fill('#login-username',u);await pg.fill('#login-password','123456');await pg.click('#login-box-content button');await pg.waitForSelector('#modal-fy',{state:'visible'});await pg.selectOption('#fy-pick-select','2570');await pg.click('#modal-fy button');await pg.waitForSelector('#app-login-screen',{state:'hidden'});await pg.waitForTimeout(500);};
  const idle=p=>p.waitForSelector('#busy-overlay',{state:'hidden'});
 
  // ---- 1. default card, switch, rows == cards list, memory per account

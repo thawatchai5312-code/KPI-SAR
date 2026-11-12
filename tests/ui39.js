@@ -1,7 +1,7 @@
 const {chromium}=require('playwright');
 const fs=require('fs');const h=require('./harness5');const C=h.ctx;const assert=require('assert');
 const html=fs.readFileSync(require('path').join(__dirname,'../src/Index.html'),'utf8').replace("let listMode = 'table';","let listMode = 'card';").replace("listMode = defaultListMode(); tblHide.clear(); TBL_DEFAULT_HIDE","listMode = 'card'; tblHide.clear(); TBL_DEFAULT_HIDE");
-const U=h.sheets.Users.d; const a=U.find(x=>x[0]==='Admin'); a[1]=C.hashPassword_('pw123456'); a[4]='FALSE';
+const U=h.sheets.Users.d; const a=U.find(x=>x[0]==='Admin'); a[1]=C.hashPassword_('123456'); a[4]='FALSE';
 const S=h.sheets['ปีงบ 2570'];const row=id=>C.rowToKpi_(S.d.find(r=>r[0]===id));const show=k=>k.cats.map(c=>c.part+'›'+c.category).join(' ; ')+' ['+k.levels+'] dept='+k.department;
 // fixtures for cases 4/5: SAR-only KPIs with Part placement only (one with dept ER, one without dept)
 const coreOnly=S.d.slice(1).filter(r=>r[0]&&/^Part/.test(String(r[2]))).slice(5,7);coreOnly.forEach(r=>{r[36]='';});
@@ -13,7 +13,7 @@ coreOnly[0][28]='SAR';coreOnly[0][26]='ER';coreOnly[1][28]='SAR';coreOnly[1][26]
  await pg.route('**/*',r=>r.request().url()==='http://app.test/'?r.fulfill({contentType:'text/html; charset=utf-8',body:html}):r.abort());
  await pg.addInitScript(()=>{function mk(ok,fail){return new Proxy({},{get:(_,fn)=>{if(fn==='withSuccessHandler')return f=>mk(f,fail);if(fn==='withFailureHandler')return f=>mk(ok,f);return (...a)=>window.__call(fn,a).then(r=>ok&&ok(JSON.parse(r)))}})}window.google={script:{run:mk()}};});
  await pg.goto('http://app.test/');
- await pg.fill('#login-username','Admin');await pg.fill('#login-password','pw123456');await pg.click('#login-box-content button');await pg.waitForSelector('#modal-fy',{state:'visible'});await pg.selectOption('#fy-pick-select','2570');await pg.click('#modal-fy button');await pg.waitForSelector('#app-login-screen',{state:'hidden'});await pg.waitForTimeout(500);
+ await pg.fill('#login-username','Admin');await pg.fill('#login-password','123456');await pg.click('#login-box-content button');await pg.waitForSelector('#modal-fy',{state:'visible'});await pg.selectOption('#fy-pick-select','2570');await pg.click('#modal-fy button');await pg.waitForSelector('#app-login-screen',{state:'hidden'});await pg.waitForTimeout(500);
  const pick=f=>pg.evaluate(f);
  const edit=async(id)=>{await pg.evaluate(id=>{selectKpi(id);},id);await pg.waitForTimeout(500);await pg.evaluate(id=>{const k=globalDatabase.find(x=>x.id===id);startEditNow(id,placementsOf(k)[0].key)},id);await pg.waitForTimeout(500);};
  const rows=()=>pg.evaluate(()=>readCatRows('ed-cats').map(c=>c.part+'›'+c.category).join(' ; '));

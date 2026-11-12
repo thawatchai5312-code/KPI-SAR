@@ -1,6 +1,6 @@
 // KPI รายบุคคล (หน้าสรุปรายงาน): getKpisOfPerson — เฉพาะหัวหน้าขึ้นไป · ครบทุกตัวของคนนั้น (ข้ามหน่วย/ระดับ) · ดูอย่างเดียว · getDirectory ส่งรายชื่อหัวหน้า
 const h=require('./harness7');const C=h.ctx;const assert=require('assert');
-const U=h.sheets.Users.d;U.slice(1).forEach(r=>{r[1]=C.hashPassword_('pw123456');r[4]='FALSE'});
+const U=h.sheets.Users.d;U.slice(1).forEach(r=>{r[1]=C.hashPassword_('123456');r[4]='FALSE'});
 const tok=r=>C.createSession_(r[0],r[1]);
 const ad=U.find(r=>r[2]==='admin'),st=U.find(r=>r[2]==='staff'),hd=U.find(r=>r[2]==='head'),ex=U.find(r=>r[2]==='executive');
 const tA=tok(ad);

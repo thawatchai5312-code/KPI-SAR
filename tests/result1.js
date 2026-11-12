@@ -12,7 +12,7 @@ eq([W('A'),W('B-'),W('ดีมาก'),W('1/2'),W('12,34'),W('8O')],['A','B-','
 eq(W('x'.repeat(80)).length,60,'text capped 60');
 eq([W(NaN),W(Infinity)],[null,null]);
 // ----- บันทึก/อ่านกลับ
-const U=h.sheets.Users.d;U.slice(1).forEach(r=>{r[1]=C.hashPassword_('pw123456');r[4]='FALSE'});
+const U=h.sheets.Users.d;U.slice(1).forEach(r=>{r[1]=C.hashPassword_('123456');r[4]='FALSE'});
 const ad=U.find(r=>r[2]==='admin'),tA=C.createSession_(ad[0],ad[1]);
 const sh=h.sheets['ปีงบ 2570'];
 const fmt=[];const orig=sh.getRange.bind(sh);sh.getRange=function(r,c,nr,nc){const o=orig(r,c,nr,nc);const sf=o.setNumberFormat;o.setNumberFormat=function(f){fmt.push([r,c,nr||1,nc||1,f]);return sf.apply(o,arguments)};return o};

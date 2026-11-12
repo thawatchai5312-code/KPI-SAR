@@ -5,7 +5,7 @@ const html=fs.readFileSync(require('path').join(__dirname,'../src/Index.html'),'
 const U=h.sheets.Users.d; const setPw=(name,pw)=>{const r=U.find(x=>x[0]===name); r[1]=C.hashPassword_(pw); r[4]='FALSE'};
 (async()=>{
  C.PropertiesService.getScriptProperties().setProperty('HEAD_SEED_V1','done');
- ['Admin'].forEach(n=>setPw(n,'pw123456'));
+ ['Admin'].forEach(n=>setPw(n,'123456'));
  const at=C.createSession_('Admin',U.find(r=>r[0]==='Admin')[1]);
  assert(C.nsoImportCommit(at).success);
  const b=await chromium.launch({executablePath:'/opt/pw-browsers/chromium'});
@@ -15,7 +15,7 @@ const U=h.sheets.Users.d; const setPw=(name,pw)=>{const r=U.find(x=>x[0]===name)
   await pg.addInitScript(()=>{function mk(ok,fail){return new Proxy({},{get:(_,fn)=>{if(fn==='withSuccessHandler')return f=>mk(f,fail);if(fn==='withFailureHandler')return f=>mk(ok,f);return (...a)=>window.__call(fn,a).then(r=>ok&&ok(JSON.parse(r)))}})}window.google={script:{run:mk()}};});
   await pg.goto('http://app.test/');return pg};
  const login=async(pg,u,p)=>{await pg.fill('#login-username',u);await pg.fill('#login-password',p);await pg.click('#login-box-content button');await pg.waitForSelector('#modal-fy',{state:'visible'});await pg.click('#modal-fy button');await pg.waitForSelector('#app-login-screen',{state:'hidden'});await pg.waitForTimeout(400)};
- let pg=await mk(); await login(pg,'Admin','pw123456');
+ let pg=await mk(); await login(pg,'Admin','123456');
  // numbering: roots sequential, children parent.n
  const nums=await pg.evaluate(()=>{const out={bad:0,sub:0,samples:[]};const byCat={};
    globalDatabase.forEach(k=>placementsOf(k).forEach(p=>{(byCat[p.part+'||'+p.category]=byCat[p.part+'||'+p.category]||[]).push(p)}));

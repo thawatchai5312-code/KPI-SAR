@@ -4,9 +4,9 @@ const fs=require('fs');const path=require('path');
 const h=require('./harness7');const C=h.ctx;const assert=require('assert');
 const html=fs.readFileSync(path.join(__dirname,'../src/Index.html'),'utf8');
 const U=h.sheets.Users.d;const fy=2570;const OUT=process.cwd();
-U.slice(1).forEach(r=>{r[1]=C.hashPassword_('pw123456');r[4]='FALSE'});
+U.slice(1).forEach(r=>{r[1]=C.hashPassword_('123456');r[4]='FALSE'});
 const ad=U.find(r=>r[2]==='admin');const tA=C.createSession_(ad[0],ad[1]);
-const mk=n=>{const r=[n,C.hashPassword_('pw123456'),'staff','','FALSE','',''];U.push(r);return r};
+const mk=n=>{const r=[n,C.hashPassword_('123456'),'staff','','FALSE','',''];U.push(r);return r};
 const u1=mk('ซ้ำทดสอบ'),u2=mk('ซ้ำทดสอบแ.');
 const item=(name,owner)=>({part:'OPD',category:'x',name,target:'',years:[null,null,null,null,null],months:Array(12).fill(null),levels:['รายบุคคล'],owner,department:'OPD'});
 const k1=C.addIndicator(tA,fy,item('ตัวชี้วัดซ้ำ 1','ซ้ำทดสอบ'));const k2=C.addIndicator(tA,fy,item('ตัวชี้วัดซ้ำ 2','ซ้ำทดสอบแ.'));const k3=C.addIndicator(tA,fy,item('ตัวชี้วัดซ้ำ 3','อื่นๆ'));
@@ -23,7 +23,7 @@ const loginFy=async pg=>{await pg.waitForSelector('#modal-fy',{state:'visible'})
 (async()=>{
  const br=await chromium.launch({executablePath:'/opt/pw-browsers/chromium'});
  let pg=await page(br);
- await pg.fill('#login-username',ad[0]);await pg.fill('#login-password','pw123456');await pg.click('#login-box-content button');await loginFy(pg);
+ await pg.fill('#login-username',ad[0]);await pg.fill('#login-password','123456');await pg.click('#login-box-content button');await loginFy(pg);
  // ===== แท็บผู้ใช้ =====
  await pg.click('#admin-settings-btn');await pg.waitForSelector('#modal-settings',{state:'visible'});await pg.waitForTimeout(300);
  await pg.click('button:has-text("✏️ เปลี่ยนชื่อ")');await pg.waitForSelector('#modal-rename',{state:'visible'});
@@ -85,18 +85,18 @@ const loginFy=async pg=>{await pg.waitForSelector('#modal-fy',{state:'visible'})
  await pg.evaluate(()=>{const m=document.getElementById('modal-alert');if(m)m.style.display='none'});
  assert.strictEqual(await pg.locator('.login-choose-btn').count(),0);
  // รหัสผ่านตรงทั้งสองบัญชี → เลือกนามสกุล
- await pg.fill('#login-username','ซ้ำทดสอบ');await pg.fill('#login-password','pw123456');await pg.click('#login-box-content button');
+ await pg.fill('#login-username','ซ้ำทดสอบ');await pg.fill('#login-password','123456');await pg.click('#login-box-content button');
  await pg.waitForSelector('.login-choose-btn');assert.strictEqual(await pg.locator('.login-choose-btn').count(),2);
  await pg.screenshot({path:OUT+'/ui69-login.png'});
  await pg.click('#login-box-content button:has-text("กลับ")');await pg.waitForSelector('#login-username');
- await pg.fill('#login-username','ซ้ำทดสอบ');await pg.fill('#login-password','pw123456');await pg.click('#login-box-content button');
+ await pg.fill('#login-username','ซ้ำทดสอบ');await pg.fill('#login-password','123456');await pg.click('#login-box-content button');
  await pg.waitForSelector('.login-choose-btn');await pg.click('.login-choose-btn:has-text("แถวบุญตา")');
  await loginFy(pg);
  assert.strictEqual(await pg.evaluate(()=>currentUser.username),'ซ้ำทดสอบ แถวบุญตา');
  // รหัสผ่านตรงบัญชีเดียว → เข้าเลย
  await pg.evaluate(()=>logout());await pg.waitForSelector('#login-username');
- u2[1]=C.hashPassword_('pwOther99');
- await pg.fill('#login-username','ซ้ำทดสอบ');await pg.fill('#login-password','pw123456');await pg.click('#login-box-content button');await loginFy(pg);
+ u2[1]=C.hashPassword_('135790');
+ await pg.fill('#login-username','ซ้ำทดสอบ');await pg.fill('#login-password','123456');await pg.click('#login-box-content button');await loginFy(pg);
  assert.strictEqual(await pg.evaluate(()=>currentUser.username),'ซ้ำทดสอบ ธนาคุณ');
  console.log('errors',pg.errs);assert.strictEqual(pg.errs.length,0);
  await br.close();console.log('UI69 OK');

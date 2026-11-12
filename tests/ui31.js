@@ -8,8 +8,8 @@ const upd=(name,tier,depts)=>{const r=U.find(x=>x[0]===name); r[2]=tier; r[3]=de
 C.PropertiesService.getScriptProperties().setProperty('HEAD_SEED_V1','done');
  upd('อรทัย','head','ER,NSO'); upd('ชูใจ','head','NSO,OPD');
  U.push(['หัวหน้าพยาบาล','x','staff','NSO,OPD','FALSE','','']); U.push(['หัวหน้าตึกหรือหัวหน้าหน่วยงานพยาบาลแต่ละฝ่าย','x','staff','NSO','FALSE','','']);
- ['Admin','อรทัย','ชูใจ','เดือนเพ็ญ','ผอ.'].forEach(n=>setPw(n,'pw123456'));
- const kp=U.find(x=>x[0]==='สมศรี'); if(!kp)U.push(['สมศรี','x','staff','IPD,NSO','FALSE','','']); setPw('สมศรี','pw123456');
+ ['Admin','อรทัย','ชูใจ','เดือนเพ็ญ','ผอ.'].forEach(n=>setPw(n,'123456'));
+ const kp=U.find(x=>x[0]==='สมศรี'); if(!kp)U.push(['สมศรี','x','staff','IPD,NSO','FALSE','','']); setPw('สมศรี','123456');
  const at=C.createSession_('Admin',U.find(r=>r[0]==='Admin')[1]);
  assert(C.nsoImportCommit(at).wrote.added===521);
  // the import auto-tidies; for the UI flow test restore the un-tidied state: re-run via backup copy
@@ -28,7 +28,7 @@ C.PropertiesService.getScriptProperties().setProperty('HEAD_SEED_V1','done');
   await pg.goto('http://app.test/');return pg};
  const login=async(pg,u,p)=>{await pg.fill('#login-username',u);await pg.fill('#login-password',p);await pg.click('#login-box-content button');await pg.waitForSelector('#modal-fy',{state:'visible'});await pg.click('#modal-fy button');await pg.waitForSelector('#app-login-screen',{state:'hidden'});await pg.waitForTimeout(400)};
  // ---------- admin: before tidy
- let pg=await mk(); await login(pg,'Admin','pw123456');
+ let pg=await mk(); await login(pg,'Admin','123456');
  const before=await pg.evaluate(()=>({numbered:globalDatabase.filter(k=>/^\s*[0-9๐-๙\-]/.test(k.name)).length,placeholders:globalDatabase.filter(k=>kpiCats(k).some(c=>c.category==='รอจัดหมวดย่อย')).length}));
  console.log('before',JSON.stringify(before)); assert(before.numbered>300&&before.placeholders>100);
  // ---------- tidy modal

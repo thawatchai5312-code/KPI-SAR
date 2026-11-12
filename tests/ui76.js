@@ -2,7 +2,7 @@
 const {chromium}=require('playwright');
 const fs=require('fs');const path=require('path');const h=require('./harness7');const C=h.ctx;const assert=require('assert');
 const html=fs.readFileSync(path.join(__dirname,'../src/Index.html'),'utf8');
-const U=h.sheets.Users.d;const ad=U.find(r=>r[2]==='admin');ad[1]=C.hashPassword_('pw123456');ad[4]='FALSE';
+const U=h.sheets.Users.d;const ad=U.find(r=>r[2]==='admin');ad[1]=C.hashPassword_('123456');ad[4]='FALSE';
 const OUT=path.join(__dirname,'..');
 (async()=>{
  const b=await chromium.launch({executablePath:'/opt/pw-browsers/chromium'});
@@ -11,7 +11,7 @@ const OUT=path.join(__dirname,'..');
  await pg.route('**/*',r=>r.request().url()==='http://app.test/'?r.fulfill({contentType:'text/html; charset=utf-8',body:html}):r.abort());
  await pg.addInitScript(()=>{function mk(ok,fail){return new Proxy({},{get:(_,fn)=>{if(fn==='withSuccessHandler')return f=>mk(f,fail);if(fn==='withFailureHandler')return f=>mk(ok,f);return (...a)=>Promise.resolve().then(()=>window.__call(fn,a)).then(r=>ok&&ok(JSON.parse(r)))}})}window.google={script:{run:mk()}};});
  await pg.goto('http://app.test/');
- await pg.fill('#login-username',ad[0]);await pg.fill('#login-password','pw123456');await pg.click('#login-box-content button');await pg.waitForSelector('#modal-fy',{state:'visible'});await pg.selectOption('#fy-pick-select','2570');await pg.click('#modal-fy button');await pg.waitForSelector('#app-login-screen',{state:'hidden'});
+ await pg.fill('#login-username',ad[0]);await pg.fill('#login-password','123456');await pg.click('#login-box-content button');await pg.waitForSelector('#modal-fy',{state:'visible'});await pg.selectOption('#fy-pick-select','2570');await pg.click('#modal-fy button');await pg.waitForSelector('#app-login-screen',{state:'hidden'});
  await pg.waitForFunction(()=>document.querySelector('#kpi-table tbody tr[id^="card-"]'),null,{timeout:60000});
  // ตัวแปรช่วย: ชุดฐาน (ไม่สนคำค้น) เทียบกับที่แสดง
  const base=()=>pg.evaluate(()=>uniqueById(getOrderedKpis(false,treeView,false,true)).map(k=>({id:k.id,name:k.name,owner:k.owner,department:k.department})));
@@ -95,7 +95,7 @@ const OUT=path.join(__dirname,'..');
  await pm.route('**/*',r=>r.request().url()==='http://app.test/'?r.fulfill({contentType:'text/html; charset=utf-8',body:html.replace('<head>','<head><meta name="viewport" content="width=device-width, initial-scale=1">')}):r.abort());
  await pm.addInitScript(()=>{function mk(ok,fail){return new Proxy({},{get:(_,fn)=>{if(fn==='withSuccessHandler')return f=>mk(f,fail);if(fn==='withFailureHandler')return f=>mk(ok,f);return (...a)=>Promise.resolve().then(()=>window.__call(fn,a)).then(r=>ok&&ok(JSON.parse(r)))}})}window.google={script:{run:mk()}};});
  await pm.goto('http://app.test/');
- await pm.fill('#login-username',ad[0]);await pm.fill('#login-password','pw123456');await pm.click('#login-box-content button');await pm.waitForSelector('#modal-fy',{state:'visible'});await pm.selectOption('#fy-pick-select','2570');await pm.click('#modal-fy button');await pm.waitForSelector('#app-login-screen',{state:'hidden'});
+ await pm.fill('#login-username',ad[0]);await pm.fill('#login-password','123456');await pm.click('#login-box-content button');await pm.waitForSelector('#modal-fy',{state:'visible'});await pm.selectOption('#fy-pick-select','2570');await pm.click('#modal-fy button');await pm.waitForSelector('#app-login-screen',{state:'hidden'});
  await pm.waitForSelector('#home-q',{timeout:60000});
  const box=await pm.evaluate(()=>{const r=document.getElementById('home-q').getBoundingClientRect();return {l:r.left,r:r.right,w:r.width,sw:document.documentElement.scrollWidth,cw:document.documentElement.clientWidth}});
  assert(box.l>=0&&box.r<=box.cw+1,'mobile search inside screen '+JSON.stringify(box));assert(box.w>200,'mobile search wide '+box.w);assert(box.sw<=box.cw+1,'no horizontal page scroll');

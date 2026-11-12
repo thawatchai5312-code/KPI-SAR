@@ -2,7 +2,7 @@
 const {chromium}=require('playwright');
 const fs=require('fs');const h=require('./harness5');const C=h.ctx;const assert=require('assert');
 const html=fs.readFileSync(require('path').join(__dirname,'../src/Index.html'),'utf8').replace("let listMode = 'table';","let listMode = 'card';").replace("listMode = defaultListMode(); tblHide.clear(); TBL_DEFAULT_HIDE","listMode = 'card'; tblHide.clear(); TBL_DEFAULT_HIDE");
-const U=h.sheets.Users.d; const r=U.find(x=>x[0]==='Admin'); r[1]=C.hashPassword_('pw123456'); r[4]='FALSE';
+const U=h.sheets.Users.d; const r=U.find(x=>x[0]==='Admin'); r[1]=C.hashPassword_('123456'); r[4]='FALSE';
 (async()=>{
  const b=await chromium.launch({executablePath:'/opt/pw-browsers/chromium'});
  const pg=await b.newPage({viewport:{width:1440,height:900}});const errs=[];pg.on('pageerror',e=>errs.push(e.message));
@@ -10,7 +10,7 @@ const U=h.sheets.Users.d; const r=U.find(x=>x[0]==='Admin'); r[1]=C.hashPassword
  await pg.route('**/*',r=>r.request().url()==='http://app.test/'?r.fulfill({contentType:'text/html; charset=utf-8',body:html}):r.abort());
  await pg.addInitScript(()=>{function mk(ok,fail){return new Proxy({},{get:(_,fn)=>{if(fn==='withSuccessHandler')return f=>mk(f,fail);if(fn==='withFailureHandler')return f=>mk(ok,f);return (...a)=>window.__call(fn,a).then(r=>ok&&ok(JSON.parse(r)))}})}window.google={script:{run:mk()}};});
  await pg.goto('http://app.test/');
- await pg.fill('#login-username','Admin');await pg.fill('#login-password','pw123456');await pg.click('#login-box-content button');await pg.waitForSelector('#modal-fy',{state:'visible'});await pg.selectOption('#fy-pick-select','2570');await pg.click('#modal-fy button');await pg.waitForSelector('#app-login-screen',{state:'hidden'});await pg.waitForTimeout(500);
+ await pg.fill('#login-username','Admin');await pg.fill('#login-password','123456');await pg.click('#login-box-content button');await pg.waitForSelector('#modal-fy',{state:'visible'});await pg.selectOption('#fy-pick-select','2570');await pg.click('#modal-fy button');await pg.waitForSelector('#app-login-screen',{state:'hidden'});await pg.waitForTimeout(500);
  await pg.evaluate(()=>switchMenu('report')); await pg.waitForTimeout(1500);
  const res=await pg.evaluate(()=>{
    const multi=globalDatabase.find(k=>kpiCats(k).filter(c=>isCorePart(c.part)).length>=2);

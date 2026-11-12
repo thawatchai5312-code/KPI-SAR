@@ -1,7 +1,7 @@
 // น้องเป้า: แยกข้อความที่คนเขียนกับร่างเดิมของ AI — จำรหัสย่อบรรทัดที่ AI ร่าง (ไม่เก็บข้อความ) แล้วติดป้าย [ร่าง AI] ตอนกดวิเคราะห์ซ้ำ
 const h=require('./harness7');const C=h.ctx;const assert=require('assert');
 const U=h.sheets.Users.d;const FY=2570;
-U.slice(1).forEach(r=>{r[1]=C.hashPassword_('pw123456');r[4]='FALSE'});
+U.slice(1).forEach(r=>{r[1]=C.hashPassword_('123456');r[4]='FALSE'});
 const tok=r=>C.createSession_(r[0],r[1]);
 const tA=tok(U.find(r=>r[2]==='admin'));
 let calls=[],replyText='';

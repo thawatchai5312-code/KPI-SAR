@@ -1178,8 +1178,9 @@
       <div class="modal-body">
         <p id="change-password-note" style="margin-bottom: 12px; font-size: 13px; color: #64748b; font-weight: 500;"></p>
         <div class="form-group"><label>รหัสผ่านเดิม</label><input type="password" id="chpw-old" class="editable-input"></div>
-        <div class="form-group"><label>รหัสผ่านใหม่ (อย่างน้อย 6 ตัวอักษร)</label><input type="password" id="chpw-new" class="editable-input"></div>
-        <div class="form-group"><label>ยืนยันรหัสผ่านใหม่</label><input type="password" id="chpw-confirm" class="editable-input"></div>
+        <div class="form-group"><label>รหัสผ่านใหม่ (ตัวเลข 6 หลัก)</label><input type="password" id="chpw-new" class="editable-input" inputmode="numeric" autocomplete="new-password" oninput="chpwClean(this)" placeholder="เช่น 482915"></div>
+        <div class="form-group"><label>ยืนยันรหัสผ่านใหม่</label><input type="password" id="chpw-confirm" class="editable-input" inputmode="numeric" autocomplete="new-password" oninput="chpwClean(this)"></div>
+        <label class="check-row" style="font-size: 13px;"><input type="checkbox" id="chpw-show" onchange="chpwShow(this.checked)"> 👁 แสดงรหัสที่พิมพ์ (เช็กว่าพิมพ์ถูกภาษา/ตัวเลข)</label>
       </div>
       <div class="modal-footer" style="display: flex; justify-content: space-between;">
         <button class="btn btn-secondary" id="chpw-cancel" onclick="closeChangePassword()">ยกเลิก</button>
@@ -1870,11 +1871,21 @@
         <h2>เข้าสู่ระบบรายงานตัวชี้วัด</h2>
         <p>${esc(notice || 'ระบุชื่อผู้ใช้งานและรหัสผ่านเพื่อเข้าใช้งาน')}</p>
         <input type="text" id="login-username" class="editable-input" placeholder="ชื่อผู้ใช้ (ภาษาไทย)" style="text-align: center; font-size: 15px; margin-bottom: 10px;">
-        <input type="password" id="login-password" class="editable-input" placeholder="รหัสผ่าน" style="text-align: center; font-size: 15px; margin-bottom: 15px;">
+        <input type="password" id="login-password" class="editable-input" placeholder="รหัสผ่าน" inputmode="numeric" autocomplete="current-password" style="text-align: center; font-size: 15px; margin-bottom: 6px;">
+        <div style="margin-bottom: 12px; font-size: 12px;"><a href="#" id="login-kb-toggle" onclick="loginKbToggle(); return false;" style="color: #64748b;">รหัสเดิมมีตัวอักษร? แตะเพื่อพิมพ์ตัวอักษร</a></div>
         <button class="btn btn-primary" style="width: 100%; font-size: 15px; padding: 10px;" onclick="unlockApp()">ยืนยันเข้าสู่ระบบ</button>
       `;
     }
 
+    // ช่องรหัสผ่านหน้าเข้าสู่ระบบ: ค่าตั้งต้นขึ้นแป้นตัวเลข (รหัสใหม่เป็นเลข 6 หลัก) · คนที่รหัสเดิมมีตัวอักษรสลับเป็นแป้นปกติได้
+    function loginKbToggle() {
+      const el = document.getElementById('login-password'), a = document.getElementById('login-kb-toggle');
+      if (!el) return;
+      const text = el.getAttribute('inputmode') !== 'text';
+      el.setAttribute('inputmode', text ? 'text' : 'numeric');
+      if (a) a.innerText = text ? 'กลับไปใช้แป้นตัวเลข' : 'รหัสเดิมมีตัวอักษร? แตะเพื่อพิมพ์ตัวอักษร';
+      el.blur(); el.focus();
+    }
     function resetLoginBox(notice) {
       document.getElementById('login-box-content').innerHTML = loginBoxHtml(notice);
     }
@@ -1929,7 +1940,13 @@
           applyDefaultFilters();
           tblResetView(); // มุมมองเริ่มต้นตาม Tier (staff = การ์ด)
 
-          if (currentUser.mustChange) {
+          if (currentUser.pinRequired) {
+            document.getElementById('login-box-content').innerHTML = `
+              <div style="font-size: 40px; margin-bottom: 10px;">🔑</div>
+              <h2>ตั้งรหัสผ่านใหม่</h2>
+            `;
+            openChangePassword('pin');
+          } else if (currentUser.mustChange) {
             document.getElementById('login-box-content').innerHTML = `
               <div style="font-size: 40px; margin-bottom: 10px;">🔑</div>
               <h2>แนะนำให้เปลี่ยนรหัสผ่าน</h2>
@@ -2000,7 +2017,7 @@
       document.getElementById('progress-filter').value = '';
       document.getElementById('user-bar').style.display = 'none';
       document.getElementById('pw-warning-bar').style.display = 'none';
-      chpwForced = false;
+      chpwForced = false; chpwPin = false;
       ['modal-settings', 'modal-dup', 'modal-add-kpi', 'modal-fy', 'modal-unsaved', 'modal-change-password', 'modal-alert', 'modal-confirm', 'modal-tbl-long']
         .forEach(id => { document.getElementById(id).style.display = 'none'; });
       document.getElementById('accordion-tree-container').innerHTML = '<div class="empty-state">กรุณาเข้าสู่ระบบ...</div>';
@@ -2019,13 +2036,29 @@
     }
 
     // forced = หน้าต่างที่ขึ้นตอนล็อกอินด้วยรหัสตั้งต้น: เปลี่ยนเลยหรือกด "ข้ามไปก่อน" ก็ได้ (จะถามอีกทุกครั้งที่เข้าใช้ จนกว่าจะเปลี่ยน)
-    let chpwForced = false;
+    let chpwForced = false, chpwPin = false;
+    // รหัสใหม่: เหลือเฉพาะตัวเลข (เลขไทยแปลงเป็นอารบิก) ไม่เกิน 6 ตัว
+    function chpwClean(el) {
+      const v = el.value.replace(/[\u0E50-\u0E59]/g, c => String(c.charCodeAt(0) - 0x0E50)).replace(/\D/g, '').slice(0, 6);
+      if (v !== el.value) el.value = v;
+    }
+    function chpwShow(on) {
+      ['chpw-new', 'chpw-confirm'].forEach(id => { document.getElementById(id).type = on ? 'text' : 'password'; });
+    }
+    // forced === 'pin' = รหัสเดิมไม่ใช่เลข 6 หลัก: ต้องตั้งก่อนใช้งาน (ไม่มีปุ่มข้าม มีแต่ออกจากระบบ)
     function openChangePassword(forced) {
+      chpwPin = forced === 'pin';
       chpwForced = !!forced;
       document.getElementById('chpw-old').value = '';
       document.getElementById('chpw-new').value = '';
       document.getElementById('chpw-confirm').value = '';
-      document.getElementById('chpw-cancel').innerText = forced ? 'ข้ามไปก่อน' : 'ยกเลิก';
+      document.getElementById('chpw-show').checked = false; chpwShow(false);
+      document.getElementById('chpw-cancel').innerText = chpwPin ? 'ออกจากระบบ' : forced ? 'ข้ามไปก่อน' : 'ยกเลิก';
+      if (chpwPin) {
+        document.getElementById('change-password-note').innerText = 'รหัสผ่านของคุณยังไม่ใช่ตัวเลข 6 หลัก กรุณาตั้งรหัสผ่านใหม่เป็นตัวเลข 6 หลักก่อนใช้งาน (กรอกรหัสผ่านเดิมที่เพิ่งใช้เข้าสู่ระบบ)';
+        document.getElementById('modal-change-password').style.display = 'flex';
+        return;
+      }
       document.getElementById('change-password-note').innerText = forced
         ? 'บัญชีของคุณยังใช้รหัสผ่านตั้งต้น (11038) แนะนำให้ตั้งรหัสผ่านใหม่เพื่อป้องกันผู้อื่นเข้าใช้แทน (ข้ามไปก่อนได้ แต่ระบบจะถามอีกทุกครั้งที่เข้าใช้)'
         : 'กรอกรหัสผ่านเดิมและรหัสผ่านใหม่';
@@ -2034,6 +2067,7 @@
 
     function closeChangePassword() {
       document.getElementById('modal-change-password').style.display = 'none';
+      if (chpwPin) { chpwPin = false; chpwForced = false; logout(); return; } // ยังไม่ตั้งเลข 6 หลัก = ออกจากระบบ
       if (chpwForced) { chpwForced = false; loadAfterLogin(); }
     }
 
@@ -2041,6 +2075,10 @@
       const oldPw = document.getElementById('chpw-old').value;
       const newPw = document.getElementById('chpw-new').value;
       const confirmPw = document.getElementById('chpw-confirm').value;
+      if (!/^\d{6}$/.test(newPw)) {
+        showAlert('รหัสผ่านใหม่ไม่ถูกต้อง', '⚠️', 'ต้องเป็นตัวเลข 6 หลักเท่านั้น (เช่น 482915)');
+        return;
+      }
       if (newPw !== confirmPw) {
         showAlert('รหัสผ่านไม่ตรงกัน', '⚠️', 'กรุณายืนยันรหัสผ่านใหม่ให้ตรงกัน');
         return;
@@ -2056,7 +2094,8 @@
           document.getElementById('modal-change-password').style.display = 'none';
           if (res.token) sessionToken = res.token; // เปลี่ยนรหัสแล้ว session เดิมใช้ไม่ได้ — ใช้ token ใหม่
           currentUser.mustChange = false;
-          chpwForced = false;
+          currentUser.pinRequired = false;
+          chpwForced = false; chpwPin = false;
           applyUserUi();
           setProgressHeight();
           showAlert('สำเร็จ', '✅', res.message);

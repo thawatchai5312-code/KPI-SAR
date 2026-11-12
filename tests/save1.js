@@ -2,7 +2,7 @@
 const h=require('./harness7');const C=h.ctx;const assert=require('assert');
 const eq=(x,y,m)=>assert.strictEqual(JSON.stringify(x),JSON.stringify(y),m);
 const FY=2570;
-const U=h.sheets.Users.d;U.slice(1).forEach(r=>{r[1]=C.hashPassword_('pw123456');r[4]='FALSE'});
+const U=h.sheets.Users.d;U.slice(1).forEach(r=>{r[1]=C.hashPassword_('123456');r[4]='FALSE'});
 const tA=C.createSession_(U.find(r=>r[2]==='admin')[0],U.find(r=>r[2]==='admin')[1]);
 const sh=h.sheets['ปีงบ '+FY],Y=()=>sh.d;
 const rowNo=id=>Y().findIndex(r=>String(r[0]).trim()===id)+1;   // เลขแถวในชีต (เริ่ม 1)

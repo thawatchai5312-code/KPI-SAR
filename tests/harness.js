@@ -22,7 +22,7 @@ class Sheet{
 const db=new Sheet('Database',[rows0=null].slice(1));
 const header=new Array(28).fill('');header[0]='ID';
 db.d=[header].concat(rows.map(r=>{const x=r.slice();while(x.length<28)x.push('');return x}));
-const users=new Sheet('Users',[['Role','Username','Password'],['viewer','','11038'],['admin','Admin','Admin11038'],['officer','ER','ph11038']]);
+const users=new Sheet('Users',[['Role','Username','Password'],['viewer','','11038'],['admin','Admin','123456'],['officer','ER','ph11038']]);
 const sheets={Database:db,Users:users};
 const ss={getSheets:()=>Object.values(sheets),getSheetByName:n=>sheets[n]||null,insertSheet:n=>sheets[n]=new Sheet(n,[[]])};
 // renaming support

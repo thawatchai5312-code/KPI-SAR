@@ -1,5 +1,5 @@
 const {ctx,sheets}=require('./harness');const assert=require('assert');
-ctx.authenticateUser('Admin','Admin11038'); const a=ctx.authenticateUser('Admin','Admin11038');
+ctx.authenticateUser('Admin','123456'); const a=ctx.authenticateUser('Admin','123456');
 const S=()=>sheets['ปีงบ 2570'].d, row=id=>S().find(r=>r[0]===id);
 const login=u=>ctx.authenticateUser(u,'11038');
 const st=login('มานี'), head=login('อรทัย'), exec=login('ผอ.');

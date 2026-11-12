@@ -2,7 +2,7 @@
 const h=require('./harness7');const C=h.ctx;const assert=require('assert');
 const U=h.sheets.Users.d;const FY=2570;
 const eq=(x,y,m)=>assert.strictEqual(JSON.stringify(x),JSON.stringify(y),m);
-U.slice(1).forEach(r=>{r[1]=C.hashPassword_('pw123456');r[4]='FALSE'});
+U.slice(1).forEach(r=>{r[1]=C.hashPassword_('123456');r[4]='FALSE'});
 const tok=r=>C.createSession_(r[0],r[1]);
 const info=(r)=>{const t=tok(r);const d=C.getAllData(t,FY);const ed=new Set(),vw=new Set();d.data.forEach(k=>{vw.add(k.id);if(k.canEditDetails)ed.add(k.id)});return {r,t,ed,vw}};
 const allStaff=U.slice(1).filter(r=>r[2]==='staff').map(info);

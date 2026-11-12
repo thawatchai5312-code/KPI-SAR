@@ -1,6 +1,6 @@
 process.env.MIGRATE='1';
 const {ctx,sheets}=require('./harness');const assert=require('assert');
-ctx.authenticateUser('Admin','Admin11038'); const a=ctx.authenticateUser('Admin','Admin11038');
+ctx.authenticateUser('Admin','123456'); const a=ctx.authenticateUser('Admin','123456');
 // create previous-year sheet too by rolling? just 2570 and 2569 exist after migration to fiscal years
 const names=Object.keys(sheets).filter(n=>/^ปีงบ \d{4}$/.test(n)); console.log('year sheets',names);
 const before=JSON.stringify(sheets['ปีงบ 2570'].d);

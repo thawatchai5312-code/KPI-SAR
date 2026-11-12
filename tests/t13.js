@@ -1,6 +1,6 @@
 process.env.MIGRATE='1';
 ctx_pre=1;const {ctx,sheets}=require('./harness');const assert=require('assert');
-ctx.PropertiesService.getScriptProperties().setProperty('OWNER_LEVEL_V1','x'); ctx.authenticateUser('Admin','Admin11038'); const a=ctx.authenticateUser('Admin','Admin11038');
+ctx.PropertiesService.getScriptProperties().setProperty('OWNER_LEVEL_V1','x'); ctx.authenticateUser('Admin','123456'); const a=ctx.authenticateUser('Admin','123456');
 // create legacy state: a KPI with level ฝ่ายการพยาบาล, dept text "ฝ่ายการพยาบาล" and "OPD/ฝ่ายการ", users with ฝ่ายการพยาบาล
 const S=sheets['ปีงบ 2570'].d;
 const r1=S[1], r2=S[2], r3=S[3], r4=S[4];

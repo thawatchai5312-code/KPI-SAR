@@ -3,7 +3,7 @@ const h=require('./harness7');const C=h.ctx;const assert=require('assert');
 const U=h.sheets.Users.d;
 const pick=(tier,dept)=>U.find(r=>r[2]===tier&&(!dept||new RegExp('(^|,)'+dept+'(,|$)').test(r[3])));
 const ad=pick('admin'),ex=pick('executive'),st=pick('staff');
-[ad,ex,st].forEach(r=>{r[1]=C.hashPassword_('pw123456');r[4]='FALSE'});
+[ad,ex,st].forEach(r=>{r[1]=C.hashPassword_('123456');r[4]='FALSE'});
 const tA=C.createSession_(ad[0],ad[1]),tE=C.createSession_(ex[0],ex[1]),tS=C.createSession_(st[0],st[1]);
 const FY=2570,PREV=2569;
 const core=k=>C.inCorePart_(k);
@@ -64,7 +64,7 @@ g=C.getSarDoc(tA,FY);assert(!g.pdca[k3.id]&&g.pdca[k1.id]&&g.pdca[k2.id],'2570 h
 
 // ---- หัวหน้าหน่วย: แก้ได้เฉพาะตัวของหน่วยตัวเอง
 const heads=U.filter(u=>u[2]==='head');let own=null,other=null,tH=null,head=null;
-for(const hd of heads){hd[1]=C.hashPassword_('pw123456');hd[4]='FALSE';const t=C.createSession_(hd[0],hd[1]);const d=C.getAllData(t,FY).data.filter(core);
+for(const hd of heads){hd[1]=C.hashPassword_('123456');hd[4]='FALSE';const t=C.createSession_(hd[0],hd[1]);const d=C.getAllData(t,FY).data.filter(core);
   const a=d.find(k=>k.canEditDetails),b=d.find(k=>!k.canEditDetails);if(a&&b){own=a;other=b;tH=t;head=hd;break}}
 assert(head,'found a head with both editable and view-only core kpis');
 r=C.saveSarPdca(tH,FY,own.id,'หัวหน้าเขียนของหน่วยตัวเอง',(C.getSarDoc(tH,FY).pdca[own.id]||{rev:0}).rev);assert(r.success&&r.item.by===head[0],JSON.stringify(r));

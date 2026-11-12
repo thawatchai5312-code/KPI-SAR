@@ -1,7 +1,7 @@
 // หน่วยงานของ staff คิดอัตโนมัติจากตัวชี้วัดที่รับผิดชอบ · หัวหน้าหน่วย QMR/QA สิทธิ์พิเศษ · getDirectory · หน้าตั้งค่าแสดง autoDepts
 const h=require('./harness7');const C=h.ctx;const assert=require('assert');
 const eq=(a,b,m)=>assert.strictEqual(JSON.stringify(a),JSON.stringify(b),m);
-const U=h.sheets.Users.d;U.slice(1).forEach(r=>{r[1]=C.hashPassword_('pw123456');r[4]='FALSE'});
+const U=h.sheets.Users.d;U.slice(1).forEach(r=>{r[1]=C.hashPassword_('123456');r[4]='FALSE'});
 const tok=r=>C.createSession_(r[0],r[1]);const tA=tok(U.find(r=>r[2]==='admin'));
 const Y=h.sheets['ปีงบ 2570'].d;
 // staff: ล้างหน่วยงานในชีต Users แล้วต้องยังได้หน่วยจากตัวชี้วัดที่รับผิดชอบ
@@ -12,13 +12,13 @@ const before=C.getAllData(tok(st),2570).data.map(k=>k.id).sort().join();
 st[3]='';const ts=tok(st);
 const after=C.getAllData(ts,2570).data.map(k=>k.id).sort().join();
 assert.strictEqual(after,before,'staff sees the same KPIs without any stored department');
-const lg=C.authenticateUser(st[0],'pw123456');assert(lg.success);eq(lg.user.depts.slice().sort(),want.slice().sort(),'login payload carries derived depts');
+const lg=C.authenticateUser(st[0],'123456');assert(lg.success);eq(lg.user.depts.slice().sort(),want.slice().sort(),'login payload carries derived depts');
 // หน้าตั้งค่า
 const lu=C.getUsersForAdmin(tA).users.find(u=>u.username===st[0]);assert.strictEqual(lu.depts,'');eq(lu.autoDepts.split(', ').filter(Boolean).sort(),want.slice().sort());
 // getDirectory
 const dir=C.getDirectory(ts);assert(dir.success&&dir.users.includes(st[0])&&want.every(d=>dir.units.includes(d)),'directory');assert(!C.getDirectory('bad').success);
 // หัวหน้า QMR / QA
-const hd=U.find(r=>r[2]==='head');hd[1]=C.hashPassword_('pw123456');hd[4]='FALSE';
+const hd=U.find(r=>r[2]==='head');hd[1]=C.hashPassword_('123456');hd[4]='FALSE';
 const all=C.getAllData(tA,2570).data;
 // ถอดชื่อหัวหน้าทดสอบออกจากผู้รับผิดชอบทุกตัวก่อน (กันหน่วยอัตโนมัติจากข้อมูลจริงปนเข้ามา) แล้วคืนตอนท้าย
 const ownBackup=[];Y.slice(1).forEach(r=>{if(C.parseOwners_(r[25]).indexOf(hd[0])!==-1){ownBackup.push([r,r[25]]);r[25]='ไม่มีใคร'}});
@@ -50,7 +50,7 @@ r=C.saveKpi(mk('ZZZ'),2570,{id:sar.id,target:'≥ 1'});assert(!r.success,'plain 
  const pOwn=perm(th,own.id),pOther=perm(th,other.id);
  assert.strictEqual(pOwn.edit,true,'head edits own kpi of an auto unit (staff-like)');assert.strictEqual(pOwn.mine,true);
  assert.strictEqual(pOther.view,true,'head sees other unit-level kpi of auto unit');assert.strictEqual(pOther.edit,false,'...but cannot edit it (not head of D)');
- const lg2=C.authenticateUser(hd[0],'pw123456');assert(lg2.success);
+ const lg2=C.authenticateUser(hd[0],'123456');assert(lg2.success);
  assert(lg2.user.depts.includes('ZZZ')&&lg2.user.depts.includes(D),'depts = specified + auto');eq(lg2.user.headDepts,['ZZZ']);
  const au=C.getUsersForAdmin(tA).users.find(u=>u.username===hd[0]);assert.strictEqual(au.depts,'ZZZ');assert(au.autoDepts.split(', ').includes(D),'settings shows auto for head');
  // ระบุ D เป็นหน่วยที่เป็นหัวหน้า → แก้ได้ทั้งหน่วย

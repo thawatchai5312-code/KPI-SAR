@@ -13,7 +13,7 @@ const fiApi=f=>({getId:()=>f.id,getUrl:()=>'https://drive.google.com/file/d/'+f.
 C.DriveApp={Access:{},Permission:{},getRootFolder:()=>fo('root',null),createFolder:n=>fo(n,null),getFolderById:id=>fApi(folders[id]),getFileById:id=>fiApi(files[id])};
 C.Drive={Files:{create:(res,blob)=>({id:mf({name:res.name,mime:res.mimeType,parent:res.parents[0]}).getId()}),list:()=>({})}};
 C.Utilities.base64Decode=s=>[...Buffer.from(s,'base64')].map(x=>x>127?x-256:x);C.Utilities.newBlob=(bytes,mime,name)=>({bytes,mime,name});
-U.slice(1).forEach(r=>{r[1]=C.hashPassword_('pw123456');r[4]='FALSE'});
+U.slice(1).forEach(r=>{r[1]=C.hashPassword_('123456');r[4]='FALSE'});
 const info=(r)=>{const t=C.createSession_(r[0],r[1]);const d=C.getAllData(t,fy);const ed=[];d.data.forEach(k=>{if(k.canEditDetails)ed.push(k.id)});return {r,t,ed}};
 const S=U.filter(r=>r[2]==='staff').map(info).find(x=>x.ed.length>=2);assert(S,'fixture staff');const [a,b]=S.ed;
 const PDFBUF=Buffer.concat([Buffer.from('%PDF-1.4\n'),Buffer.alloc(3000,65)]);
@@ -23,7 +23,7 @@ async function open(br,opts){
  await pg.route('**/*',r=>r.request().url()==='http://app.test/'?r.fulfill({contentType:'text/html; charset=utf-8',body:html}):r.abort());
  await pg.addInitScript(()=>{function mk(ok,fail){return new Proxy({},{get:(_,fn)=>{if(fn==='withSuccessHandler')return f=>mk(f,fail);if(fn==='withFailureHandler')return f=>mk(ok,f);return (...a)=>Promise.resolve().then(()=>window.__call(fn,a)).then(r=>ok&&ok(JSON.parse(r)))}})}window.google={script:{run:mk()}};});
  await pg.goto('http://app.test/');
- await pg.fill('#login-username',S.r[0]);await pg.fill('#login-password','pw123456');await pg.click('#login-box-content button');await pg.waitForSelector('#modal-fy',{state:'visible'});await pg.selectOption('#fy-pick-select',String(fy));await pg.click('#modal-fy button');await pg.waitForSelector('#app-login-screen',{state:'hidden'});
+ await pg.fill('#login-username',S.r[0]);await pg.fill('#login-password','123456');await pg.click('#login-box-content button');await pg.waitForSelector('#modal-fy',{state:'visible'});await pg.selectOption('#fy-pick-select',String(fy));await pg.click('#modal-fy button');await pg.waitForSelector('#app-login-screen',{state:'hidden'});
  await pg.waitForFunction(()=>document.getElementById('kpi-table')||document.querySelector('.kpi-card'),null,{timeout:60000});
  await pg.evaluate(()=>{document.querySelectorAll('.modal-overlay').forEach(m=>{if(m.style.display==='flex')m.style.display='none'})});
  return pg;

@@ -2,7 +2,7 @@
 const h=require('./harness7');const C=h.ctx;const assert=require('assert');
 const eq=(x,y,m)=>assert.strictEqual(JSON.stringify(x),JSON.stringify(y),m);
 const U=h.sheets.Users.d;
-U.slice(1).forEach(r=>{r[1]=C.hashPassword_('pw123456');r[4]='FALSE'});
+U.slice(1).forEach(r=>{r[1]=C.hashPassword_('123456');r[4]='FALSE'});
 const tok=r=>C.createSession_(r[0],r[1]);
 const tA=tok(U.find(r=>r[2]==='admin'));
 const Y=fy=>h.sheets['ปีงบ '+fy].d;

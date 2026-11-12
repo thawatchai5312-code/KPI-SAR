@@ -2,9 +2,9 @@
 const {chromium}=require('playwright');
 const fs=require('fs');const path=require('path');const h=require('./harness7');const C=h.ctx;const assert=require('assert');
 const html=fs.readFileSync(path.join(__dirname,'../src/Index.html'),'utf8');
-const U=h.sheets.Users.d;const ad=U.find(r=>r[2]==='admin');ad[1]=C.hashPassword_('pw123456');ad[4]='FALSE';
+const U=h.sheets.Users.d;const ad=U.find(r=>r[2]==='admin');ad[1]=C.hashPassword_('123456');ad[4]='FALSE';
 const tA=C.createSession_(ad[0],ad[1]);
-['ทดสอบรวมหนึ่ง','ทดสอบรวมสอง'].forEach(n=>U.push([n,C.hashPassword_('pw123456'),'staff','','FALSE','','']));
+['ทดสอบรวมหนึ่ง','ทดสอบรวมสอง'].forEach(n=>U.push([n,C.hashPassword_('123456'),'staff','','FALSE','','']));
 const FY=2570;const Y=()=>h.sheets['ปีงบ '+FY].d;const rowOf=id=>Y().slice(1).find(r=>String(r[0]).trim()===id);
 const add=(name,owner,dept)=>{const r=C.addIndicator(tA,FY,{part:'OPD',category:'x',name,target:'≥ 80',years:[null,null,null,null,null],months:Array(12).fill(null),levels:['รายบุคคล'],owner,department:dept});assert(r.success,JSON.stringify(r));return r.newId};
 const E=add('ทดสอบหน้าจอรวมซ้ำ เวลารอผลตรวจทางห้องปฏิบัติการ','ทดสอบรวมหนึ่ง','LABX'),F=add('ทดสอบหน้าจอรวมซ้ำ เวลารอผลตรวจทางห้องปฏิบัติการ ','ทดสอบรวมสอง','LABX');
@@ -20,7 +20,7 @@ const OUT=path.join(__dirname,'..');
  await pg.route('**/*',r=>r.request().url()==='http://app.test/'?r.fulfill({contentType:'text/html; charset=utf-8',body:html}):r.abort());
  await pg.addInitScript(()=>{function mk(ok,fail){return new Proxy({},{get:(_,fn)=>{if(fn==='withSuccessHandler')return f=>mk(f,fail);if(fn==='withFailureHandler')return f=>mk(ok,f);return (...a)=>Promise.resolve().then(()=>window.__call(fn,a)).then(r=>ok&&ok(JSON.parse(r)))}})}window.google={script:{run:mk()}};});
  await pg.goto('http://app.test/');
- await pg.fill('#login-username',ad[0]);await pg.fill('#login-password','pw123456');await pg.click('#login-box-content button');await pg.waitForSelector('#modal-fy',{state:'visible'});await pg.selectOption('#fy-pick-select','2570');await pg.click('#modal-fy button');await pg.waitForSelector('#app-login-screen',{state:'hidden'});
+ await pg.fill('#login-username',ad[0]);await pg.fill('#login-password','123456');await pg.click('#login-box-content button');await pg.waitForSelector('#modal-fy',{state:'visible'});await pg.selectOption('#fy-pick-select','2570');await pg.click('#modal-fy button');await pg.waitForSelector('#app-login-screen',{state:'hidden'});
  await pg.waitForFunction(()=>document.querySelector('#kpi-table tbody tr[id^="card-"]'),null,{timeout:60000});
  // 1) หน้าต่างตั้งค่าใหญ่ขึ้น
  await pg.click('#admin-settings-btn');await pg.waitForSelector('#modal-settings',{state:'visible'});

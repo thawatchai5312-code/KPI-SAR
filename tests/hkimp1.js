@@ -1,11 +1,11 @@
 // นำเข้า KPI หัวหน้าหน่วย (HeadImport.js) — ข้อมูลสมมติเท่านั้น: หาหัวตาราง 2 แบบ · หยุดที่ KPI กลาง/rd · จับคู่ตรง/คล้าย/ใหม่ · KPI ร่วมหลายคน · เพิ่มผู้รับผิดชอบตัวเดิม · เติมเดือนที่ว่าง · ชุดคะแนน · บัญชีใหม่ · รันซ้ำ
 const h=require('./harness7');const C=h.ctx;const assert=require('assert');
 const FY=2570;const eq=(x,y,m)=>assert.strictEqual(JSON.stringify(x),JSON.stringify(y),m);
-const U=h.sheets.Users.d;U.slice(1).forEach(r=>{r[1]=C.hashPassword_('pw123456');r[4]='FALSE'});
+const U=h.sheets.Users.d;U.slice(1).forEach(r=>{r[1]=C.hashPassword_('123456');r[4]='FALSE'});
 const tok=r=>C.createSession_(r[0],r[1]);
 const adRow=U.find(r=>r[2]==='admin'),tA=tok(adRow),stRow=U.find(r=>r[2]==='staff'),tS=tok(stRow);
 const Y=()=>h.sheets['ปีงบ '+FY].d;
-const mkUser=(n,tier,depts)=>{const r=[n,C.hashPassword_('pw123456'),tier||'staff',depts||'','FALSE','',''];U.push(r);return r};
+const mkUser=(n,tier,depts)=>{const r=[n,C.hashPassword_('123456'),tier||'staff',depts||'','FALSE','',''];U.push(r);return r};
 // ---- ฟังก์ชันล้วน
 assert(C.hkDice_('abcd','abcd')===1&&C.hkDice_('ab','xy')===0&&C.hkDice_('อัตราความสมบูรณ์เวชระเบียน','อัตราความสมบูรณ์ของเวชระเบียน')>0.8);
 // ---- ข้อมูลที่มีอยู่แล้วในระบบ (ชื่อสมมติ) — เพิ่มผ่าน addIndicator

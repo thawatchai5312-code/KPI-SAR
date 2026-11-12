@@ -1,7 +1,7 @@
 // ผลรายเดือน "-" = เดือนนั้นไม่มีเคส: เก็บเป็น "-" ในชีต อ่านกลับเป็น "-" · NA/N/A พิมพ์แล้วเก็บเป็น "-" · ข้อความอื่นเก็บเป็นข้อความ · "NA" เดิมในชีตยังอ่านเป็นว่าง
 const h=require('./harness7');const C=h.ctx;const assert=require('assert');
 const eq=(x,y,m)=>assert.strictEqual(JSON.stringify(x),JSON.stringify(y),m);
-const U=h.sheets.Users.d;U.slice(1).forEach(r=>{r[1]=C.hashPassword_('pw123456');r[4]='FALSE'});
+const U=h.sheets.Users.d;U.slice(1).forEach(r=>{r[1]=C.hashPassword_('123456');r[4]='FALSE'});
 const tA=C.createSession_(U.find(r=>r[2]==='admin')[0],U.find(r=>r[2]==='admin')[1]);
 const Y=fy=>h.sheets['ปีงบ '+fy].d,rowOf=(fy,id)=>Y(fy).slice(1).find(r=>String(r[0]).trim()===id);
 const k=C.getAllData(tA,2570).data.find(x=>x.canEditResults&&x.months.every(v=>v===null));assert(k,'KPI with empty months');

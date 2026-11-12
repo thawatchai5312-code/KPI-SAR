@@ -3,10 +3,10 @@ const fs=require('fs');const h=require('./harness');const assert=require('assert
 const ff=require('./lib/font');
 const html=fs.readFileSync(require('path').join(__dirname,'../src/Index.html'),'utf8').replace("let listMode = 'table';","let listMode = 'card';").replace("listMode = defaultListMode(); tblHide.clear(); TBL_DEFAULT_HIDE","listMode = 'card'; tblHide.clear(); TBL_DEFAULT_HIDE").replace('</head>','<style>'+ff('thai')+ff('latin')+'</style></head>');
 (async()=>{
- h.ctx.authenticateUser('Admin','Admin11038'); h.ctx.authenticateUser('Admin','Admin11038');
- for(const u of ['มานี','อรทัย','ผอ.']){const t=h.ctx.authenticateUser(u,'11038'); h.ctx.changePassword(t.token,'11038','secret99');}
+ h.ctx.authenticateUser('Admin','123456'); h.ctx.authenticateUser('Admin','123456');
+ for(const u of ['มานี','อรทัย','ผอ.']){const t=h.ctx.authenticateUser(u,'11038'); h.ctx.changePassword(t.token,'11038','654321');}
  // a staff with no KPIs
- const at=h.ctx.authenticateUser('Admin','Admin11038'); const users=h.ctx.getUsersForAdmin(at.token).users; users.push({username:'คนใหม่',tier:'staff',depts:'',isNew:true}); h.ctx.saveUsersForAdmin(at.token,users,[]); const tn=h.ctx.authenticateUser('คนใหม่','11038'); h.ctx.changePassword(tn.token,'11038','secret99');
+ const at=h.ctx.authenticateUser('Admin','123456'); const users=h.ctx.getUsersForAdmin(at.token).users; users.push({username:'คนใหม่',tier:'staff',depts:'',isNew:true}); h.ctx.saveUsersForAdmin(at.token,users,[]); const tn=h.ctx.authenticateUser('คนใหม่','11038'); h.ctx.changePassword(tn.token,'11038','654321');
  const b=await chromium.launch({executablePath:'/opt/pw-browsers/chromium'});
  const mkpage=async(vw=1440,vh=900)=>{
   const pg=await b.newPage({viewport:{width:vw,height:vh}});
@@ -18,7 +18,7 @@ const html=fs.readFileSync(require('path').join(__dirname,'../src/Index.html'),'
  const login=async(pg,u,p)=>{await pg.fill('#login-username',u);await pg.fill('#login-password',p);await pg.click('#login-box-content button');await pg.waitForSelector('#modal-fy',{state:'visible'});await pg.click('#modal-fy button');await pg.waitForSelector('#app-login-screen',{state:'hidden'});await pg.waitForTimeout(300)};
  const total=pg=>pg.evaluate(()=>getOrderedKpis().length);
 
- let pg=await mkpage(); await login(pg,'อรทัย','secret99'); await pg.evaluate(()=>setTreeView('hosp')); await pg.waitForTimeout(400); await pg.mouse.move(1300,500); await pg.waitForTimeout(600);
+ let pg=await mkpage(); await login(pg,'อรทัย','654321'); await pg.evaluate(()=>setTreeView('hosp')); await pg.waitForTimeout(400); await pg.mouse.move(1300,500); await pg.waitForTimeout(600);
  const state=()=>pg.evaluate(()=>({openParts:Array.from(document.querySelectorAll('.accordion-part.open')).map(e=>e.dataset.part),openCats:Array.from(document.querySelectorAll('.category-block.open')).map(e=>e.dataset.cat),inView:(document.querySelector('.kpi-link-item.in-view')||{}).dataset?.key,firstCard:(document.querySelector('.kpi-card')||{dataset:{}}).dataset.key}));
  let st=await state(); console.log('initial (mine filter on):',JSON.stringify(st));
  assert(st.openParts.length===1&&st.openCats.length===1,'initial: first category opened once (one-time focus)');
@@ -63,7 +63,7 @@ const html=fs.readFileSync(require('path').join(__dirname,'../src/Index.html'),'
  console.log('in-view count',await pg.locator('.kpi-link-item.in-view').count());
  console.log('errors',pg._errs); await pg.close();
  // mobile: no tree scroll-sync
- pg=await mkpage(390,800); await login(pg,'อรทัย','secret99'); await pg.waitForTimeout(400);
+ pg=await mkpage(390,800); await login(pg,'อรทัย','654321'); await pg.waitForTimeout(400);
  const before=await pg.evaluate(()=>document.getElementById('panel-tree').scrollTop); await pg.evaluate(()=>window.scrollBy(0,3000)); await pg.waitForTimeout(600);
  const m=await pg.evaluate(()=>({st:document.getElementById('panel-tree').scrollTop,open:document.querySelectorAll('.accordion-part.open').length})); console.log('mobile',before,JSON.stringify(m)); assert(m.st===before);
  console.log('mobile errors',pg._errs); await pg.close(); await b.close(); console.log('UI25 OK');

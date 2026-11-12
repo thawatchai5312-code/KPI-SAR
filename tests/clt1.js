@@ -5,7 +5,7 @@ const pick=(tier,dept)=>U.find(r=>r[2]===tier&&(!dept||new RegExp('(^|,)'+dept+'
 const ad=pick('admin'),ex=pick('executive'),st=pick('staff'),hp=pick('head','PCT');
 const hn=U.find(r=>r[2]==='head'&&!/(^|,)PCT(,|$)/.test(r[3]));
 assert(hp&&hn,'need a PCT head and a non-PCT head');
-[ad,ex,st,hp,hn].forEach(r=>{r[1]=C.hashPassword_('pw123456');r[4]='FALSE'});
+[ad,ex,st,hp,hn].forEach(r=>{r[1]=C.hashPassword_('123456');r[4]='FALSE'});
 const T=u=>C.createSession_(u[0],u[1]);const tA=T(ad),tE=T(ex),tS=T(st),tP=T(hp),tN=T(hn);
 
 // ---- สิทธิ์

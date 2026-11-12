@@ -12,7 +12,7 @@
 var DEFAULT_PASSWORD = "11038";
 var DEFAULT_ADMIN_USERNAME = "Admin";
 var DEFAULT_ADMIN_PASSWORD = "Admin11038";
-var MIN_PASSWORD_LENGTH = 6;
+var PIN_LENGTH = 6; // รหัสผ่านใหม่ = ตัวเลข 6 หลักเท่านั้น (ลดปัญหาพิมพ์ผิดภาษา/ตัวพิมพ์ใหญ่ — ผู้ใช้เลือก)
 var SESSION_TTL_SECONDS = 21600; // 6 ชั่วโมง (สูงสุดของ CacheService)
 var MAX_LOGIN_FAILURES = 5;
 var LOGIN_LOCK_SECONDS = 300;
@@ -533,17 +533,27 @@ function autoDeptsByOwner_(fy) {
 }
 
 // session ผูกกับรหัสผ่านปัจจุบัน — เปลี่ยน/รีเซ็ตรหัสผ่านแล้ว session เก่าทั้งหมดใช้ไม่ได้
-function createSession_(username, hash) {
+/** แปลงเลขไทย ๐–๙ เป็นอารบิก + ตัดเว้นวรรค (รวมเว้นวรรคพิเศษ) หัว-ท้าย */
+function normalizePin_(s) {
+  return String(s === null || s === undefined ? "" : s)
+    .replace(/[\u0E50-\u0E59]/g, function(c) { return String(c.charCodeAt(0) - 0x0E50); })
+    .replace(/\u00a0/g, " ").trim();
+}
+function isPin_(s) { return new RegExp("^\\d{" + PIN_LENGTH + "}$").test(s); }
+
+// pinRequired = ล็อกอินด้วยรหัสที่ไม่ใช่เลข 6 หลัก (และไม่ใช่รหัสตั้งต้น) → ใช้ได้แค่ "เปลี่ยนรหัส"/"ออกจากระบบ" จนกว่าจะตั้งเลข 6 หลัก
+function createSession_(username, hash, pinRequired) {
   var token = Utilities.getUuid() + Utilities.getUuid();
-  CacheService.getScriptCache().put("sess_" + token, username + "\n" + (hash || "").slice(-16), SESSION_TTL_SECONDS);
+  CacheService.getScriptCache().put("sess_" + token, username + "\n" + (hash || "").slice(-16) + (pinRequired ? "\nP" : ""), SESSION_TTL_SECONDS);
   return token;
 }
 
 /** คืนผู้ใช้ปัจจุบันจาก token (อ่านสิทธิ์ล่าสุดจากชีตทุกครั้ง) ถ้าหมดอายุให้ throw SESSION_EXPIRED */
-function requireUser_(token) {
+function requireUser_(token, allowPinPending) {
   var cached = token ? CacheService.getScriptCache().get("sess_" + token) : null;
   if (!cached) throw new Error("SESSION_EXPIRED");
   var parts = cached.split("\n"), username = parts[0];
+  if (parts[2] === "P" && !allowPinPending) throw new Error("กรุณาตั้งรหัสผ่านเป็นตัวเลข 6 หลักก่อนใช้งาน");
   var sheet = getUsersSpreadsheet_().getSheetByName(USERS_SHEET_NAME);
   var users = sheet ? readUsers_(sheet) : [];
   for (var i = 0; i < users.length; i++) {
@@ -697,6 +707,14 @@ function getKpiPermission_(user, kpi, fy) {
 
 // ---------------------------------------------------------------- ล็อกอิน
 
+/** ล็อกอินสำเร็จ: รหัสที่พิมพ์ไม่ใช่เลข 6 หลัก และไม่ใช่รหัสตั้งต้น = ต้องตั้งเลข 6 หลักก่อนใช้งาน (session ใช้ได้แค่เปลี่ยนรหัส) */
+function loginOk_(u, typedPassword) {
+  var pinRequired = !isPin_(typedPassword) && typedPassword !== DEFAULT_PASSWORD;
+  var pu = publicUser_(u);
+  pu.pinRequired = pinRequired;
+  return { success: true, token: createSession_(u.username, u.hash, pinRequired), user: pu };
+}
+
 function authenticateUser(username, password) {
   try {
     var sheet = ensureUsersSheet_();
@@ -712,22 +730,26 @@ function authenticateUser(username, password) {
     }
 
     var users = readUsers_(sheet);
+    // เลขไทย/เว้นวรรคหัวท้าย: ลองแบบแปลงแล้วด้วย (เฉพาะกรณีเป็นเลข 6 หลักหลังแปลง) — รหัสที่ตั้งไว้เป็นเลขอารบิก
+    var pinForm = normalizePin_(password), alt = (pinForm !== password && isPin_(pinForm)) ? pinForm : null;
+    var okPw = function(u) { return verifyPassword_(password, u.hash) ? password : (alt && verifyPassword_(alt, u.hash) ? alt : null); };
     for (var i = 0; i < users.length; i++) {
-      if (users[i].username === username && verifyPassword_(password, users[i].hash)) {
+      var typed = users[i].username === username ? okPw(users[i]) : null;
+      if (typed !== null) {
         cache.remove(failKey);
         touchUser_(users[i], "access");
-        return { success: true, token: createSession_(username, users[i].hash), user: publicUser_(users[i]) };
+        return loginOk_(users[i], typed);
       }
     }
     // พิมพ์แต่ชื่อต้นที่ซ้ำกับหลายคน (บัญชีเป็น "ชื่อ นามสกุล"): ตรวจรหัสผ่านกับบัญชีเหล่านั้น — ตรง 1 บัญชี = เข้าเลย · ตรงหลายบัญชี = ให้เลือกนามสกุล
     // (ไม่เปิดเผยนามสกุลก่อนรหัสผ่านถูก)
     var names = users.map(function(u) { return u.username; });
     if (nameMatchesFull_(username, names).length > 0) {
-      var okUsers = users.filter(function(u) { return u.username.indexOf(username + " ") === 0 && verifyPassword_(password, u.hash); });
+      var okUsers = users.filter(function(u) { return u.username.indexOf(username + " ") === 0 && okPw(u) !== null; });
       if (okUsers.length === 1) {
         cache.remove(failKey);
         touchUser_(okUsers[0], "access");
-        return { success: true, token: createSession_(okUsers[0].username, okUsers[0].hash), user: publicUser_(okUsers[0]) };
+        return loginOk_(okUsers[0], okPw(okUsers[0]));
       }
       if (okUsers.length > 1) {
         cache.remove(failKey);
@@ -748,13 +770,10 @@ function logoutUser(token) {
 
 function changePassword(token, oldPassword, newPassword) {
   try {
-    var user = requireUser_(token);
-    newPassword = newPassword ? newPassword.toString() : "";
-    if (newPassword.length < MIN_PASSWORD_LENGTH) {
-      return { success: false, message: "รหัสผ่านใหม่ต้องมีอย่างน้อย " + MIN_PASSWORD_LENGTH + " ตัวอักษร" };
-    }
-    if (newPassword === DEFAULT_PASSWORD) {
-      return { success: false, message: "ห้ามใช้รหัสผ่านตั้งต้น กรุณาตั้งรหัสผ่านใหม่" };
+    var user = requireUser_(token, true); // ยังไม่ได้ตั้งเลข 6 หลัก = ฟังก์ชันนี้เป็นอย่างเดียวที่เรียกได้
+    newPassword = normalizePin_(newPassword);
+    if (!isPin_(newPassword)) {
+      return { success: false, message: "รหัสผ่านใหม่ต้องเป็นตัวเลข " + PIN_LENGTH + " หลักเท่านั้น (เช่น 482915)" };
     }
     if (!verifyPassword_(oldPassword ? oldPassword.toString() : "", user.hash)) {
       return { success: false, message: "รหัสผ่านเดิมไม่ถูกต้อง" };
