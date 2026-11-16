@@ -11,8 +11,8 @@ r=ctx.saveKpi(st.token,2570,{id:k.id,templateDetails:'วิเคราะห�
 const stamp=r.kpi.analysisUpdatedAt; assert(sheets['ปีงบ 2570'].d[0][34]==='อัปเดตการวิเคราะห์ล่าสุด');
 r=ctx.saveKpi(st.token,2570,{id:k.id,templateDetails:'วิเคราะห์ใหม่ ปี70',dataSource:k.dataSource}); assert(!r.changed&&r.kpi.analysisUpdatedAt===stamp,'unchanged text keeps stamp');
 fake=new RealDate(fake.getTime()+60000); r=ctx.saveKpi(st.token,2570,{id:k.id,dataSource:'สูตรใหม่'}); assert(r.changed&&r.kpi.analysisUpdatedAt!==''); 
-// frequency: staff cannot, admin can, invalid ignored, copies to next FY, analysis cleared next FY
-r=ctx.saveKpi(st.token,2570,{id:k.id,frequency:'รายปี'}); assert(!r.changed&&r.kpi.frequency==='รายเดือน');
+// frequency: staff (เจ้าของ) can, admin can, invalid ignored, copies to next FY, analysis cleared next FY
+r=ctx.saveKpi(st.token,2570,{id:k.id,frequency:'รายปี'}); assert(r.changed&&r.kpi.frequency==='รายปี');
 r=ctx.saveKpi(a.token,2570,{id:k.id,frequency:'รายไตรมาส'}); assert(r.changed&&r.kpi.frequency==='รายไตรมาส'&&row(2570,k.id)[35]==='รายไตรมาส'&&sheets['ปีงบ 2570'].d[0][35]==='ความถี่การเก็บข้อมูล (Frequency)');
 r=ctx.saveKpi(a.token,2570,{id:k.id,frequency:'bogus'}); assert(!r.changed&&r.kpi.frequency==='รายไตรมาส');
 fake=new RealDate('2027-09-30T20:00:00Z'); ctx.dailyFiscalYearCheck();

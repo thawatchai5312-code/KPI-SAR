@@ -29,8 +29,8 @@ assert(!ctx.addIndicator(st.token,2569,{...base,part:'หมวดมานี',
 const myId=mk.id;
 r=ctx.saveKpi(st.token,2570,{id:myId,name:'ชื่อใหม่',target:'> 90',templateDetails:'d',dataSource:'s',owner:'มานี / เพื่อน',department:'PCU'}); assert(r.success&&r.changed,JSON.stringify(r));
 rw=row(myId); assert(rw[4]==='ชื่อใหม่'&&rw[5]==='> 90'&&rw[23]==='d'&&rw[24]==='s'&&rw[25]==='มานี / เพื่อน'&&rw[26]==='PCU');
-// staff cannot change levels / summary / frequency
-r=ctx.saveKpi(st.token,2570,{id:myId,levels:['SAR'],summaryMethod:'ผลรวม',frequency:'รายปี'}); assert(r.success&&!r.changed&&rw[28]==='รายบุคคล');
+// staff cannot change levels (เมินเงียบ) · แต่เปลี่ยนวิธีสรุป/ความถี่ของตัวที่ตนแก้ได้
+r=ctx.saveKpi(st.token,2570,{id:myId,levels:['SAR'],summaryMethod:'ผลรวม',frequency:'รายปี'}); assert(r.success&&r.changed&&rw[28]==='รายบุคคล'&&rw[33]==='ผลรวม'&&rw[35]==='รายปี');
 // staff cannot rename KPI of others (visible SAR)
 const vis=ctx.getAllData(st.token,2570).data.find(k=>!k.mine&&!k.canEditDetails);
 r=ctx.saveKpi(st.token,2570,{id:vis.id,name:'HACK'}); assert(!r.success); assert(row(vis.id)[4]!=='HACK');

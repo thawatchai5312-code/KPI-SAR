@@ -5,8 +5,8 @@ ctx.authenticateUser('Admin','123456'); const a=ctx.authenticateUser('Admin','12
 const st=ctx.authenticateUser('มานี','11038'); const row=(fy,id)=>sheets['ปีงบ '+fy].d.find(r=>r[0]===id);
 const all=ctx.getAllData(a.token,2570).data; assert(all.every(k=>k.summaryMethod==='เฉลี่ย'),'default');
 const mine=ctx.getAllData(st.token,2570).data.find(x=>x.mine); const k=mine;
-// staff cannot change
-let r=ctx.saveKpi(st.token,2570,{id:k.id,summaryMethod:'ผลรวม'}); assert(r.success&&!r.changed&&r.kpi.summaryMethod==='เฉลี่ย');
+// staff (เจ้าของตัวชี้วัดนี้ แก้รายละเอียดได้) เปลี่ยนวิธีสรุปได้
+let r=ctx.saveKpi(st.token,2570,{id:k.id,summaryMethod:'เดือนล่าสุด'}); assert(r.success&&r.changed&&r.kpi.summaryMethod==='เดือนล่าสุด'&&row(2570,k.id)[33]==='เดือนล่าสุด');
 // admin sets, validates
 r=ctx.saveKpi(a.token,2570,{id:k.id,summaryMethod:'ผลรวม'}); assert(r.changed&&r.kpi.summaryMethod==='ผลรวม'&&row(2570,k.id)[33]==='ผลรวม'); assert(sheets['ปีงบ 2570'].d[0][33]==='วิธีสรุปผลรายเดือน (Summary)');
 r=ctx.saveKpi(a.token,2570,{id:k.id,summaryMethod:'bogus'}); assert(!r.changed&&r.kpi.summaryMethod==='ผลรวม');
