@@ -3151,8 +3151,8 @@
               ${ed && kpi.lockedYears && kpi.lockedYears.some(x => x) && !priv ? '<div class="hint">ช่องสีเทา = ผลของปีที่มีชีตปีงบนั้นอยู่แล้ว (แก้ได้เฉพาะ admin / ผอ. / QMR)</div>' : ''}
               <div class="section-bar"><h4>📊 ผลลัพธ์รายเดือน (ปีงบประมาณ ${selectedFy})</h4></div>
               <div class="data-table-wrapper"><table><tbody>${monthRows}</tbody></table></div>
-              ${ed && priv ? `<div class="form-group" style="margin: 6px 0 0;"><label>ความถี่การเก็บข้อมูล (ระบบเช็กผลเฉพาะรอบที่ถึงกำหนด)</label><select id="ed-frequency" class="editable-input" style="width:auto;">${FREQUENCIES.map(m => `<option value="${m}" ${m === (kpi.frequency || 'รายเดือน') ? 'selected' : ''}>${m}</option>`).join('')}</select></div>` : ''}
-              ${ed && priv ? `<div class="form-group" style="margin: 6px 0 0;"><label>วิธีสรุปผลรายเดือน</label><select id="ed-summary" class="editable-input" style="width:auto;">${SUMMARY_METHODS.map(m => `<option value="${m}" ${m === (kpi.summaryMethod || 'เฉลี่ย') ? 'selected' : ''}>${m}</option>`).join('')}</select></div>` : ''}
+              ${canDet ? `<div class="form-group" style="margin: 6px 0 0;"><label>ความถี่การเก็บข้อมูล (ระบบเช็กผลเฉพาะรอบที่ถึงกำหนด)</label><select id="ed-frequency" class="editable-input" style="width:auto;">${FREQUENCIES.map(m => `<option value="${m}" ${m === (kpi.frequency || 'รายเดือน') ? 'selected' : ''}>${m}</option>`).join('')}</select></div>` : ''}
+              ${canDet ? `<div class="form-group" style="margin: 6px 0 0;"><label>วิธีสรุปผลรายเดือน</label><select id="ed-summary" class="editable-input" style="width:auto;">${SUMMARY_METHODS.map(m => `<option value="${m}" ${m === (kpi.summaryMethod || 'เฉลี่ย') ? 'selected' : ''}>${m}</option>`).join('')}</select></div>` : ''}
               <div class="hint">สรุปรายเดือน (${esc(kpi.summaryMethod || 'เฉลี่ย')}): <b>${calculateMonthlySummary(kpi.months, kpi.summaryMethod)}</b></div>
               ${canRes ? resLegendHtml() : ''}
               ${ed && !kpi.canEditResults ? '<div class="hint">ไม่มีสิทธิ์แก้ไขผลของตัวชี้วัดนี้ในปีงบนี้</div>' : ''}
@@ -3430,11 +3430,11 @@
         p.department = getVal('ed-dept');
         if (document.getElementById('ed-cats')) p.cats = readCatRows('ed-cats');
         if (document.getElementById('ed-parent')) p.parentId = getVal('ed-parent');
+        p.summaryMethod = getVal('ed-summary'); // วิธีสรุปผล/ความถี่: ผู้ที่แก้รายละเอียดได้ (ไม่มีช่อง = undefined = ไม่ส่ง)
+        p.frequency = getVal('ed-frequency');
       }
       if (isPrivilegedUser()) {
         if (document.querySelector('.ed-level-cb')) p.levels = checkedLevels('ed-level-cb');
-        p.summaryMethod = getVal('ed-summary');
-        p.frequency = getVal('ed-frequency');
       }
       return p;
     }
@@ -8114,8 +8114,8 @@
       kpi.years.forEach((v, i) => { c['y' + i] = canRes ? { h: yearInputHtml(kpi, i, v), num0: 1 } : Object.assign({ h: resShow(v) }, lockR_); });
       kpi.months.forEach((v, i) => { c['m' + i] = canRes ? { h: `<input type="text" autocomplete="off" id="ed-m${i}" class="editable-input cell-input${resCls(v)}" placeholder="ว่าง" title="${resultIsText(v) ? RESULT_TEXT_TIP : NO_CASE_HINT}" value="${esc(v !== null ? v : '')}">`, num0: 1 } : Object.assign({ h: resShow(v) }, lockR_); });
       c.sum = { h: `${calculateMonthlySummary(kpi.months, kpi.summaryMethod)}<div class="hint" style="margin:0;">${esc(kpi.summaryMethod || 'เฉลี่ย')}</div>` };
-      c.sm = ed && priv ? { h: `<select id="ed-summary" class="editable-input tbl-in">${SUMMARY_METHODS.map(m => `<option value="${m}" ${m === (kpi.summaryMethod || 'เฉลี่ย') ? 'selected' : ''}>${m}</option>`).join('')}</select>` } : { h: esc(kpi.summaryMethod || 'เฉลี่ย') };
-      c.fq = ed && priv ? { h: `<select id="ed-frequency" class="editable-input tbl-in">${FREQUENCIES.map(m => `<option value="${m}" ${m === (kpi.frequency || 'รายเดือน') ? 'selected' : ''}>${m}</option>`).join('')}</select>` } : { h: esc(kpi.frequency || 'รายเดือน') };
+      c.sm = canDet ? { h: `<select id="ed-summary" class="editable-input tbl-in">${SUMMARY_METHODS.map(m => `<option value="${m}" ${m === (kpi.summaryMethod || 'เฉลี่ย') ? 'selected' : ''}>${m}</option>`).join('')}</select>` } : { h: esc(kpi.summaryMethod || 'เฉลี่ย') };
+      c.fq = canDet ? { h: `<select id="ed-frequency" class="editable-input tbl-in">${FREQUENCIES.map(m => `<option value="${m}" ${m === (kpi.frequency || 'รายเดือน') ? 'selected' : ''}>${m}</option>`).join('')}</select>` } : { h: esc(kpi.frequency || 'รายเดือน') };
       const lvTxt = esc(kpi.level) + ((kpi.levels || []).length > 1 ? ' (+' + (kpi.levels.length - 1) + ')' : '');
       c.lv = canDet && priv ? { h: tblPrevHtml('levels', data) + tblLongBtn('levels') } : Object.assign({ h: `<span title="ทุกระดับ: ${esc((kpi.levels || [kpi.level]).join(', '))}">${lvTxt}</span>` }, canDet ? {} : lockD_);
       c.det = canDet ? { h: tblPrevHtml('details', data) + tblLongBtn('details') } : Object.assign({ h: clamp(kpi.templateDetails, 'ไม่มีข้อมูลรายละเอียดเพิ่มเติม') }, lockD_);
@@ -8443,7 +8443,7 @@
           html: () => '<p>ผลรวมทั้งปีของปีงบนี้และย้อนหลัง 4 ปี กรอกเป็นตัวเลข</p><ul><li>ช่องที่มีไอคอนล็อก = ผลปีที่ผ่านมาที่อ้างอิงจากชีตต้นทาง แก้ได้เฉพาะ admin / ผอ. / QMR</li><li>ผลของปีงบอื่นที่ตรงกัน ระบบอัปเดตให้ทุกชีตเอง</li></ul>' },
         { page: 'home', mode: 'table', ctx: 'edit', when: () => tourCanRes(), target: () => tourCell('m0', 'm5'), title: 'ผลรายเดือน',
           html: () => '<p>กรอกผลของแต่ละเดือน ต.ค.–ก.ย. (เลื่อนตารางไปทางขวาเพื่อดูเดือนที่เหลือ) เว้นว่างถ้ายังไม่มีผล</p><ul><li>ผลมักกรอกย้อนหลัง 1 เดือน ระบบเช็กถึง <b>เดือนที่แล้ว</b></li><li>ท้ายเดือน ก.ย. มีช่อง <b>สรุป</b> คำนวณให้เอง (เฉลี่ย / ผลรวม / เดือนล่าสุด)</li></ul>' },
-        { page: 'home', mode: 'table', ctx: 'edit', when: () => isPrivilegedUser() && !!tourEditKpi(), target: () => tourCell('sm', 'fq'), title: 'ความถี่และวิธีสรุปผล (ผู้บริหาร)',
+        { page: 'home', mode: 'table', ctx: 'edit', when: () => { const k = tourEditKpi(); return !!k && !!k.canEditDetails; }, target: () => tourCell('sm', 'fq'), title: 'ความถี่และวิธีสรุปผล',
           html: () => '<ul><li><b>วิธีสรุปผลรายเดือน</b> เฉลี่ย / ผลรวม / เดือนล่าสุด</li><li><b>ความถี่การเก็บข้อมูล</b> รายเดือน / รายไตรมาส / ครึ่งปี / รายปี ระบบเช็กผลเฉพาะรอบที่ถึงกำหนด</li></ul><p>คอลัมน์กลุ่ม "ตั้งค่า" ช่องนี้ผู้บริหารและผู้ดูแลระบบแก้ได้</p>' },
         { page: 'home', mode: 'table', ctx: 'edit', when: () => tourCanDet(), target: () => tourCell('det'), title: 'รายละเอียด / การวิเคราะห์',
           html: () => '<p>เขียน <b>ผลการวิเคราะห์</b>: แนวโน้มของผล สาเหตุ ปัญหา/อุปสรรค และแนวทางพัฒนา</p><ul><li>กด <b>✎ แก้ไข</b> ในช่องนี้ จะเปิดหน้าต่างกลางจอให้พิมพ์ กด <b>ตกลง</b> ค่าจะกลับมารอที่แถว (ยังไม่บันทึกจนกว่าจะกด 💾)</li><li>ทุกปีงบใหม่ ต้องแก้ข้อความช่องนี้หรือช่องที่มาข้อมูลอย่างน้อย 1 ครั้ง ระบบจึงนับว่า "อัปเดตการวิเคราะห์" แล้ว</li></ul>' },

@@ -37,7 +37,7 @@ const html=fs.readFileSync(require('path').join(__dirname,'../src/Index.html'),'
  await pg.waitForTimeout(200);
  const has=async s=>(await pg.locator(s).count())>0;
  console.log('inputs',{name:await has('#ed-name'),target:await has('#ed-target'),owner:await has('#ed-owner'),dept:await has('#ed-dept'),level:await has('.ed-level-cb'),summary:await has('#ed-summary'),freq:await has('#ed-frequency'),del:await has('text=ลบตัวชี้วัด')});
- assert(await has('#ed-name')&&await has('#ed-target')&&await has('#ed-owner')&&await has('#ed-dept')&&!(await has('.ed-level-cb'))&&!(await has('#ed-summary'))&&!(await has('#ed-frequency'))&&!(await has('.kpi-card .btn-danger')));
+ assert(await has('#ed-name')&&await has('#ed-target')&&await has('#ed-owner')&&await has('#ed-dept')&&!(await has('.ed-level-cb'))&&(await has('#ed-summary'))&&(await has('#ed-frequency'))&&!(await has('.kpi-card .btn-danger')));
  await pg.fill('#ed-name','ชื่อที่แก้โดยเจ้าของ'); await pg.click('button:has-text("บันทึกข้อมูล")'); await pg.waitForTimeout(500);
  assert((await pg.innerText('#kpi-list-area')).includes('ชื่อที่แก้โดยเจ้าของ')); console.log('staff renamed own KPI');
  await pg.screenshot({path:'ui18-staff-edit.png'});

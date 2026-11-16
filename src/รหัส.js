@@ -330,7 +330,7 @@ function parentError_(data, id, parentId, cats) {
  *  - years/months (ผลทั้งปี/รายเดือน): ต้องมีสิทธิ์กรอกผล; ช่องผลย้อนหลังที่มีชีตต้นทางล็อกไว้ให้ admin/ผอ./QMR
  *  - templateDetails/dataSource: ต้องมีสิทธิ์แก้รายละเอียด (ปีงบปัจจุบัน)
  *  - cats (หมวดที่แสดง): เจ้าของแก้ได้เฉพาะหมวดนอก Part I–IV (ปีงบปัจจุบัน) · admin, ผอ., QMR ทุกหมวด
- *  - name/target/owner/department/levels/summaryMethod/frequency (ความถี่การเก็บข้อมูล): เฉพาะ admin, ผอ., QMR — แก้ในปีงบที่เลือกเท่านั้น ปีอื่นไม่เปลี่ยน
+ *  - name/target/owner/department/summaryMethod/frequency (ความถี่การเก็บข้อมูล): ผู้ที่แก้รายละเอียดได้ · levels: เฉพาะ admin, ผอ., QMR — แก้ในปีงบที่เลือกเท่านั้น ปีอื่นไม่เปลี่ยน
  * คืน kpi ที่อัปเดตแล้วให้หน้าเว็บแทนที่ได้ทันที
  */
 function saveKpi(token, fy, item) {
@@ -393,6 +393,10 @@ function saveKpiCore_(user, fy, item) {
       return item[f] !== undefined && item[f].toString().trim() !== arabicDigits_((old[f] || "").toString().trim());
     });
     var parentChange = item.parentId !== undefined && (item.parentId || "").toString().trim() !== old.parentId;
+    // วิธีสรุปผลรายเดือน/ความถี่การเก็บข้อมูล: ผู้ที่แก้รายละเอียดตัวชี้วัดนั้นได้ (ค่าไม่อยู่ในรายการ/ค่าเดิม = ไม่นับว่าเปลี่ยน)
+    var sumDiffers = item.summaryMethod !== undefined && SUMMARY_METHODS.indexOf(item.summaryMethod) !== -1 && item.summaryMethod !== old.summaryMethod;
+    var freqDiffers = item.frequency !== undefined && FREQUENCIES.indexOf(item.frequency) !== -1 && item.frequency !== old.frequency;
+    if ((sumDiffers || freqDiffers) && !perm.editDetails) return { success: false, message: "ไม่มีสิทธิ์แก้ไขวิธีสรุปผล/ความถี่ของตัวชี้วัดนี้ในปีงบ " + fy };
     if (parentChange && !perm.editDetails) return { success: false, message: "ไม่มีสิทธิ์กำหนดตัวชี้วัดแม่ของตัวชี้วัดนี้ในปีงบ " + fy };
     if (metaDiffers && !perm.editDetails) return { success: false, message: "ไม่มีสิทธิ์แก้ไขข้อมูลตัวชี้วัดนี้ในปีงบ " + fy };
     // เปลี่ยนช่องผู้รับผิดชอบเป็นชื่อกำกวม (ชื่อต้นที่มีหลายคน) → ต้องระบุนามสกุล · ข้อความเดิมที่ไม่ได้แก้ไม่ตรวจ
@@ -541,22 +545,24 @@ function saveKpiCore_(user, fy, item) {
       changed = true;
     }
 
-    // วิธีสรุป/ความถี่/ระดับ: เฉพาะ admin, ผอ., QMR
-    if (privileged) {
-      if (item.summaryMethod !== undefined && SUMMARY_METHODS.indexOf(item.summaryMethod) !== -1 && item.summaryMethod !== old.summaryMethod) {
+    // วิธีสรุปผล/ความถี่: ผู้ที่แก้รายละเอียดได้ (ตรวจสิทธิ์ก่อนเขียนข้างบนแล้ว) · ระดับ: เฉพาะ admin, ผอ., QMR
+    if (perm.editDetails) {
+      if (sumDiffers) {
         sheet.getRange(row, SUMMARY_COL).setValue(item.summaryMethod);
         if (!sheet.getRange(1, SUMMARY_COL).getValue()) {
           sheet.getRange(1, SUMMARY_COL).setValue(SUMMARY_HEADER).setFontWeight("bold").setBackground("#e0f2fe").setHorizontalAlignment("center");
         }
         changed = true;
       }
-      if (item.frequency !== undefined && FREQUENCIES.indexOf(item.frequency) !== -1 && item.frequency !== old.frequency) {
+      if (freqDiffers) {
         sheet.getRange(row, FREQ_COL).setValue(item.frequency);
         if (!sheet.getRange(1, FREQ_COL).getValue()) {
           sheet.getRange(1, FREQ_COL).setValue(FREQ_HEADER).setFontWeight("bold").setBackground("#e0f2fe").setHorizontalAlignment("center");
         }
         changed = true;
       }
+    }
+    if (privileged) {
       if (newLevels.length > 0 && newLevels.join(", ") !== old.levels.join(", ")) {
         sheet.getRange(row, LEVEL_COLUMN).setValue(newLevels.join(", "));
         changed = true;

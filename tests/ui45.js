@@ -51,7 +51,7 @@ const srv=(t,id)=>C.getAllData(t,2570).data.find(k=>k.id===id);
  await S.click('tr.kpi-row[data-id="'+X.id+'"] .btn-accent');
  await S.waitForSelector('tr.kpi-row.editing #ed-name');
  const ed=await S.evaluate(()=>{const r=document.querySelector('tr.kpi-row.editing');return {ids:['ed-name','ed-target','ed-y0','ed-y4','ed-m0','ed-m11','ed-owner','ed-dept','ed-details','ed-source','ed-cats','ed-parent'].map(i=>[i,!!document.getElementById(i)]).filter(x=>!x[1]).map(x=>x[0]),lockedYears:[...r.querySelectorAll('.c-y0 .lock-wrap,.c-y1 .lock-wrap,.c-y2 .lock-wrap,.c-y3 .lock-wrap')].length,noPriv:['ed-summary','ed-frequency'].map(i=>!!document.getElementById(i)).join(),lv:!!document.querySelector('.ed-level-cb'),btns:[...r.querySelectorAll('.c-act button')].map(b=>b.title).join('|')}});
- assert(ed.ids.length===0&&ed.noPriv==='false,false'&&!ed.lv&&/บันทึก/.test(ed.btns)&&/ยกเลิก/.test(ed.btns)&&!/ลบ/.test(ed.btns),JSON.stringify(ed));
+ assert(ed.ids.length===0&&ed.noPriv==='true,true'&&!ed.lv&&/บันทึก/.test(ed.btns)&&/ยกเลิก/.test(ed.btns)&&!/ลบ/.test(ed.btns),JSON.stringify(ed));
  console.log('locked year cells (staff):',ed.lockedYears);
  // dirty + simple fields
  await S.fill('#ed-name',X.name+' (ตาราง)');await S.fill('#ed-target','≥ 77 %');await S.fill('#ed-m0','61.5');await S.fill('#ed-owner',st[0]+' / '+ad[0]);
